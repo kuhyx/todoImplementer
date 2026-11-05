@@ -7,7 +7,7 @@ from runnerfakes import Env, FakeClient, make_repo, task
 from schedfakes import CARD, IMPL, LIVE_OK, PLAN, boot, reply, state, wait, wait_stage
 from todoimpl.board import state as store
 from todoimpl.board.state import RunState, SpecQuestion
-from todoimpl.runner import files, limits
+from todoimpl.runner import files, limits, orphans
 from todoimpl.runner.scheduler import RunnerError, Scheduler
 from todoimpl.runner.stages import merge_questions
 from todoimpl.service.cards import CardTask
@@ -193,4 +193,22 @@ def test_t302_recover_leaves_runs_waiting_on_kuhy_alone(world: Env) -> None:
         assert world.calls() == []
         assert state(world).stage == "implement"
     finally:
+        sched.close()
+
+
+def test_t902_recover_kills_a_recorded_turn_but_spares_kuhys_own_session(world: Env) -> None:
+    run_dir = world.root / CARD
+    wt = files.worktree_path(world.root, CARD)
+    wt.mkdir(parents=True)
+    store.save(run_dir, RunState(task_id=CARD, stage="implement", last_tag="D"))
+    orphan = subprocess.Popen(["sleep", "60"], cwd=wt, start_new_session=True)
+    orphans.record(run_dir, orphan.pid)
+    mine = subprocess.Popen(["sleep", "60"], cwd=wt, start_new_session=True)
+    sched = Scheduler(FakeClient({}), world.root)
+    try:
+        assert orphan.wait(timeout=10) < 0  # killed by a signal, not left running beside the resumed turn
+        assert mine.poll() is None  # same cwd and group leader, but never recorded by the runner
+    finally:
+        orphan.kill()
+        mine.kill()
         sched.close()

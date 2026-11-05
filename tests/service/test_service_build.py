@@ -60,3 +60,23 @@ def test_startup_survives_a_dead_todo_app_and_the_board_says_why(tmp_path: Path)
         assert err.value.code == "upstream_unavailable"
     finally:
         backend.cache.stop()
+
+
+def test_t901_scheduler_recovery_can_read_the_notes_at_construction(
+    fake: FakeTodoMcp, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The engine's first act (recover -> drive -> get_task) must not race the first note fetch."""
+    card = f"{fake.seed('kuhyx/demo', 'demo todos', '')[:8]}-0"
+    seen: dict[str, object] = {}
+
+    class Scheduler(FakeScheduler):
+        def __init__(self, client: ItemView, root: Path) -> None:
+            super().__init__()
+            seen["card"] = client.get_task(card).id
+
+    module = types.ModuleType("todoimpl.runner.scheduler")
+    module.Scheduler = Scheduler  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "todoimpl.runner.scheduler", module)
+    backend = build_backend(root=tmp_path, build="x", client=TodoClient(fake.url, fake.token))
+    backend.cache.stop()
+    assert seen == {"card": card}

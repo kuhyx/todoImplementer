@@ -41,11 +41,13 @@ def build_backend(
         return cards + closed.cards({note.id[:8] for note in notes})
 
     cache = TaskCache(fetch)
+    if refresh:
+        # Before the Scheduler: its recovery drives resolve card ids through this cache at once.
+        cache.refresh()
     if scheduler is None:
         module = importlib.import_module("todoimpl.runner.scheduler")
         scheduler = module.Scheduler(ItemView(client, cache), root)
     backend = ServiceBackend(cache, scheduler, root, build or git_build_id(REPO))
     if refresh:
-        cache.refresh()
         cache.start()
     return backend

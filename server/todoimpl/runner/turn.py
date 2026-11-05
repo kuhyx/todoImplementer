@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from . import claude, files, session
+from . import claude, files, orphans, session
 from .stream import StreamParser, TurnResult, state_tag
 
 if TYPE_CHECKING:
@@ -66,6 +66,7 @@ def run_turn(
     with stream.open("w", encoding="utf-8") as raw, err_path.open("w", encoding="utf-8") as err:
         proc = claude.spawn(inv, err)
         env.register(proc)
+        orphans.record(env.run_dir, proc.pid)
         try:
             for line in proc.stdout or ():
                 raw.write(line)
@@ -74,6 +75,7 @@ def run_turn(
                     env.activity(act.kind, act.text, act.tool)
         finally:
             code = proc.wait()
+            orphans.clear(env.run_dir)
             env.register(None)
     res = parser.result
     spent = _turn_cost(state, res)

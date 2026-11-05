@@ -18,6 +18,7 @@ from . import limits
 from .bus import Bus
 from .claude import kill_tree
 from .files import read_json, write_json
+from .orphans import reap
 from .pipeline import WORK_STAGES, Ctx, Driver
 
 if TYPE_CHECKING:
@@ -187,6 +188,8 @@ class Engine:
         st = store.load(run_dir)
         if st is None:
             return
+        # A turn the old server left running (KillMode=process) must not write beside this drive.
+        reap(run_dir)
         try:
             item = self.client.get_task(card).item
         except TodoError as exc:
