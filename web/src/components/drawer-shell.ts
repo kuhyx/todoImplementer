@@ -1,10 +1,11 @@
 import type { TaskDetail } from "@/lib/schemas";
 
 /** Static drawer skeleton, its tab strip and the keyboard trap. No task data lives here. */
+import { askOf } from "@/components/ask-model";
 import { h, must } from "@/lib/dom";
 
-export const TABS = ["activity", "plan", "diff", "live", "checks", "details"] as const;
-export type Tab = (typeof TABS)[number];
+const PANELS = ["activity", "plan", "diff", "live", "checks", "details"] as const;
+export type Tab = "questions" | (typeof PANELS)[number];
 const TAB_LABEL: Record<Tab, string> = {
   activity: "Activity",
   checks: "Checks",
@@ -12,9 +13,10 @@ const TAB_LABEL: Record<Tab, string> = {
   diff: "Diff",
   live: "Live check",
   plan: "Plan",
+  questions: "Questions",
 };
 const FOCUSABLE = 'button:not([aria-disabled="true"]), textarea, input, select, summary, [href]';
-const SLOTS = ["head", "needs", "actions", "pending", "questions", "lesson"];
+const SLOTS = ["head", "needs", "actions", "pending", "lesson"];
 
 export interface ShellHandlers {
   onClose: () => void;
@@ -37,13 +39,14 @@ export function buildShell(feed: HTMLElement, handlers: ShellHandlers): HTMLElem
       },
     },
   });
-  const panels = TABS.map((tab) => h("div", { attrs: { "data-panel": tab }, class: "panel" }));
+  const panels = PANELS.map((tab) => h("div", { attrs: { "data-panel": tab }, class: "panel" }));
   panels[0]?.append(feed);
   const scroll = h(
     "div",
     { class: "drawer-scroll" },
     ...SLOTS.map((name) => h("div", { attrs: { "data-slot": name } })),
     h("div", { attrs: { "aria-label": "Sections", role: "group" }, class: "dtabs" }),
+    h("div", { attrs: { "data-slot": "questions" } }),
     ...panels,
   );
   const bar = h(
@@ -72,13 +75,15 @@ export function buildShell(feed: HTMLElement, handlers: ShellHandlers): HTMLElem
 }
 
 export function paintTabs(root: HTMLElement, detail: null | TaskDetail, active: Tab, onTab: (tab: Tab) => void): void {
+  const ask = detail === null ? null : askOf(detail);
   const counts: Partial<Record<Tab, number>> = {
+    ...(ask?.kind === "spec" && { questions: ask.questions.length }),
     checks: detail?.checks?.results.length ?? 0,
     diff: detail?.diff?.files.length ?? 0,
     live: detail?.live_check?.shots.length ?? 0,
   };
   must(root, ".dtabs").replaceChildren(
-    ...TABS.map((tab) => {
+    ...(ask === null ? PANELS : (["questions", ...PANELS] as const)).map((tab) => {
       return h("button", {
         attrs: { "aria-pressed": tab === active, "data-tab": tab, type: "button" },
         class: "dtab",
@@ -93,6 +98,8 @@ export function paintTabs(root: HTMLElement, detail: null | TaskDetail, active: 
     ),
   );
   for (const panel of root.querySelectorAll<HTMLElement>("[data-panel]")) panel.hidden = panel.dataset.panel !== active;
+  must<HTMLElement>(root, '[data-slot="questions"]').hidden = active !== "questions";
+  must(root, ".drawer").classList.toggle("drawer--ask", active === "questions");
 }
 
 /** Keep Tab inside the dialog (aria-modal). */

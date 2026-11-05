@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { card, env, fail, open, q, useDrawerHarness } from "@/test/drawer-harness";
+import { freeDetail } from "@/test/fixture-ask";
 import { makeDetail } from "@/test/fixture-detail";
+import { preset } from "@/test/fixture-presets";
 import { settle, stubFetch } from "@/test/net";
 
 useDrawerHarness();
@@ -149,16 +151,20 @@ describe("send and spec answers", () => {
     expect(box.value).toBe("");
   });
 
-  it("saves the prefilled recommended answers and keeps edits across polls", async () => {
+  it("sends every answer in one call and keeps an edit across polls", async () => {
     const c = card("needs_you");
     await open(c, { [`POST /api/task/${c.id}/spec-answers`]: { ok: true, task: c } });
+    expect(q("[data-slot=needs]").textContent).toBe("");
+    expect(q<HTMLTextAreaElement>("textarea[name=Q1]").hidden).toBe(true);
+    q(".ask-card .link").click();
     const first = q<HTMLTextAreaElement>("textarea[name=Q1]");
-    expect(first.value).toBe("localStorage");
+    expect(first.hidden).toBe(false);
+    expect(document.activeElement).toBe(first);
     first.value = "IndexedDB";
-    first.focus();
+    first.dispatchEvent(new Event("input"));
     await settle(5000);
     expect(q<HTMLTextAreaElement>("textarea[name=Q1]").value).toBe("IndexedDB");
-    expect(document.activeElement).toBe(q("textarea[name=Q1]"));
+    expect(q<HTMLTextAreaElement>("textarea[name=Q1]").hidden).toBe(false);
     q("[data-action=spec-answers]").click();
     await settle(0);
     const post = env.stub.calls.find((call) => call.init?.method === "POST");
@@ -166,12 +172,46 @@ describe("send and spec answers", () => {
     expect(q("[data-action=spec-ok]").getAttribute("aria-disabled")).toBe("true");
   });
 
-  it("refuses to save with every answer empty", async () => {
+  it("refuses to send with every answer empty", async () => {
     const c = card("needs_you");
-    await open(c);
-    for (const field of env.drawer.querySelectorAll<HTMLTextAreaElement>("textarea[name^=Q]")) field.value = "";
+    const empty = { ...makeDetail(c), questions: [{ answer: null, body: "", id: "Q1", recommendation: "", title: "Storage" }] };
+    await open(c, { [`GET /api/task/${c.id}`]: empty });
     q("[data-action=spec-answers]").click();
     expect(document.querySelector("#toasts")?.textContent).toContain("Write at least one answer first.");
+  });
+
+  it("answers a plain Claude question from the card's own box and clears it", async () => {
+    const c = freeDetail().card;
+    await open(c, { [`GET /api/task/${c.id}`]: freeDetail(), [`POST /api/task/${c.id}/send`]: { ok: true, task: c } });
+    expect(q("[data-slot=send]").hidden).toBe(true);
+    expect(q(".drawer").classList.contains("drawer--ask")).toBe(true);
+    const box = q<HTMLTextAreaElement>("textarea[name=ask-send]");
+    q("[data-action=send]").click();
+    expect(document.querySelector("#toasts")?.textContent).toContain("Write a message first.");
+    box.value = "use port 8790";
+    q("[data-action=send]").click();
+    await settle(0);
+    const post = env.stub.calls.find((call) => call.init?.method === "POST");
+    expect(post?.init?.body).toBe('{"text":"use port 8790"}');
+    expect(q<HTMLTextAreaElement>("textarea[name=ask-send]").value).toBe("");
+  });
+
+  it("switches to Questions once and back to Activity when they are answered", async () => {
+    const c = card("needs_you");
+    await open(c);
+    expect(q("[data-tab=questions]").getAttribute("aria-pressed")).toBe("true");
+    expect(q("[data-slot=questions]").hidden).toBe(false);
+    q("[data-tab=plan]").click();
+    await settle(5000);
+    expect(q("[data-tab=plan]").getAttribute("aria-pressed")).toBe("true");
+    expect(q("[data-slot=questions]").hidden).toBe(true);
+    expect(q(".drawer").classList.contains("drawer--ask")).toBe(false);
+    q("[data-tab=questions]").click();
+    const working = { ...makeDetail(c), card: { ...c, ...preset("working", true) } };
+    env.stub.routes.set(`GET /api/task/${c.id}`, () => working);
+    await settle(5000);
+    expect(q("[data-tab=activity]").getAttribute("aria-pressed")).toBe("true");
+    expect(q("[data-slot=questions]").hidden).toBe(true);
   });
 
   it("approves the drafted lesson by id", async () => {

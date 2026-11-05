@@ -1,8 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
-  collectAnswers, renderChecks, renderDetails, renderDiff, renderHead, renderLesson, renderLiveCheck, renderNeeds,
-  renderPlan, renderQuestions,
+  renderChecks, renderDetails, renderDiff, renderHead, renderLesson, renderLiveCheck, renderNeeds, renderPlan,
 } from "@/components/drawer-sections";
 import { renderMarkdown } from "@/lib/markdown";
 import { makeDetail } from "@/test/fixture-detail";
@@ -27,6 +26,7 @@ describe("drawer sections", () => {
   it("head shows chips, title and current line; Yours has no repo", () => {
     const head = renderHead(makeDetail(byStatus("working")));
     expect(head.querySelector("h2")?.textContent).toBe("Escape hatch needs keyboard path");
+    expect(head.querySelector("h2")?.getAttribute("title")).toBe("Escape hatch needs keyboard path");
     expect(head.textContent).toContain("gatelock");
     const yours = renderHead(makeDetail(byStatus("yours")));
     expect(yours.textContent).toContain("Yours (no repo)");
@@ -39,26 +39,8 @@ describe("drawer sections", () => {
     const calm = makeDetail(byStatus("working"));
     expect(renderNeeds(calm)).toBeNull();
     expect(renderNeeds({ ...calm, error: "boom" })?.getAttribute("role")).toBe("alert");
-  });
-
-  it("spec questions prefill the recommendation, keep a given answer, and collect answers", () => {
-    const detail = makeDetail(byStatus("needs_you"));
-    const slot = vi.fn((id: string) => (id === "spec-answers" ? document.createElement("i") : null));
-    const element = renderQuestions(detail, slot);
-    if (element === null) throw new Error("questions");
-    document.body.append(element);
-    const [q1, q2] = element.querySelectorAll<HTMLTextAreaElement>("textarea");
-    expect([q1?.value, q2?.value]).toEqual(["localStorage", "Yes"]);
-    expect(element.textContent).toContain("Recommended: localStorage");
-    expect(element.querySelector("i")).not.toBeNull();
-    if (q1 === undefined) throw new Error("q1");
-    q1.value = "sessionStorage";
-    element.querySelector<HTMLElement>(".qcard .btn")?.click();
-    expect(q1.value).toBe("localStorage");
-    q1.value = "  ";
-    expect(collectAnswers(element)).toEqual({ Q2: "Yes" });
-    expect(renderQuestions(makeDetail(byStatus("working")), act())).toBeNull();
-    expect(renderQuestions({ ...detail, questions: [{ ...detail.questions[0]!, body: "" }] }, act())?.querySelectorAll(".qcard p")).toHaveLength(1);
+    expect(renderNeeds(needy, true)).toBeNull();
+    expect(renderNeeds({ ...needy, error: "push refused" }, true)?.getAttribute("role")).toBe("alert");
   });
 
   it("lesson block shows the draft and its action", () => {

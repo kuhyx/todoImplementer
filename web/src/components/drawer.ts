@@ -1,9 +1,9 @@
 import type { Action } from "@/lib/schemas-common";
 
-/** Side drawer for one task: live feed, plan, diff, live check, check output, spec questions, actions and the Send-to-Claude box. */
 import { type BarState, idleBar, renderAction, slowTimer } from "@/components/action-bar";
+/** Side drawer for one task: live feed, plan, diff, live check, check output, spec questions, actions and the Send-to-Claude box. */
+import { AskPanel } from "@/components/ask-view";
 import { paintDetail } from "@/components/drawer-render";
-import { collectAnswers } from "@/components/drawer-sections";
 import { buildShell, paintTabs, type Tab, trapTab } from "@/components/drawer-shell";
 import { createFeed } from "@/components/feed-view";
 import { loader, showToast } from "@/components/feedback";
@@ -18,6 +18,7 @@ import { type LiveEvent, type TaskDetail, taskDetail } from "@/lib/schemas";
 const DETAIL_POLL_MS = 5000;
 
 export class TiDrawer extends HTMLElement {
+  readonly #ask = new AskPanel();
   #bar: BarState = idleBar();
   #detail: null | TaskDetail = null;
   #feed = createFeed();
@@ -49,6 +50,7 @@ export class TiDrawer extends HTMLElement {
       this.#tab = tab;
       this.#paintTabs();
     });
+    this.#ask.fit();
   }
 
   async #refresh(id: string): Promise<void> {
@@ -90,11 +92,12 @@ export class TiDrawer extends HTMLElement {
   #render(): void {
     const detail = this.#detail;
     if (detail === null) return;
+    this.#tab = this.#ask.tabFor(detail, this.#tab);
     const signature = JSON.stringify([detail, this.#bar, this.#tab]);
     if (signature === this.#signature) return;
     this.#signature = signature;
     const snapshot = snapshotInputs(this);
-    paintDetail(this, detail, this.#host(detail), this.#bar);
+    paintDetail(this, detail, this.#host(detail), this.#bar, this.#ask);
     this.#paintTabs();
     restoreInputs(this, snapshot);
   }
@@ -147,8 +150,8 @@ export class TiDrawer extends HTMLElement {
       showToast("This page has no CSRF token (index.html was not stamped by the server). Reload it from the server.", "error");
       return;
     }
-    const sendBox = must<HTMLTextAreaElement>(this, "textarea[name=send]");
-    const answers = collectAnswers(this);
+    const sendBox = this.querySelector<HTMLTextAreaElement>("textarea[name=ask-send]") ?? must<HTMLTextAreaElement>(this, "textarea[name=send]");
+    const answers = this.#ask.answers();
     const text = sendBox.value.trim();
     if (text === "" && action.id === "send") {
       showToast("Write a message first.", "error");
@@ -166,7 +169,7 @@ export class TiDrawer extends HTMLElement {
     });
     try {
       await postAction(detail.card.id, action.id, { answers, lessonId: detail.lesson?.id ?? "", text }, csrf);
-      if (action.id === "send") sendBox.value = "";
+      if (action.id === "send") for (const box of this.querySelectorAll<HTMLTextAreaElement>("textarea[name$=send]")) box.value = "";
       showToast(`${action.label}: done`);
     } catch (error) {
       showToast(errorText(error), "error");
@@ -194,6 +197,7 @@ export class TiDrawer extends HTMLElement {
     this.#opener = opener;
     this.#detail = null;
     this.#signature = "";
+    this.#ask.reset();
     this.#bar = idleBar();
     this.#feed = createFeed();
     this.hidden = false;

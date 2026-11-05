@@ -17,14 +17,15 @@ export function renderHead(detail: TaskDetail): HTMLElement {
     "div",
     { class: "drawer-headline" },
     h("div", { class: "drawer-chips" }, statusChip(card.status), h("span", { class: "chip", text: card.repo ?? "Yours (no repo)" }), h("span", { class: "chip", text: `#${card.id}` })),
-    h("h2", { attrs: { id: "drawer-title" }, class: "drawer-title", text: card.title }),
+    h("h2", { attrs: { id: "drawer-title", title: card.title }, class: "drawer-title", text: card.title }),
     h("p", { class: "drawer-current", text: card.current }),
   );
 }
 
-export function renderNeeds(detail: TaskDetail): HTMLElement | null {
+/** `isQuiet` drops the need's own box (the question cards already say it) and keeps only an error banner. */
+export function renderNeeds(detail: TaskDetail, isQuiet = false): HTMLElement | null {
   const { needs } = detail.card;
-  if (needs === null) return detail.error === null ? null : h("p", { attrs: { role: "alert" }, class: "banner", text: detail.error });
+  if (needs === null || isQuiet) return detail.error === null ? null : h("p", { attrs: { role: "alert" }, class: "banner", text: detail.error });
   return h(
     "div",
     { attrs: { "data-kind": needs.kind }, class: "needs" },
@@ -32,42 +33,6 @@ export function renderNeeds(detail: TaskDetail): HTMLElement | null {
     h("p", { text: needs.text }),
     detail.error !== null && h("p", { class: "needs-error", text: detail.error }),
   );
-}
-
-export function renderQuestions(detail: TaskDetail, act: ActionSlot): HTMLElement | null {
-  if (detail.questions.length === 0) return null;
-  return h(
-    "section",
-    { attrs: { "aria-label": "Spec questions" }, class: "block" },
-    h("h3", { text: "Spec questions" }),
-    h("p", { class: "hint", text: "The recommended answer is prefilled; edit it or keep it, then save." }),
-    ...detail.questions.map((question) => {
-      const field = h("textarea", {
-        attrs: { "aria-label": `Answer to ${question.id}`, "data-keep": true, "data-qid": true, name: question.id, rows: 3 },
-        text: question.answer ?? question.recommendation,
-      });
-      return h(
-        "article",
-        { class: "qcard" },
-        h("h4", { text: `${question.id} · ${question.title}` }),
-        question.body !== "" && h("p", { text: question.body }),
-        h("p", { class: "rec" }, h("strong", { text: "Recommended: " }), question.recommendation),
-        field,
-        h("button", { attrs: { type: "button" }, class: "btn", on: { click: () => { field.value = question.recommendation; } }, text: "Use recommended" }),
-      );
-    }),
-    act("spec-answers"),
-    act("spec-ok"),
-  );
-}
-
-export function collectAnswers(root: ParentNode): Record<string, string> {
-  const answers: Record<string, string> = {};
-  for (const field of root.querySelectorAll<HTMLTextAreaElement>("textarea[data-qid]")) {
-    const value = field.value.trim();
-    if (value !== "") answers[field.name] = value;
-  }
-  return answers;
 }
 
 export function renderLesson(detail: TaskDetail, act: ActionSlot): HTMLElement | null {

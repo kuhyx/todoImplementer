@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from cdp_driver import Cdp, goto, launch, page_ws, probe
+from viewport_questions import step_questions
 
 WORKING = "17a1b2c3-0"
 SPEC = "1ca1b2c3-0"
@@ -98,6 +99,7 @@ STEPS = {
     "drawer": step_drawer,
     "focus": step_focus,
     "flow": step_flow,
+    "questions": step_questions,
 }
 
 

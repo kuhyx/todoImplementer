@@ -2,6 +2,7 @@
 
 import base64
 import json
+import os
 import re
 import struct
 import subprocess
@@ -14,7 +15,7 @@ from typing import Any
 import websocket
 
 CHROMIUM = "/usr/bin/chromium"
-PORT = 9333
+PORT = int(os.environ.get("CDP_PORT", "9333"))
 BAD_TEXT = re.compile(r"\[object Object\]|\bundefined\b|\bNaN\b")
 
 PROBE = """(() => {

@@ -9,18 +9,19 @@ import { readFile } from "node:fs/promises";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { extname, join, normalize } from "node:path";
 
+import { ASK_IDS, askCards, askDetail, FREE_ID, freeDetail } from "#fixtures/fixture-ask";
 import { makeDetail, makeUsage } from "#fixtures/fixture-detail";
 import { preset } from "#fixtures/fixture-presets";
 import { makeBoard, makeCards, NOW } from "#fixtures/fixtures";
 
 const PORT = Number(process.env.PORT ?? 4399);
 const BUILD = process.env.MOCK_BUILD ?? "mock0001";
-const DIST = join(import.meta.dirname, "..", "dist");
+const DIST = process.env.MOCK_DIST ?? join(import.meta.dirname, "..", "dist");
 const TOKEN = randomUUID();
 const TYPES: Record<string, string> = { ".css": "text/css", ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".svg": "image/svg+xml" };
 const TIME_KEYS = new Set(["at", "ended", "generated_at", "resets_at", "resumes_at", "started", "until", "updated"]);
 const offset = Math.floor(Date.now() / 1000) - NOW;
-const cards = makeCards();
+const cards = [...makeCards(), ...askCards()];
 const streams = new Map<string, Set<ServerResponse>>();
 
 function shift(value: unknown, key = ""): unknown {
@@ -48,7 +49,7 @@ function stageEvent(id: string): unknown {
   return { actions, column, current, needs, stage, status, type: "stage" };
 }
 
-const NEXT: Record<string, "backlog" | "cancelled" | "done" | "working"> = { cancel: "cancelled", credits: "working", ship: "done", "spec-ok": "working", start: "working" };
+const NEXT: Record<string, "backlog" | "cancelled" | "done" | "working"> = { cancel: "cancelled", credits: "working", ship: "done", "spec-answers": "working", "spec-ok": "working", start: "working" };
 
 function hasTask(id: string, action: string, body: { text?: string }): boolean {
   const card = cards.find((c) => c.id === id);
@@ -111,6 +112,11 @@ async function serveStatic(res: ServerResponse, path: string): Promise<void> {
 const SHOT =
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400"><rect width="640" height="400" fill="#38312e"/><text x="32" y="64" fill="#eceae9" font-size="32">mock screenshot</text></svg>';
 
+function detailFor(card: (typeof cards)[number]): unknown {
+  if (card.status !== "needs_you" || !ASK_IDS.includes(card.id)) return makeDetail(card);
+  return { ...(card.id === FREE_ID ? freeDetail() : askDetail(card.id)), card };
+}
+
 async function route(request: IncomingMessage, res: ServerResponse): Promise<void> {
   const target = request.url ?? "/";
   const [path = "/", query = ""] = target.split("?", 2);
@@ -135,7 +141,7 @@ async function route(request: IncomingMessage, res: ServerResponse): Promise<voi
   }
   const card = cards.find((c) => c.id === id);
   if (card === undefined) json(res, { error: { code: "not_found", message: "No such task." }, ok: false }, 404);
-  else json(res, makeDetail(card));
+  else json(res, detailFor(card));
 }
 
 createServer(async (request, res) => {

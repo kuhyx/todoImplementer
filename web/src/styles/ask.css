@@ -1,0 +1,200 @@
+/* Question cards: the drawer widens and the grid is sized to fit, never scrolled (ask-view.ts measures and pages). */
+
+.drawer--ask {
+  width: 90%;
+}
+
+[data-slot="questions"] {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-height: 16rem;
+}
+
+.ask {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 0;
+}
+
+.ask-grid {
+  display: grid;
+  flex: 1;
+  grid-template-columns: repeat(var(--cols, 1), minmax(0, 1fr));
+  gap: var(--space-3);
+  grid-auto-rows: max-content;
+  align-content: start;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ask-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  max-height: var(--ask-h, none);
+  padding: var(--space-3);
+  background: var(--surface-2);
+  border-radius: var(--radius-md);
+  overflow-y: auto;
+}
+
+.ask-title {
+  font-size: var(--text-subtitle);
+  letter-spacing: var(--tracking-title);
+  line-height: 1.25;
+}
+
+.ask-card p {
+  overflow-wrap: anywhere;
+}
+
+.ask-label {
+  display: block;
+  font-size: var(--text-label);
+  color: var(--text-muted);
+}
+
+.ask-card textarea {
+  field-sizing: content;
+  min-height: calc(3lh + var(--space-3));
+}
+
+.ask-links {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.link {
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.ask-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-2) var(--space-3);
+  min-height: calc(var(--space-5) + var(--space-2));
+}
+
+.ask-pager {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ask-page {
+  min-width: 6ch;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.ask-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-2) var(--space-3);
+  margin-left: auto;
+}
+
+.ask-actions .btn {
+  padding-inline: var(--space-4);
+}
+
+@media (max-height: 800px) {
+  .ask-card {
+    gap: var(--space-1);
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-label);
+    line-height: 1.3;
+  }
+
+  .ask-title {
+    font-size: var(--text-body);
+  }
+
+  .ask {
+    gap: var(--space-2);
+  }
+
+  .drawer--ask .drawer-title {
+    font-size: var(--text-subtitle);
+  }
+
+  .drawer--ask .drawer-chips {
+    margin-bottom: var(--space-1);
+  }
+}
+
+@media (max-height: 800px), (max-width: 719.98px) {
+  .drawer--ask .drawer-current {
+    display: none;
+  }
+
+  .drawer--ask .dtabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .drawer--ask .dtab {
+    white-space: nowrap;
+  }
+}
+
+@media (max-height: 800px) and (min-width: 720px) {
+  .drawer--ask .drawer-bar {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 1;
+    border: 0;
+  }
+
+  .drawer--ask .drawer-scroll {
+    gap: var(--space-2);
+    padding-top: var(--space-2);
+  }
+
+  .drawer--ask .drawer-headline {
+    padding-right: var(--space-6);
+  }
+
+  .drawer--ask .actions .action {
+    flex-wrap: nowrap;
+  }
+
+  .drawer--ask .actions .reason {
+    flex-basis: auto;
+  }
+}
+
+@media (max-width: 719.98px) {
+  .drawer--ask {
+    width: 100%;
+  }
+
+  .ask-foot {
+    flex-wrap: nowrap;
+  }
+
+  .ask-pager {
+    gap: var(--space-1);
+  }
+
+  .ask-page {
+    min-width: 5ch;
+  }
+
+  .ask-actions .btn {
+    padding-inline: var(--space-3);
+  }
+}

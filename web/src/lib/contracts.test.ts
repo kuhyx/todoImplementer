@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { board, liveEvent, postResponse, taskDetail, usage, version } from "@/lib/schemas";
 import { action, ACTION_IDS, COLUMN_IDS, NEEDS_KINDS, STAGES, STATUSES } from "@/lib/schemas-common";
 import { contractEnum, contractValidator } from "@/test/contract-ajv";
+import { ASK_IDS, askDetail, FREE_ID, freeDetail } from "@/test/fixture-ask";
 import { LIVE_EVENTS, makeDetail, makeUsage } from "@/test/fixture-detail";
 import { makeBoard, makeCards } from "@/test/fixtures";
 
@@ -26,6 +27,10 @@ describe("contract mirror", () => {
     for (const card of makeCards()) {
       expect(agree("task", taskDetail, makeDetail(card))).toEqual([true, true]);
     }
+  });
+
+  it("accepts the real-shaped question fixtures in both", () => {
+    for (const id of ASK_IDS) expect(agree("task", taskDetail, id === FREE_ID ? freeDetail() : askDetail(id))).toEqual([true, true]);
   });
 
   it("accepts usage, version and every live event in both", () => {

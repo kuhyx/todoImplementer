@@ -32,7 +32,7 @@ export function preset(status: TaskCard["status"], hasRepository: boolean): Pres
     case "needs_you": {
       return {
         actions: [
-          { enabled: true, id: "spec-answers", label: "Save answers", reason: null },
+          { enabled: true, id: "spec-answers", label: "Send answers", reason: null },
           { enabled: false, id: "spec-ok", label: "Spec OK", reason: "2 questions are still unanswered" },
           CANCEL,
         ],
