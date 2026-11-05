@@ -69,7 +69,7 @@ def test_unit_file_verifies() -> None:
 def test_manifest_matches_control_panel_shape() -> None:
     data = json.loads((DEPLOY / "control-panel-todoimplementer.json").read_text())
     assert data["id"] == "todoimplementer"
-    assert set(data) <= {"id", "title", "category", "units", "containers", "dashboards"}
+    assert set(data) <= {"id", "title", "category", "units", "containers", "dashboards", "docs"}
     assert data["units"][0] == {
         "name": "todoimplementer.service",
         "scope": "user",
@@ -78,6 +78,7 @@ def test_manifest_matches_control_panel_shape() -> None:
     }
     assert {d["url"] for d in data["dashboards"]} == {
         "http://127.0.0.1:8786/",
+        "http://127.0.0.1:8786/usage/",
         "https://agents.kuhy.duckdns.org/",
     }
 
