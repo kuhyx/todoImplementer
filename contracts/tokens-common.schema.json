@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://todoimplementer.local/contracts/tokens-common.schema.json", "title": "/api/tokens shared definitions",
+  "description": "Defs shared by the tokens-* contracts: filters echo, _tables metadata, the panel envelope, error body, banner, session row, A/B experiment.",
+  "$defs": {
+    "filters": {
+      "type": "object", "description": "The filters as parsed: since/until are epoch seconds.",
+      "properties": {
+        "since": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"},
+        "until": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"}, "cwd": {"type": "string"},
+        "model": {"type": "string"}, "scope": {"enum": ["all", "main", "sub"]}
+      },
+      "required": ["since", "until", "cwd", "model", "scope"], "additionalProperties": false
+    },
+    "column": {
+      "type": "object",
+      "properties": {"kind": {"enum": ["number", "object", "text", "enum"]}, "values": {"type": "array", "items": {"type": "string"}}},
+      "required": ["kind"], "additionalProperties": false, "if": {"properties": {"kind": {"const": "enum"}}},
+      "then": {"required": ["values"]}
+    },
+    "table_meta": {
+      "type": "object",
+      "properties": {
+        "total": {"type": "number"}, "matched": {"type": "number"}, "shown": {"type": "number"},
+        "columns": {"type": "object", "additionalProperties": {"$ref": "#/$defs/column"}}
+      },
+      "required": ["total", "matched", "shown", "columns"], "additionalProperties": false
+    },
+    "tables_meta": {
+      "type": "object",
+      "description": "Per table (nested ones as a.b): counts and column kinds. Empty where a route has no tables.",
+      "additionalProperties": {"$ref": "#/$defs/table_meta"}
+    },
+    "panel": {
+      "type": "object", "description": "What every /api/tokens/panel/<name> body carries; each panel adds its own keys.",
+      "properties": {"filters": {"$ref": "#/$defs/filters"}, "_tables": {"$ref": "#/$defs/tables_meta"}},
+      "required": ["filters", "_tables"]
+    },
+    "error": {
+      "type": "object", "description": "Body of every non-200 answer (404 unknown route/panel/session/file, 503 no store).",
+      "properties": {"error": {"type": "string"}}, "required": ["error"], "additionalProperties": false
+    },
+    "banner": {
+      "type": "object", "properties": {"level": {"enum": ["green", "grey", "red"]}, "text": {"type": "string"}},
+      "required": ["level", "text"], "additionalProperties": false
+    },
+    "session_row": {
+      "type": "object",
+      "properties": {
+        "key": {"type": "string"}, "cwd": {"type": ["string", "null"]}, "title": {"type": "string"},
+        "first_ts": {"$ref": "#/$defs/ts"}, "last_ts": {"$ref": "#/$defs/ts"}, "wall_s": {"type": "number"},
+        "active_s": {"type": "number"}, "usd": {"type": "number"}, "usd_main": {"type": "number"}, "usd_sub": {"type": "number"},
+        "calls": {"type": "number"}, "prompts": {"type": "number"}, "subagents": {"type": "number"},
+        "models": {"type": "object", "additionalProperties": {"type": "number"}}, "final_tag": {"type": ["string", "null"]},
+        "usd_scope": {"type": "number"}
+      },
+      "required": [
+        "key", "cwd", "title", "first_ts", "last_ts", "wall_s", "active_s", "usd", "usd_main", "usd_sub", "calls", "prompts",
+        "subagents", "models", "final_tag"
+      ],
+      "additionalProperties": false
+    },
+    "rate_ci": {
+      "type": "object",
+      "properties": {"k": {"type": "number"}, "rate": {"type": ["number", "null"]}, "low": {"type": "number"}, "high": {"type": "number"}},
+      "required": ["k", "rate", "low", "high"], "additionalProperties": false
+    },
+    "mean_ci": {
+      "type": "object", "properties": {"mean": {"type": "number"}, "low": {"type": "number"}, "high": {"type": "number"}},
+      "required": ["mean", "low", "high"], "additionalProperties": false
+    },
+    "arm": {
+      "type": "object",
+      "properties": {
+        "n": {"type": "number"}, "redo": {"$ref": "#/$defs/rate_ci"}, "followup": {"$ref": "#/$defs/rate_ci"},
+        "error": {"$ref": "#/$defs/rate_ci"}, "correction": {"$ref": "#/$defs/rate_ci"}, "usd": {"$ref": "#/$defs/mean_ci"},
+        "duration_s": {"$ref": "#/$defs/mean_ci"}, "tags": {"type": "object", "additionalProperties": {"type": "number"}}
+      },
+      "required": ["n"], "additionalProperties": false
+    },
+    "diff": {
+      "type": "object", "properties": {"diff": {"type": "number"}, "low": {"type": "number"}, "high": {"type": "number"}},
+      "required": ["diff", "low", "high"], "additionalProperties": false
+    },
+    "experiment": {
+      "type": "object",
+      "properties": {
+        "arms": {"type": "object", "additionalProperties": {"$ref": "#/$defs/arm"}}, "banner": {"$ref": "#/$defs/banner"},
+        "diffs": {"type": "object", "additionalProperties": {"$ref": "#/$defs/diff"}}, "unjoined": {"type": "number"}
+      },
+      "required": ["arms", "banner"]
+    },
+    "ts": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"}
+  }
+}

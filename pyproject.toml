@@ -1,0 +1,55 @@
+[project]
+name = "todoimplementer"
+version = "0.1.0"
+description = "Board that plans, implements, reviews and ships todo-app notes with Claude Code sessions."
+requires-python = ">=3.15"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "jsonschema==4.26.0",
+    "mcp==2.3.0",
+    "mypy==2.4.1",
+    "pre-commit==4.7.0",
+    "pytest==9.2.0",
+    "pytest-cov==7.1.0",
+    "ruff==0.17.3",
+    "types-jsonschema==4.26.0.20261006",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["server", "scripts", "tests/shims", "deploy"]
+addopts = "--strict-markers -q"
+
+[tool.coverage.run]
+source = ["server/todoimpl", "scripts", "deploy", "mcp/todoimpl_mcp"]
+branch = true
+
+[tool.coverage.report]
+fail_under = 100
+show_missing = true
+skip_covered = true
+
+[tool.mypy]
+strict = true
+python_version = "3.15"
+mypy_path = ["server", "scripts", "tests/shims", "deploy", "mcp"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py315"
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = ["D203", "D213", "COM812", "ISC001", "T201", "CPY001", "TC001", "TC002", "TC003"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S603", "S607", "PLR2004", "D100", "D101", "D102", "D103", "D107", "INP001", "ANN401", "ARG001", "ARG002", "PLR0913", "PLR0911", "FBT001", "FBT002", "S106", "SLF001", "EM101", "TRY003"]
+"scripts/**" = ["INP001"]
+# Dev-only probes (headless chromium drivers); not shipped, not covered.
+"web/dev/**" = ["D", "E501", "INP001", "S603", "PLR2004", "PLR0915", "TRY", "EM", "ARG002", "FBT", "ANN401"]
+"**/__init__.py" = ["D104"]

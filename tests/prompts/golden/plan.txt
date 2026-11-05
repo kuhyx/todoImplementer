@@ -1,0 +1,12 @@
+override
+Plan stage. Research is fine; edit nothing in the repo.
+Item: Add dark mode toggle (repo: todo)
+Header needs a toggle that persists.
+done_check: pnpm test
+Spec answers:
+- Persist where?: localStorage
+kuhy's notes:
+- also check mobile width
+Write /run/ab12cd34/plan.md: `## Approach` (files to touch, short), `## Acceptance criteria`.
+Number criteria `C1.`, `C2.` ... Each is observable behaviour in the live app: `I do X, I see Y`.
+Never a test or code property. Cover the done_check if there is one. End with `D:`.

@@ -1,0 +1,87 @@
+"""One board card: the contract's task_card object, built from a note, its run and the computed status."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any
+
+from .actions import actions
+from .status import Status, column, compute, needs
+from .types import Limit, fmt_when
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from .state import RunState
+    from .types import TaskLike
+
+
+@dataclass(frozen=True)
+class Context:
+    """Everything outside the note and its run that decides a card: live runs, limit, clock."""
+
+    live: frozenset[str] = frozenset()
+    limit: Limit = field(default_factory=Limit)
+    now: float = 0.0
+    repo_missing: Callable[[str | None], str | None] = lambda _repo: None
+
+
+def current_line(status: Status, run: RunState | None, resumes_at: float | None, now: float) -> str:
+    """Return one line on what the task does or waits on (never a second status)."""
+    if status == Status.WORKING and run is not None:
+        return _working(run)
+    if status == Status.QUEUED and run is not None:
+        return f"waiting to continue {run.stage}"
+    if status == Status.PAUSED_LIMIT:
+        return "paused by the usage limit" + (f", resumes {fmt_when(resumes_at, now)}" if resumes_at else "")
+    if status == Status.NEEDS_YOU and run is not None:
+        return needs(run).text
+    return {
+        Status.BACKLOG: "not started",
+        Status.YOURS: "yours: no repo on this note" if run is None else "assigned to you",
+        Status.CANCELLED: "cancelled",
+        Status.SHIPPING: "pushing and closing the note",
+        Status.READY_TO_SHIP: "waiting for your Ship click",
+        Status.DONE: "done",
+    }[status]
+
+
+def _working(run: RunState) -> str:
+    """Return the stage line."""
+    return run.stage
+
+
+def build_card(task: TaskLike, run: RunState | None, ctx: Context) -> dict[str, Any]:
+    """Return the task_card object for one note."""
+    tid = task.id
+    live = tid in ctx.live
+    limit_until = ctx.limit.until if ctx.limit.active else None
+    status = compute(task, run, live, limit_until)
+    resumes_at = None
+    if status == Status.PAUSED_LIMIT:
+        resumes_at = run.resume_at if run is not None and run.resume_at else limit_until
+    repo_missing = ctx.repo_missing(task.repo) if task.repo else None
+    buttons = actions(
+        task,
+        run,
+        status,
+        ctx.limit,
+        repo_missing=repo_missing,
+        now=ctx.now,
+    )
+    return {
+        "id": tid,
+        "title": task.title,
+        "repo": task.repo,
+        "priority": task.priority,
+        "assignee": run.assignee if run is not None else ("human" if task.repo is None else "claude"),
+        "stage": run.stage if run is not None else None,
+        "status": status.value,
+        "column": column(status).value,
+        "current": current_line(status, run, resumes_at, ctx.now),
+        "needs": needs(run).to_dict() if status == Status.NEEDS_YOU and run is not None else None,
+        "cost_usd": run.cost_usd if run is not None else 0,
+        "resumes_at": resumes_at,
+        "updated": run.updated if run is not None else None,
+        "actions": [a.to_dict() for a in buttons],
+    }

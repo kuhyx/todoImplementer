@@ -1,0 +1,29 @@
+{
+  "generated_at": 1793880002.0,
+  "five_hour": {
+    "utilization": 0.4,
+    "resets_at": 1793890000,
+    "status": "allowed"
+  },
+  "seven_day": null,
+  "overage": {
+    "status": "rejected",
+    "using": false
+  },
+  "limit": {
+    "active": false,
+    "until": null,
+    "credits_available": false
+  },
+  "cost": {
+    "today_usd": 1.37,
+    "total_usd": 9.5,
+    "per_task": [
+      {
+        "id": "c59d2588-0",
+        "title": "Demo task",
+        "cost_usd": 1.37
+      }
+    ]
+  }
+}

@@ -1,0 +1,18 @@
+override
+Live check stage (unknown). Do not change code; only verify.
+Item: Add dark mode toggle (repo: todo)
+Header needs a toggle that persists.
+done_check: pnpm test
+Spec answers:
+- Persist where?: localStorage
+kuhy's notes:
+- also check mobile width
+Plan (/run/ab12cd34/plan.md):
+## Acceptance criteria
+C1. I click the toggle, the page turns dark.
+Start the changed thing from /wt/todo; exercise every criterion for real, as a user would.
+Driver: No known driver: find the real entrypoint, run it, and observe its output or window the way a user would.
+Tests or reading code never count. No video. Never use kuhy's display :0.
+Write /run/ab12cd34/live_check.md, one line per criterion:
+- [x] C1: what I did -> what I saw   (use `- [ ]` if it failed or could not be tried, and say why)
+Save screenshots to /run/ab12cd34/shots/. Stop what you started. End with `D:`.

@@ -1,0 +1,14 @@
+[Unit]
+Description=todoImplementer: refresh the Claude Code spend store (0 LLM tokens)
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/src/todoImplementer
+Environment=PYTHONPATH=%h/src/todoImplementer/server
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+# Exit 75 = more transcripts pending; the next firing continues. Not a failure.
+ExecStart=%h/.local/bin/uv run --frozen --project %h/src/todoImplementer python -m todoimpl.tokens.ingest --budget 45
+SuccessExitStatus=75
+TimeoutStartSec=120
+Nice=19
+IOSchedulingClass=idle

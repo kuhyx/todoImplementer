@@ -1,0 +1,207 @@
+"""Scheduler the service drives: start, spec answers, Spec OK, send, ship, cancel, credits, events."""
+
+from __future__ import annotations
+
+import re
+from typing import TYPE_CHECKING, Any
+
+from todoimpl.board import state as store
+from todoimpl.board.state import RunState
+from todoimpl.todo_mcp.model import TodoError
+
+from . import limits
+from .engine import Client, Engine, default_clock
+from .files import read_json
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterator
+    from pathlib import Path
+
+    from todoimpl.todo_mcp.items import Item
+
+SPEC_MARKER = re.compile(r"^\s*(done|verify|done_check)\s*:", re.IGNORECASE | re.MULTILINE)
+RESTARTABLE = ("failed", "cancelled")
+FINAL = ("shipped", "cancelled")
+COUNTERS = ("failure_tail", "live_fixes", "check_fixes", "nudges", "nudge", "failed_stage", "resume_stage")
+
+
+class RunnerError(Exception):
+    """A refused action; `code` is a contracts error code (not_found, conflict, disabled, bad_request)."""
+
+    def __init__(self, message: str, code: str) -> None:  # noqa: D107
+        super().__init__(message)
+        self.code = code
+        self.message = message
+
+
+def needs_spec(item: Item) -> bool:
+    """Spec runs only when the note says neither a done_check nor done/verify lines."""
+    return item.done_check is None and not SPEC_MARKER.search(item.body)
+
+
+class Scheduler(Engine):
+    """Every start drives at once in its own thread; only the usage limit holds a run back."""
+
+    def __init__(
+        self,
+        client: Client,
+        root: Path | None = None,
+        *,
+        check_timeout: float = 600.0,
+        clock: Callable[[], float] = default_clock,
+    ) -> None:
+        """Root defaults to `$TODOIMPL_HOME` or ~/.cache/todoImplementer."""
+        super().__init__(client, root or store.run_root(), check_timeout, clock)
+
+    def _load(self, card: str) -> RunState:
+        st = store.load(self.root / card)
+        if st is None:
+            msg = f"{card} has no run yet: start it first"
+            raise RunnerError(msg, "not_found")
+        return st
+
+    def _idle(self, card: str) -> RunState:
+        if card in self._active:
+            msg = f"{card} has a turn running: wait for it to end"
+            raise RunnerError(msg, "conflict")
+        return self._load(card)
+
+    def start(self, card: str) -> None:  # noqa: D102
+        try:
+            item = self.client.get_task(card).item
+        except TodoError as exc:
+            msg = str(exc)
+            raise RunnerError(msg, "not_found") from exc
+        with self._cv:
+            if card in self._active or card in self._queue:
+                msg = f"{card} is already running"
+                raise RunnerError(msg, "conflict")
+            st = store.load(self.root / card)
+            if st is not None and st.stage not in RESTARTABLE:
+                msg = f"{card} already has a run ({st.stage})"
+                raise RunnerError(msg, "conflict")
+            st = st or RunState(task_id=card, stage="spec", started_at=self.clock(), repo=item.repo)
+            st.stage = "plan" if st.extra.get("spec_ok") or not needs_spec(item) else "spec"
+            st.error, st.last_tag, st.assignee = None, None, "claude"
+            for key in COUNTERS:
+                st.extra.pop(key, None)
+            self.save(card, st)
+            self.enqueue(card)
+
+    def spec_answers(self, card: str, answers: dict[str, str]) -> None:  # noqa: D102
+        with self._cv:
+            st = self._idle(card)
+            if st.stage != "spec_wait":
+                msg = "Answers are taken only while Claude waits on spec questions"
+                raise RunnerError(msg, "disabled")
+            unknown = set(answers) - {q.id for q in st.spec_questions}
+            if unknown:
+                msg = f"No such question: {', '.join(sorted(unknown))}"
+                raise RunnerError(msg, "bad_request")
+            for q in st.spec_questions:
+                if answers.get(q.id, "").strip():
+                    q.answer = answers[q.id].strip()
+            st.stage, st.last_tag = "spec", None
+            self.save(card, st)
+            self.enqueue(card)
+
+    def spec_ok(self, card: str) -> None:  # noqa: D102
+        with self._cv:
+            st = self._idle(card)
+            if st.stage != "spec_wait":
+                msg = "Spec OK needs the spec stage waiting on you"
+                raise RunnerError(msg, "disabled")
+            if st.open_questions():
+                msg = f"{len(st.open_questions())} question(s) are still open"
+                raise RunnerError(msg, "disabled")
+            st.extra["spec_ok"] = True
+            st.stage, st.last_tag = "plan", None
+            self.save(card, st)
+            self.enqueue(card)
+
+    def _route(self, st: RunState) -> None:
+        """Where a note from kuhy sends a resting run: back to work in the stage that fits."""
+        if st.stage == "gate":
+            st.stage = "implement"
+        elif st.stage == "spec_wait":
+            st.stage = "spec"
+        elif st.stage == "failed":
+            failed = str(st.extra.pop("failed_stage", "implement"))
+            st.stage = "implement" if failed in ("shipping", "gate") else failed
+        st.error, st.last_tag, st.assignee = None, None, "claude"
+        for key in ("live_fixes", "check_fixes", "nudges"):
+            st.extra.pop(key, None)
+
+    def send(self, card: str, text: str) -> None:  # noqa: D102
+        if not text.strip():
+            msg = "The message is empty"
+            raise RunnerError(msg, "bad_request")
+        with self._cv:
+            st = self._load(card)
+            if st.stage in (*FINAL, "shipping"):
+                msg = f"The run is {st.stage}: nothing to send to"
+                raise RunnerError(msg, "disabled")
+            self.push_note(card, text.strip())
+            shown = {
+                "type": "activity",
+                "at": self.clock(),
+                "kind": "user",
+                "text": text.strip(),
+                "tool": None,
+            }
+            self.bus.publish(card, shown)
+            if card not in self._active:
+                self._route(st)
+                self.save(card, st)
+                self.enqueue(card)
+
+    def after_drive(self, card: str) -> None:
+        """Requeue a paused run at the front; reopen a resting run when a note arrived mid-turn."""
+        st = store.load(self.root / card)
+        if st is None:  # pragma: no cover - a drive always saves
+            return
+        if st.stage == "paused_limit":
+            self.enqueue(card, first=True)
+        elif read_json(self.root / card / "inbox.json") and st.stage not in (*FINAL, "shipping"):
+            self._route(st)
+            self.save(card, st)
+            self.enqueue(card)
+
+    def ship(self, card: str) -> None:  # noqa: D102
+        with self._cv:
+            st = self._idle(card)
+            if st.stage != "gate":
+                msg = "Ship is offered only at Ready to ship"
+                raise RunnerError(msg, "disabled")
+            st.stage = "shipping"
+            self.save(card, st)
+            self.enqueue(card)
+
+    def cancel(self, card: str) -> None:  # noqa: D102
+        with self._cv:
+            st = self._load(card)
+            if st.stage in FINAL:
+                msg = f"The run is already {st.stage}"
+                raise RunnerError(msg, "disabled")
+            if card in self._active:
+                self.kill(card)
+                return
+            if card in self._queue:
+                self._queue.remove(card)
+            st.stage = "cancelled"
+            self.save(card, st)
+        self.bus.publish(card, {"type": "done"})
+
+    def credits(self, card: str) -> None:  # noqa: D102
+        with self._cv:
+            st = self._idle(card)
+            if st.stage != "paused_limit":
+                msg = "Run on credits is offered only while the plan limit pauses the run"
+                raise RunnerError(msg, "disabled")
+            st.using_credits = True
+            limits.grant_credits(self.root)
+            self.save(card, st)
+            self.enqueue(card, first=True)
+
+    def subscribe(self, card: str, after: int = 0) -> Iterator[dict[str, Any]]:  # noqa: D102
+        return self.bus.subscribe(card, after)

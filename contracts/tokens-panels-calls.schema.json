@@ -1,0 +1,220 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://todoimplementer.local/contracts/tokens-panels-calls.schema.json",
+  "title": "GET /api/tokens/panel/<name>: carry, hooks, tools",
+  "description": "One $defs entry per panel, named like the panel: the shared panel envelope (filters, _tables) plus its own keys; unknown keys fail. Ratios that divide by zero on an empty window are null.",
+  "$defs": {
+    "base": {"$ref": "https://todoimplementer.local/contracts/tokens-common.schema.json#/$defs/panel"},
+    "ts": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"},
+    "carry_row": {
+      "type": "object",
+      "properties": {
+        "label": {"type": "string"}, "detail": {"type": "string"}, "count": {"type": "number"}, "tokens": {"type": "number"},
+        "create_usd": {"type": "number"}, "carry_usd": {"type": "number"}, "total_usd": {"type": "number"}
+      },
+      "required": ["label", "detail", "count", "tokens", "create_usd", "carry_usd", "total_usd"], "additionalProperties": false
+    },
+    "carry": {
+      "allOf": [{"$ref": "#/$defs/base"}], "type": "object",
+      "properties": {
+        "caption": {"type": "string"},
+        "totals": {
+          "type": "object", "properties": {"carry_total_usd": {"type": "number"}, "spend_usd": {"type": "number"}},
+          "required": ["carry_total_usd", "spend_usd"], "additionalProperties": false
+        },
+        "daily": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {"day": {"type": "string"}, "results_usd": {"type": "number"}, "context_usd": {"type": "number"}},
+            "required": ["day", "results_usd", "context_usd"], "additionalProperties": false
+          }
+        },
+        "families": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": {"type": "string"}, "detail": {"type": "string"}, "count": {"type": "number"}, "tokens": {"type": "number"},
+              "create_usd": {"type": "number"}, "carry_usd": {"type": "number"}, "total_usd": {"type": "number"},
+              "carried_calls": {"type": "number"}
+            },
+            "required": ["label", "detail", "count", "tokens", "create_usd", "carry_usd", "total_usd", "carried_calls"],
+            "additionalProperties": false
+          }
+        },
+        "mcp": {"type": "array", "items": {"$ref": "#/$defs/carry_row"}},
+        "skills": {"type": "array", "items": {"$ref": "#/$defs/carry_row"}},
+        "context_reads": {"type": "array", "items": {"$ref": "#/$defs/carry_row"}},
+        "web": {"type": "array", "items": {"$ref": "#/$defs/carry_row"}},
+        "images": {"type": "array", "items": {"$ref": "#/$defs/carry_row"}},
+        "rereads": {"type": "array", "items": {"$ref": "#/$defs/carry_row"}},
+        "hooks": {"type": "array", "items": {"$ref": "#/$defs/carry_row"}},
+        "attachments": {"type": "array", "items": {"$ref": "#/$defs/carry_row"}},
+        "pasted_images": {"type": "array", "items": {"$ref": "#/$defs/carry_row"}}
+      },
+      "required": [
+        "caption", "totals", "daily", "families", "mcp", "skills", "context_reads", "web", "images", "rereads", "hooks",
+        "attachments", "pasted_images"
+      ],
+      "unevaluatedProperties": false
+    },
+    "hooks": {
+      "allOf": [{"$ref": "#/$defs/base"}], "type": "object",
+      "properties": {
+        "caption": {"type": "string"},
+        "totals": {
+          "type": "object",
+          "properties": {
+            "fires": {"type": "number"}, "tokens": {"type": "number"}, "blocks": {"type": "number"}, "errors": {"type": "number"},
+            "runtime_s": {"type": "number"}, "injected_usd": {"type": "number"}, "retry_usd": {"type": "number"},
+            "total_usd": {"type": "number"}, "spend_usd": {"type": "number"}
+          },
+          "required": ["fires", "tokens", "blocks", "errors", "runtime_s", "injected_usd", "retry_usd", "total_usd", "spend_usd"],
+          "additionalProperties": false
+        },
+        "daily": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {"day": {"type": "string"}, "injected_usd": {"type": "number"}, "retry_usd": {"type": "number"}},
+            "required": ["day", "injected_usd", "retry_usd"], "additionalProperties": false
+          }
+        },
+        "hooks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "hook": {"type": "string"}, "script": {"type": "string"}, "fires": {"type": "number"},
+              "runtime_s": {"type": "number"}, "mean_ms": {"type": ["number", "null"]}, "tokens": {"type": "number"},
+              "create_usd": {"type": "number"}, "carry_usd": {"type": "number"}, "injected_usd": {"type": "number"},
+              "blocks": {"type": "number"}, "retry_usd": {"type": "number"}, "errors": {"type": "number"},
+              "messages": {"type": "number"}, "total_usd": {"type": "number"}
+            },
+            "required": [
+              "hook", "script", "fires", "runtime_s", "mean_ms", "tokens", "create_usd", "carry_usd", "injected_usd", "blocks",
+              "retry_usd", "errors", "messages", "total_usd"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "stop_bounces": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "hook": {"type": "string"}, "script": {"type": "string"}, "count": {"type": "number"},
+              "retry_usd": {"type": "number"}
+            },
+            "required": ["hook", "script", "count", "retry_usd"], "additionalProperties": false
+          }
+        },
+        "budget": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "event": {"type": "string"}, "command": {"type": "string"}, "status": {"type": "string"},
+              "time_s": {"type": "number"}, "budget_s": {"type": "number"}, "over_s": {"type": "number"}
+            },
+            "required": ["event", "command", "status", "time_s", "budget_s", "over_s"], "additionalProperties": false
+          }
+        },
+        "budget_file": {
+          "type": "object",
+          "properties": {
+            "path": {"type": "string"}, "found": {"type": "boolean"}, "mtime": {"type": ["number", "null"]},
+            "over": {"type": "number"}, "caption": {"type": "string"}
+          },
+          "required": ["path", "found", "mtime", "over", "caption"], "additionalProperties": false
+        }
+      },
+      "required": ["caption", "totals", "daily", "hooks", "stop_bounces", "budget", "budget_file"], "unevaluatedProperties": false
+    },
+    "tools": {
+      "allOf": [{"$ref": "#/$defs/base"}], "type": "object",
+      "properties": {
+        "caption": {"type": "string"},
+        "totals": {
+          "type": "object",
+          "properties": {
+            "calls": {"type": "number"}, "errors": {"type": "number"}, "error_rate": {"type": ["number", "null"]},
+            "failed": {
+              "type": "object",
+              "properties": {"rejected": {"type": "number"}, "denied": {"type": "number"}, "hook": {"type": "number"}},
+              "required": ["rejected", "denied", "hook"], "additionalProperties": false
+            },
+            "time_cap_calls": {"type": "number"},
+            "time_cap_events": {
+              "type": ["object", "null"],
+              "properties": {"killed": {"type": "number"}, "denied": {"type": "number"}, "unmatched": {"type": "number"}},
+              "required": ["killed", "denied", "unmatched"], "additionalProperties": false
+            },
+            "batched_share": {"type": ["number", "null"]}
+          },
+          "required": ["calls", "errors", "error_rate", "failed", "time_cap_calls", "time_cap_events", "batched_share"],
+          "additionalProperties": false
+        },
+        "tools": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {"type": "string"}, "calls": {"type": "number"}, "errors": {"type": "number"},
+              "error_rate": {"type": ["number", "null"]}, "result_p50": {"type": "number"}, "result_p95": {"type": "number"},
+              "rejected": {"type": "number"}, "denied": {"type": "number"}, "hook": {"type": "number"},
+              "time_cap": {"type": "number"}
+            },
+            "required": ["name", "calls", "errors", "error_rate", "result_p50", "result_p95", "rejected", "denied", "hook", "time_cap"],
+            "additionalProperties": false
+          }
+        },
+        "families": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "family": {"type": "string"}, "calls": {"type": "number"}, "errors": {"type": "number"},
+              "error_rate": {"type": ["number", "null"]}, "result_p50": {"type": "number"}, "result_p95": {"type": "number"},
+              "rejected": {"type": "number"}, "denied": {"type": "number"}, "hook": {"type": "number"},
+              "time_cap": {"type": "number"}
+            },
+            "required": ["family", "calls", "errors", "error_rate", "result_p50", "result_p95", "rejected", "denied", "hook", "time_cap"],
+            "additionalProperties": false
+          }
+        },
+        "loops": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {"type": "string"}, "name": {"type": "string"}, "target": {"type": "string"}, "repeats": {"type": "number"},
+              "cost_usd": {"type": "number"}
+            },
+            "required": ["key", "name", "target", "repeats", "cost_usd"], "additionalProperties": false
+          }
+        },
+        "time_cap": {
+          "type": "array",
+          "items": {
+            "type": "object", "properties": {"day": {"type": "string"}, "kind": {"type": "string"}, "count": {"type": "number"}},
+            "required": ["day", "kind", "count"], "additionalProperties": false
+          }
+        },
+        "batching": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "day": {"type": "string"}, "calls": {"type": "number"}, "batched": {"type": "number"},
+              "share": {"type": ["number", "null"]}
+            },
+            "required": ["day", "calls", "batched", "share"], "additionalProperties": false
+          }
+        }
+      },
+      "required": ["caption", "totals", "tools", "families", "loops", "time_cap", "batching"], "unevaluatedProperties": false
+    }
+  }
+}

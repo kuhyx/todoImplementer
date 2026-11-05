@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://todoimplementer.local/contracts/board.schema.json",
+  "title": "GET /api/board",
+  "description": "Every open todo item (one per note section) as a card with its server-computed status and actions. The page groups/filters by repo; it never computes a status.",
+  "type": "object",
+  "properties": {
+    "build": {"type": "string", "minLength": 1},
+    "generated_at": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"},
+    "slots": {
+      "type": "object",
+      "description": "Runs driving right now. There is no cap: every Start runs at once.",
+      "properties": {"used": {"type": "integer", "minimum": 0}},
+      "required": ["used"],
+      "additionalProperties": false
+    },
+    "limit": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/limit"},
+    "columns": {
+      "type": "array",
+      "description": "Always the five columns in this order: backlog, running, needs_you, ready, done.",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/column"},
+          "label": {"type": "string", "minLength": 1},
+          "count": {"type": "integer", "minimum": 0}
+        },
+        "required": ["id", "label", "count"],
+        "additionalProperties": false
+      }
+    },
+    "repos": {
+      "type": "array",
+      "description": "Distinct repos of the cards, sorted; notes with no repo are not listed here (they are the Yours lane).",
+      "items": {"type": "string", "minLength": 1}
+    },
+    "tasks": {
+      "type": "array",
+      "items": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/task_card"}
+    },
+    "error": {
+      "anyOf": [{"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/error"}, {"type": "null"}],
+      "description": "Board-level banner (e.g. the todo MCP is unreachable): cards shown are the last known ones and stale. Omitted or null when healthy."
+    }
+  },
+  "required": ["build", "generated_at", "slots", "limit", "columns", "repos", "tasks"],
+  "additionalProperties": false
+}

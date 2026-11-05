@@ -1,0 +1,21 @@
+[Unit]
+Description=todoImplementer board (127.0.0.1:8786)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/src/todoImplementer
+Environment=PYTHONPATH=%h/src/todoImplementer/server
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin
+Environment=TODOIMPL_CLAUDE=%h/.local/bin/claude
+# Spawned claude sessions must never start untracked follow-up sessions.
+Environment=CLAUDE_AUTO_CONTINUE=0
+ExecStart=%h/.local/bin/uv run --python 3.15 --project %h/src/todoImplementer python -m todoimpl.http.main
+Restart=on-failure
+RestartSec=3
+# Runs are claude/git children: a restart of the server must not kill them.
+KillMode=process
+TimeoutStopSec=15
+
+[Install]
+WantedBy=default.target

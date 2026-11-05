@@ -1,0 +1,219 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://todoimplementer.local/contracts/tokens-panels-context.schema.json",
+  "title": "GET /api/tokens/panel/<name>: context, prefix, context_growth, prompts",
+  "description": "One $defs entry per panel, named like the panel: the shared panel envelope (filters, _tables) plus its own keys; unknown keys fail. Ratios that divide by zero on an empty window are null.",
+  "$defs": {
+    "base": {"$ref": "https://todoimplementer.local/contracts/tokens-common.schema.json#/$defs/panel"},
+    "ts": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"},
+    "context": {
+      "allOf": [{"$ref": "#/$defs/base"}], "type": "object",
+      "properties": {
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {"type": "string"}, "kind": {"type": "string"}, "standing": {"type": "string"},
+              "bytes": {"type": ["number", "null"]}, "lines": {"type": ["number", "null"]}, "tokens": {"type": "number"},
+              "usd_per_day": {"type": "number"}, "warning": {"type": ["string", "null"]},
+              "status": {"enum": ["ok", "over budget", "over hard limit"]},
+              "breaches": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "measure": {"type": "string"}, "value": {"type": "number"}, "limit": {"type": "number"},
+                    "why": {"type": "string"}, "hard": {"type": "boolean"}
+                  },
+                  "required": ["measure", "value", "limit", "why", "hard"], "additionalProperties": false
+                }
+              },
+              "hard_limits": {"type": "array", "items": {"type": "string"}},
+              "budgets": {"type": "array", "items": {"type": "string"}},
+              "history": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {"ts": {"$ref": "#/$defs/ts"}, "bytes": {"type": "number"}, "source": {"type": "string"}},
+                  "required": ["ts", "bytes", "source"], "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "path", "kind", "standing", "bytes", "lines", "tokens", "usd_per_day", "warning", "status", "breaches",
+              "hard_limits", "budgets", "history"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "calls_per_day": {"type": "number"}, "price_per_mtok": {"type": "number"}, "measure_command": {"type": "string"}
+      },
+      "required": ["files", "calls_per_day", "price_per_mtok", "measure_command"], "unevaluatedProperties": false
+    },
+    "prefix": {
+      "allOf": [{"$ref": "#/$defs/base"}], "type": "object",
+      "properties": {
+        "caption": {"type": "string"}, "filtered_by": {"type": "string"},
+        "totals": {
+          "type": "object",
+          "properties": {
+            "audit_tokens": {"type": ["number", "null"]}, "files_tokens": {"type": "number"}, "calls_per_day": {"type": "number"},
+            "price_per_mtok": {"type": "number"}, "audit_usd_per_day": {"type": ["number", "null"]},
+            "files_usd_per_day": {"type": "number"}, "pruned_bytes": {"type": "number"}
+          },
+          "required": [
+            "audit_tokens", "files_tokens", "calls_per_day", "price_per_mtok", "audit_usd_per_day", "files_usd_per_day",
+            "pruned_bytes"
+          ],
+          "additionalProperties": false
+        },
+        "series": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": {"type": "string"},
+              "points": {
+                "type": "array",
+                "items": {
+                  "type": "object", "properties": {"day": {"type": "string"}, "tokens": {"type": "number"}},
+                  "required": ["day", "tokens"], "additionalProperties": false
+                }
+              }
+            },
+            "required": ["label", "points"], "additionalProperties": false
+          }
+        },
+        "surfaces": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "surface": {"type": "string"}, "files": {"type": "number"}, "start_tokens": {"type": "number"},
+              "tokens": {"type": "number"}, "delta_tokens": {"type": "number"}, "usd_per_day": {"type": "number"}
+            },
+            "required": ["surface", "files", "start_tokens", "tokens", "delta_tokens", "usd_per_day"],
+            "additionalProperties": false
+          }
+        },
+        "prunes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "ts": {"$ref": "#/$defs/ts"}, "path": {"type": "string"}, "surface": {"type": "string"},
+              "source": {"type": "string"}, "bytes": {"type": "number"}, "delta_bytes": {"type": ["number", "null"]}
+            },
+            "required": ["ts", "path", "surface", "source", "bytes", "delta_bytes"], "additionalProperties": false
+          }
+        }
+      },
+      "required": ["caption", "filtered_by", "totals", "series", "surfaces", "prunes"], "unevaluatedProperties": false
+    },
+    "context_growth": {
+      "allOf": [{"$ref": "#/$defs/base"}], "type": "object",
+      "properties": {
+        "caption": {"type": "string"},
+        "percentiles": {
+          "type": "object",
+          "properties": {"p50": {"type": ["number", "null"]}, "p90": {"type": ["number", "null"]}, "p99": {"type": ["number", "null"]}},
+          "required": ["p50", "p90", "p99"], "additionalProperties": false
+        },
+        "histogram": {
+          "type": "array",
+          "items": {
+            "type": "object", "properties": {"bucket": {"type": "string"}, "calls": {"type": "number"}, "usd": {"type": "number"}},
+            "required": ["bucket", "calls", "usd"], "additionalProperties": false
+          }
+        },
+        "growth": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "chart": {"type": "number"}, "key": {"type": "string"}, "title": {"type": "string"}, "usd": {"type": "number"},
+              "max_context": {"type": "number"},
+              "points": {
+                "type": "array",
+                "items": {
+                  "type": "object", "properties": {"call": {"type": "number"}, "context": {"type": "number"}},
+                  "required": ["call", "context"], "additionalProperties": false
+                }
+              }
+            },
+            "required": ["chart", "key", "title", "usd", "max_context", "points"], "additionalProperties": false
+          }
+        },
+        "crossings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {"type": "string"}, "title": {"type": "string"}, "max_context": {"type": "number"},
+              "calls": {"type": "number"}, "calls_over_250k": {"type": "number"}, "calls_over_300k": {"type": "number"},
+              "usd_over_300k": {"type": "number"}, "usd": {"type": "number"}
+            },
+            "required": ["key", "title", "max_context", "calls", "calls_over_250k", "calls_over_300k", "usd_over_300k", "usd"],
+            "additionalProperties": false
+          }
+        },
+        "handoffs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {"ts": {"$ref": "#/$defs/ts"}, "key": {"type": "string"}, "source": {"type": "string"}, "detail": {"type": "string"}},
+            "required": ["ts", "key", "source", "detail"], "additionalProperties": false
+          }
+        }
+      },
+      "required": ["caption", "percentiles", "histogram", "growth", "crossings", "handoffs"], "unevaluatedProperties": false
+    },
+    "prompts": {
+      "allOf": [{"$ref": "#/$defs/base"}], "type": "object",
+      "properties": {
+        "caption": {"type": "string"}, "filtered_by": {"type": "string"},
+        "totals": {
+          "type": "object",
+          "properties": {
+            "prompts": {"type": "number"}, "usd": {"type": "number"}, "median_usd": {"type": ["number", "null"]},
+            "mean_usd": {"type": ["number", "null"]}, "top10_share": {"type": ["number", "null"]}
+          },
+          "required": ["prompts", "usd", "median_usd", "mean_usd", "top10_share"], "additionalProperties": false
+        },
+        "daily": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "day": {"type": "string"}, "prompts": {"type": "number"}, "median_usd": {"type": ["number", "null"]},
+              "mean_usd": {"type": ["number", "null"]}, "usd": {"type": "number"}
+            },
+            "required": ["day", "prompts", "median_usd", "mean_usd", "usd"], "additionalProperties": false
+          }
+        },
+        "histogram": {
+          "type": "array",
+          "items": {
+            "type": "object", "properties": {"bucket": {"type": "string"}, "prompts": {"type": "number"}},
+            "required": ["bucket", "prompts"], "additionalProperties": false
+          }
+        },
+        "prompts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "ts": {"$ref": "#/$defs/ts"}, "key": {"type": "string"}, "idx": {"type": "number"}, "text": {"type": "string"},
+              "usd_own": {"type": "number"}, "usd_sub": {"type": "number"}, "usd": {"type": "number"}, "total": {"type": "number"},
+              "active_s": {"type": "number"}, "calls": {"type": "number"}
+            },
+            "required": ["ts", "key", "idx", "text", "usd_own", "usd_sub", "usd", "total", "active_s", "calls"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["caption", "filtered_by", "totals", "daily", "histogram", "prompts"], "unevaluatedProperties": false
+    }
+  }
+}

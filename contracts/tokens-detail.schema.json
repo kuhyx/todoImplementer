@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://todoimplementer.local/contracts/tokens-detail.schema.json",
+  "title": "GET /api/tokens/session/<key>, /context-file, /items, /ab",
+  "description": "One $defs entry per route: session, context_file, items, ab. Errors are tokens-common#error.",
+  "$defs": {
+    "ts": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"},
+    "base": {"$ref": "https://todoimplementer.local/contracts/tokens-common.schema.json#/$defs/panel"},
+    "subagent_row": {
+      "type": "object",
+      "properties": {
+        "key": {"type": "string"}, "depth": {"type": "number"}, "description": {"type": "string"},
+        "agent_type": {"type": "string"}, "model": {"type": "string"}, "usd": {"type": "number"}, "calls": {"type": "number"},
+        "wall_s": {"type": "number"}, "active_s": {"type": "number"}
+      },
+      "required": ["key", "depth", "description", "agent_type", "model", "usd", "calls", "wall_s", "active_s"],
+      "additionalProperties": false
+    },
+    "tool_row": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string"}, "calls": {"type": "number"}, "result_tokens": {"type": "number"}, "usd": {"type": "number"},
+        "carry_usd": {"type": "number"}, "share": {"type": ["number", "null"]}
+      },
+      "required": ["name", "calls", "result_tokens", "usd", "carry_usd", "share"], "additionalProperties": false
+    },
+    "prompt_row": {
+      "type": "object",
+      "properties": {
+        "idx": {"type": "number"}, "ts": {"$ref": "#/$defs/ts"}, "text": {"type": "string"}, "usd": {"type": "number"},
+        "usd_own": {"type": "number"}, "usd_sub": {"type": "number"}, "active_s": {"type": "number"}, "wall_s": {"type": "number"},
+        "calls": {"type": "number"}, "subagents": {"type": "array", "items": {"$ref": "#/$defs/subagent_row"}},
+        "tools": {"type": "array", "items": {"$ref": "#/$defs/tool_row"}}
+      },
+      "required": ["idx", "ts", "text", "usd", "usd_own", "usd_sub", "active_s", "wall_s", "calls", "subagents", "tools"],
+      "additionalProperties": false
+    },
+    "session": {
+      "type": "object", "description": "GET /api/tokens/session/<key>; 404 {error} for an unknown key.",
+      "properties": {
+        "session": {"$ref": "https://todoimplementer.local/contracts/tokens-common.schema.json#/$defs/session_row"},
+        "prompts": {"type": "array", "items": {"$ref": "#/$defs/prompt_row"}},
+        "unattributed": {"type": "array", "items": {"$ref": "#/$defs/subagent_row"}},
+        "_tables": {"$ref": "https://todoimplementer.local/contracts/tokens-common.schema.json#/$defs/tables_meta"}
+      },
+      "required": ["session", "prompts", "unattributed", "_tables"], "additionalProperties": false
+    },
+    "context_file": {
+      "type": "object", "description": "GET /api/tokens/context-file?path=; 404 {error} unless the path is a listed context file.",
+      "properties": {
+        "path": {"type": "string"}, "kind": {"type": "string"}, "content": {"type": ["string", "null"]},
+        "git_log": {"type": "array", "items": {"type": "string"}},
+        "_tables": {"$ref": "https://todoimplementer.local/contracts/tokens-common.schema.json#/$defs/tables_meta"}
+      },
+      "required": ["path", "kind", "content", "git_log", "_tables"], "additionalProperties": false
+    },
+    "items": {
+      "allOf": [{"$ref": "#/$defs/base"}], "type": "object",
+      "description": "GET /api/tokens/items: cost per todoImplementer item, repo and stage.",
+      "properties": {
+        "items": {"type": "array", "items": {"$ref": "#/$defs/item_row"}},
+        "repos": {"type": "array", "items": {"$ref": "#/$defs/repo_row"}},
+        "stages": {"type": "array", "items": {"$ref": "#/$defs/stage_row"}}, "total_usd": {"type": "number"}
+      },
+      "required": ["items", "repos", "stages", "total_usd"], "unevaluatedProperties": false
+    },
+    "item_row": {
+      "type": "object",
+      "properties": {
+        "item": {"type": "string"}, "repo": {"type": "string"}, "stage": {"type": "string"}, "sessions": {"type": "number"},
+        "calls": {"type": "number"}, "usd": {"type": "number"}
+      },
+      "required": ["item", "repo", "stage", "sessions", "calls", "usd"], "additionalProperties": false
+    },
+    "repo_row": {
+      "type": "object",
+      "properties": {"repo": {"type": "string"}, "sessions": {"type": "number"}, "calls": {"type": "number"}, "usd": {"type": "number"}},
+      "required": ["repo", "sessions", "calls", "usd"], "additionalProperties": false
+    },
+    "stage_row": {
+      "type": "object",
+      "properties": {"stage": {"type": "string"}, "sessions": {"type": "number"}, "calls": {"type": "number"}, "usd": {"type": "number"}},
+      "required": ["stage", "sessions", "calls", "usd"], "additionalProperties": false
+    },
+    "ab": {
+      "allOf": [
+        {"$ref": "https://todoimplementer.local/contracts/tokens-common.schema.json#/$defs/experiment"},
+        {
+          "properties": {"_tables": {"$ref": "https://todoimplementer.local/contracts/tokens-common.schema.json#/$defs/tables_meta"}},
+          "required": ["_tables"]
+        }
+      ],
+      "description": "GET /api/tokens/ab: the stored judgment-agent A/B (the tray reads this); no filters.",
+      "unevaluatedProperties": false
+    }
+  }
+}

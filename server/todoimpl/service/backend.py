@@ -1,0 +1,205 @@
+"""The http Backend over the real pieces: cached todo notes, run states, the Scheduler, usage, lessons."""
+
+from __future__ import annotations
+
+import logging
+import threading
+import time
+from dataclasses import replace
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
+
+from todoimpl.board.board import build_board, build_task, repo_checker
+from todoimpl.board.card import Context, build_card
+from todoimpl.board.diff import worktree_diff
+from todoimpl.board.state import load, load_runs, run_dir
+from todoimpl.board.types import Limit
+from todoimpl.http.backend import ERROR_CODES, BackendError
+from todoimpl.lessons import LessonError, approve, draft_lesson, latest_lesson, run_skills
+from todoimpl.runner.scheduler import RunnerError
+from todoimpl.todo_mcp.model import TodoError
+from todoimpl.usage import limit_state, usage_summary
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterator
+
+    from todoimpl.board.state import RunState
+
+    from .cache import TaskCache
+    from .scheduling import SchedulerLike
+
+log = logging.getLogger("todoimpl.service")
+UPSTREAM = "upstream_unavailable"
+CONFLICT = "conflict"
+CARD_FIELDS = ("status", "column", "current", "needs", "actions")  # what live.schema.json adds to a stage
+
+
+def _spawn(job: Callable[[], None]) -> None:
+    threading.Thread(target=job, name="lesson-draft", daemon=True).start()
+
+
+class ServiceBackend:
+    """Implements todoimpl.http.backend.Backend; every read is served from memory and small files."""
+
+    def __init__(  # noqa: PLR0913 - the collaborators; all injectable for tests
+        self,
+        cache: TaskCache,
+        scheduler: SchedulerLike,
+        root: Path,
+        build: str,
+        *,
+        clock: Callable[[], float] = time.time,
+        drafter: Callable[[str], str] | None = None,
+        spawn: Callable[[Callable[[], None]], None] = _spawn,
+        repo_missing: Callable[[str | None], str | None] | None = None,
+    ) -> None:
+        """Wire the pieces; nothing is read until a request arrives."""
+        self.cache = cache
+        self.scheduler = scheduler
+        self.root = root
+        self.build = build
+        self._clock = clock
+        self.drafter = drafter  # lesson drafter; None = the real `claude -p` one
+        self.spawn = spawn  # runs a background job; tests run it inline
+        self._repo_missing = repo_missing or repo_checker()
+
+    # ---- reads ----
+    def _context(self) -> Context:
+        now = self._clock()
+        state = limit_state(self.root)
+        active = state.active(now)
+        return Context(
+            live=frozenset(self.scheduler.running()),
+            limit=Limit(active, state.until if active else None, state.credits),
+            now=now,
+            repo_missing=self._repo_missing,
+        )
+
+    def _with_extras(self, run: RunState | None) -> RunState | None:
+        """Overlay the drafted lesson and the skills seen in the streams; they live outside state.json."""
+        if run is None:
+            return None
+        directory = run_dir(self.root, run.task_id)
+        try:
+            latest = latest_lesson(directory)
+        except LessonError as exc:  # a corrupt lessons.json must not take the whole board down
+            return replace(run, error=run.error or str(exc))
+        skills = run_skills(directory)
+        return replace(
+            run,
+            lesson=latest.to_dict() if latest else run.lesson,
+            skills_loaded=skills or run.skills_loaded,
+        )
+
+    def board(self) -> dict[str, Any]:
+        """GET /api/board."""
+        snap = self.cache.snapshot()
+        if snap.error and not snap.loaded:  # no board ever existed: nothing honest to show but the error
+            raise BackendError(UPSTREAM, f"todo MCP: {snap.error}")
+        tasks = snap.tasks
+        runs = load_runs(self.root, [t.id for t in tasks])
+        extended = {key: self._with_extras(run) for key, run in runs.items()}
+        board = build_board(tasks, extended, self._context(), self.build)  # type: ignore[arg-type]
+        if snap.error:  # stale cards plus a banner, never an empty board that looks healthy
+            board["error"] = {"code": UPSTREAM, "message": f"todo MCP: {snap.error}"}
+        return board
+
+    def task(self, id8: str) -> dict[str, Any] | None:
+        """GET /api/task/<id8>."""
+        found = next((t for t in self.cache.snapshot().tasks if t.id == id8), None)
+        if found is None:
+            return None
+        run = self._with_extras(load(run_dir(self.root, id8)))
+        diff = worktree_diff(run.worktree, run.base_sha) if run is not None else None
+        return build_task(found, run, run_dir(self.root, id8), self._context(), diff)
+
+    def shot(self, id8: str, name: str) -> bytes | None:
+        """Bytes of `<run dir>/shots/<name>`, None for anything that is not a plain png file there."""
+        shots = run_dir(self.root, id8) / "shots"
+        path = shots / name
+        if Path(name).name != name or path.suffix != ".png" or not path.is_file():
+            return None
+        try:
+            return path.read_bytes()
+        except OSError:
+            return None
+
+    def usage(self) -> dict[str, Any]:
+        """GET /api/usage."""
+        titles = {t.id: t.title for t in self.cache.snapshot().tasks}
+        return usage_summary(self.root, self._clock(), titles)
+
+    def subscribe(self, id8: str) -> Iterator[dict[str, Any]]:
+        """Live events of one task; stage/done carry the freshly computed card fields (live.schema.json)."""
+        for event in self.scheduler.subscribe(id8):
+            if event.get("type") not in ("stage", "done"):
+                yield event
+                continue
+            card = self._card(id8)
+            if card is None:  # the note vanished: a half-empty event would break the contract
+                continue
+            if event["type"] == "done":
+                yield {"type": "done", "status": card["status"]}
+            else:
+                yield {"type": "stage", "stage": event["stage"], **{k: card[k] for k in CARD_FIELDS}}
+
+    def _card(self, id8: str) -> dict[str, Any] | None:
+        found = next((t for t in self.cache.snapshot().tasks if t.id == id8), None)
+        if found is None:
+            return None
+        return build_card(found, self._with_extras(load(run_dir(self.root, id8))), self._context())
+
+    # ---- actions ----
+    def _act(self, call: Callable[[], object]) -> None:
+        try:
+            call()
+        except RunnerError as exc:  # its ctor is (message, code): the reverse of BackendError
+            code = exc.code if exc.code in ERROR_CODES else "internal"
+            raise BackendError(code, exc.message) from exc
+        except LessonError as exc:
+            raise BackendError(CONFLICT, str(exc)) from exc
+        except TodoError as exc:
+            raise BackendError(UPSTREAM, f"todo MCP: {exc}") from exc
+        self.cache.poke()
+
+    def start(self, id8: str) -> None:
+        """Start click."""
+        self._act(lambda: self.scheduler.start(id8))
+
+    def spec_answers(self, id8: str, answers: dict[str, str]) -> None:
+        """Answers to spec questions."""
+        self._act(lambda: self.scheduler.spec_answers(id8, answers))
+
+    def spec_ok(self, id8: str) -> None:
+        """Spec OK click."""
+        self._act(lambda: self.scheduler.spec_ok(id8))
+
+    def send(self, id8: str, text: str) -> None:
+        """Send to Claude; at the gate this is a rejection, so a lesson is drafted in the background."""
+        run = load(run_dir(self.root, id8))
+        if run is not None and run.stage == "gate":
+            self.spawn(lambda: self._draft(id8, text))
+        self._act(lambda: self.scheduler.send(id8, text))
+
+    def _draft(self, id8: str, note: str) -> None:
+        directory = run_dir(self.root, id8)
+        try:
+            draft_lesson(directory, note, run_skills(directory), self.drafter)
+        except Exception:
+            log.exception("lesson draft for %s failed", id8)
+
+    def ship(self, id8: str) -> None:
+        """Ship click."""
+        self._act(lambda: self.scheduler.ship(id8))
+
+    def cancel(self, id8: str) -> None:
+        """Cancel click."""
+        self._act(lambda: self.scheduler.cancel(id8))
+
+    def credits(self, id8: str) -> None:
+        """Run on credits click."""
+        self._act(lambda: self.scheduler.credits(id8))
+
+    def lesson_approve(self, id8: str, lesson_id: str) -> None:
+        """Write the drafted lesson into its skill."""
+        self._act(lambda: approve(run_dir(self.root, id8), lesson_id))

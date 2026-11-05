@@ -1,0 +1,15 @@
+*.zip
+node_modules/
+dist/
+.venv/
+coverage/
+__pycache__/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+*.tsbuildinfo
+.astro/
+*.egg-info/
+.coverage.*

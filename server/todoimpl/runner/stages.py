@@ -1,0 +1,146 @@
+"""Stage handlers: each runs one step and returns the next stage, or None to rest where it is."""
+
+from __future__ import annotations
+
+from dataclasses import replace
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+from .checks import discover, record, run_all
+from .files import NeedsYouError, write_json
+from .parsing import parse_criteria, parse_live, parse_questions, parse_self_check
+from .ship import ShipPlan, ship
+from .worktree import repo_dir
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from todoimpl.board.state import SpecQuestion
+
+    from .pipeline import Driver
+
+MAX_CHECK_FIXES = 2
+MAX_LIVE_FIXES = 1
+
+
+def merge_questions(old: list[SpecQuestion], new: list[SpecQuestion]) -> list[SpecQuestion]:
+    """Merge new cards: same id replaces an unanswered card; an answered card's reused id gets a fresh one."""
+    merged = list(old)
+    for card in new:
+        index = next((i for i, q in enumerate(merged) if q.id == card.id), None)
+        if index is None:
+            merged.append(card)
+        elif merged[index].answer is None:
+            merged[index] = card
+        elif merged[index].title != card.title:
+            top = max(int(q.id[1:]) for q in merged)
+            merged.append(replace(card, id=f"Q{top + 1}"))
+    return merged
+
+
+def _spec(d: Driver) -> str | None:
+    st = d.state
+    res = d.turn("spec", "spec")
+    st.spec_questions = merge_questions(st.spec_questions, parse_questions(res.text))
+    write_json(d.ctx.run_dir / "questions.json", [vars(q) for q in st.spec_questions])
+    return "spec_wait"
+
+
+def _plan(d: Driver) -> str | None:
+    res = d.turn("plan", "plan")
+    if res.tag in ("Q", "A"):
+        return None
+    plan = d.ctx.run_dir / "plan.md"
+    if not parse_criteria(d.plan_md()) and parse_criteria(res.text):
+        plan.write_text(res.text, encoding="utf-8")
+    if not parse_criteria(d.plan_md()):
+        msg = "plan.md has no `## Acceptance criteria` items: send guidance"
+        raise NeedsYouError(msg, "run_failed")
+    return "implement"
+
+
+def _implement(d: Driver) -> str | None:
+    tail = str(d.state.extra.get("failure_tail", ""))
+    res = d.turn("implement", "fix" if tail else "implement", failure_tail=tail)
+    d.state.extra.pop("failure_tail", None)
+    d.state.self_check = parse_self_check(res.text)
+    return d.after_tag(res, "live_check")
+
+
+def _retry(d: Driver, key: str, cap: int, tail: str, stop: NeedsYouError) -> str:
+    fixes = int(d.state.extra.get(key, 0))
+    if fixes >= cap:
+        raise stop
+    d.state.extra[key] = fixes + 1
+    d.state.extra["failure_tail"] = tail
+    return "implement"
+
+
+def _live_check(d: Driver) -> str | None:
+    st, run_dir = d.state, d.ctx.run_dir
+    report_file, shots = run_dir / "live_check.md", run_dir / "shots"
+    report_file.unlink(missing_ok=True)
+    shots.mkdir(parents=True, exist_ok=True)
+    res = d.turn("implement", "live_check")
+    if res.tag in ("Q", "A"):
+        return None
+    if not report_file.exists():
+        report_file.write_text(res.text, encoding="utf-8")
+    report = report_file.read_text(encoding="utf-8")
+    st.live_check = {
+        "report_md": report,
+        "shots": sorted(str(p.relative_to(run_dir)) for p in shots.rglob("*") if p.is_file()),
+    }
+    rows = parse_live(report)
+    not_done = [str(r["criterion"]) for r in rows if not r["done"]] or ([] if rows else ["no `- [x]` lines"])
+    if not not_done:
+        st.extra.pop("live_fixes", None)
+        return "checks"
+    why = f"The live check still saw criteria not done: {', '.join(not_done)}"
+    return _retry(d, "live_fixes", MAX_LIVE_FIXES, report, NeedsYouError(why))
+
+
+def _checks(d: Driver) -> str | None:
+    st, wt = d.state, Path(str(d.state.worktree))
+    results, log = run_all(discover(wt, d.item.done_check), wt, d.ctx.run_dir, d.ctx.check_timeout)
+    st.checks = record(results, log, d.ctx.now())
+    red = [r for r in results if not r.passed]
+    d.activity(
+        "checks: " + (", ".join(f"{r.name} {'red' if r in red else 'ok'}" for r in results) or "none found")
+    )
+    if not red:
+        st.extra.pop("check_fixes", None)
+        return "gate"
+    tail = "\n\n".join(f"== {r.name}: {r.command} (exit {r.exit_code})\n{r.tail}" for r in red)
+    why = f"Checks still red after {MAX_CHECK_FIXES} fix attempts: {', '.join(r.name for r in red)}"
+    return _retry(d, "check_fixes", MAX_CHECK_FIXES, tail, NeedsYouError(why, "checks_failed"))
+
+
+def live_summary(report: str) -> str:
+    """One line per criterion of the live check, for the close evidence."""
+    rows = parse_live(report)
+    return "\n".join(
+        f"live {r['criterion']}: {'done' if r['done'] else 'not done'} ({r['note']})" for r in rows
+    )
+
+
+def _shipping(d: Driver) -> str | None:
+    st, wt = d.state, Path(str(d.state.worktree))
+    live = live_summary(str((st.live_check or {}).get("report_md", "")))
+    checks = discover(wt, d.item.done_check)
+    plan = ShipPlan(
+        repo_dir(d.item.repo), wt, str(st.branch), d.item, checks, d.ctx.run_dir, d.ctx.check_timeout, live
+    )
+    st.ship = ship(plan, d.ctx.client, d.ctx.now)
+    st.head_sha = st.ship["commit"]
+    return "shipped"
+
+
+HANDLERS: dict[str, Callable[[Driver], str | None]] = {
+    "spec": _spec,
+    "plan": _plan,
+    "implement": _implement,
+    "live_check": _live_check,
+    "checks": _checks,
+    "shipping": _shipping,
+}

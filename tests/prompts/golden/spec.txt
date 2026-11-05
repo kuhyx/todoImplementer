@@ -1,0 +1,14 @@
+Spec stage. Grill me on this item before any plan or code.
+Item: Add dark mode toggle (repo: todo)
+Header needs a toggle that persists.
+done_check: pnpm test
+Spec answers:
+- Persist where?: localStorage
+kuhy's notes:
+- also check mobile width
+Reply with question cards only, exactly this format, a blank line between cards:
+❓ **Q1** - **<title>**: <body>
+➡️ <your recommended answer>
+Ask the whole frontier at once; no question may depend on another in the same round.
+Facts on disk are yours to find; only decisions are mine. No prose, plan, code or edits.
+End with `Q:`. If nothing is open, reply only `D:`.

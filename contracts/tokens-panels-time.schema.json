@@ -1,0 +1,188 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://todoimplementer.local/contracts/tokens-panels-time.schema.json",
+  "title": "GET /api/tokens/panel/<name>: subagents, latency, session_stats",
+  "description": "One $defs entry per panel, named like the panel: the shared panel envelope (filters, _tables) plus its own keys; unknown keys fail. Ratios that divide by zero on an empty window are null.",
+  "$defs": {
+    "base": {"$ref": "https://todoimplementer.local/contracts/tokens-common.schema.json#/$defs/panel"},
+    "ts": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"},
+    "agent_group": {
+      "type": "object",
+      "properties": {
+        "label": {"type": "string"}, "agents": {"type": "number"}, "usd": {"type": "number"}, "calls": {"type": "number"},
+        "wall_s": {"type": "number"}, "active_s": {"type": "number"}, "returned_tokens": {"type": "number"},
+        "spent_tokens": {"type": "number"}, "leverage": {"type": ["number", "null"]}
+      },
+      "required": ["label", "agents", "usd", "calls", "wall_s", "active_s", "returned_tokens", "spent_tokens", "leverage"],
+      "additionalProperties": false
+    },
+    "subagents": {
+      "allOf": [{"$ref": "#/$defs/base"}], "type": "object",
+      "properties": {
+        "caption": {"type": "string"},
+        "totals": {
+          "type": "object",
+          "properties": {
+            "agents": {"type": "number"}, "usd": {"type": "number"}, "calls": {"type": "number"}, "wall_s": {"type": "number"},
+            "active_s": {"type": "number"}, "returned_tokens": {"type": "number"}, "spent_tokens": {"type": "number"},
+            "leverage": {"type": ["number", "null"]}, "worktree_agents": {"type": "number"}
+          },
+          "required": ["agents", "usd", "calls", "wall_s", "active_s", "returned_tokens", "spent_tokens", "leverage", "worktree_agents"],
+          "additionalProperties": false
+        },
+        "by_type": {"type": "array", "items": {"$ref": "#/$defs/agent_group"}},
+        "by_model": {"type": "array", "items": {"$ref": "#/$defs/agent_group"}},
+        "by_description": {"type": "array", "items": {"$ref": "#/$defs/agent_group"}},
+        "worktree": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "day": {"type": "string"}, "key": {"type": "string"}, "target": {"type": "string"}, "sub_key": {"type": "string"},
+              "usd": {"type": "number"}
+            },
+            "required": ["day", "key", "target", "sub_key", "usd"], "additionalProperties": false
+          }
+        },
+        "routing": {
+          "type": "object",
+          "properties": {
+            "hook_runs": {"type": "number"}, "rewrites": {"type": "number"},
+            "ab": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "arm": {"type": "string"}, "class": {"type": "string"}, "subagent_type": {"type": "string"},
+                  "count": {"type": "number"}
+                },
+                "required": ["arm", "class", "subagent_type", "count"], "additionalProperties": false
+              }
+            },
+            "gap": {"type": "string"},
+            "ab_build": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "arm": {"type": "string"}, "class": {"type": "string"}, "subagent_type": {"type": "string"},
+                  "count": {"type": "number"}
+                },
+                "required": ["arm", "class", "subagent_type", "count"], "additionalProperties": false
+              }
+            },
+            "gap_build": {"type": "string"}
+          },
+          "required": ["hook_runs", "rewrites", "ab", "gap", "ab_build", "gap_build"], "additionalProperties": false
+        }
+      },
+      "required": ["caption", "totals", "by_type", "by_model", "by_description", "worktree", "routing"],
+      "unevaluatedProperties": false
+    },
+    "latency": {
+      "allOf": [{"$ref": "#/$defs/base"}], "type": "object",
+      "properties": {
+        "caption": {"type": "string"},
+        "daily": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "day": {"type": "string"}, "calls": {"type": "number"}, "total_s": {"type": "number"}, "p50": {"type": "number"},
+              "p90": {"type": "number"}, "p99": {"type": "number"}
+            },
+            "required": ["day", "calls", "total_s", "p50", "p90", "p99"], "additionalProperties": false
+          }
+        },
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "model": {"type": "string"}, "calls": {"type": "number"}, "total_s": {"type": "number"}, "p50": {"type": "number"},
+              "p90": {"type": "number"}, "p99": {"type": "number"}
+            },
+            "required": ["model", "calls", "total_s", "p50", "p90", "p99"], "additionalProperties": false
+          }
+        },
+        "tools": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {"type": "string"}, "calls": {"type": "number"}, "total_s": {"type": "number"}, "p50": {"type": "number"},
+              "p95": {"type": "number"}
+            },
+            "required": ["name", "calls", "total_s", "p50", "p95"], "additionalProperties": false
+          }
+        },
+        "think": {
+          "type": "object",
+          "properties": {"prompts": {"type": "number"}, "p50": {"type": ["number", "null"]}, "p90": {"type": ["number", "null"]}},
+          "required": ["prompts", "p50", "p90"], "additionalProperties": false
+        },
+        "think_histogram": {
+          "type": "array",
+          "items": {
+            "type": "object", "properties": {"bucket": {"type": "string"}, "prompts": {"type": "number"}},
+            "required": ["bucket", "prompts"], "additionalProperties": false
+          }
+        }
+      },
+      "required": ["caption", "daily", "models", "tools", "think", "think_histogram"], "unevaluatedProperties": false
+    },
+    "session_stats": {
+      "allOf": [{"$ref": "#/$defs/base"}], "type": "object",
+      "properties": {
+        "caption": {"type": "string"},
+        "totals": {
+          "type": "object",
+          "properties": {
+            "sessions": {"type": "number"}, "usd": {"type": "number"}, "usd_per_session": {"type": ["number", "null"]},
+            "interrupts": {"type": "number"}
+          },
+          "required": ["sessions", "usd", "usd_per_session", "interrupts"], "additionalProperties": false
+        },
+        "cost_hist": {
+          "type": "array",
+          "items": {
+            "type": "object", "properties": {"bucket": {"type": "string"}, "sessions": {"type": "number"}},
+            "required": ["bucket", "sessions"], "additionalProperties": false
+          }
+        },
+        "position": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {"bucket": {"type": "string"}, "calls": {"type": "number"}, "mean_usd": {"type": ["number", "null"]}},
+            "required": ["bucket", "calls", "mean_usd"], "additionalProperties": false
+          }
+        },
+        "prompts_hist": {
+          "type": "array",
+          "items": {
+            "type": "object", "properties": {"bucket": {"type": "string"}, "sessions": {"type": "number"}},
+            "required": ["bucket", "sessions"], "additionalProperties": false
+          }
+        },
+        "interrupts_hist": {
+          "type": "array",
+          "items": {
+            "type": "object", "properties": {"bucket": {"type": "string"}, "sessions": {"type": "number"}},
+            "required": ["bucket", "sessions"], "additionalProperties": false
+          }
+        },
+        "daily": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {"day": {"type": "string"}, "sessions": {"type": "number"}, "max_concurrent": {"type": "number"}},
+            "required": ["day", "sessions", "max_concurrent"], "additionalProperties": false
+          }
+        }
+      },
+      "required": ["caption", "totals", "cost_hist", "position", "prompts_hist", "interrupts_hist", "daily"],
+      "unevaluatedProperties": false
+    }
+  }
+}

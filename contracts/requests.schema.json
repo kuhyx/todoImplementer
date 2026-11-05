@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://todoimplementer.local/contracts/requests.schema.json",
+  "title": "POST /api/task/<item-id>/<action> request bodies",
+  "description": "One def per endpoint, named after it (hyphens become underscores). Every POST sends Content-Type application/json, header X-Todoimpl-Token (CSRF, from the page's meta tag) and a same-origin Origin. Answer: response.schema.json.",
+  "$defs": {
+    "start": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Start the next stage chain (Spec or Plan)."
+    },
+    "spec_answers": {
+      "type": "object",
+      "properties": {
+        "answers": {
+          "type": "object",
+          "description": "Question id (Q1..) to answer text; may be partial.",
+          "patternProperties": {"^Q[0-9]+$": {"type": "string", "minLength": 1}},
+          "additionalProperties": false,
+          "minProperties": 1
+        }
+      },
+      "required": ["answers"],
+      "additionalProperties": false
+    },
+    "spec_ok": {"type": "object", "additionalProperties": false, "description": "Spec OK click: starts Plan."},
+    "send": {
+      "type": "object",
+      "properties": {"text": {"type": "string", "minLength": 1, "maxLength": 20000}},
+      "required": ["text"],
+      "additionalProperties": false
+    },
+    "ship": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Ship click: rebase, recheck, commit, push, close note."
+    },
+    "cancel": {"type": "object", "additionalProperties": false},
+    "credits": {"type": "object", "additionalProperties": false, "description": "Run on credits click for this task only."},
+    "lesson_approve": {
+      "type": "object",
+      "properties": {"lesson_id": {"type": "string", "minLength": 1}},
+      "required": ["lesson_id"],
+      "additionalProperties": false
+    }
+  }
+}

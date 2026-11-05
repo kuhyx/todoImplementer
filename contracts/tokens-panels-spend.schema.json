@@ -1,0 +1,191 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://todoimplementer.local/contracts/tokens-panels-spend.schema.json",
+  "title": "GET /api/tokens/panel/<name>: overview, sessions, efficiency, levers",
+  "description": "One $defs entry per panel, named like the panel: the shared panel envelope (filters, _tables) plus its own keys; unknown keys fail. Ratios that divide by zero on an empty window are null.",
+  "$defs": {
+    "base": {"$ref": "https://todoimplementer.local/contracts/tokens-common.schema.json#/$defs/panel"},
+    "ts": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"},
+    "session_row": {"$ref": "https://todoimplementer.local/contracts/tokens-common.schema.json#/$defs/session_row"},
+    "overview": {
+      "allOf": [{"$ref": "#/$defs/base"}], "type": "object",
+      "properties": {
+        "tiles": {
+          "type": "object",
+          "properties": {
+            "usd": {"type": "number"}, "calls": {"type": "number"}, "usd_per_day": {"type": "number"},
+            "usd_per_call": {"type": ["number", "null"]}, "active_h": {"type": "number"}, "sessions": {"type": "number"}
+          },
+          "required": ["usd", "calls", "usd_per_day", "usd_per_call", "active_h", "sessions"], "additionalProperties": false
+        },
+        "daily": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "day": {"type": "string"}, "usd": {"type": "number"}, "calls": {"type": "number"},
+              "usd_per_call": {"type": ["number", "null"]}, "sub_share": {"type": ["number", "null"]},
+              "opus_share": {"type": ["number", "null"]}, "over_share": {"type": ["number", "null"]},
+              "home_share": {"type": ["number", "null"]}
+            },
+            "required": ["day", "usd", "calls", "usd_per_call", "sub_share", "opus_share", "over_share", "home_share"],
+            "additionalProperties": false
+          }
+        },
+        "weekly": {
+          "type": "array",
+          "items": {
+            "type": "object", "properties": {"week": {"type": "string"}, "usd": {"type": "number"}, "calls": {"type": "number"}},
+            "required": ["week", "usd", "calls"], "additionalProperties": false
+          }
+        },
+        "aggregate": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {"day": {"type": "string"}, "sessions": {"type": "number"}, "usd_est": {"type": "number"}},
+            "required": ["day", "sessions", "usd_est"], "additionalProperties": false
+          }
+        },
+        "prompts": {
+          "type": "array",
+          "items": {
+            "type": "object", "properties": {"day": {"type": "string"}, "prompts": {"type": "number"}},
+            "required": ["day", "prompts"], "additionalProperties": false
+          }
+        }
+      },
+      "required": ["tiles", "daily", "weekly", "aggregate", "prompts"], "unevaluatedProperties": false
+    },
+    "sessions": {
+      "allOf": [{"$ref": "#/$defs/base"}], "type": "object",
+      "properties": {
+        "sessions": {"type": "array", "items": {"$ref": "#/$defs/session_row"}}, "limit": {"type": "number"},
+        "scope": {"type": "string"}
+      },
+      "required": ["sessions", "limit", "scope"], "unevaluatedProperties": false
+    },
+    "efficiency": {
+      "allOf": [{"$ref": "#/$defs/base"}], "type": "object",
+      "properties": {
+        "captions": {
+          "type": "object",
+          "properties": {"done": {"type": "string"}, "commits": {"type": "string"}, "estimate": {"type": "string"}, "notes": {"type": "string"}},
+          "required": ["done", "commits", "estimate", "notes"], "additionalProperties": false
+        },
+        "filtered_by": {"type": "string"},
+        "done": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "done": {"type": "number"}, "other": {"type": "number"}, "untagged": {"type": "number"},
+              "usd_tagged": {"type": "number"}, "week": {"type": "string"}, "usd_per_done": {"type": ["number", "null"]},
+              "done_share": {"type": ["number", "null"]}
+            },
+            "required": ["done", "other", "untagged", "usd_tagged", "week", "usd_per_done", "done_share"],
+            "additionalProperties": false
+          }
+        },
+        "commits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "survived": {"type": "number"}, "lost": {"type": "number"}, "pending": {"type": "number"},
+              "unknown": {"type": "number"}, "week": {"type": "string"}, "usd": {"type": "number"},
+              "usd_per_survivor": {"type": ["number", "null"]}
+            },
+            "required": ["survived", "lost", "pending", "unknown", "week", "usd", "usd_per_survivor"],
+            "additionalProperties": false
+          }
+        },
+        "estimate": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "usd": {"type": "number"}, "est_calls": {"type": "number"}, "n": {"type": "number"}, "week": {"type": "string"},
+              "usd_per_unit": {"type": ["number", "null"]}
+            },
+            "required": ["usd", "est_calls", "n", "week", "usd_per_unit"], "additionalProperties": false
+          }
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {"type": "string"}, "title": {"type": "string"}, "status": {"type": "string"}, "priority": {"type": "string"},
+              "done": {"type": ["string", "null"]}, "done_at": {"type": ["number", "null"]}, "sessions": {"type": "number"},
+              "usd": {"type": "number"}, "tokens": {"type": "number"}
+            },
+            "required": ["id", "title", "status", "priority", "done", "done_at", "sessions", "usd", "tokens"],
+            "additionalProperties": false
+          }
+        },
+        "notes_weekly": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "done": {"type": "number"}, "abandoned": {"type": "number"}, "usd": {"type": "number"}, "week": {"type": "string"},
+              "usd_per_note": {"type": ["number", "null"]}
+            },
+            "required": ["done", "abandoned", "usd", "week", "usd_per_note"], "additionalProperties": false
+          }
+        }
+      },
+      "required": ["captions", "filtered_by", "done", "commits", "estimate", "notes", "notes_weekly"],
+      "unevaluatedProperties": false
+    },
+    "levers": {
+      "allOf": [{"$ref": "#/$defs/base"}], "type": "object",
+      "properties": {
+        "rows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "source": {"type": "string"}, "date": {"type": ["string", "null"]}, "lever": {"type": "string"},
+              "metric": {"type": "string"}, "baseline": {"type": ["number", "null"]}, "predicted": {"type": ["number", "null"]},
+              "actual": {"type": ["number", "null"]}, "lower_is_better": {"type": "number"},
+              "status": {"enum": ["applied", "not applied", "proposed"]}, "outcome": {"type": ["string", "null"]},
+              "detail": {"type": ["string", "null"]}
+            },
+            "required": [
+              "source", "date", "lever", "metric", "baseline", "predicted", "actual", "lower_is_better", "status", "outcome",
+              "detail"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "series": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "snapshots": {
+                "type": "array",
+                "items": {
+                  "type": "object", "properties": {"date": {"type": "string"}, "value": {"type": "number"}},
+                  "required": ["date", "value"], "additionalProperties": false
+                }
+              },
+              "daily": {
+                "type": "array",
+                "items": {
+                  "type": "object", "properties": {"date": {"type": "string"}, "value": {"type": "number"}},
+                  "required": ["date", "value"], "additionalProperties": false
+                }
+              }
+            },
+            "required": ["snapshots", "daily"], "additionalProperties": false
+          }
+        },
+        "rolling_days": {"type": "number"}
+      },
+      "required": ["rows", "series", "rolling_days"], "unevaluatedProperties": false
+    }
+  }
+}

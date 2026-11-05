@@ -1,0 +1,92 @@
+.chart {
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+  min-width: 0;
+}
+
+.chart figcaption {
+  font-size: var(--text-body);
+  font-weight: 600;
+}
+
+.chart-box {
+  position: relative;
+  overflow-x: auto;
+}
+
+.plot {
+  display: block;
+  width: 100%;
+  min-width: 25rem;
+  height: auto;
+}
+
+.plot .grid {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.plot .tick {
+  fill: var(--text-muted);
+  font-size: 12px;
+}
+
+.plot .cross,
+.plot .zero {
+  stroke: var(--text-muted);
+  stroke-dasharray: 3 3;
+}
+
+.plot .marker {
+  stroke: var(--surface-1);
+  stroke-width: 2;
+}
+
+.plot .hit:focus-visible {
+  outline: 2px solid var(--focus-ring);
+}
+
+.tip {
+  position: absolute;
+  top: 0;
+  z-index: 2;
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-1);
+  font-size: var(--text-label);
+  pointer-events: none;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-label);
+  color: var(--text-muted);
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.chart-table summary {
+  font-size: var(--text-label);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.view > .chart,
+.panel > .chart {
+  max-width: 48rem;
+}

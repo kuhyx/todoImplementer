@@ -1,0 +1,56 @@
+{
+  "task_id": "c59d2588-0",
+  "stage": "checks",
+  "assignee": "claude",
+  "session_id": "5f0e9c4a-1111-4222-8333-444455556666",
+  "worktree": "/tmp/todoimpl/worktrees/c59d2588-demo",
+  "branch": "todoimpl/c59d2588",
+  "cost_usd": 1.37,
+  "spec_questions": [
+    {
+      "id": "Q1",
+      "title": "Scope",
+      "body": "Which file?",
+      "recommendation": "demo.py",
+      "answer": "demo.py"
+    }
+  ],
+  "last_tag": "R",
+  "error": null,
+  "updated": 1793880000.5,
+  "sessions": {
+    "implement": {
+      "session_id": "5f0e9c4a",
+      "last_turn_end": 1793879900.0
+    }
+  },
+  "checks": {
+    "passed": true,
+    "ran_at": 1793879000.0,
+    "log": "logs/checks-1793879000.log",
+    "results": [
+      {
+        "command": "python demo.py",
+        "exit": 0,
+        "tail": "hello"
+      },
+      {
+        "command": "make test",
+        "exit": 0,
+        "tail": "1 passed"
+      }
+    ]
+  },
+  "self_check": [
+    {
+      "criterion": "demo prints hello",
+      "done": true
+    }
+  ],
+  "live_check": {
+    "report_md": "Ran demo.py; saw hello.",
+    "shots": [
+      "evidence/shot1.png"
+    ]
+  }
+}

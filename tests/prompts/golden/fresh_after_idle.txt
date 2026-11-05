@@ -1,0 +1,13 @@
+override
+New session after an idle break; the old one is gone. Handoff summary:
+Stage implement; toggle component written, persistence missing.
+Item: Add dark mode toggle (repo: todo)
+Header needs a toggle that persists.
+done_check: pnpm test
+Spec answers:
+- Persist where?: localStorage
+kuhy's notes:
+- also check mobile width
+Plan: read /run/ab12cd34/plan.md.
+Rules: work only in /wt/todo. Follow your ~/.claude rules: red check first, heavy commands via ~/.claude/scripts/capped.sh, every call under 60 s. Never commit, push or touch main: the server ships.
+Check `git status`, then continue where the summary stops. End with `D:`.

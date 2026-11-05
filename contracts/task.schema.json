@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://todoimplementer.local/contracts/task.schema.json",
+  "title": "GET /api/task/<item-id>",
+  "description": "Drawer content: the card plus note, plan, questions, checks, self-check, diff, lesson.",
+  "type": "object",
+  "properties": {
+    "card": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/task_card"},
+    "body": {"type": "string", "description": "The todo note text."},
+    "done_check": {"type": ["string", "null"]},
+    "plan_md": {"type": ["string", "null"], "description": "plan.md with the acceptance criteria; null before Plan."},
+    "questions": {
+      "type": "array",
+      "items": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/question"}
+    },
+    "diff": {
+      "type": ["object", "null"],
+      "properties": {
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": {"type": "string"},
+              "added": {"type": "integer", "minimum": 0},
+              "removed": {"type": "integer", "minimum": 0}
+            },
+            "required": ["path", "added", "removed"],
+            "additionalProperties": false
+          }
+        },
+        "patch": {"type": "string", "description": "Unified diff, capped at 200000 chars."},
+        "truncated": {"type": "boolean"}
+      },
+      "required": ["files", "patch", "truncated"],
+      "additionalProperties": false
+    },
+    "stages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "stage": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/stage"},
+          "started": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"},
+          "ended": {
+            "anyOf": [
+              {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"},
+              {"type": "null"}
+            ]
+          }
+        },
+        "required": ["stage", "started", "ended"],
+        "additionalProperties": false
+      }
+    },
+    "skills_loaded": {"type": "array", "items": {"type": "string"}},
+    "worktree": {"type": ["string", "null"]},
+    "branch": {"type": ["string", "null"]},
+    "resume_command": {
+      "type": ["string", "null"],
+      "description": "cd <worktree> && claude --resume <id>; null without a session."
+    },
+    "lesson": {
+      "anyOf": [{"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/lesson"}, {"type": "null"}]
+    },
+    "error": {"type": ["string", "null"]},
+    "checks": {
+      "anyOf": [{"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/checks"}, {"type": "null"}]
+    },
+    "self_check": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/self_check"},
+    "live_check": {
+      "anyOf": [
+        {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/live_check"},
+        {"type": "null"}
+      ]
+    }
+  },
+  "required": [
+    "card",
+    "body",
+    "done_check",
+    "plan_md",
+    "questions",
+    "diff",
+    "stages",
+    "skills_loaded",
+    "worktree",
+    "branch",
+    "resume_command",
+    "lesson",
+    "error",
+    "live_check",
+    "checks",
+    "self_check"
+  ],
+  "additionalProperties": false
+}

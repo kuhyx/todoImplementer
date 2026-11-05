@@ -1,0 +1,16 @@
+{
+  "extends": "@kuhyx/ts-config/tsconfig",
+  "compilerOptions": {
+    "target": "ES2024",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "types": ["vitest/globals", "node"],
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "paths": { "@/*": ["./src/*"] }
+  },
+  "include": [".astro/types.d.ts", "src", "dev", "*.mjs", "*.ts"],
+  "exclude": ["dist", "coverage"]
+}

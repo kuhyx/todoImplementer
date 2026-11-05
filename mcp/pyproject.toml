@@ -1,0 +1,13 @@
+[project]
+name = "todoimpl-mcp"
+version = "0.1.0"
+description = "Read-only stdio MCP server over todoImplementer's /api/tokens usage API"
+requires-python = ">=3.15"
+dependencies = [
+    # The MCP SDK is the only runtime dependency; it lives in its own venv
+    # (mcp/setup_mcp.sh) so the todoImplementer server stays stdlib-only.
+    "mcp==2.3.0",
+]
+
+[tool.setuptools.packages.find]
+include = ["todoimpl_mcp*"]

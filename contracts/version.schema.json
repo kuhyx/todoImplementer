@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://todoimplementer.local/contracts/version.schema.json",
+  "title": "GET /version",
+  "description": "Polled by the page every few seconds; a changed build makes it reload.",
+  "type": "object",
+  "properties": {
+    "build": {
+      "type": "string",
+      "minLength": 1,
+      "description": "git rev-parse --short HEAD at serve time; same value stamped in index.html."
+    },
+    "version": {"type": "string", "minLength": 1}
+  },
+  "required": ["build", "version"],
+  "additionalProperties": false
+}

@@ -1,0 +1,13 @@
+override
+Your session was killed mid-work (restart or limit). Continue the stage you were in.
+Run `git status` and `git diff --stat` first; do not redo finished work.
+Item: Add dark mode toggle (repo: todo)
+Header needs a toggle that persists.
+done_check: pnpm test
+Spec answers:
+- Persist where?: localStorage
+kuhy's notes:
+- also check mobile width
+Plan: /run/ab12cd34/plan.md.
+Rules: work only in /wt/todo. Follow your ~/.claude rules: red check first, heavy commands via ~/.claude/scripts/capped.sh, every call under 60 s. Never commit, push or touch main: the server ships.
+End with `D:`.

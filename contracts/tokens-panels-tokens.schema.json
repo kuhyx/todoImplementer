@@ -1,0 +1,211 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://todoimplementer.local/contracts/tokens-panels-tokens.schema.json",
+  "title": "GET /api/tokens/panel/<name>: token_classes, spend_more, output",
+  "description": "One $defs entry per panel, named like the panel: the shared panel envelope (filters, _tables) plus its own keys; unknown keys fail. Ratios that divide by zero on an empty window are null.",
+  "$defs": {
+    "base": {"$ref": "https://todoimplementer.local/contracts/tokens-common.schema.json#/$defs/panel"},
+    "ts": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"},
+    "token_classes": {
+      "allOf": [{"$ref": "#/$defs/base"}], "type": "object",
+      "properties": {
+        "caption": {"type": "string"}, "prices_source": {"type": "string"},
+        "totals": {
+          "type": "object",
+          "properties": {
+            "input": {"type": "number"}, "cw_5m": {"type": "number"}, "cw_1h": {"type": "number"}, "unsplit": {"type": "number"},
+            "cache_read": {"type": "number"}, "output": {"type": "number"}, "usd": {"type": "number"},
+            "spend_usd": {"type": "number"}, "hit_ratio": {"type": ["number", "null"]}, "waste_tokens": {"type": "number"},
+            "waste_usd": {"type": "number"}, "pending_tokens": {"type": "number"}, "cold_starts": {"type": "number"},
+            "cold_start_usd": {"type": "number"}, "compactions": {"type": "number"}, "compaction_usd": {"type": "number"}
+          },
+          "required": [
+            "input", "cw_5m", "cw_1h", "unsplit", "cache_read", "output", "usd", "spend_usd", "hit_ratio", "waste_tokens",
+            "waste_usd", "pending_tokens", "cold_starts", "cold_start_usd", "compactions", "compaction_usd"
+          ],
+          "additionalProperties": false
+        },
+        "daily": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "day": {"type": "string"}, "input": {"type": "number"}, "cw_5m": {"type": "number"}, "cw_1h": {"type": "number"},
+              "unsplit": {"type": "number"}, "cache_read": {"type": "number"}, "output": {"type": "number"},
+              "input_usd": {"type": "number"}, "cw_5m_usd": {"type": "number"}, "cw_1h_usd": {"type": "number"},
+              "unsplit_usd": {"type": "number"}, "cache_read_usd": {"type": "number"}, "output_usd": {"type": "number"},
+              "usd": {"type": "number"}, "spend_usd": {"type": "number"}, "hit_ratio": {"type": ["number", "null"]},
+              "waste_usd": {"type": "number"}, "cold_starts": {"type": "number"}
+            },
+            "required": [
+              "day", "input", "cw_5m", "cw_1h", "unsplit", "cache_read", "output", "input_usd", "cw_5m_usd", "cw_1h_usd",
+              "unsplit_usd", "cache_read_usd", "output_usd", "usd", "spend_usd", "hit_ratio", "waste_usd", "cold_starts"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "waste": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {"type": "string"}, "wasted_calls": {"type": "number"}, "wasted_tokens": {"type": "number"},
+              "wasted_usd": {"type": "number"}, "cold_starts": {"type": "number"}, "cold_start_usd": {"type": "number"}
+            },
+            "required": ["key", "wasted_calls", "wasted_tokens", "wasted_usd", "cold_starts", "cold_start_usd"],
+            "additionalProperties": false
+          }
+        },
+        "compactions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "ts": {"$ref": "#/$defs/ts"}, "key": {"type": "string"}, "model": {"type": "string"}, "trigger": {"type": "string"},
+              "count": {"type": "number"}, "pre_tokens": {"type": "number"}, "post_tokens": {"type": "number"},
+              "duration_s": {"type": "number"}, "est_usd": {"type": "number"}
+            },
+            "required": ["ts", "key", "model", "trigger", "count", "pre_tokens", "post_tokens", "duration_s", "est_usd"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["caption", "prices_source", "totals", "daily", "waste", "compactions"], "unevaluatedProperties": false
+    },
+    "spend_more": {
+      "allOf": [{"$ref": "#/$defs/base"}], "type": "object",
+      "properties": {
+        "caption": {"type": "string"},
+        "totals": {
+          "type": "object",
+          "properties": {
+            "usd": {"type": "number"}, "blocks": {"type": "number"}, "peak_block_usd": {"type": "number"},
+            "rate_limit_errors": {"type": "number"}
+          },
+          "required": ["usd", "blocks", "peak_block_usd", "rate_limit_errors"], "additionalProperties": false
+        },
+        "grid": {"type": "array", "items": {"type": "array", "items": {"type": "number"}}},
+        "months": {
+          "type": "array",
+          "items": {
+            "type": "object", "properties": {"month": {"type": "string"}, "usd": {"type": "number"}, "calls": {"type": "number"}},
+            "required": ["month", "usd", "calls"], "additionalProperties": false
+          }
+        },
+        "cumulative": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {"month": {"type": "string"}, "dom": {"type": "number"}, "usd": {"type": "number"}, "cum_usd": {"type": "number"}},
+            "required": ["month", "dom", "usd", "cum_usd"], "additionalProperties": false
+          }
+        },
+        "by_model": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "model": {"type": "string"}, "usd": {"type": "number"}, "calls": {"type": "number"},
+              "share": {"type": ["number", "null"]}
+            },
+            "required": ["model", "usd", "calls", "share"], "additionalProperties": false
+          }
+        },
+        "by_cwd": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "cwd": {"type": ["string", "null"]}, "usd": {"type": "number"}, "calls": {"type": "number"},
+              "share": {"type": ["number", "null"]}
+            },
+            "required": ["cwd", "usd", "calls", "share"], "additionalProperties": false
+          }
+        },
+        "heatmap": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {"weekday": {"type": "number"}, "hour": {"type": "number"}, "usd": {"type": "number"}, "calls": {"type": "number"}},
+            "required": ["weekday", "hour", "usd", "calls"], "additionalProperties": false
+          }
+        },
+        "blocks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "start": {"$ref": "#/$defs/ts"}, "end": {"$ref": "#/$defs/ts"}, "day": {"type": "string"},
+              "first_ts": {"$ref": "#/$defs/ts"}, "last_ts": {"$ref": "#/$defs/ts"}, "usd": {"type": "number"},
+              "calls": {"type": "number"}, "usd_per_hour": {"type": ["number", "null"]}
+            },
+            "required": ["start", "end", "day", "first_ts", "last_ts", "usd", "calls", "usd_per_hour"],
+            "additionalProperties": false
+          }
+        },
+        "block_daily": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {"day": {"type": "string"}, "blocks": {"type": "number"}, "max_block_usd": {"type": "number"}},
+            "required": ["day", "blocks", "max_block_usd"], "additionalProperties": false
+          }
+        },
+        "rate_limits": {
+          "type": "array",
+          "items": {
+            "type": "object", "properties": {"day": {"type": "string"}, "errors": {"type": "number"}},
+            "required": ["day", "errors"], "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "caption", "totals", "grid", "months", "cumulative", "by_model", "by_cwd", "heatmap", "blocks", "block_daily",
+        "rate_limits"
+      ],
+      "unevaluatedProperties": false
+    },
+    "output": {
+      "allOf": [{"$ref": "#/$defs/base"}], "type": "object",
+      "properties": {
+        "caption": {"type": "string"},
+        "totals": {
+          "type": "object",
+          "properties": {
+            "think": {"type": "number"}, "text": {"type": "number"}, "tool": {"type": "number"}, "output": {"type": "number"},
+            "output_usd": {"type": "number"}, "spend_usd": {"type": "number"}, "output_share": {"type": ["number", "null"]}
+          },
+          "required": ["think", "text", "tool", "output", "output_usd", "spend_usd", "output_share"],
+          "additionalProperties": false
+        },
+        "daily": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "day": {"type": "string"}, "think": {"type": "number"}, "text": {"type": "number"}, "tool": {"type": "number"},
+              "output": {"type": "number"}, "output_usd": {"type": "number"}, "spend_usd": {"type": "number"},
+              "output_share": {"type": ["number", "null"]}
+            },
+            "required": ["day", "think", "text", "tool", "output", "output_usd", "spend_usd", "output_share"],
+            "additionalProperties": false
+          }
+        },
+        "longest": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "ts": {"$ref": "#/$defs/ts"}, "key": {"type": "string"}, "model": {"type": "string"}, "output": {"type": "number"},
+              "output_usd": {"type": "number"}, "usd": {"type": "number"}, "think": {"type": ["number", "null"]},
+              "text": {"type": ["number", "null"]}, "tool": {"type": ["number", "null"]}
+            },
+            "required": ["ts", "key", "model", "output", "output_usd", "usd", "think", "text", "tool"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["caption", "totals", "daily", "longest"], "unevaluatedProperties": false
+    }
+  }
+}

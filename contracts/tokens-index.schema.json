@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://todoimplementer.local/contracts/tokens-index.schema.json", "title": "GET /api/tokens and GET /api/tokens/schema",
+  "description": "$defs index (panel list, options, coverage, A/B banner) and schema_doc (the API's self-description).",
+  "$defs": {
+    "index": {
+      "type": "object", "description": "GET /api/tokens: panel list, filter options, data coverage, A/B banner.",
+      "properties": {
+        "panels": {
+          "type": "array",
+          "items": {
+            "type": "object", "properties": {"name": {"type": "string"}, "title": {"type": "string"}},
+            "required": ["name", "title"], "additionalProperties": false
+          }
+        },
+        "options": {
+          "type": "object",
+          "properties": {"cwds": {"type": "array", "items": {"type": "string"}}, "models": {"type": "array", "items": {"type": "string"}}},
+          "required": ["cwds", "models"], "additionalProperties": false
+        },
+        "coverage": {
+          "type": "object",
+          "properties": {
+            "detail_from": {"type": ["string", "null"]}, "detail_to": {"type": ["string", "null"]},
+            "aggregate_from": {"type": ["string", "null"]}, "any_from": {"type": ["string", "null"]},
+            "refreshed_at": {"type": "number"}, "snapshots": {"type": "array", "items": {"type": "string"}}
+          },
+          "required": ["detail_from", "detail_to", "aggregate_from", "any_from", "refreshed_at", "snapshots"],
+          "additionalProperties": false
+        },
+        "ab_banner": {"$ref": "https://todoimplementer.local/contracts/tokens-common.schema.json#/$defs/banner"},
+        "snapshot_metrics": {
+          "type": "object", "additionalProperties": {"type": "object", "additionalProperties": {"type": "number"}},
+          "description": "Per token_audit snapshot name: its metrics (older ones have fewer)."
+        },
+        "store": {"type": "string"},
+        "_tables": {"$ref": "https://todoimplementer.local/contracts/tokens-common.schema.json#/$defs/tables_meta"}
+      },
+      "required": ["panels", "options", "coverage", "ab_banner", "snapshot_metrics", "store", "_tables"],
+      "additionalProperties": false
+    },
+    "schema_doc": {
+      "type": "object", "description": "GET /api/tokens/schema: the API described by itself.",
+      "properties": {
+        "name": {"type": "string"}, "read_only": {"type": "boolean"},
+        "units": {"type": "object", "additionalProperties": {"type": "string"}},
+        "endpoints": {"type": "object", "additionalProperties": {"type": "string"}},
+        "filters": {"type": "object", "additionalProperties": {"type": "string"}},
+        "table_params": {"type": "object", "additionalProperties": {"type": "string"}},
+        "response_extras": {"type": "object", "additionalProperties": {"type": "string"}},
+        "panels": {"type": "object", "additionalProperties": {"$ref": "#/$defs/panel_doc"}}
+      },
+      "required": ["name", "read_only", "units", "endpoints", "filters", "table_params", "response_extras", "panels"],
+      "additionalProperties": false
+    },
+    "panel_doc": {
+      "type": "object",
+      "properties": {
+        "title": {"type": "string"},
+        "default_table_params": {"type": "object", "additionalProperties": {"type": "object", "additionalProperties": {"type": "string"}}},
+        "tables": {
+          "type": "object",
+          "additionalProperties": {"type": "object", "additionalProperties": {"enum": ["number", "object", "text", "enum"]}}
+        }
+      },
+      "required": ["title", "default_table_params", "tables"], "additionalProperties": false
+    }
+  }
+}

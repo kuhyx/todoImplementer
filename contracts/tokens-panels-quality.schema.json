@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://todoimplementer.local/contracts/tokens-panels-quality.schema.json",
+  "title": "GET /api/tokens/panel/<name>: ab, anomalies, errors",
+  "description": "One $defs entry per panel, named like the panel: the shared panel envelope (filters, _tables) plus its own keys; unknown keys fail. Ratios that divide by zero on an empty window are null.",
+  "$defs": {
+    "base": {"$ref": "https://todoimplementer.local/contracts/tokens-common.schema.json#/$defs/panel"},
+    "ts": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"},
+    "ab_metric": {
+      "type": "object",
+      "properties": {"measure": {"type": "string"}, "sonnet": {"type": "string"}, "opus": {"type": "string"}, "difference": {"type": "string"}},
+      "required": ["measure", "sonnet", "opus", "difference"], "additionalProperties": false
+    },
+    "ab_build": {
+      "allOf": [
+        {"$ref": "https://todoimplementer.local/contracts/tokens-common.schema.json#/$defs/experiment"},
+        {"properties": {"metrics": {"type": "array", "items": {"$ref": "#/$defs/ab_metric"}}}, "required": ["metrics"]}
+      ],
+      "unevaluatedProperties": false
+    },
+    "ab": {
+      "allOf": [
+        {"$ref": "#/$defs/base"}, {"$ref": "https://todoimplementer.local/contracts/tokens-common.schema.json#/$defs/experiment"},
+        {
+          "properties": {
+            "metrics": {"type": "array", "items": {"$ref": "#/$defs/ab_metric"}}, "filtered_by": {"type": "string"},
+            "build": {"$ref": "#/$defs/ab_build"}
+          },
+          "required": ["metrics", "filtered_by", "build"]
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "anomalies": {
+      "allOf": [{"$ref": "#/$defs/base"}], "type": "object",
+      "properties": {
+        "caption": {"type": "string"}, "over": {"type": "number"},
+        "totals": {
+          "type": "object",
+          "properties": {
+            "spikes": {"type": "number"}, "expensive": {"type": "number"}, "loops": {"type": "number"},
+            "expensive_usd": {"type": "number"}
+          },
+          "required": ["spikes", "expensive", "loops", "expensive_usd"], "additionalProperties": false
+        },
+        "spikes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "day": {"type": "string"}, "usd": {"type": "number"}, "median_usd": {"type": ["number", "null"]},
+              "ratio": {"type": "number"}
+            },
+            "required": ["day", "usd", "median_usd", "ratio"], "additionalProperties": false
+          }
+        },
+        "expensive": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {"type": "string"}, "title": {"type": "string"}, "cwd": {"type": ["string", "null"]},
+              "day": {"type": "string"}, "usd": {"type": "number"}, "calls": {"type": "number"}
+            },
+            "required": ["key", "title", "cwd", "day", "usd", "calls"], "additionalProperties": false
+          }
+        },
+        "loops": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {"type": "string"}, "name": {"type": "string"}, "target": {"type": "string"}, "repeats": {"type": "number"},
+              "cost_usd": {"type": "number"}
+            },
+            "required": ["key", "name", "target", "repeats", "cost_usd"], "additionalProperties": false
+          }
+        },
+        "categories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {"type": "string"}, "category": {"type": "string"}, "calls": {"type": "number"},
+              "cost_usd": {"type": "number"}
+            },
+            "required": ["key", "category", "calls", "cost_usd"], "additionalProperties": false
+          }
+        },
+        "category_totals": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {"category": {"type": "string"}, "calls": {"type": "number"}, "cost_usd": {"type": "number"}},
+            "required": ["category", "calls", "cost_usd"], "additionalProperties": false
+          }
+        }
+      },
+      "required": ["caption", "over", "totals", "spikes", "expensive", "loops", "categories", "category_totals"],
+      "unevaluatedProperties": false
+    },
+    "errors": {
+      "allOf": [{"$ref": "#/$defs/base"}], "type": "object",
+      "properties": {
+        "caption": {"type": "string"},
+        "totals": {
+          "type": "object",
+          "properties": {
+            "api_errors": {"type": "number"}, "rate_limit_hits": {"type": "number"}, "rate_limit_sessions": {"type": "number"},
+            "last_rate_limit_ts": {"type": ["number", "null"]}, "interrupts": {"type": "number"}, "calls": {"type": "number"},
+            "tool_errors": {"type": "number"}, "error_rate": {"type": ["number", "null"]}
+          },
+          "required": [
+            "api_errors", "rate_limit_hits", "rate_limit_sessions", "last_rate_limit_ts", "interrupts", "calls", "tool_errors",
+            "error_rate"
+          ],
+          "additionalProperties": false
+        },
+        "daily": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "day": {"type": "string"}, "api_errors": {"type": "number"}, "rate_limits": {"type": "number"},
+              "interrupts": {"type": "number"}, "calls": {"type": "number"}, "tool_errors": {"type": "number"},
+              "error_rate": {"type": ["number", "null"]}
+            },
+            "required": ["day", "api_errors", "rate_limits", "interrupts", "calls", "tool_errors", "error_rate"],
+            "additionalProperties": false
+          }
+        },
+        "api_error_types": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": {"type": "string"}, "count": {"type": "number"}, "sessions": {"type": "number"},
+              "last_ts": {"$ref": "#/$defs/ts"}
+            },
+            "required": ["type", "count", "sessions", "last_ts"], "additionalProperties": false
+          }
+        },
+        "api_errors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": {"type": "string"}, "detail": {"type": "string"}, "count": {"type": "number"},
+              "last_ts": {"$ref": "#/$defs/ts"}
+            },
+            "required": ["type", "detail", "count", "last_ts"], "additionalProperties": false
+          }
+        },
+        "error_kinds": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "error_kind": {"type": "string"}, "count": {"type": "number"}, "share": {"type": ["number", "null"]},
+              "rate": {"type": ["number", "null"]}
+            },
+            "required": ["error_kind", "count", "share", "rate"], "additionalProperties": false
+          }
+        },
+        "error_tools": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {"type": "string"}, "family": {"type": "string"}, "calls": {"type": "number"}, "errors": {"type": "number"},
+              "error_rate": {"type": ["number", "null"]}
+            },
+            "required": ["name", "family", "calls", "errors", "error_rate"], "additionalProperties": false
+          }
+        },
+        "recent": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "ts": {"$ref": "#/$defs/ts"}, "key": {"type": "string"}, "name": {"type": "string"}, "family": {"type": "string"},
+              "target": {"type": "string"}, "error_kind": {"type": "string"}
+            },
+            "required": ["ts", "key", "name", "family", "target", "error_kind"], "additionalProperties": false
+          }
+        }
+      },
+      "required": ["caption", "totals", "daily", "api_error_types", "api_errors", "error_kinds", "error_tools", "recent"],
+      "unevaluatedProperties": false
+    }
+  }
+}

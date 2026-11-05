@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://todoimplementer.local/contracts/state.schema.json",
+  "title": "state.json",
+  "description": "Per-task run state at <root>/<item id>/state.json. Written atomically (tmp + os.replace, flock) by the runner and board.state; read by the server. Extra keys are tolerated so an older reader survives a newer writer.",
+  "type": "object",
+  "properties": {
+    "task_id": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/item_id"},
+    "stage": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/stage"},
+    "assignee": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/assignee"},
+    "session_id": {"type": ["string", "null"], "description": "Session of the stage now running or last run (resume target)."},
+    "worktree": {"type": ["string", "null"]},
+    "branch": {"type": ["string", "null"]},
+    "cost_usd": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/usd"},
+    "spec_questions": {
+      "type": "array",
+      "items": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/question"}
+    },
+    "last_tag": {
+      "enum": ["Q", "A", "R", "D", null],
+      "description": "Status tag parsed from the last final reply. Q or A means Needs you."
+    },
+    "error": {"type": ["string", "null"], "description": "Non-null: the run stopped and says why (becomes needs.text)."},
+    "updated": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"},
+    "repo": {"type": ["string", "null"]},
+    "base_sha": {"type": ["string", "null"]},
+    "head_sha": {"type": ["string", "null"]},
+    "started_at": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"},
+    "resume_at": {
+      "anyOf": [{"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"}, {"type": "null"}],
+      "description": "paused_limit: when to resume."
+    },
+    "using_credits": {"type": "boolean", "description": "Set by the Run on credits click for this task only."},
+    "sessions": {
+      "type": "object",
+      "description": "Per role (spec, plan, implement, review, verify): session id and when its last turn ended (fresh session after 1 h idle).",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "session_id": {"type": "string"},
+          "last_turn_end": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"}
+        },
+        "required": ["session_id", "last_turn_end"],
+        "additionalProperties": false
+      }
+    },
+    "skills_loaded": {"type": "array", "items": {"type": "string"}},
+    "lesson": {
+      "anyOf": [{"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/lesson"}, {"type": "null"}]
+    },
+    "ship": {
+      "type": ["object", "null"],
+      "properties": {
+        "commit": {"type": "string"},
+        "pushed_at": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"},
+        "closed_at": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"}
+      },
+      "required": ["commit"],
+      "additionalProperties": false
+    },
+    "checks": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/checks"},
+    "self_check": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/self_check"},
+    "live_check": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/live_check"}
+  },
+  "required": [
+    "task_id",
+    "stage",
+    "assignee",
+    "session_id",
+    "worktree",
+    "branch",
+    "cost_usd",
+    "spec_questions",
+    "last_tag",
+    "error",
+    "updated"
+  ]
+}

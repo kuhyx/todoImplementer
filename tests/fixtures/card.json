@@ -1,0 +1,30 @@
+{
+  "id": "c59d2588-0",
+  "title": "Demo task",
+  "repo": "demo",
+  "priority": "high",
+  "assignee": "claude",
+  "stage": "checks",
+  "status": "working",
+  "column": "running",
+  "current": "checks",
+  "needs": null,
+  "cost_usd": 1.37,
+  "resumes_at": null,
+  "updated": 1793880000.5,
+  "actions": [
+    {
+      "id": "cancel",
+      "label": "Cancel",
+      "enabled": true,
+      "reason": null,
+      "confirm": true
+    },
+    {
+      "id": "start",
+      "label": "Start",
+      "enabled": false,
+      "reason": "already running"
+    }
+  ]
+}

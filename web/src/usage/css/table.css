@@ -1,0 +1,110 @@
+.ut {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.ut-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.ut-bar input[type="search"] {
+  flex: 1 1 14rem;
+  max-width: 24rem;
+}
+
+.ut-count {
+  font-size: var(--text-label);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.ut-scroll {
+  max-width: 100%;
+  max-height: 70dvh;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.ut table,
+.chart-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-label);
+}
+
+.ut th,
+.ut td,
+.chart-table th,
+.chart-table td {
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+  max-width: 28rem;
+  overflow-wrap: anywhere;
+}
+
+.ut thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface-2);
+  white-space: nowrap;
+}
+
+.ut-filters td {
+  position: sticky;
+  top: var(--space-5);
+  z-index: 1;
+  padding: var(--space-1);
+  background: var(--surface-1);
+}
+
+.ut-filters input,
+.ut-filters select {
+  width: 100%;
+  min-width: 4.5rem;
+  min-height: var(--space-4);
+}
+
+.ut-f input + input {
+  margin-top: var(--space-1);
+}
+
+.num {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.ut-sort {
+  padding: 0;
+  background: none;
+  border: 0;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ut th[data-arrow="▲"] .ut-sort::after {
+  content: " ▲";
+}
+
+.ut th[data-arrow="▼"] .ut-sort::after {
+  content: " ▼";
+}
+
+.ut-empty {
+  color: var(--text-muted);
+  text-align: center !important;
+}
+
+.ut tbody tr:hover {
+  background: var(--surface-1);
+}
+
+.ut td:first-child {
+  min-width: 14rem;
+}

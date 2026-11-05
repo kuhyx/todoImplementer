@@ -1,0 +1,48 @@
+#!/bin/bash
+# ============================================================================
+# Test shim installed as `git`: passes every command to the real git
+# ($REAL_GIT) except `push`, which may only reach a local bare remote under
+# $GIT_PUSH_ALLOW_ROOT and never with force. Anything else is refused, so a
+# test can never push to GitHub, and a forced push fails loudly.
+# ============================================================================
+
+set -euo pipefail
+
+: "${REAL_GIT:?REAL_GIT must point at the real git binary}"
+
+refuse() {
+    echo "git_push_refuse: $1" >&2
+    exit 1
+}
+
+# Global options before the subcommand (git -C dir -c k=v push ...).
+pre=()
+while (($#)); do
+    case "$1" in
+        -C | -c) pre+=("$1" "$2"); shift 2 ;;
+        -*) pre+=("$1"); shift ;;
+        *) break ;;
+    esac
+done
+
+if [[ "${1:-}" != "push" ]]; then
+    exec "$REAL_GIT" "${pre[@]}" "$@"
+fi
+shift
+
+remote=""
+for arg in "$@"; do
+    case "$arg" in
+        -f | --force | --force-with-lease* | --force-if-includes | --mirror | +*) refuse "force push refused: $arg" ;;
+        -*) ;;
+        *) if [[ -z "$remote" ]]; then remote="$arg"; fi ;;
+    esac
+done
+remote="${remote:-origin}"
+
+url="$("$REAL_GIT" "${pre[@]}" remote get-url "$remote" 2>/dev/null || printf '%s' "$remote")"
+allow="${GIT_PUSH_ALLOW_ROOT:-}"
+if [[ -n "$allow" && "$url" == "$allow"/* ]]; then
+    exec "$REAL_GIT" "${pre[@]}" push "$@"
+fi
+refuse "push to $url refused (tests may only push under GIT_PUSH_ALLOW_ROOT)"

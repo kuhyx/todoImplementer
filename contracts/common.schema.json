@@ -1,0 +1,233 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://todoimplementer.local/contracts/common.schema.json",
+  "title": "Shared definitions",
+  "description": "Defs referenced by every other contract. Times are epoch seconds (number). Costs are USD numbers.",
+  "$defs": {
+    "id8": {"type": "string", "pattern": "^[A-Za-z0-9]{8}$", "description": "First 8 chars of the todo-app note id."},
+    "epoch": {"type": "number", "minimum": 0},
+    "usd": {"type": "number", "minimum": 0},
+    "assignee": {"enum": ["human", "claude"]},
+    "stage": {
+      "enum": [
+        "spec",
+        "spec_wait",
+        "plan",
+        "implement",
+        "live_check",
+        "checks",
+        "gate",
+        "shipping",
+        "shipped",
+        "failed",
+        "paused_limit",
+        "cancelled"
+      ],
+      "description": "Run stage as written by the runner. See DOCS-spec.md for transitions."
+    },
+    "status": {
+      "enum": [
+        "backlog",
+        "yours",
+        "cancelled",
+        "queued",
+        "working",
+        "paused_limit",
+        "shipping",
+        "needs_you",
+        "ready_to_ship",
+        "done"
+      ],
+      "description": "THE single status, computed on the server by board.status.compute. Never recomputed in the page."
+    },
+    "column": {"enum": ["backlog", "running", "needs_you", "ready", "done"]},
+    "needs_kind": {
+      "enum": [
+        "spec_questions",
+        "spec_ok",
+        "claude_question",
+        "claude_action",
+        "checks_failed",
+        "run_failed",
+        "handed_to_you"
+      ]
+    },
+    "needs": {
+      "type": ["object", "null"],
+      "description": "Why the task is in Needs you; null in every other column. text names exactly what is needed.",
+      "properties": {"kind": {"$ref": "#/$defs/needs_kind"}, "text": {"type": "string", "minLength": 1}},
+      "required": ["kind", "text"],
+      "additionalProperties": false
+    },
+    "action": {
+      "type": "object",
+      "description": "A button the page may show. enabled=false needs a reason; the page renders it disabled with the reason.",
+      "properties": {
+        "id": {
+          "enum": [
+            "start",
+            "spec-answers",
+            "spec-ok",
+            "send",
+            "ship",
+            "cancel",
+            "credits",
+            "lesson-approve",
+            "copy-resume"
+          ]
+        },
+        "label": {"type": "string", "minLength": 1},
+        "enabled": {"type": "boolean"},
+        "reason": {"type": ["string", "null"]},
+        "confirm": {"type": "boolean", "description": "Page asks 'sure?' first (ship, cancel, credits)."},
+        "value": {"type": "string", "description": "copy-resume only: the text to copy."}
+      },
+      "required": ["id", "label", "enabled", "reason"],
+      "additionalProperties": false,
+      "if": {"properties": {"enabled": {"const": false}}},
+      "then": {"properties": {"reason": {"type": "string", "minLength": 1}}}
+    },
+    "actions": {"type": "array", "items": {"$ref": "#/$defs/action"}},
+    "question": {
+      "type": "object",
+      "description": "Spec-stage card: Claude's open question and its recommended answer.",
+      "properties": {
+        "id": {"type": "string", "pattern": "^Q[0-9]+$"},
+        "title": {"type": "string", "minLength": 1},
+        "body": {"type": "string"},
+        "recommendation": {"type": "string"},
+        "answer": {"type": ["string", "null"]}
+      },
+      "required": ["id", "title", "body", "recommendation", "answer"],
+      "additionalProperties": false
+    },
+    "lesson": {
+      "type": "object",
+      "description": "Lesson drafted on a gate rejection; written to a skill only after the approve click.",
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "skill": {"type": "string", "minLength": 1},
+        "mistake": {"type": "string"},
+        "rule": {"type": "string"},
+        "evidence": {"type": "string"},
+        "state": {"enum": ["drafted", "approved", "rejected"]}
+      },
+      "required": ["id", "skill", "mistake", "rule", "evidence", "state"],
+      "additionalProperties": false
+    },
+    "limit": {
+      "type": "object",
+      "description": "Claude plan limit. until=null when none is active.",
+      "properties": {
+        "active": {"type": "boolean"},
+        "until": {"anyOf": [{"$ref": "#/$defs/epoch"}, {"type": "null"}]},
+        "credits_available": {"type": "boolean", "description": "Run on credits can run now."}
+      },
+      "required": ["active", "until", "credits_available"],
+      "additionalProperties": false
+    },
+    "error": {
+      "type": "object",
+      "properties": {
+        "code": {"enum": ["bad_request", "forbidden", "not_found", "disabled", "conflict", "internal", "upstream_unavailable"]},
+        "message": {"type": "string", "minLength": 1}
+      },
+      "required": ["code", "message"],
+      "additionalProperties": false
+    },
+    "task_card": {
+      "type": "object",
+      "description": "One board card; also the head of the task detail.",
+      "properties": {
+        "id": {"$ref": "#/$defs/item_id"},
+        "title": {"type": "string", "minLength": 1},
+        "repo": {"type": ["string", "null"], "description": "null: the note has no repo, so it is in Yours."},
+        "priority": {"type": "string"},
+        "assignee": {"$ref": "#/$defs/assignee"},
+        "stage": {"anyOf": [{"$ref": "#/$defs/stage"}, {"type": "null"}], "description": "null before a run."},
+        "status": {"$ref": "#/$defs/status"},
+        "column": {"$ref": "#/$defs/column"},
+        "current": {"type": "string", "description": "One line on what it does or waits on, e.g. 'review round 2/5'."},
+        "needs": {"$ref": "#/$defs/needs"},
+        "cost_usd": {"$ref": "#/$defs/usd"},
+        "resumes_at": {"anyOf": [{"$ref": "#/$defs/epoch"}, {"type": "null"}]},
+        "updated": {"anyOf": [{"$ref": "#/$defs/epoch"}, {"type": "null"}]},
+        "actions": {"$ref": "#/$defs/actions"}
+      },
+      "required": [
+        "id",
+        "title",
+        "repo",
+        "priority",
+        "assignee",
+        "stage",
+        "status",
+        "column",
+        "current",
+        "needs",
+        "cost_usd",
+        "resumes_at",
+        "updated",
+        "actions"
+      ],
+      "additionalProperties": false
+    },
+    "item_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9]{8}-[0-9]+$",
+      "description": "Card id: <note id8>-<0-based index of the note's '## ' section> (todo_mcp.items.Item). Also the run-dir name."
+    },
+    "checks": {
+      "type": "object",
+      "description": "Latest Checks stage record: done_check, tests, linters. passed = every exit is 0. The last results' tails are the evidence close_task gets.",
+      "properties": {
+        "passed": {"type": "boolean"},
+        "ran_at": {"$ref": "#/$defs/epoch"},
+        "log": {"type": "string", "description": "Combined log path relative to the run dir."},
+        "results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "command": {"type": "string", "minLength": 1},
+              "exit": {"type": "integer"},
+              "tail": {"type": "string", "description": "Last lines of the output."}
+            },
+            "required": ["command", "exit", "tail"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["passed", "ran_at", "results"],
+      "additionalProperties": false
+    },
+    "self_check": {
+      "type": "array",
+      "description": "The implementer's own walk through plan.md's acceptance criteria (its final turn). Informational, never proof.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "criterion": {"type": "string", "minLength": 1},
+          "done": {"type": "boolean"},
+          "note": {"type": "string"}
+        },
+        "required": ["criterion", "done"],
+        "additionalProperties": false
+      }
+    },
+    "live_check": {
+      "type": "object",
+      "description": "Record of the live_check stage: Claude ran the changed app/CLI/server and reports what it saw per criterion. Tests and code reading do not count. Shown at the gate and passed to close_task with the checks tails.",
+      "properties": {
+        "report_md": {"type": "string", "description": "What was run, what was seen, per criterion."},
+        "shots": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Screenshot paths relative to the run dir (may be empty)."
+        }
+      },
+      "required": ["report_md", "shots"],
+      "additionalProperties": false
+    }
+  }
+}

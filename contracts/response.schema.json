@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://todoimplementer.local/contracts/response.schema.json",
+  "title": "POST /api/task/<item-id>/<action> response",
+  "description": "ok:true (HTTP 200) returns the updated card. ok:false carries the HTTP status: 400 bad_request, 403 forbidden (Origin or token), 404 not_found, 409 disabled (the action is not enabled; message is its reason) or conflict, 500 internal.",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "ok": {"const": true},
+        "task": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/task_card"}
+      },
+      "required": ["ok", "task"],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "ok": {"const": false},
+        "error": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/error"}
+      },
+      "required": ["ok", "error"],
+      "additionalProperties": false
+    }
+  ]
+}

@@ -1,0 +1,122 @@
+#!/usr/bin/env python3
+"""Fake `claude` CLI for hermetic tests: replays scripted stream-json turns.
+
+Scripts live in $FAKE_CLAUDE_DIR/<key>/NNN.jsonl and are consumed in name order; key is the first 8 chars
+of the run dir name (a worktree is `<root>/<id8>-<n>/wt`), falling back to $FAKE_CLAUDE_DIR/default/. With no
+script left it replays a plain successful turn ending in a `D:` tag. Every call is appended to
+$FAKE_CLAUDE_DIR/calls.jsonl (argv, cwd, prompt, resume, model, CLAUDE_AUTO_CONTINUE).
+
+A script line is either a raw stream-json object (printed with the session id filled in) or a directive
+{"_fake": kind}: text, tool, result, limit, write, sleep, spawn_sleeper, raw, exit; a first `bare` line
+suppresses the init event and the session id.
+"""
+
+import json
+import os
+import subprocess
+import sys
+import time
+import uuid
+from pathlib import Path
+
+DEFAULT = [
+    {"_fake": "text", "text": "Did the thing."},
+    {"_fake": "result", "text": "Did the thing.\n\nD: done"},
+]
+
+
+def parse(argv: list[str]) -> dict[str, str | None]:
+    """Pick the prompt (after -p), --resume and --model out of argv."""
+    opts: dict[str, str | None] = {"prompt": None, "resume": None, "model": None}
+    i = 0
+    while i < len(argv):
+        arg = argv[i]
+        if arg == "-p" and i + 1 < len(argv):
+            opts["prompt"] = argv[i + 1]
+            i += 2
+        elif arg in ("--resume", "--model") and i + 1 < len(argv):
+            opts[arg[2:]] = argv[i + 1]
+            i += 2
+        else:
+            i += 1
+    return opts
+
+
+def next_script(base: Path, key: str) -> list[dict]:
+    """Pop the first unused script for this key (or default); the built-in turn when none is left."""
+    for folder in (base / key, base / "default"):
+        files = sorted(folder.glob("*.jsonl")) if folder.is_dir() else []
+        for script in files:
+            claimed = script.with_suffix(".used")
+            try:  # rename is the atomic claim: of two parallel turns exactly one wins each script
+                script.rename(claimed)
+            except FileNotFoundError:
+                continue
+            text = claimed.read_text(encoding="utf-8")
+            return [json.loads(line) for line in text.splitlines() if line.strip()]
+    return DEFAULT
+
+
+def emit(obj: dict) -> None:
+    sys.stdout.write(json.dumps(obj) + "\n")
+    sys.stdout.flush()
+
+
+def run(step: dict, sid: str, cwd: Path) -> int | None:
+    """Play one script line; return an exit code to stop early."""
+    kind = step.get("_fake")
+    if kind is None:
+        emit({**step, "session_id": sid})
+    elif kind == "text":
+        emit({"type": "assistant", "message": {"content": [{"type": "text", "text": step["text"]}]}, "session_id": sid})
+    elif kind == "tool":
+        block = {"type": "tool_use", "id": "toolu_fake", "name": step["name"], "input": step.get("input", {})}
+        emit({"type": "assistant", "message": {"content": [block]}, "session_id": sid})
+    elif kind == "result":
+        emit({
+            "type": "result", "subtype": "success", "is_error": step.get("is_error", False), "result": step["text"],
+            "session_id": sid, "total_cost_usd": step.get("cost", 0.01), "num_turns": 1,
+        })
+    elif kind == "limit":
+        info = {"status": step.get("status", "rejected"), "resetsAt": step["resets_at"], "rateLimitType": "five_hour",
+                "overageStatus": "rejected", "isUsingOverage": step.get("using_overage", False)}
+        emit({"type": "rate_limit_event", "rate_limit_info": info, "session_id": sid})
+    elif kind == "write":
+        target = cwd / step["path"]
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(step["text"], encoding="utf-8")
+    elif kind == "sleep":
+        time.sleep(step["sec"])
+    elif kind == "spawn_sleeper":
+        child = subprocess.Popen(["sleep", "30"])
+        Path(step["pidfile"]).write_text(str(child.pid), encoding="utf-8")
+    elif kind == "raw":
+        sys.stdout.write(step["text"] + "\n")
+        sys.stdout.flush()
+    elif kind == "exit":
+        return int(step["code"])
+    return None
+
+
+def main() -> int:
+    base = Path(os.environ["FAKE_CLAUDE_DIR"])
+    opts = parse(sys.argv[1:])
+    cwd = Path.cwd()
+    call = {"argv": sys.argv[1:], "cwd": str(cwd), **opts, "auto_continue": os.environ.get("CLAUDE_AUTO_CONTINUE")}
+    with (base / "calls.jsonl").open("a", encoding="utf-8") as log:
+        log.write(json.dumps(call) + "\n")
+    key = (cwd.parent.name if cwd.name == "wt" else cwd.name)[:8]
+    steps = next_script(base, key)
+    bare = steps[0].get("_fake") == "bare"
+    sid = "" if bare else opts["resume"] or f"fake-{uuid.uuid4().hex[:8]}"
+    if not bare:
+        emit({"type": "system", "subtype": "init", "session_id": sid, "model": opts["model"], "cwd": str(cwd)})
+    for step in steps[1:] if bare else steps:
+        code = run(step, sid, cwd)
+        if code is not None:
+            return code
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

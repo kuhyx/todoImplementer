@@ -1,0 +1,74 @@
+{
+  "build": "abc1234",
+  "generated_at": 1793880001.0,
+  "slots": {
+    "used": 1
+  },
+  "limit": {
+    "active": false,
+    "until": null,
+    "credits_available": false
+  },
+  "columns": [
+    {
+      "id": "backlog",
+      "label": "Backlog",
+      "count": 0
+    },
+    {
+      "id": "running",
+      "label": "Running",
+      "count": 1
+    },
+    {
+      "id": "needs_you",
+      "label": "Needs you",
+      "count": 0
+    },
+    {
+      "id": "ready",
+      "label": "Ready to ship",
+      "count": 0
+    },
+    {
+      "id": "done",
+      "label": "Done",
+      "count": 0
+    }
+  ],
+  "repos": [
+    "demo"
+  ],
+  "tasks": [
+    {
+      "id": "c59d2588-0",
+      "title": "Demo task",
+      "repo": "demo",
+      "priority": "high",
+      "assignee": "claude",
+      "stage": "checks",
+      "status": "working",
+      "column": "running",
+      "current": "checks",
+      "needs": null,
+      "cost_usd": 1.37,
+      "resumes_at": null,
+      "updated": 1793880000.5,
+      "actions": [
+        {
+          "id": "cancel",
+          "label": "Cancel",
+          "enabled": true,
+          "reason": null,
+          "confirm": true
+        },
+        {
+          "id": "start",
+          "label": "Start",
+          "enabled": false,
+          "reason": "already running"
+        }
+      ]
+    }
+  ]
+}

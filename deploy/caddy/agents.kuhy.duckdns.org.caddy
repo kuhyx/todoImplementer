@@ -1,0 +1,22 @@
+# Reference snippet for the gitea-caddy edge; publish_caddy_site.sh --forward-auth
+# renders the same block. Google sign-in (oauth2-proxy) gates everything.
+agents.kuhy.duckdns.org {
+	handle /oauth2/* {
+		reverse_proxy 127.0.0.1:4186 {
+			header_up X-Real-IP {remote_host}
+		}
+	}
+	handle {
+		forward_auth 127.0.0.1:4186 {
+			uri /oauth2/auth
+			header_up X-Real-IP {remote_host}
+			@unauth status 401
+			handle_response @unauth {
+				redir * /oauth2/sign_in?rd={scheme}://{host}{uri}
+			}
+		}
+		reverse_proxy 127.0.0.1:8786 {
+			flush_interval -1
+		}
+	}
+}

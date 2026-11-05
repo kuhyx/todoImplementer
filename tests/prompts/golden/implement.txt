@@ -1,0 +1,16 @@
+override
+Implement stage.
+Item: Add dark mode toggle (repo: todo)
+Header needs a toggle that persists.
+done_check: pnpm test
+Spec answers:
+- Persist where?: localStorage
+kuhy's notes:
+- also check mobile width
+Plan (/run/ab12cd34/plan.md):
+## Acceptance criteria
+C1. I click the toggle, the page turns dark.
+Rules: work only in /wt/todo. Follow your ~/.claude rules: red check first, heavy commands via ~/.claude/scripts/capped.sh, every call under 60 s. Never commit, push or touch main: the server ships.
+Write the failing check first, see it red, implement, see it green.
+Self-check: walk every acceptance criterion, run the done_check and the tests yourself, and state per criterion `Cn: done` or `Cn: not done` plus one line of evidence.
+End with `D:`.

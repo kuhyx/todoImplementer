@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://todoimplementer.local/contracts/tokens-panels-misc.schema.json",
+  "title": "GET /api/tokens/panel/<name>: estimator, prompt_habits, export",
+  "description": "One $defs entry per panel, named like the panel: the shared panel envelope (filters, _tables) plus its own keys; unknown keys fail. Ratios that divide by zero on an empty window are null.",
+  "$defs": {
+    "base": {"$ref": "https://todoimplementer.local/contracts/tokens-common.schema.json#/$defs/panel"},
+    "ts": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"},
+    "estimator": {
+      "allOf": [{"$ref": "#/$defs/base"}], "type": "object",
+      "properties": {
+        "caption": {"type": "string"}, "filtered_by": {"type": "string"},
+        "totals": {
+          "type": "object",
+          "properties": {
+            "sessions": {"type": "number"}, "within_share": {"type": ["number", "null"]},
+            "over_share": {"type": ["number", "null"]}, "under_share": {"type": ["number", "null"]},
+            "median_ratio": {"type": ["number", "null"]}, "gate_misses": {"type": "number"}, "predicted_fits": {"type": "number"}
+          },
+          "required": ["sessions", "within_share", "over_share", "under_share", "median_ratio", "gate_misses", "predicted_fits"],
+          "additionalProperties": false
+        },
+        "sessions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "session_id": {"type": "string"}, "title": {"type": "string"}, "cwd": {"type": ["string", "null"]},
+              "first_ts": {"$ref": "#/$defs/ts"}, "est_calls": {"type": "number"}, "actual_calls": {"type": "number"},
+              "ratio": {"type": ["number", "null"]}, "miss": {"type": "string"}, "usd": {"type": "number"}
+            },
+            "required": ["session_id", "title", "cwd", "first_ts", "est_calls", "actual_calls", "ratio", "miss", "usd"],
+            "additionalProperties": false
+          }
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {"day": {"type": "string"}, "kind": {"type": "string"}, "count": {"type": "number"}, "example": {"type": "string"}},
+            "required": ["day", "kind", "count", "example"], "additionalProperties": false
+          }
+        },
+        "events_daily": {
+          "type": "array",
+          "items": {
+            "type": "object", "properties": {"day": {"type": "string"}, "count": {"type": "number"}}, "required": ["day", "count"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["caption", "filtered_by", "totals", "sessions", "events", "events_daily"], "unevaluatedProperties": false
+    },
+    "prompt_habits": {
+      "allOf": [{"$ref": "#/$defs/base"}], "type": "object",
+      "properties": {
+        "caption": {"type": "string"},
+        "sessions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {"key": {"type": "string"}, "prompt": {"type": "string"}, "length": {"type": "number"}, "usd": {"type": "number"}},
+            "required": ["key", "prompt", "length", "usd"], "additionalProperties": false
+          }
+        },
+        "length_buckets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "bucket": {"type": "string"}, "sessions": {"type": "number"}, "total_usd": {"type": "number"},
+              "mean_usd": {"type": ["number", "null"]}
+            },
+            "required": ["bucket", "sessions", "total_usd", "mean_usd"], "additionalProperties": false
+          }
+        },
+        "prefixes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "prefix": {"type": "string"}, "prompts": {"type": "number"}, "sessions": {"type": "number"},
+              "session_usd": {"type": "number"}
+            },
+            "required": ["prefix", "prompts", "sessions", "session_usd"], "additionalProperties": false
+          }
+        },
+        "home": {
+          "type": "object",
+          "properties": {
+            "sessions": {"type": "number"}, "usd": {"type": "number"}, "usd_share": {"type": ["number", "null"]},
+            "session_share": {"type": ["number", "null"]}
+          },
+          "required": ["sessions", "usd", "usd_share", "session_share"], "additionalProperties": false
+        }
+      },
+      "required": ["caption", "sessions", "length_buckets", "prefixes", "home"], "unevaluatedProperties": false
+    },
+    "export": {
+      "allOf": [{"$ref": "#/$defs/base"}], "type": "object",
+      "properties": {
+        "caption": {"type": "string"},
+        "turns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "ts": {"$ref": "#/$defs/ts"}, "key": {"type": "string"}, "cwd": {"type": ["string", "null"]},
+              "model": {"type": "string"}, "usd": {"type": "number"}, "context": {"type": "number"}, "input": {"type": "number"},
+              "cache_write": {"type": "number"}, "cache_read": {"type": "number"}, "output": {"type": "number"},
+              "latency_s": {"type": ["number", "null"]}, "out_think": {"type": ["number", "null"]}
+            },
+            "required": [
+              "ts", "key", "cwd", "model", "usd", "context", "input", "cache_write", "cache_read", "output", "latency_s",
+              "out_think"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "calls": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "ts": {"$ref": "#/$defs/ts"}, "key": {"type": "string"}, "cwd": {"type": ["string", "null"]},
+              "model": {"type": "string"}, "name": {"type": "string"}, "family": {"type": "string"}, "target": {"type": "string"},
+              "result_tokens": {"type": "number"}, "error_kind": {"type": "string"}, "create_usd": {"type": "number"},
+              "carry_usd": {"type": "number"}, "carry_calls": {"type": "number"}
+            },
+            "required": [
+              "ts", "key", "cwd", "model", "name", "family", "target", "result_tokens", "error_kind", "create_usd", "carry_usd",
+              "carry_calls"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "marks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "ts": {"$ref": "#/$defs/ts"}, "key": {"type": "string"}, "cwd": {"type": ["string", "null"]},
+              "model": {"type": "string"}, "kind": {"type": "string"}, "name": {"type": "string"}, "detail": {"type": "string"},
+              "count": {"type": "number"}, "tokens": {"type": "number"}, "duration_ms": {"type": "number"},
+              "retry_usd": {"type": "number"}, "create_usd": {"type": "number"}, "carry_usd": {"type": "number"}
+            },
+            "required": [
+              "ts", "key", "cwd", "model", "kind", "name", "detail", "count", "tokens", "duration_ms", "retry_usd", "create_usd",
+              "carry_usd"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["caption", "turns", "calls", "marks"], "unevaluatedProperties": false
+    }
+  }
+}

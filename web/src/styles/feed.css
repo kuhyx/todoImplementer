@@ -1,0 +1,52 @@
+/* Feed ------------------------------------------------------------------------ */
+
+.feed-state {
+  margin-bottom: var(--space-2);
+  font-size: var(--text-label);
+  color: var(--text-muted);
+}
+
+.feed-state[data-state="reconnecting"] {
+  color: var(--warning);
+}
+
+.feed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.feed-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0 var(--space-2);
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid var(--border);
+  font-size: var(--text-label);
+}
+
+.feed-item[data-kind="error"] {
+  border-left: 2px solid var(--danger);
+  padding-left: var(--space-2);
+}
+
+.feed-item[data-kind="user"] {
+  border-left: 2px solid var(--accent);
+  padding-left: var(--space-2);
+}
+
+.feed-time,
+.feed-kind {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  color: var(--text-muted);
+}
+
+.feed-text {
+  grid-column: 1 / -1;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

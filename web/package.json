@@ -1,0 +1,41 @@
+{
+  "name": "todoimplementer-web",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.16.1",
+  "engines": {
+    "node": ">=24",
+    "pnpm": ">=10"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro check && astro build",
+    "preview": "astro preview",
+    "mock": "node dev/mock-server.ts",
+    "lint": "astro sync && tsc --noEmit && eslint . && astro check",
+    "test": "vitest run",
+    "coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@kuhyx/web-ui": "github:kuhyx/utils#web_ui-v0.5.0&path:/web_ui",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@astrojs/check": "0.9.12",
+    "@eslint/js": "10.0.1",
+    "@kuhyx/ts-config": "github:kuhyx/utils#ts_config-v0.1.3&path:/ts_config",
+    "@testing-library/jest-dom": "7.0.1",
+    "@types/node": "26.6.6",
+    "@vitest/coverage-v8": "5.1.0",
+    "ajv": "8.20.0",
+    "astro": "7.4.5",
+    "eslint": "10.14.0",
+    "jsdom": "30.1.3",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.1",
+    "vitest": "5.1.0"
+  },
+  "imports": {
+    "#fixtures/*": "./src/test/*.ts"
+  }
+}

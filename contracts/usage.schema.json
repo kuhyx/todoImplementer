@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://todoimplementer.local/contracts/usage.schema.json",
+  "title": "GET /api/usage",
+  "description": "Plan windows (from the stream's rate_limit_event) and per-task dollar cost.",
+  "$defs": {
+    "window": {
+      "type": ["object", "null"],
+      "description": "null until a rate_limit_event has been seen.",
+      "properties": {
+        "utilization": {"type": "number", "minimum": 0},
+        "resets_at": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"},
+        "status": {"type": "string"}
+      },
+      "required": ["utilization", "resets_at", "status"],
+      "additionalProperties": false
+    }
+  },
+  "type": "object",
+  "properties": {
+    "generated_at": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"},
+    "five_hour": {"$ref": "#/$defs/window"},
+    "seven_day": {"$ref": "#/$defs/window"},
+    "overage": {
+      "type": "object",
+      "properties": {"status": {"type": "string"}, "using": {"type": "boolean"}},
+      "required": ["status", "using"],
+      "additionalProperties": false
+    },
+    "limit": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/limit"},
+    "cost": {
+      "type": "object",
+      "properties": {
+        "today_usd": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/usd"},
+        "total_usd": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/usd"},
+        "per_task": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/item_id"},
+              "title": {"type": "string"},
+              "cost_usd": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/usd"}
+            },
+            "required": ["id", "title", "cost_usd"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["today_usd", "total_usd", "per_task"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["generated_at", "five_hour", "seven_day", "overage", "limit", "cost"],
+  "additionalProperties": false
+}

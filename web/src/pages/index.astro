@@ -1,0 +1,31 @@
+---
+import "@kuhyx/web-ui/tokens.css";
+import "@/styles/base.css";
+import "@/styles/header.css";
+import "@/styles/feedback.css";
+import "@/styles/board.css";
+import "@/styles/drawer.css";
+import "@/styles/feed.css";
+import "@/styles/panels.css";
+import "@/styles/send.css";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="todoimpl-csrf" content="__TODOIMPL_CSRF__" />
+    <meta name="todoimpl-build" content="__TODOIMPL_BUILD__" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>todoImplementer</title>
+  </head>
+  <body>
+    <ti-app></ti-app>
+    <noscript><p>todoImplementer needs JavaScript to show the board.</p></noscript>
+    <script>
+      import "@/main";
+    </script>
+  </body>
+</html>

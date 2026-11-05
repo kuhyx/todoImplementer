@@ -1,0 +1,96 @@
+{
+  "card": {
+    "id": "c59d2588-0",
+    "title": "Demo task",
+    "repo": "demo",
+    "priority": "high",
+    "assignee": "claude",
+    "stage": "checks",
+    "status": "working",
+    "column": "running",
+    "current": "checks",
+    "needs": null,
+    "cost_usd": 1.37,
+    "resumes_at": null,
+    "updated": 1793880000.5,
+    "actions": [
+      {
+        "id": "cancel",
+        "label": "Cancel",
+        "enabled": true,
+        "reason": null,
+        "confirm": true
+      },
+      {
+        "id": "start",
+        "label": "Start",
+        "enabled": false,
+        "reason": "already running"
+      }
+    ]
+  },
+  "body": "Do the demo.",
+  "done_check": "python demo.py",
+  "plan_md": "# Plan",
+  "questions": [],
+  "diff": {
+    "files": [
+      {
+        "path": "demo.py",
+        "added": 2,
+        "removed": 0
+      }
+    ],
+    "patch": "diff --git",
+    "truncated": false
+  },
+  "stages": [
+    {
+      "stage": "plan",
+      "started": 1793879000.0,
+      "ended": 1793879100.0
+    },
+    {
+      "stage": "checks",
+      "started": 1793879100.0,
+      "ended": null
+    }
+  ],
+  "skills_loaded": [
+    "build-backend"
+  ],
+  "worktree": "/tmp/w",
+  "branch": "todoimpl/c59d2588",
+  "resume_command": "cd /tmp/w && claude --resume 5f0e9c4a",
+  "lesson": null,
+  "error": null,
+  "checks": {
+    "passed": true,
+    "ran_at": 1793879000.0,
+    "log": "logs/checks-1793879000.log",
+    "results": [
+      {
+        "command": "python demo.py",
+        "exit": 0,
+        "tail": "hello"
+      },
+      {
+        "command": "make test",
+        "exit": 0,
+        "tail": "1 passed"
+      }
+    ]
+  },
+  "self_check": [
+    {
+      "criterion": "demo prints hello",
+      "done": true
+    }
+  ],
+  "live_check": {
+    "report_md": "Ran demo.py; saw hello.",
+    "shots": [
+      "evidence/shot1.png"
+    ]
+  }
+}

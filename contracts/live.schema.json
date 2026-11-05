@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://todoimplementer.local/contracts/live.schema.json",
+  "title": "GET /api/live?id=<item-id> (SSE data payloads)",
+  "description": "Each SSE message is 'id: <seq>', 'event: <type>', 'data: <this JSON>'. A reconnect sends Last-Event-ID and the server replays activity events with a greater seq. A 15 s ': keepalive' comment line is not a message. The first message after connecting is always a 'stage' snapshot.",
+  "oneOf": [
+    {
+      "type": "object",
+      "description": "One line of the live activity feed.",
+      "properties": {
+        "type": {"const": "activity"},
+        "seq": {"type": "integer", "minimum": 1},
+        "at": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"},
+        "kind": {
+          "enum": ["text", "tool", "result", "error", "system", "user"],
+          "description": "user: a Send-to-Claude message."
+        },
+        "text": {"type": "string"},
+        "tool": {"type": ["string", "null"], "description": "Tool name when kind=tool."}
+      },
+      "required": ["type", "seq", "at", "kind", "text", "tool"],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "description": "The stage or status changed (also the connect snapshot). The page replaces the card with these fields.",
+      "properties": {
+        "type": {"const": "stage"},
+        "stage": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/stage"},
+        "status": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/status"},
+        "column": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/column"},
+        "current": {"type": "string"},
+        "needs": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/needs"},
+        "actions": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/actions"}
+      },
+      "required": ["type", "stage", "status", "column", "current", "needs", "actions"],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "type": {"const": "cost"},
+        "cost_usd": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/usd"}
+      },
+      "required": ["type", "cost_usd"],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "description": "The run left the live set (waiting, finished or stopped); the page may close the stream.",
+      "properties": {
+        "type": {"const": "done"},
+        "status": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/status"}
+      },
+      "required": ["type", "status"],
+      "additionalProperties": false
+    }
+  ]
+}
