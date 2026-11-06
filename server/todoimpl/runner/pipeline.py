@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 from todoimpl.board import state as store
 from todoimpl.prompts import PromptContext, build
 
-from . import limits, retry, worktree
+from . import limits, phone, retry, worktree
 from .files import NeedsYouError
 from .session import handoff_summary
 from .turn import TurnEnv, run_turn
@@ -157,6 +157,7 @@ class Driver:
             run_dir=self.ctx.run_dir, done_check=item.done_check, plan_md=self.plan_md(),
             spec_answers=answers,
             notes=notes, failure_tail=failure_tail, handoff=handoff,
+            phone=st.extra.get("waiting_phone") if st.extra.get("phone_attached") else None,
         )  # fmt: skip
 
     def turn(self, role: str, stage: str, *, failure_tail: str = "") -> TurnResult:
@@ -189,6 +190,8 @@ class Driver:
         env = TurnEnv(ctx.run_dir, Path(str(st.worktree)), ctx.publish, ctx.register, ctx.now)
         res = run_turn(env, st, role, prompt_for, (ctx.run_dir,))
         st.extra["last_reply"] = res.text[-1500:]
+        if res.finished and not res.is_error:
+            phone.after_turn(st, ctx.run_dir, res)
         self.save()
         if ctx.cancelled():
             raise CancelledError

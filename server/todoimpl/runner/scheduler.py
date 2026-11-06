@@ -10,8 +10,9 @@ from todoimpl.board.state import RunState
 from todoimpl.todo_mcp.model import TodoError
 
 from . import limits, retry
-from .engine import Client, Engine, default_clock
+from .engine import Client, default_clock
 from .files import read_json
+from .phone_sched import PhoneEngine
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -43,7 +44,7 @@ def needs_spec(item: Item) -> bool:
     return item.done_check is None and not SPEC_MARKER.search(item.body)
 
 
-class Scheduler(Engine):
+class Scheduler(PhoneEngine):
     """Every start drives at once in its own thread; only the usage limit holds a run back."""
 
     def __init__(

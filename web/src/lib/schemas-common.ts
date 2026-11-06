@@ -20,7 +20,7 @@ export const STATUSES = [
 ] as const;
 export const COLUMN_IDS = ["backlog", "running", "needs_you", "ready", "done"] as const;
 export const NEEDS_KINDS = [
-  "spec_questions", "spec_ok", "claude_question", "claude_action", "checks_failed", "run_failed", "handed_to_you",
+  "spec_questions", "spec_ok", "claude_question", "claude_action", "phone", "checks_failed", "run_failed", "handed_to_you",
 ] as const;
 export const ACTION_IDS = [
   "start", "spec-answers", "spec-ok", "send", "ship", "cancel", "credits", "lesson-approve", "copy-resume",

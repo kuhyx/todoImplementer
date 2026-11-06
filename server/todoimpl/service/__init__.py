@@ -47,6 +47,8 @@ def build_backend(
     if scheduler is None:
         module = importlib.import_module("todoimpl.runner.scheduler")
         scheduler = module.Scheduler(ItemView(client, cache), root)
+    if callable(start_watch := getattr(scheduler, "start_phone_watch", None)):
+        start_watch()
     backend = ServiceBackend(cache, scheduler, root, build or git_build_id(REPO))
     if refresh:
         cache.start()

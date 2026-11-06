@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from . import phone
 from .kind import HINTS, detect_kind
 
 if TYPE_CHECKING:
@@ -89,6 +90,7 @@ def implement(ctx: PromptContext) -> str:
         _rules(ctx),
         "Write the failing check first, see it red, implement, see it green.",
         SELF_CHECK,
+        phone.IMPLEMENT,
         "End with `D:`.",
     )
 
@@ -103,6 +105,7 @@ def live_check(ctx: PromptContext) -> str:
         f"Start the changed thing from {ctx.worktree}; exercise every criterion for real, as a user would.",
         f"Driver: {HINTS[kind]}",
         "Tests or reading code never count. No video. Never use kuhy's display :0.",
+        phone.attached(ctx) if ctx.phone is not None else phone.staging(ctx),
         f"Write {ctx.run_dir}/live_check.md, one line per criterion:",
         "- [x] C1: what I did -> what I saw   (use `- [ ]` if it failed or could not be tried, and say why)",
         "A criterion that can only pass after the ship (committed, merged, deployed, restarted from main) or "
