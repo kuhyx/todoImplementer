@@ -1,4 +1,4 @@
-/** The task drawer's question flow: one big editable question at a time (Enter or swipe right = OK), an all-at-once tab, one automatic send. */
+/** The task drawer's question flow: one centered editable question at a time (Enter or swipe right = OK), an all-at-once view behind a bar icon, one automatic send. */
 import type { ActionSlot } from "@/components/drawer-sections";
 import type { Tab } from "@/components/drawer-shell";
 import type { TaskDetail } from "@/lib/schemas";
@@ -6,12 +6,15 @@ import type { Question } from "@/lib/schemas-common";
 
 import { type FieldHooks, type Status, statusView } from "@/components/ask-cards";
 import { answersOf, askOf, firstOpen, nextOpen, NOT_WAITING, waitingNote } from "@/components/ask-model";
-import { actionButton, allView, type StepProps, stepView } from "@/components/ask-step";
+import { allView, retryButton, type StepProps, stepView } from "@/components/ask-step";
 import { type AskState, blankState, dropState, loadState, saveState, storeKey } from "@/components/ask-store";
+import { iconButton, setIcon } from "@/components/icons";
 import { h } from "@/lib/dom";
 import { errorText } from "@/lib/http";
 
 const FREE_TITLE = "Answer Claude";
+const ALL_LABEL = "All questions";
+const ONE_LABEL = "One question at a time";
 
 export interface AskHost {
   /** Runs after a successful send: refresh the card from the server. */
@@ -34,9 +37,11 @@ export class AskPanel {
   #root: HTMLElement | null = null;
   #state: AskState = blankState(0);
   #status: Status = { kind: "idle" };
+  readonly #switch: HTMLButtonElement;
 
   constructor(host: AskHost) {
     this.#host = host;
+    this.#switch = iconButton("all", ALL_LABEL, { "data-ask-mode": true }, () => { this.#setMode(this.#mode === "step" ? "all" : "step"); });
   }
 
   get #busy(): boolean {
@@ -50,15 +55,14 @@ export class AskPanel {
   #paint(): void {
     const root = this.#root;
     if (root === null) return;
-    const mode = (kind: "all" | "step", text: string): HTMLButtonElement =>
-      h("button", { attrs: { "aria-pressed": this.#mode === kind, "data-mode": kind, type: "button" }, class: "dtab", on: { click: () => { this.#setMode(kind); } }, text });
+    if (this.#mode === "step") setIcon(this.#switch, "all", ALL_LABEL);
+    else setIcon(this.#switch, "one", ONE_LABEL);
     const view = this.#mode === "step"
       ? stepView(this.#props())
       : allView(this.#questions, this.#state.drafts, this.#hooks(), this.#busy, () => { void this.#submit(); });
     root.replaceChildren(
-      h("div", { attrs: { "aria-label": "Question view", role: "group" }, class: "ask-modes" }, mode("step", "One by one"), mode("all", "All questions")),
       view,
-      statusView(this.#status, () => actionButton("Retry", { "data-ask": "retry" }, this.#busy, () => { void this.#submit(); })),
+      statusView(this.#status, () => retryButton(() => { void this.#submit(); })),
     );
   }
 
@@ -158,6 +162,11 @@ export class AskPanel {
       h("p", { class: "ask-body", text }),
       this.#interactive && h("textarea", { attrs: { "aria-label": "Your answer to Claude", "data-keep": true, name: "ask-send", placeholder: "Your answer to Claude", rows: 4 } }),
     );
+  }
+
+  /** The top-bar icon that flips between one question at a time and all of them; null when there is nothing to switch. */
+  get switcher(): HTMLElement | null {
+    return this.#questions.length > 0 ? this.#switch : null;
   }
 
   get interactive(): boolean {

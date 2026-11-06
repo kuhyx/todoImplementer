@@ -2,6 +2,7 @@ import type { TaskDetail } from "@/lib/schemas";
 
 /** Static drawer skeleton, its tab strip and the keyboard trap. No task data lives here. */
 import { askOf } from "@/components/ask-model";
+import { iconButton, setIcon } from "@/components/icons";
 import { h, must } from "@/lib/dom";
 
 const PANELS = ["activity", "plan", "diff", "live", "checks", "details"] as const;
@@ -53,8 +54,9 @@ export function buildShell(feed: HTMLElement, handlers: ShellHandlers): HTMLElem
   const bar = h(
     "div",
     { class: "drawer-bar" },
-    h("button", { attrs: { "aria-expanded": false, "data-details": true, hidden: true, type: "button" }, class: "btn", on: { click: handlers.onDetails }, text: "Details" }),
-    h("button", { attrs: { type: "button" }, class: "btn", on: { click: handlers.onClose }, text: "Close" }),
+    iconButton("info", "Details", { "aria-expanded": false, "data-details": true, hidden: true }, handlers.onDetails),
+    h("span", { attrs: { "data-slot": "mode", hidden: true }, class: "drawer-mode" }),
+    iconButton("close", "Close", { "data-close": true }, handlers.onClose),
   );
   const footer = h(
     "footer",
@@ -101,6 +103,7 @@ export function paintTabs(root: HTMLElement, detail: null | TaskDetail, active: 
   );
   for (const panel of root.querySelectorAll<HTMLElement>("[data-panel]")) panel.hidden = panel.dataset.panel !== active;
   must<HTMLElement>(root, '[data-slot="questions"]').hidden = active !== "questions";
+  must<HTMLElement>(root, '[data-slot="mode"]').hidden = active !== "questions";
   must(root, ".drawer").classList.toggle("drawer--ask", active === "questions");
 }
 
@@ -109,7 +112,7 @@ export function paintFocus(root: HTMLElement, isOnlyAsk: boolean, isOpen: boolea
   const toggle = must<HTMLElement>(root, "[data-details]");
   toggle.hidden = !isOnlyAsk;
   toggle.setAttribute("aria-expanded", String(isOpen));
-  toggle.textContent = isOpen ? "Hide details" : "Details";
+  setIcon(toggle, "info", isOpen ? "Hide details" : "Details");
   must(root, ".drawer").classList.toggle("drawer--only-ask", isOnlyAsk && !isOpen);
 }
 

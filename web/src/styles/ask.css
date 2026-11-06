@@ -1,11 +1,8 @@
-/* Question flow: one question at a time, or all at once. Only the answer field grows; the buttons stay inside the screen. */
+/* Question flow. One reading style for title, body and answer: the 20 px subtitle step, line height 1.5, a
+   ~65 character line (--measure). The title differs by weight only. 4K is scaled by ti-app's zoom, not here. */
 
 .drawer--ask {
   width: min(60rem, 100%);
-}
-
-.drawer-bar {
-  gap: var(--space-2);
 }
 
 [data-slot="questions"] {
@@ -21,14 +18,9 @@
   flex-direction: column;
   gap: var(--space-3);
   width: 100%;
-  max-width: 52rem;
   min-height: 0;
-  margin-inline: auto;
-}
-
-.ask-modes {
-  display: flex;
-  gap: var(--space-2);
+  font-size: var(--text-subtitle);
+  line-height: 1.5;
 }
 
 .ask-step,
@@ -36,72 +28,101 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: var(--space-2);
   min-height: 0;
-}
-
-/* Horizontal pans reach the swipe handler; vertical ones still scroll. */
-.ask-step {
-  touch-action: pan-y;
 }
 
 .ask-card {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
   min-width: 0;
   padding: var(--space-3);
   background: var(--surface-2);
   border-radius: var(--radius-md);
 }
 
-.ask-title {
-  font-size: var(--text-subtitle);
-  letter-spacing: var(--tracking-title);
-  line-height: 1.25;
-}
-
-/* The single question is the whole screen: a big title, the body, the box right under it, one big OK. */
-.ask-step .ask-title {
-  font-size: clamp(1.5rem, 1rem + 3vw, 2.25rem);
-  line-height: 1.15;
-}
-
-.ask-ok {
-  min-height: 3rem;
-  font-size: var(--text-subtitle);
-}
-
-.ask-back {
-  align-self: flex-start;
-  padding: var(--space-1) 0;
-  font-size: var(--text-label);
-  color: var(--text-muted);
-  text-decoration: underline;
+/* The single question has no box: it sits in the middle of the free space (auto margins center it and
+   collapse to the top when it is taller than the screen, so it scrolls instead of being cut off). */
+.ask-step {
+  padding: 0;
+  overflow-y: auto;
   background: none;
-  border: 0;
-  cursor: pointer;
+  /* Horizontal pans reach the swipe handler; vertical ones still scroll. */
+  touch-action: pan-y;
 }
 
-.ask-card p {
-  overflow-wrap: anywhere;
+.ask-center {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: 100%;
+  max-width: var(--measure);
+  margin: auto;
+}
+
+.ask .ask-title {
+  font-size: inherit;
+  font-weight: 600;
+  line-height: inherit;
+  letter-spacing: normal;
 }
 
 .ask-body {
-  max-height: 30vh;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
-.ask-label {
+.ask-card p {
+  overflow-wrap: break-word;
+}
+
+.ask code {
+  padding: 0.1em 0.35em;
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+}
+
+.ask-card code {
+  background: var(--surface-1);
+}
+
+/* The answer reads like the question and grows with its text (two lines at least, half the screen at most). */
+.ask textarea {
   display: block;
-  font-size: var(--text-label);
-  color: var(--text-muted);
+  field-sizing: content;
+  min-height: calc(2lh + 2 * var(--space-3));
+  max-height: 50vh;
+  padding: var(--space-3);
+  font: inherit;
+  line-height: inherit;
+  resize: none;
 }
 
-.ask-card textarea {
-  flex: 1 1 8rem;
-  min-height: 6rem;
-  resize: vertical;
+.ask-nav {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  gap: var(--space-3);
+  justify-content: space-between;
+  padding-block: var(--space-2);
+  background: var(--surface-1);
+}
+
+.ask-nav .icon-btn {
+  width: var(--space-6);
+  height: var(--space-6);
+}
+
+.ask-nav .icon-btn svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.ask-ok {
+  margin-left: auto;
 }
 
 .ask-list {
@@ -113,30 +134,15 @@
   overflow-y: auto;
 }
 
-.ask-list .ask-card textarea {
-  flex: none;
-  field-sizing: content;
-}
-
-.ask-page {
-  font-variant-numeric: tabular-nums;
-  color: var(--text-muted);
-}
-
-.ask-foot {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2) var(--space-3);
-  justify-content: space-between;
-}
-
-.ask-foot .btn {
-  padding-inline: var(--space-4);
-}
-
 .ask-reason,
 .ask-status {
   margin: 0;
+}
+
+.ask-reason {
+  font-size: var(--text-label);
+  color: var(--text-muted);
+  text-align: center;
 }
 
 .ask-status:empty {
@@ -153,33 +159,8 @@
   display: none;
 }
 
-@media (max-height: 800px) {
-  .ask-card {
-    padding: var(--space-2) var(--space-3);
-    font-size: var(--text-label);
-    line-height: 1.3;
-  }
-
-  .ask-title {
-    font-size: var(--text-body);
-  }
-
-  .ask-step .ask-title {
-    font-size: var(--text-subtitle);
-  }
-}
-
 @media (max-width: 719.98px) {
   .drawer--ask {
     width: 100%;
-  }
-
-  .ask-foot {
-    flex-wrap: nowrap;
-  }
-
-  .ask-foot .btn {
-    flex: 1;
-    padding-inline: var(--space-3);
   }
 }

@@ -28,9 +28,15 @@ ti-drawer {
 
 .drawer-bar {
   display: flex;
+  gap: var(--space-1);
+  align-items: center;
   justify-content: flex-end;
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-1) var(--space-2);
   border-bottom: 1px solid var(--border);
+}
+
+.drawer-mode {
+  display: contents;
 }
 
 .drawer-scroll {
@@ -55,15 +61,22 @@ ti-drawer {
   margin-bottom: var(--space-2);
 }
 
+/* The whole title always shows (it wraps; it is never clamped), so it stays at the subtitle step. */
 .drawer-title {
-  font-size: var(--text-title);
+  font-size: var(--text-subtitle);
   letter-spacing: var(--tracking-title);
-  line-height: 1.25;
-  overflow: hidden;
+  line-height: 1.3;
   overflow-wrap: anywhere;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+}
+
+/* A card that only asks shows its whole title, small and centered above the question. */
+.drawer--only-ask .drawer-title {
+  max-width: var(--measure);
+  margin-inline: auto;
+  font-size: var(--text-body);
+  font-weight: 600;
+  line-height: 1.5;
+  text-align: center;
 }
 
 .drawer-current {

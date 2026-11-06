@@ -11,7 +11,8 @@ interface State {
   root: HTMLElement;
 }
 
-function inline(text: string): Child[] {
+/** Text with `code` spans turned into <code> nodes; also used by the question body. */
+export function inline(text: string): Child[] {
   return text.split(/(`[^`]+`)/v).flatMap((part): Child[] => {
     if (part === "") return [];
     return [part.startsWith("`") ? h("code", { text: part.slice(1, -1) }) : part];

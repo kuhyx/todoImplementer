@@ -23,7 +23,7 @@ describe("question card", () => {
     expect(q(".drawer").classList.contains("drawer--only-ask")).toBe(true);
     expect(q("[data-tab=questions]").getAttribute("aria-pressed")).toBe("true");
     expect(q("[data-details]").hidden).toBe(false);
-    expect(q("[data-details]").textContent).toBe("Details");
+    expect(q("[data-details]").getAttribute("aria-label")).toBe("Details");
     expect(document.activeElement).toBe(field());
     expect(field().value).toBe("localStorage");
     expect(document.querySelector("[data-action=spec-answers]")).toBeNull();
@@ -33,7 +33,7 @@ describe("question card", () => {
     await open(card("needs_you"));
     q("[data-details]").click();
     expect(q(".drawer").classList.contains("drawer--only-ask")).toBe(false);
-    expect(q("[data-details]").textContent).toBe("Hide details");
+    expect(q("[data-details]").getAttribute("aria-label")).toBe("Hide details");
     expect(q("[data-details]").getAttribute("aria-expanded")).toBe("true");
     q("[data-tab=plan]").click();
     expect(q("[data-panel=plan]").hidden).toBe(false);
@@ -58,7 +58,7 @@ describe("question card", () => {
     await open(c, { [`POST /api/task/${c.id}/spec-answers`]: () => gate.promise });
     field().value = "IndexedDB";
     field().dispatchEvent(new Event("input"));
-    expect(q(".ask-page").textContent).toBe("1 / 2");
+    expect(q(".ask-title").textContent).toContain("Q1");
     enter();
     await settle(0);
     expect(q(".loader").textContent).toBe("Sending 2 answers…");
@@ -114,5 +114,39 @@ describe("question card", () => {
     await settle(0);
     expect(env.stub.calls.slice(before).filter((call) => call.url.startsWith("/api/task/") && call.init?.method !== "POST")).toHaveLength(0);
     expect(makeDetail(c).questions).toHaveLength(2);
+  });
+});
+
+describe("top bar", () => {
+  const named = (selector: string): string[] => {
+    const button = q(selector);
+    return [button.getAttribute("aria-label") ?? "", button.title, button.textContent];
+  };
+
+  it("has icon-only Close and Details buttons, each named by aria-label and tooltip", async () => {
+    await open(card("needs_you"));
+    expect(named("[data-details]")).toEqual(["Details", "Details", ""]);
+    expect(named("[data-close]")).toEqual(["Close", "Close", ""]);
+    expect(document.querySelectorAll(".drawer-bar svg")).toHaveLength(3);
+    q("[data-details]").click();
+    expect(named("[data-details]")).toEqual(["Hide details", "Hide details", ""]);
+  });
+
+  it("holds the questions-mode switch, visible only while the questions are shown", async () => {
+    await open(card("needs_you"));
+    expect(q(".drawer-bar [data-ask-mode]").getAttribute("aria-label")).toBe("All questions");
+    expect(q("[data-slot=mode]").hidden).toBe(false);
+    expect(document.querySelectorAll("[data-mode]")).toHaveLength(0);
+    expect(document.body.textContent).not.toContain("One by one");
+    q(".drawer-bar [data-ask-mode]").click();
+    expect(q(".drawer-bar [data-ask-mode]").getAttribute("aria-label")).toBe("One question at a time");
+    q("[data-details]").click();
+    q("[data-tab=plan]").click();
+    expect(q("[data-slot=mode]").hidden).toBe(true);
+  });
+
+  it("has no switch on cards without questions", async () => {
+    await open(card("working"));
+    expect(document.querySelectorAll("[data-ask-mode]")).toHaveLength(0);
   });
 });

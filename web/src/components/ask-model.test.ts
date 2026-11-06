@@ -1,7 +1,7 @@
 /** Pure model of the question flow: ask kind, effective answers, first open question, swipes, labels. */
 import { describe, expect, it } from "vitest";
 
-import { answersOf, askOf, effective, firstOpen, isOnlyAsk, nextOpen, progressLabel, sendingLabel, swipeOf, waitingNote } from "@/components/ask-model";
+import { answersOf, askOf, effective, firstOpen, isOnlyAsk, nextOpen, sendingLabel, swipeOf, waitingNote } from "@/components/ask-model";
 import { ASK_ID, askDetail, askQuestions, FREE_ID, freeDetail } from "@/test/fixture-ask";
 import { makeDetail } from "@/test/fixture-detail";
 import { makeCards } from "@/test/fixtures";
@@ -65,7 +65,6 @@ describe("ask model", () => {
   });
 
   it("labels progress and the sending loader", () => {
-    expect(progressLabel(2, 10)).toBe("3 / 10");
     expect(sendingLabel(10)).toBe("Sending 10 answers…");
     expect(sendingLabel(1)).toBe("Sending 1 answer…");
   });

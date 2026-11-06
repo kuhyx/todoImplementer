@@ -33,6 +33,7 @@ export function paintDetail(root: HTMLElement, detail: TaskDetail, host: BarHost
   slot("actions").replaceChildren(h("div", { class: "actions" }, ...rest));
   slot("pending").replaceChildren(...present(pendingLoader(pending, detail.card.id, bar)));
   slot("questions").replaceChildren(...present(questions));
+  slot("mode").replaceChildren(...present(ask.switcher));
   slot("lesson").replaceChildren(...present(lesson));
   slot("send-action").replaceChildren(...present(send));
   slot("send").hidden = send === null;

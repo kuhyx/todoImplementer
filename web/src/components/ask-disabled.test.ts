@@ -1,7 +1,7 @@
 /** The question flow when the server cannot take the answers yet (or never will): still one question, answers kept and sent later. */
 import { describe, expect, it } from "vitest";
 
-import { field, flush, fresh, host, key, mount, page, q, type, useAskHarness, withAction } from "@/test/ask-harness";
+import { at, field, flush, fresh, host, key, mount, q, type, useAskHarness, withAction } from "@/test/ask-harness";
 import { ASK_ID, askDetail, askQuestions } from "@/test/fixture-ask";
 
 useAskHarness();
@@ -15,9 +15,9 @@ describe("disabled send action", () => {
     expect(document.querySelectorAll(".ask-card")).toHaveLength(1);
     expect(q("h4").textContent).toBe("Q1 · Verification");
     expect(document.activeElement).toBe(field());
-    expect(page()).toBe("1 / 5");
+    expect(at()).toBe("Q1");
     expect(q(".ask-reason").textContent).toContain("Claude is working");
-    expect(q("[data-ask=accept]").textContent).toBe("OK");
+    expect(q("[data-ask=accept]").getAttribute("aria-label")).toBe("OK");
   });
 
   it("keeps the answers of a disabled card and sends them once the action is enabled", async () => {
@@ -70,9 +70,9 @@ describe("disabled send action", () => {
     const [a, b, c, d, fifth] = detail.questions;
     const questions = [{ ...a!, answer: "A" }, b!, { ...c!, answer: "C" }, d!, { ...fifth!, answer: "E" }];
     mount(fresh(), { ...detail, questions });
-    expect(page()).toBe("2 / 5");
+    expect(at()).toBe("Q2");
     key("Enter");
-    expect(page()).toBe("4 / 5");
+    expect(at()).toBe("Q4");
     key("Enter");
     await flush();
     expect(host.send).toHaveBeenCalledWith(detail.card.id, { Q1: "A", Q2: b?.recommendation, Q3: "C", Q4: d?.recommendation, Q5: "E" });

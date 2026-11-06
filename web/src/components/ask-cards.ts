@@ -4,6 +4,7 @@ import type { Question } from "@/lib/schemas-common";
 import { effective, sendingLabel } from "@/components/ask-model";
 import { loader } from "@/components/feedback";
 import { h } from "@/lib/dom";
+import { inline } from "@/lib/markdown";
 
 export type Status = { count: number; kind: "sending" } | { kind: "error"; message: string } | { kind: "idle" } | { kind: "waiting" };
 
@@ -14,18 +15,17 @@ export interface FieldHooks {
 
 export const titleOf = (question: Question): string => `${question.id} · ${question.title}`;
 
-const hintOf = (question: Question, value: string): string =>
-  question.answer === null && value === question.recommendation ? "Recommended: edit it or accept" : "Your answer";
+/** The body as paragraphs (a blank line splits them) with `code` spans rendered. */
+const bodyView = (text: string): HTMLElement =>
+  h("div", { class: "ask-body" }, ...text.split(/\n\s*\n/v).map((paragraph) => h("p", {}, ...inline(paragraph.trim()))));
 
-/** Title, body, hint and the textarea. Enter accepts, Shift+Enter is a newline. */
+/** Title, body and the textarea, which grows with its text. Enter accepts, Shift+Enter is a newline. */
 export function questionParts(question: Question, drafts: Readonly<Record<string, string>>, hooks: FieldHooks): HTMLElement[] {
   const value = effective(question, drafts);
-  const hint = h("span", { attrs: { id: `hint-${question.id}` }, class: "ask-label", text: hintOf(question, value) });
   const field = h("textarea", {
-    attrs: { "aria-describedby": hint.id, "aria-label": `Answer to ${question.id}`, "data-keep": true, name: question.id, rows: 4 },
+    attrs: { "aria-label": `Answer to ${question.id}`, "data-keep": true, name: question.id, rows: 1 },
     on: {
       input: () => {
-        hint.textContent = hintOf(question, field.value);
         hooks.onInput(question.id, field.value);
       },
       keydown: (event) => {
@@ -38,9 +38,8 @@ export function questionParts(question: Question, drafts: Readonly<Record<string
   field.value = value;
   return [
     h("h4", { class: "ask-title", text: titleOf(question) }),
-    question.body !== "" && h("p", { class: "ask-body", text: question.body }),
+    question.body !== "" && bodyView(question.body),
     field,
-    hint,
   ].filter((node) => node !== false);
 }
 

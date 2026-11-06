@@ -13,7 +13,8 @@ export const q = <T extends HTMLElement = HTMLElement>(selector: string): T => {
   return found;
 };
 export const field = (): HTMLTextAreaElement => q<HTMLTextAreaElement>("textarea");
-export const page = (): string => q(".ask-page").textContent;
+/** The id of the question on screen ("Q2"), read from its title. */
+export const at = (): string => q(".ask-title").textContent.split(" ", 1)[0] ?? "";
 export const type = (value: string): void => {
   field().value = value;
   field().dispatchEvent(new Event("input"));
@@ -43,7 +44,7 @@ export function mount(panel: AskPanel, detail = askDetail(ASK_ID), without: stri
     button.textContent = action.label;
     return button;
   });
-  if (root !== null) document.body.append(root);
+  if (root !== null) document.body.append(...(panel.switcher === null ? [] : [panel.switcher]), root);
   return root;
 }
 /** The ask detail with its spec-answers action changed (disabled with a reason). */

@@ -52,6 +52,4 @@ export function swipeOf(dx: number, dy: number): "back" | "next" | null {
   return dx > 0 ? "next" : "back";
 }
 
-export const progressLabel = (step: number, total: number): string => `${String(step + 1)} / ${String(total)}`;
-
 export const sendingLabel = (count: number): string => `Sending ${String(count)} answer${count === 1 ? "" : "s"}…`;

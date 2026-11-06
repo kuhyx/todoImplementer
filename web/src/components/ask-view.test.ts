@@ -1,7 +1,7 @@
 /** AskPanel step view: prefilled editable box, Enter and swipe accept, other asks, tab choice. */
 import { describe, expect, it } from "vitest";
 
-import { field, flush, fresh, host, key, mount, page, q, swipe, type, useAskHarness } from "@/test/ask-harness";
+import { at, field, flush, fresh, host, key, mount, q, swipe, type, useAskHarness } from "@/test/ask-harness";
 import { ASK_ID, askDetail, askQuestions, freeDetail } from "@/test/fixture-ask";
 import { makeDetail } from "@/test/fixture-detail";
 import { makeCards } from "@/test/fixtures";
@@ -17,8 +17,7 @@ describe("step view", () => {
     expect(field().value).toBe(askQuestions(1)[0]?.recommendation);
     expect(field().readOnly).toBe(false);
     expect(document.activeElement).toBe(field());
-    expect(page()).toBe("1 / 5");
-    expect(q(".ask-label").textContent).toContain("Recommended");
+    expect(at()).toBe("Q1");
     expect(document.querySelectorAll(".link, [data-action=spec-answers]")).toHaveLength(0);
     expect(q<HTMLButtonElement>("[data-ask=back]").getAttribute("aria-disabled")).toBe("false");
   });
@@ -27,19 +26,17 @@ describe("step view", () => {
     const detail = askDetail(ASK_ID);
     const [a, b, ...rest] = detail.questions;
     mount(fresh(), { ...detail, questions: [{ ...a!, answer: "Done A" }, { ...b!, answer: "Done B" }, ...rest] });
-    expect(page()).toBe("3 / 5");
+    expect(at()).toBe("Q3");
     q("[data-ask=back]").click();
     expect(field().value).toBe("Done B");
-    expect(q(".ask-label").textContent).toBe("Your answer");
   });
 
   it("edits without a click and accepts with the button, going back keeps the edit", () => {
     const panel = fresh();
     mount(panel);
     type("Mine");
-    expect(q(".ask-label").textContent).toBe("Your answer");
     q("[data-ask=accept]").click();
-    expect(page()).toBe("2 / 5");
+    expect(at()).toBe("Q2");
     expect(field().value).toBe(askQuestions(2)[1]?.recommendation);
     q("[data-ask=back]").click();
     expect(field().value).toBe("Mine");
@@ -51,19 +48,19 @@ describe("step view", () => {
     expect(key("Enter", { shiftKey: true }).defaultPrevented).toBe(false);
     expect(key("Enter", { isComposing: true }).defaultPrevented).toBe(false);
     expect(key("a").defaultPrevented).toBe(false);
-    expect(page()).toBe("1 / 5");
+    expect(at()).toBe("Q1");
     expect(key("Enter").defaultPrevented).toBe(true);
-    expect(page()).toBe("2 / 5");
+    expect(at()).toBe("Q2");
   });
 
   it("swipes right to accept and left to go back, and cannot go back from the first", () => {
     mount(fresh());
     swipe(-150);
-    expect(page()).toBe("1 / 5");
+    expect(at()).toBe("Q1");
     swipe(150);
-    expect(page()).toBe("2 / 5");
+    expect(at()).toBe("Q2");
     swipe(-150);
-    expect(page()).toBe("1 / 5");
+    expect(at()).toBe("Q1");
   });
 
   it("sends once, with every answer, when the last one is accepted", async () => {
@@ -73,7 +70,7 @@ describe("step view", () => {
     type("One");
     key("Enter");
     key("Enter");
-    expect(q("[data-ask=accept]").textContent).toBe("OK");
+    expect(q("[data-ask=accept]").getAttribute("aria-label")).toBe("OK");
     const gate = Promise.withResolvers<undefined>();
     host.send.mockReturnValue(gate.promise);
     key("Enter");
@@ -88,7 +85,7 @@ describe("step view", () => {
     expect(host.done).toHaveBeenCalledWith(detail.card.id);
     expect(q(".ask-status").textContent).toBe("");
     expect(localStorage).toHaveLength(0);
-    expect(page()).toBe("1 / 3");
+    expect(at()).toBe("Q1");
   });
 
   it("keeps the answers and offers Retry when the send fails", async () => {
