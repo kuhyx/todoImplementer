@@ -20,7 +20,7 @@ One row per bug, ids global and never reused. The row's test is named `test_t<N>
 | T1532 | The emulator live-check report was lost when the phone check restarted the stage | tests/runner/test_runner_phone_flow.py |
 | T1533 | A restart forgot the phone wait or re-ran the resting turn | tests/runner/test_runner_phone_flow.py |
 | T1534 | The watcher forked adb every tick even with no run waiting on the phone | tests/runner/test_runner_phone_flow.py |
-| T1535 | Eight waiting cards all hit the one phone at once | tests/runner/test_runner_phone_flow.py |
+| T1535 | Only one of several waiting cards was requeued when the Pixel showed, the rest waited for a later tick | tests/runner/test_runner_phone_flow.py |
 | T1536 | A cancelled, running or non-waiting run was requeued by the phone watcher | tests/runner/test_runner_phone_flow.py |
 | T1540 | The board could not tell a phone wait from any other action Claude asked for | tests/board/test_board_phone.py |
 | T1541 | A requeued phone run still showed as needing kuhy | tests/board/test_board_phone.py |

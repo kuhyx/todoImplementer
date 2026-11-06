@@ -40,11 +40,12 @@ class PhoneWatcher(threading.Thread):
         self._halt = threading.Event()
 
     def tick(self) -> bool:
-        """One poll; adb runs only while some run waits, and one run is requeued per tick."""
+        """One poll; adb runs only while some run waits, and every waiting run is requeued."""
         cards = self.engine.phone_waiting()
         if not cards or self.serial not in attached_serials(self.adb or adb_command()):
             return False
-        return self.engine.phone_attached(cards[0])
+        requeued = [self.engine.phone_attached(card) for card in cards]
+        return any(requeued)
 
     def run(self) -> None:  # noqa: D102
         while not self._halt.wait(self.interval):
@@ -82,14 +83,6 @@ class PhoneEngine(Engine):
         waits = st is not None and st.extra.get("waiting_phone") and st.last_tag == "A"
         return st if st is not None and resting and waits and st.stage in WORK_STAGES else None
 
-    def _phone_busy(self) -> bool:
-        return any(
-            (st := self._peek(path.parent)) is not None
-            and st.extra.get("phone_attached")
-            and (st.task_id in self._active or st.task_id in self._queue)
-            for path in self.root.glob("*/state.json")
-        )
-
     def _peek(self, run_dir: Path) -> RunState | None:
         try:
             return store.load(run_dir)
@@ -97,10 +90,8 @@ class PhoneEngine(Engine):
             return None
 
     def phone_waiting(self) -> list[str]:
-        """Cards resting on the phone, oldest first; none while another run is using the phone."""
+        """Cards resting on the phone, by id."""
         with self._cv:
-            if self._phone_busy():
-                return []
             ids = (path.parent.name for path in sorted(self.root.glob("*/state.json")))
             return [card for card in ids if self._waiting(card) is not None]
 

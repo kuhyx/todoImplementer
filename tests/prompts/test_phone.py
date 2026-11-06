@@ -22,6 +22,9 @@ def test_t1520_live_check_stages_the_phone_after_the_emulator(ctx: PromptContext
     assert "adb -s emulator-5554 only" in text
     assert "PHONE_DEPLOY_ABI=android-arm64,android-x64" in text
     assert "never install" in text
+    assert "shared by parallel runs: never stop it" in text
+    assert "Never sign in or add a Firebase account" in text
+    assert "shot <png> <pkg>" in text
 
 
 def test_implement_still_builds_the_release_apk(ctx: PromptContext) -> None:

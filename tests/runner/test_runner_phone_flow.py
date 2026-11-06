@@ -107,18 +107,16 @@ def test_t1534_adb_is_not_forked_while_no_run_waits(world: Env) -> None:
         sched.close()
 
 
-def test_t1535_one_card_uses_the_phone_at_a_time_oldest_first(world: Env) -> None:
+def test_t1535_every_waiting_card_is_requeued_when_the_phone_shows(world: Env) -> None:
     fake_adb(world, f"{SERIAL} device")
     sched, _ = boot(world)
     try:
         waiting_run(world, "aaaa0001-0")
         waiting_run(world, "aaaa0002-0")
         assert sched.phone_waiting() == ["aaaa0001-0", "aaaa0002-0"]
-        busy = RunState(task_id="aaaa0003-0", stage="live_check", extra={"phone_attached": True})
-        store.save(world.root / "aaaa0003-0", busy)
-        with sched._cv:
-            sched._queue.append("aaaa0003-0")
-        assert sched.phone_waiting() == []
+        assert PhoneWatcher(sched).tick() is True
+        wait(lambda: sched.phone_waiting() == [])
+        assert {state(world, c).last_tag for c in ("aaaa0001-0", "aaaa0002-0")} != {"A"}
     finally:
         sched.close()
 

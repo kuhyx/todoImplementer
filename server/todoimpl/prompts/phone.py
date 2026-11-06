@@ -14,7 +14,7 @@ BUILD = (
     "ADB_SERIAL=emulator-5554 PHONE_DEPLOY_ABI=android-arm64,android-x64 ~/.claude/scripts/phone_deploy.sh "
     "<app_dir> --release --stage prep|dart|kotlin|assemble (one call each, never install)"
 )
-EMULATOR = "~/.claude/scripts/emulator_run.sh boot|install <apk>|launch <pkg>|shot <png>|stop"
+EMULATOR = "~/.claude/scripts/emulator_run.sh boot|install <apk>|launch <pkg>|shot <png> <pkg>|release <pkg>"
 DEPLOY = (
     "PHONE_DEPLOY_ABI=android-arm64,android-x64 ~/.claude/scripts/phone_deploy.sh <app_dir> --release "
     "--stage prep|dart|kotlin|assemble|install (one call each)"
@@ -29,8 +29,10 @@ def staging(ctx: PromptContext) -> str:
     """Rules for criteria that need the Pixel: emulator first, phone install staged, rows marked `[~]`."""
     return (
         "Criteria that need the Pixel: never wait for it. "
-        f"(a) Build one APK for both: `{BUILD}`; test the flow on the emulator (no Google account there) "
-        f"with `{EMULATOR}`, adb -s emulator-5554 only. "
+        f"(a) Build one APK for both: `{BUILD}`; test the flow on the emulator with `{EMULATOR}`, "
+        "adb -s emulator-5554 only. The emulator is shared by parallel runs: never stop it, `release` when "
+        "done, on exit 55 retry in 30 s. Never sign in or add a Firebase account there (prod sync data "
+        "would be overwritten): sign-in and sync criteria are phone criteria. "
         f"(b) Write {STAGE.format(run_dir=ctx.run_dir, deploy=DEPLOY)}. "
         "(c) Mark those rows `- [~] Cn: needs phone: <why>` and end with `A: phone: <one line>`."
     )
