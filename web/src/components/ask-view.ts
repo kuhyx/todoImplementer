@@ -5,20 +5,21 @@ import type { TaskDetail } from "@/lib/schemas";
 import type { Question } from "@/lib/schemas-common";
 
 import { type FieldHooks, type Status, statusView } from "@/components/ask-cards";
-import { answersOf, askOf, firstOpen, nextOpen, NOT_WAITING, waitingNote } from "@/components/ask-model";
+import { answersOf, askOf, firstOpen, nextOpen, NOT_WAITING, questionsOf, waitingNote } from "@/components/ask-model";
 import { allView, retryButton, type StepProps, stepView } from "@/components/ask-step";
 import { type AskState, blankState, dropState, loadState, saveState, storeKey } from "@/components/ask-store";
 import { iconButton, setIcon } from "@/components/icons";
 import { h } from "@/lib/dom";
 import { errorText } from "@/lib/http";
 
-const FREE_TITLE = "Answer Claude";
 const ALL_LABEL = "All questions";
 const ONE_LABEL = "One question at a time";
 
 export interface AskHost {
   /** Runs after a successful send: refresh the card from the server. */
   done: (cardId: string) => Promise<void>;
+  /** POST a plain Claude question's one answer as the card's send action; rejects with the server's message. */
+  reply: (cardId: string, text: string) => Promise<void>;
   /** POST all answers once; rejects with the server's message. */
   send: (cardId: string, answers: Record<string, string>) => Promise<void>;
 }
@@ -27,11 +28,13 @@ export class AskPanel {
   #questions: Question[] = [];
   #cardId = "";
   readonly #host: AskHost;
+  /** A plain Claude question: one synthetic question, answered through the card's send action. */
+  #free = false;
   #interactive = false;
   #key = "";
   #live = false;
   #mode: "all" | "step" = "step";
-  /** Why the spec-answers action cannot send now: null when it can, "" when it is disabled without a reason. */
+  /** Why the send action (spec-answers, or send for a plain question) cannot send now: null when it can, "" when it is disabled without a reason. */
   #note: null | string = null;
   #offered = false;
   #root: HTMLElement | null = null;
@@ -138,7 +141,8 @@ export class AskPanel {
     this.#status = { count, kind: "sending" };
     this.#paint();
     try {
-      await this.#host.send(cardId, answers);
+      if (this.#free) await this.#host.reply(cardId, Object.values(answers).join(""));
+      else await this.#host.send(cardId, answers);
     } catch (error) {
       this.#status = { kind: "error", message: errorText(error) };
       this.#paint();
@@ -154,19 +158,9 @@ export class AskPanel {
     this.#paint();
   }
 
-  #freeCard(text: string): HTMLElement {
-    return h(
-      "article",
-      { class: "ask-card" },
-      h("h4", { class: "ask-title", text: FREE_TITLE }),
-      h("p", { class: "ask-body", text }),
-      this.#interactive && h("textarea", { attrs: { "aria-label": "Your answer to Claude", "data-keep": true, name: "ask-send", placeholder: "Your answer to Claude", rows: 4 } }),
-    );
-  }
-
   /** The top-bar icon that flips between one question at a time and all of them; null when there is nothing to switch. */
   get switcher(): HTMLElement | null {
-    return this.#questions.length > 0 ? this.#switch : null;
+    return this.#questions.length > 0 && !this.#free ? this.#switch : null;
   }
 
   get interactive(): boolean {
@@ -198,30 +192,26 @@ export class AskPanel {
 
   build(detail: TaskDetail, act: ActionSlot): HTMLElement | null {
     const ask = askOf(detail);
-    this.#questions = ask?.kind === "spec" ? ask.questions : [];
+    this.#free = ask?.kind === "free";
+    this.#questions = ask === null ? [] : questionsOf(ask);
     this.#root = null;
     this.#interactive = false;
     if (ask === null) return null;
     const root = h("section", { attrs: { "aria-label": "Questions" }, class: "ask" });
     this.#root = root;
-    if (ask.kind === "free") {
-      const send = act("send");
-      this.#interactive = send !== null;
-      root.append(this.#freeCard(ask.text), h("div", { class: "ask-foot" }, send));
-      return root;
-    }
-    // The server's spec-answers action only gates the send: its own button is never drawn (answers send themselves).
-    const action = detail.card.actions.find((candidate) => candidate.id === "spec-answers");
-    act("spec-answers");
+    // The server's spec-answers (or send) action only gates the send: its own button is never drawn (answers send themselves).
+    const gate = this.#free ? "send" : "spec-answers";
+    const action = detail.card.actions.find((candidate) => candidate.id === gate);
+    act(gate);
     this.#interactive = true;
     this.#offered = action !== undefined;
     this.#note = action === undefined || action.enabled ? null : (action.reason ?? "");
     this.#cardId = detail.card.id;
-    const key = storeKey(this.#cardId, ask.questions);
+    const key = storeKey(this.#free ? `${this.#cardId}.free` : this.#cardId, this.#questions);
     if (key !== this.#key) {
       this.#key = key;
-      const saved = loadState(key) ?? blankState(firstOpen(ask.questions));
-      this.#state = { ...saved, step: Math.min(saved.step, ask.questions.length - 1) };
+      const saved = loadState(key) ?? blankState(firstOpen(this.#questions));
+      this.#state = { ...saved, step: Math.min(saved.step, this.#questions.length - 1) };
     }
     this.#paint();
     if (this.#offered && this.#note === null && this.#state.queued && !this.#busy) void this.#submit();

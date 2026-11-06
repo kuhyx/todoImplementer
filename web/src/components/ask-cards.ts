@@ -19,7 +19,7 @@ export const titleOf = (question: Question): string => `${question.id} · ${ques
 const bodyView = (text: string): HTMLElement =>
   h("div", { class: "ask-body" }, ...text.split(/\n\s*\n/v).map((paragraph) => h("p", {}, ...inline(paragraph.trim()))));
 
-/** Title, body and the textarea, which grows with its text. Enter accepts, Shift+Enter is a newline. */
+/** Title and body in one block, then the textarea, which grows with its text. Enter accepts, Shift+Enter is a newline. */
 export function questionParts(question: Question, drafts: Readonly<Record<string, string>>, hooks: FieldHooks): HTMLElement[] {
   const value = effective(question, drafts);
   const field = h("textarea", {
@@ -36,11 +36,7 @@ export function questionParts(question: Question, drafts: Readonly<Record<string
     },
   });
   field.value = value;
-  return [
-    h("h4", { class: "ask-title", text: titleOf(question) }),
-    question.body !== "" && bodyView(question.body),
-    field,
-  ].filter((node) => node !== false);
+  return [h("div", { class: "ask-q" }, h("h4", { class: "ask-title", text: titleOf(question) }), question.body !== "" && bodyView(question.body)), field];
 }
 
 /** What the send is doing: a loader naming it, or the error with Retry (the answers stay). */

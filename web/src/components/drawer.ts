@@ -4,7 +4,7 @@ import { type BarState, idleBar, optionValue, renderAction, slowTimer } from "@/
 /** Side drawer for one task: live feed, plan, diff, live check, check output, spec questions, actions and the Send-to-Claude box. */
 import { isOnlyAsk } from "@/components/ask-model";
 import { AskPanel } from "@/components/ask-view";
-import { copyText, postAnswers } from "@/components/drawer-answers";
+import { copyText, postAnswers, postReply } from "@/components/drawer-answers";
 import { paintDetail } from "@/components/drawer-render";
 import { buildShell, paintFocus, paintTabs, type Tab, trapTab } from "@/components/drawer-shell";
 import { createFeed } from "@/components/feed-view";
@@ -25,6 +25,7 @@ export class TiDrawer extends HTMLElement {
       if (this.#id === id) await this.#refresh(id);
       this.dispatchEvent(new CustomEvent("task-changed", { bubbles: true }));
     },
+    reply: postReply,
     send: postAnswers,
   });
   #bar: BarState = idleBar();
@@ -158,7 +159,7 @@ export class TiDrawer extends HTMLElement {
       showToast("This page has no CSRF token (index.html was not stamped by the server). Reload it from the server.", "error");
       return;
     }
-    const sendBox = this.querySelector<HTMLTextAreaElement>("textarea[name=ask-send]") ?? must<HTMLTextAreaElement>(this, "textarea[name=send]");
+    const sendBox = must<HTMLTextAreaElement>(this, "textarea[name=send]");
     const text = sendBox.value.trim();
     if (text === "" && action.id === "send") {
       showToast("Write a message first.", "error");
@@ -201,6 +202,7 @@ export class TiDrawer extends HTMLElement {
     this.#opener = opener;
     this.#detail = null;
     this.#details = false;
+    this.#tab = "activity";
     this.#signature = "";
     this.#ask.reset();
     this.#bar = idleBar();

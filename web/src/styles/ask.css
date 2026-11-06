@@ -151,16 +151,6 @@
   display: none;
 }
 
-.drawer--only-ask [data-slot="actions"],
-.drawer--only-ask [data-slot="pending"],
-.drawer--only-ask [data-slot="send"],
-.drawer--only-ask [data-slot="lesson"],
-.drawer--only-ask .dtabs,
-.drawer--only-ask .drawer-chips,
-.drawer--only-ask .drawer-current {
-  display: none;
-}
-
 @media (max-width: 719.98px) {
   .drawer--ask {
     width: 100%;

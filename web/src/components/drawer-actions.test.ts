@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { card, env, fail, open, q, useDrawerHarness } from "@/test/drawer-harness";
-import { freeDetail } from "@/test/fixture-ask";
 import { makeDetail } from "@/test/fixture-detail";
 import { preset } from "@/test/fixture-presets";
 import { settle, stubFetch } from "@/test/net";
@@ -163,22 +162,6 @@ describe("send and spec answers", () => {
     const post = env.stub.calls.find((call) => call.init?.method === "POST");
     expect(post?.init?.body).toBe('{"text":"use the other port"}');
     expect(box.value).toBe("");
-  });
-
-  it("answers a plain Claude question from the card's own box and clears it", async () => {
-    const c = freeDetail().card;
-    await open(c, { [`GET /api/task/${c.id}`]: freeDetail(), [`POST /api/task/${c.id}/send`]: { ok: true, task: c } });
-    expect(q("[data-slot=send]").hidden).toBe(true);
-    expect(q(".drawer").classList.contains("drawer--ask")).toBe(true);
-    const box = q<HTMLTextAreaElement>("textarea[name=ask-send]");
-    q("[data-action=send]").click();
-    expect(document.querySelector("#toasts")?.textContent).toContain("Write a message first.");
-    box.value = "use port 8790";
-    q("[data-action=send]").click();
-    await settle(0);
-    const post = env.stub.calls.find((call) => call.init?.method === "POST");
-    expect(post?.init?.body).toBe('{"text":"use port 8790"}');
-    expect(q<HTMLTextAreaElement>("textarea[name=ask-send]").value).toBe("");
   });
 
   it("switches to Questions once and back to Activity when they are answered", async () => {

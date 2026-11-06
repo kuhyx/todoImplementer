@@ -13,3 +13,5 @@ Ids are global and never reused; the row's test is titled `[T<N>] ...` (vitest).
 | T1801 | With spec-answers disabled (usage limit) a questions card fell back to a read-only stacked list of every question instead of one question with its prefilled box and OK | web/src/components/ask-disabled.test.ts |
 | T1802 | Least effort still grouped cards by repo, so the easiest card overall was not at the top of its column | web/src/lib/board-model.test.ts, web/src/components/board.test.ts |
 | T1803 | A Needs-you card printed the same ask twice (current line and needs quote) | web/src/components/board.test.ts |
+| T1805 | A plain Claude question still showed the old free-text card and Send button instead of the one-question view, and could not be answered during a usage limit | web/src/components/ask-free.test.ts, web/src/components/drawer-free.test.ts |
+| T1806 | The answer view moved title, question, answer and Back/OK with text length and sat in a side panel instead of the middle of the browser | web/src/components/drawer-free.test.ts, web/dev/viewport_questions.py |

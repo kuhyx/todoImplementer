@@ -15,9 +15,9 @@ describe("ask model", () => {
     expect(FREE_ID).not.toBe(ASK_ID);
   });
 
-  it("shows only questions for a spec_questions card with questions", () => {
+  it("shows only the question for a spec_questions card with questions or a plain Claude question", () => {
     expect(isOnlyAsk(askDetail(ASK_ID))).toBe(true);
-    expect(isOnlyAsk(freeDetail())).toBe(false);
+    expect(isOnlyAsk(freeDetail())).toBe(true);
     expect(isOnlyAsk({ ...askDetail(ASK_ID), questions: [] })).toBe(false);
   });
 

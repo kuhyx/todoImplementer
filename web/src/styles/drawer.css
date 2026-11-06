@@ -69,10 +69,8 @@ ti-drawer {
   overflow-wrap: anywhere;
 }
 
-/* A card that only asks shows its whole title, small and centered above the question. */
+/* A card that only asks shows its whole title, small and centered in a three-line slot (see ask.css) that scrolls if longer. */
 .drawer--only-ask .drawer-title {
-  max-width: var(--measure);
-  margin-inline: auto;
   font-size: var(--text-body);
   font-weight: 600;
   line-height: 1.5;

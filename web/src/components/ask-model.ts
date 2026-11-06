@@ -14,8 +14,15 @@ export function askOf(detail: TaskDetail): Ask | null {
   return needs?.kind === "claude_question" ? { kind: "free", text: needs.text } : null;
 }
 
-/** A card that needs spec answers shows only the question flow until "Details" is opened. */
-export const isOnlyAsk = (detail: TaskDetail): boolean => detail.card.needs?.kind === "spec_questions" && detail.questions.length > 0;
+/** A plain Claude question goes through the same one-question view: one synthetic question whose answer is sent as a message. */
+export const freeQuestion = (text: string): Question => ({ answer: null, body: text, id: "Q1", recommendation: "", title: "Claude asks" });
+
+/** The questions the flow walks: the structured ones, or the one synthetic question of a plain Claude question. */
+export const questionsOf = (ask: Ask): Question[] => (ask.kind === "spec" ? ask.questions : [freeQuestion(ask.text)]);
+
+/** A card that waits for an answer shows only the question flow until "Details" is opened. */
+export const isOnlyAsk = (detail: TaskDetail): boolean =>
+  askOf(detail)?.kind === "free" || (detail.card.needs?.kind === "spec_questions" && detail.questions.length > 0);
 
 /** Draft first, then the saved answer, then Claude's recommendation. */
 export const effective = (question: Question, drafts: Readonly<Record<string, string>>): string =>

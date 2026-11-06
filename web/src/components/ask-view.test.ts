@@ -117,18 +117,6 @@ describe("step view", () => {
 });
 
 describe("other asks", () => {
-  it("answers a free question from its own box with the card's send button", () => {
-    const panel = fresh();
-    mount(panel, freeDetail());
-    expect(panel.interactive).toBe(true);
-    expect(q("textarea[name=ask-send]").getAttribute("placeholder")).toBe("Your answer to Claude");
-    expect(q("[data-action=send]").textContent).toBe("Send to Claude");
-    document.body.replaceChildren();
-    mount(panel, freeDetail(), ["send"]);
-    expect(panel.interactive).toBe(false);
-    expect(document.querySelectorAll("textarea")).toHaveLength(0);
-  });
-
   it("builds nothing without a question", () => {
     const panel = fresh();
     const working = makeCards().find((card) => card.status === "working");

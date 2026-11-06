@@ -32,7 +32,7 @@ export const flush = async (): Promise<void> => {
   await vi.advanceTimersByTimeAsync(0);
 };
 
-export const host = { done: vi.fn(), send: vi.fn() };
+export const host = { done: vi.fn(), reply: vi.fn(), send: vi.fn() };
 export const actions = (detail = askDetail(ASK_ID)): Map<string, Action> => new Map(detail.card.actions.map((action) => [action.id, action]));
 export function mount(panel: AskPanel, detail = askDetail(ASK_ID), without: string[] = []): HTMLElement | null {
   const known = actions(detail);
@@ -47,9 +47,9 @@ export function mount(panel: AskPanel, detail = askDetail(ASK_ID), without: stri
   if (root !== null) document.body.append(...(panel.switcher === null ? [] : [panel.switcher]), root);
   return root;
 }
-/** The ask detail with its spec-answers action changed (disabled with a reason). */
-export function withAction(change: Partial<Action>, detail = askDetail(ASK_ID)): TaskDetail {
-  return { ...detail, card: { ...detail.card, actions: detail.card.actions.map((a) => (a.id === "spec-answers" ? { ...a, ...change } : a)) } };
+/** The ask detail with its spec-answers (or the given) action changed (disabled with a reason). */
+export function withAction(change: Partial<Action>, detail = askDetail(ASK_ID), id = "spec-answers"): TaskDetail {
+  return { ...detail, card: { ...detail.card, actions: detail.card.actions.map((a) => (a.id === id ? { ...a, ...change } : a)) } };
 }
 export const fresh = (): AskPanel => new AskPanel(host);
 
@@ -59,6 +59,7 @@ export function useAskHarness(): void {
     localStorage.clear();
     document.body.replaceChildren();
     host.done.mockReset().mockResolvedValue(undefined);
+    host.reply.mockReset().mockResolvedValue(undefined);
     host.send.mockReset().mockResolvedValue(undefined);
   });
 
