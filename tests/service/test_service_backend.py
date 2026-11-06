@@ -176,3 +176,20 @@ def test_unreadable_shot_is_none(rig: Rig) -> None:
         assert rig.backend.shot(tid, "locked.png") is None
     finally:
         locked.chmod(0o600)
+
+
+def test_t1400_nested_shots_are_served_and_symlink_escapes_refused(rig: Rig, tmp_path: Path) -> None:
+    tid = rig.note()
+    shots = run_dir(rig.root, tid) / "shots"
+    (shots / "live2").mkdir(parents=True)
+    (shots / "live2" / "v1-1366x768.png").write_bytes(b"deep")
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "secret.png").write_bytes(b"secret")
+    (shots / "link").symlink_to(outside)
+    (shots / "evil.png").symlink_to(outside / "secret.png")
+    assert rig.backend.shot(tid, "live2/v1-1366x768.png") == b"deep"
+    deep = "live2/v1-1366x768.png"
+    bad = ("link/secret.png", "evil.png", f"live2/../{deep}", f"./{deep}", "live2//v1.png", f"/{deep}")
+    for name in bad:
+        assert rig.backend.shot(tid, name) is None

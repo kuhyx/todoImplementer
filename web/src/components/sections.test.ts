@@ -86,7 +86,7 @@ describe("drawer sections", () => {
     expect(element.querySelector("h4")?.textContent).toBe("Live check");
     expect(element.textContent).toContain("Ship");
     const images = [...element.querySelectorAll("img")];
-    expect(images.map((index) => index.getAttribute("src"))).toEqual([`/api/task/${detail.card.id}/shot/board.png`, `/api/task/${detail.card.id}/shot/drawer.png`]);
+    expect(images.map((index) => index.getAttribute("src"))).toEqual([`/api/task/${detail.card.id}/shot/live/board.png`, `/api/task/${detail.card.id}/shot/live/drawer.png`]);
     expect(element.querySelector("a")?.getAttribute("target")).toBe("_blank");
     expect(element.textContent).toContain("not proof");
     expect(element.textContent).toContain("Page updates within 100 ms");

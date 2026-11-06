@@ -5,8 +5,9 @@ export const routes = {
   board: "/api/board",
   live: (id: string): string => `/api/live?id=${encodeURIComponent(id)}`,
   post: (id: string, action: string): string => `/api/task/${encodeURIComponent(id)}/${action}`,
+  /** `path` is run-dir relative ("shots/live2/v1.png"); the server serves it from under <run>/shots. */
   shot: (id: string, path: string): string =>
-    `/api/task/${encodeURIComponent(id)}/shot/${encodeURIComponent(path.slice(path.lastIndexOf("/") + 1))}`,
+    `/api/task/${encodeURIComponent(id)}/shot/${path.replace(/^shots\//, "").split("/").map((part) => encodeURIComponent(part)).join("/")}`,
   task: (id: string): string => `/api/task/${encodeURIComponent(id)}`,
   usage: "/api/usage",
   version: "/version",

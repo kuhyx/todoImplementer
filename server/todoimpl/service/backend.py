@@ -114,10 +114,13 @@ class ServiceBackend:
         return build_task(found, run, run_dir(self.root, id8), self._context(), diff)
 
     def shot(self, id8: str, name: str) -> bytes | None:
-        """Bytes of `<run dir>/shots/<name>`, None for anything that is not a plain png file there."""
-        shots = run_dir(self.root, id8) / "shots"
-        path = shots / name
-        if Path(name).name != name or path.suffix != ".png" or not path.is_file():
+        """Bytes of the png at `name` (a/b.png) under `<run dir>/shots`; None when it resolves outside it."""
+        shots = (run_dir(self.root, id8) / "shots").resolve()
+        parts = name.split("/")
+        if name.startswith("/") or any(p in ("", ".", "..") for p in parts) or not name.endswith(".png"):
+            return None
+        path = (shots / name).resolve()
+        if not path.is_relative_to(shots) or not path.is_file():
             return None
         try:
             return path.read_bytes()

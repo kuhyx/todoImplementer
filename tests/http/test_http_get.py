@@ -128,9 +128,31 @@ def test_shot_serves_a_png(live: Live) -> None:
     assert r.headers["x-content-type-options"] == "nosniff"
 
 
+def test_t1400_nested_shot_path_reaches_the_backend(live: Live) -> None:
+    live.backend.shots["live2/v1-1366x768.png"] = b"deep"
+    r = call(live.port, "GET", shot_path(live, "live2/v1-1366x768.png"))
+    assert (r.status, r.body) == (200, b"deep")
+
+
 @pytest.mark.parametrize(
     "name",
-    ["missing.png", "a.jpg", "a.png.txt", "..%2F..%2Fstate.json", "%2e%2e%2fx.png", "a%20b.png", ".png"],
+    [
+        "live2/../x.png",
+        "./x.png",
+        "live2/./x.png",
+        "a//x.png",
+        "live2/x.txt",
+        "a/%2e%2e/x.png",
+        "live2/",
+        "a/b%20c.png",
+        "missing.png",
+        "a.jpg",
+        "a.png.txt",
+        "..%2F..%2Fstate.json",
+        "%2e%2e%2fx.png",
+        "a%20b.png",
+        ".png",
+    ],
 )
 def test_shot_refuses_bad_or_unknown_names(live: Live, name: str) -> None:
     r = call(live.port, "GET", shot_path(live, name))

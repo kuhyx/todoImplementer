@@ -26,9 +26,9 @@ if TYPE_CHECKING:
 
 log = logging.getLogger("todoimpl.http")
 CARD_ID = re.compile(r"[A-Za-z0-9]{8}-[0-9]+")  # <note id8>-<section index>, contracts item_id
-SHOT_NAME = re.compile(r"[\w.-]+\.png", re.ASCII)
+SHOT_NAME = re.compile(r"(?:(?!\.{1,2}/)[\w.-]+/)*[\w.-]+\.png", re.ASCII)  # a/b.png, no dot segments
 TASK_PATH = re.compile(r"/api/task/([^/]+)")
-SHOT_PATH = re.compile(r"/api/task/([^/]+)/shot/([^/]+)")
+SHOT_PATH = re.compile(r"/api/task/([^/]+)/shot/(.+)")
 ACTION_PATH = re.compile(r"/api/task/([^/]+)/([a-z-]+)")
 MAX_BODY = 256 * 1024
 SNAPSHOT_KEYS = ("stage", "status", "column", "current", "needs", "actions")
