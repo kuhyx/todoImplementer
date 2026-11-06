@@ -48,6 +48,9 @@ def _reply_ask(run: RunState) -> str | None:
 
 def _run_failed(run: RunState) -> Needs:
     text = run.error or "The run stopped without a message"
+    perm = run.extra.get("permission")
+    if run.stage == "failed" and isinstance(perm, dict):
+        return Needs("permission", text, "permission", 1, perm.get("command"))
     if run.extra.get("auto_heal") is True:
         return Needs("run_failed", text, "auto", 1)
     if run.extra.get("failed_stage") == "live_check":
@@ -58,9 +61,6 @@ def _run_failed(run: RunState) -> Needs:
 def needs(run: RunState) -> Needs:  # noqa: PLR0911 - one return per kind
     """Return the Needs for a run whose status is NEEDS_YOU."""
     err = run.error
-    perm = run.extra.get("permission")
-    if run.stage == "failed" and isinstance(perm, dict):
-        return Needs("permission", err or "A permission blocked Claude", "permission", 1, perm.get("command"))
     waiting = bool(run.extra.get("waiting_phone"))
     if waiting and run.last_tag == "A" and not err:
         return Needs("phone", PHONE_TEXT, "phone", 1)
@@ -83,7 +83,12 @@ def needs(run: RunState) -> Needs:  # noqa: PLR0911 - one return per kind
             return Needs(
                 "spec_ok", "Every question is answered: click Spec OK to start the plan", "action", 1
             )
-    if run.stage == "failed" and run.checks is not None and not run.checks.get("passed", True):
+    if (
+        run.stage == "failed"
+        and run.checks is not None
+        and not run.checks.get("passed", True)
+        and not run.extra.get("permission")
+    ):
         return Needs("checks_failed", err or "Checks are still red after the fix attempts", "action", 4)
     if run.stage != "failed" and run.last_tag == "Q":
         text = _reply_ask(run) or err or "Claude asked a question: answer it with Send to Claude"

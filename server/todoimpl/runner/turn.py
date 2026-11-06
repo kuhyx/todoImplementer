@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from . import claude, files, orphans, session
+from . import allowlist, claude, files, orphans, session
 from .stream import StreamParser, TurnResult, state_tag
 
 if TYPE_CHECKING:
@@ -25,7 +25,6 @@ class TurnEnv:
     publish: Callable[[dict[str, Any]], None]
     register: Callable[[subprocess.Popen[str] | None], None]
     now: Callable[[], float]
-    allow: tuple[str, ...] = ()
 
     def activity(self, kind: str, text: str, tool: str | None = None) -> None:  # noqa: D102
         self.publish({"type": "activity", "at": self.now(), "kind": kind, "text": text, "tool": tool})
@@ -60,7 +59,8 @@ def run_turn(
 ) -> TurnResult:
     """Run to exit; `prompt_for` gets the session situation (killed, idle or plain) and returns the prompt."""
     plan = session.plan_turn(_prior(env, state, role), now=env.now())
-    inv = claude.build(role, prompt_for(plan.situation), env.worktree, plan.resume, extra_dirs, env.allow)
+    allow = allowlist.rules_for(env.run_dir.parent, state.repo, state.task_id)
+    inv = claude.build(role, prompt_for(plan.situation), env.worktree, plan.resume, extra_dirs, allow)
     for note in inv.notes:
         env.activity("error", note)
     stream = files.new_stream(env.run_dir, role, env.now())

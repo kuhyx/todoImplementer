@@ -10,8 +10,9 @@ from typing import TYPE_CHECKING, Any
 from todoimpl.board import state as store
 from todoimpl.prompts import PromptContext, build
 
-from . import limits, permit, phone, retry, worktree
+from . import limits, phone, retry, worktree
 from .files import NeedsYouError
+from .permit import gate, with_grant
 from .session import handoff_summary
 from .turn import TurnEnv, run_turn
 
@@ -131,8 +132,6 @@ class Driver:
         st = self.state
         st.extra["failed_stage"] = st.stage
         st.error = exc.text
-        if exc.kind != "permission":
-            st.extra.pop("permission", None)
         if exc.kind == "handed_to_you":
             st.assignee = "human"
         self.set_stage("failed")
@@ -189,31 +188,33 @@ class Driver:
                 return build("fresh_after_idle", self.context(handoff=handoff, nudge=nudge))
             return build(stage, self.context(failure_tail=failure_tail, nudge=nudge, cont=cont))
 
-        allow = permit.allowed(ctx.root, self.item.repo, st.task_id)
-        env = TurnEnv(ctx.run_dir, Path(str(st.worktree)), ctx.publish, ctx.register, ctx.now, allow)
-        res = run_turn(env, st, role, permit.with_grant(st, prompt_for, role), (ctx.run_dir,))
+        env = TurnEnv(ctx.run_dir, Path(str(st.worktree)), ctx.publish, ctx.register, ctx.now)
+        res = run_turn(env, st, role, with_grant(st, prompt_for, role), (ctx.run_dir,))
         st.extra["last_reply"] = res.text[-1500:]
         if res.finished and not res.is_error:
             phone.after_turn(st, ctx.run_dir, res)
         self.save()
-        if ctx.cancelled():
-            raise CancelledError
-        pause = limits.pause_until(res.limit, res.text, is_error=res.is_error, now=ctx.now())
-        if pause is not None:
-            limits.write_until(ctx.root, pause)
-            raise LimitHitError(pause)
-        if permit.gate(self, res, stage):
+        self._check_turn(res)
+        if gate(self, res, stage):
             return self.turn(role, stage, failure_tail=failure_tail)
-        self._raise_if_unfinished(res, role, stage)
-        st.extra.pop("retries", None)
-        st.extra.pop("crash_retries", None)
-        return res
+        return self._finished(res, role, stage)
 
-    def _raise_if_unfinished(self, res: TurnResult, role: str, stage: str) -> None:
+    def _check_turn(self, res: TurnResult) -> None:
+        if self.ctx.cancelled():
+            raise CancelledError
+        pause = limits.pause_until(res.limit, res.text, is_error=res.is_error, now=self.ctx.now())
+        if pause is not None:
+            limits.write_until(self.ctx.root, pause)
+            raise LimitHitError(pause)
+
+    def _finished(self, res: TurnResult, role: str, stage: str) -> TurnResult:
         if res.is_error or not res.finished:
             reason = res.text.strip()[:300] or retry.NO_RESULT
             tail = retry.stderr_tail(self.ctx.run_dir, role)
             raise retry.failure(self.state, now=self.ctx.now(), stage=stage, reason=reason, tail=tail)
+        for key in ("retries", "crash_retries"):
+            self.state.extra.pop(key, None)
+        return res
 
     def r_continue(self, res: TurnResult) -> str | None:
         """Resume the same stage with a continue prompt after an `R:` turn, up to MAX_R_CONTINUES times."""

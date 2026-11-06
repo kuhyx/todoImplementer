@@ -30,11 +30,6 @@ MAX_RERUNS = 2
 LEGIT_STOPS = ("D", "Q")
 
 
-def allowed(root: Path, repo: str | None, task_id: str) -> tuple[str, ...]:
-    """Return the learned rules for this task, handed to claude as --allowedTools."""
-    return allowlist.rules_for(root, repo, task_id)
-
-
 def with_grant(st: RunState, prompt_for: Callable[[Situation], str], role: str) -> Callable[[Situation], str]:
     """Append the one-shot 'permission granted' note, and under kuhy's policy the sensitive-file advice."""
     standing = SENSITIVE if role == "implement" and policy.load().present else None
@@ -48,7 +43,7 @@ def with_grant(st: RunState, prompt_for: Callable[[Situation], str], role: str) 
 
 def _learn(driver: Driver, verdicts: list[Verdict]) -> None:
     st = driver.state
-    keys = {"global": "", "repo": driver.item.repo or "", "task": st.task_id}
+    keys = {"global": "", "repo": st.repo or "", "task": st.task_id}
     for verdict in verdicts:
         for rule in allowlist.add(driver.ctx.root, verdict.scope, keys[verdict.scope], verdict.rules):
             driver.activity(f"permission auto-allowed ({verdict.scope}): {rule}")
@@ -66,6 +61,7 @@ def _hand_over(st: RunState, blocked: list[tuple[Denial, Verdict]], worktree: Pa
 def gate(driver: Driver, res: TurnResult, stage: str) -> bool:
     """Learn rules and return True to rerun the turn; raise NeedsYouError when only kuhy can help."""
     st = driver.state
+    st.extra.pop("permission", None)
     stopped = [d for d in res.denials if d.terminal]
     if not stopped or res.tag in LEGIT_STOPS:
         st.extra.pop("perm_reruns", None)
