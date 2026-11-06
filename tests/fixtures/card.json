@@ -9,6 +9,7 @@
   "column": "running",
   "current": "checks",
   "needs": null,
+  "partial": null,
   "cost_usd": 1.37,
   "resumes_at": null,
   "updated": 1793880000.5,

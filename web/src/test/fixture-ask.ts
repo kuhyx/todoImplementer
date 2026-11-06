@@ -48,7 +48,7 @@ function needsCard(id: string, kind: "claude_question" | "spec_questions", text:
   if (base === undefined) throw new Error("fixture has no needs_you card");
   const send = { enabled: true, id: "send" as const, label: "Send to Claude", reason: null };
   const actions = kind === "claude_question" ? [send, ...base.actions.filter((a) => a.id === "cancel")] : base.actions;
-  return { ...base, actions, id, needs: { kind, text }, title: TITLE };
+  return { ...base, actions, id, needs: { category: "questions", effort: 2, kind, text }, title: TITLE };
 }
 
 export function askDetail(id: string): TaskDetail {

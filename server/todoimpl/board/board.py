@@ -45,13 +45,19 @@ def repo_checker(src_root: Path | None = None) -> Callable[[str | None], str | N
     return missing
 
 
+def _ask_order(card: dict[str, Any]) -> tuple[int, float]:
+    """Needs-you cards: least effort first, then the longest waiting; other columns keep their order."""
+    ask = card["needs"]
+    return (0, 0.0) if ask is None else (ask["effort"], card["updated"] or 0.0)
+
+
 def build_board(
     tasks: Sequence[TaskLike], runs: dict[str, RunState], ctx: Context, build: str
 ) -> dict[str, Any]:
     """Return the /api/board object: every note as a card, grouped by the five fixed columns."""
     cards = [build_card(task, runs.get(task.id), ctx) for task in tasks]
     order = [key for key, _ in COLUMNS]
-    cards.sort(key=lambda card: order.index(card["column"]))
+    cards.sort(key=lambda card: (order.index(card["column"]), *_ask_order(card)))
     return {
         "build": build,
         "generated_at": ctx.now,

@@ -60,6 +60,13 @@ describe("sortCards", () => {
     expect(titles).toEqual(titles.toSorted((a, b) => a.localeCompare(b)));
     expect(sortCards(cards, "cost")[0]?.cost_usd).toBe(5);
   });
+  it("[T1105] sorts Needs you by server effort, easiest first", () => {
+    const base = cards.find((c) => c.needs !== null);
+    if (base?.needs == null) throw new Error("fixture");
+    const hard = { ...base, id: "hhhhhhhh-0", needs: { ...base.needs, effort: 4 }, priority: "urgent" };
+    const easy = { ...base, id: "eeeeeeee-0", needs: { ...base.needs, effort: 1 }, priority: "low" };
+    expect(sortCards([hard, easy], "effort").map((c) => c.id)).toEqual(["eeeeeeee-0", "hhhhhhhh-0"]);
+  });
   it("ranks unknown priorities last and breaks ties by id", () => {
     const [a, b] = cards;
     if (a === undefined || b === undefined) throw new Error("fixture");

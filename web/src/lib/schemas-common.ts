@@ -30,8 +30,24 @@ export const stage = z.enum(STAGES);
 export const status = z.enum(STATUSES);
 export const column = z.enum(COLUMN_IDS);
 
+export const NEEDS_CATEGORIES = ["questions", "criteria", "action", "auto", "phone"] as const;
+
 export const needs = z
-  .strictObject({ kind: z.enum(NEEDS_KINDS), text: z.string().min(1) })
+  .strictObject({
+    category: z.enum(NEEDS_CATEGORIES),
+    effort: z.number().int().min(1).max(5),
+    kind: z.enum(NEEDS_KINDS),
+    text: z.string().min(1),
+  })
+  .nullable();
+
+export const partial = z
+  .strictObject({
+    deferred: z.array(z.string()),
+    done: z.array(z.string()),
+    followup_id: z.string().nullable(),
+    open: z.array(z.string()),
+  })
   .nullable();
 
 const hasReason = (a: { enabled: boolean; reason: null | string }): boolean => a.enabled || (a.reason !== null && a.reason.length > 0);
@@ -103,6 +119,7 @@ export const taskCard = z.strictObject({
   current: z.string(),
   id: itemId,
   needs,
+  partial,
   priority: z.string(),
   repo: z.string().nullable(),
   resumes_at: epoch.nullable(),
@@ -116,6 +133,7 @@ export type Action = z.infer<typeof action>;
 export type ActionOption = z.infer<typeof actionOption>;
 export type Question = z.infer<typeof question>;
 export type TaskCard = z.infer<typeof taskCard>;
+export type NeedsCategory = (typeof NEEDS_CATEGORIES)[number];
 export type ColumnId = z.infer<typeof column>;
 export type Status = z.infer<typeof status>;
 

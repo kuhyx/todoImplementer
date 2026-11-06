@@ -52,6 +52,19 @@ def parse_tag(text: str) -> str | None:
     return tag
 
 
+def last_tag_line(text: str) -> tuple[str, str] | None:
+    """Return (letter, text after the colon) of the last status-tag line, None without one."""
+    found = None
+    for match in TAG_LINE.finditer(text):
+        found = match
+    if found is None:
+        return None
+    letter = found.group(3) or LONG[found.group(1) or found.group(2)]
+    line_end = text.find("\n", found.end())
+    rest = text[found.end() : None if line_end < 0 else line_end]
+    return letter, rest.strip(" \t*_`")
+
+
 def state_tag(tag: str | None) -> str | None:
     """state.json allows Q/A/R/D only; a `C:` handoff is still running work."""
     return "R" if tag == "C" else tag

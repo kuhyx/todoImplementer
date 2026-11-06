@@ -56,8 +56,12 @@
     "needs": {
       "type": ["object", "null"],
       "description": "Why the task is in Needs you; null in every other column. text names exactly what is needed.",
-      "properties": {"kind": {"$ref": "#/$defs/needs_kind"}, "text": {"type": "string", "minLength": 1}},
-      "required": ["kind", "text"],
+      "properties": {
+        "kind": {"$ref": "#/$defs/needs_kind"}, "text": {"type": "string", "minLength": 1},
+        "category": {"enum": ["questions", "criteria", "action", "auto", "phone"], "description": "auto: the server heals it itself. phone: waiting for the phone."},
+        "effort": {"type": "integer", "minimum": 1, "maximum": 5, "description": "Server-computed; Needs you sorts by it, ascending."}
+      },
+      "required": ["kind", "text", "category", "effort"],
       "additionalProperties": false
     },
     "action": {
@@ -150,6 +154,14 @@
       "required": ["code", "message"],
       "additionalProperties": false
     },
+    "id_list": {"type": "array", "items": {"type": "string"}},
+    "partial": {
+      "type": ["object", "null"],
+      "description": "Live-check outcome when criteria are open or deferred to after the ship; else null.",
+      "properties": {"done": {"$ref": "#/$defs/id_list"}, "open": {"$ref": "#/$defs/id_list"}, "deferred": {"$ref": "#/$defs/id_list"}, "followup_id": {"type": ["string", "null"]}},
+      "required": ["done", "open", "deferred", "followup_id"],
+      "additionalProperties": false
+    },
     "task_card": {
       "type": "object",
       "description": "One board card; also the head of the task detail.",
@@ -164,6 +176,7 @@
         "column": {"$ref": "#/$defs/column"},
         "current": {"type": "string", "description": "One line on what it does or waits on, e.g. 'review round 2/5'."},
         "needs": {"$ref": "#/$defs/needs"},
+        "partial": {"$ref": "#/$defs/partial"},
         "cost_usd": {"$ref": "#/$defs/usd"},
         "resumes_at": {"anyOf": [{"$ref": "#/$defs/epoch"}, {"type": "null"}]},
         "updated": {"anyOf": [{"$ref": "#/$defs/epoch"}, {"type": "null"}]},
@@ -180,6 +193,7 @@
         "column",
         "current",
         "needs",
+        "partial",
         "cost_usd",
         "resumes_at",
         "updated",

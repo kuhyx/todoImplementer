@@ -38,7 +38,7 @@ export function preset(status: TaskCard["status"], hasRepository: boolean): Pres
         ],
         column: "needs_you",
         current: "waiting for your answers",
-        needs: { kind: "spec_questions", text: "Answer 2 questions so Claude can plan." },
+        needs: { category: "questions", effort: 1, kind: "spec_questions", text: "Answer 2 questions so Claude can plan." },
         stage: "spec_wait",
         status,
       };

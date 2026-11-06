@@ -7,7 +7,8 @@ import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from .status import Status, needs
+from .needs import needs
+from .status import Status
 from .types import fmt_when
 
 if TYPE_CHECKING:

@@ -8,3 +8,5 @@ Ids are global and never reused; the row's test is titled `[T<N>] ...` (vitest).
 | T801 | A live frame that failed Zod toasted only "live stage: unexpected shape": no path, no expected/received, no raw payload in the console | web/src/lib/live-feed.test.ts |
 | T802 | Identical error toasts stacked: three bad frames gave three identical toasts | web/src/components/feedback.test.ts |
 | T1401 | routes.shot kept only the last path segment, so nested live-check screenshots requested the wrong URL and rendered broken | web/src/lib/routes.test.ts |
+| T1105 | The board could not order Needs you by the server's effort, easiest first | web/src/lib/board-model.test.ts |
+| T1106 | A card showed neither its needs category nor the partial live-check outcome | web/src/components/board.test.ts |

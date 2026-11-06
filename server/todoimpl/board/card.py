@@ -7,7 +7,8 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from .actions import actions
-from .status import Status, column, compute, needs
+from .needs import needs
+from .status import Status, column, compute
 from .types import Limit, fmt_when
 
 if TYPE_CHECKING:
@@ -55,6 +56,15 @@ def _working(run: RunState) -> str:
     return run.stage
 
 
+def partial_of(run: RunState | None) -> dict[str, Any] | None:
+    """Return the contract's partial object (live-check outcome) or None when the run has none."""
+    found = run.extra.get("partial") if run is not None else None
+    if run is None or not isinstance(found, dict):
+        return None
+    keys = ("done", "open", "deferred")
+    return {key: list(found.get(key, [])) for key in keys} | {"followup_id": run.extra.get("followup_id")}
+
+
 def build_card(task: TaskLike, run: RunState | None, ctx: Context) -> dict[str, Any]:
     """Return the task_card object for one note."""
     tid = task.id
@@ -84,6 +94,7 @@ def build_card(task: TaskLike, run: RunState | None, ctx: Context) -> dict[str, 
         "column": column(status).value,
         "current": current_line(status, run, resumes_at, ctx.now),
         "needs": needs(run).to_dict() if status == Status.NEEDS_YOU and run is not None else None,
+        "partial": partial_of(run),
         "cost_usd": run.cost_usd if run is not None else 0,
         "resumes_at": resumes_at,
         "updated": run.updated if run is not None else None,

@@ -74,6 +74,7 @@ export function makeCards(): TaskCard[] {
       assignee: repository === null ? "human" : "claude",
       cost_usd: cost,
       id: idFor(index),
+      partial: null,
       priority,
       repo: repository,
       resumes_at: status === "paused_limit" ? NOW + 3 * 3600 : null,

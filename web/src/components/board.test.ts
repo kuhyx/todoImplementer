@@ -21,6 +21,19 @@ afterEach(() => {
 });
 
 describe("renderCard", () => {
+  it("[T1106] labels the needs category and shows the partial outcome", () => {
+    const card = makeCards().find((c) => c.status === "needs_you");
+    if (card === undefined) throw new Error("fixture");
+    const partial = { deferred: ["C7"], done: ["C1", "C2", "C4"], followup_id: "abcd1234", open: ["C3", "C5"] };
+    const text = renderCard({ ...card, partial }, NOW).textContent;
+    expect(text).toContain("Questions");
+    expect(text).toContain("partial: 3/5, follow-up abcd1234");
+    expect(text).toContain("after ship: C7");
+    const open = { ...partial, deferred: [], followup_id: null, open: ["C3"] };
+    expect(renderCard({ ...card, partial: open }, NOW).textContent).toContain("partial: 3/4");
+    expect(renderCard({ ...card, needs: { ...card.needs!, category: "auto" } }, NOW).textContent).toContain("Fixing itself");
+  });
+
   it("shows server words only, no raw objects", () => {
     const card = makeCards().find((c) => c.status === "needs_you");
     if (card === undefined) throw new Error("fixture");

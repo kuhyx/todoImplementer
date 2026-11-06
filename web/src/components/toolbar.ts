@@ -16,6 +16,7 @@ export interface Toolbar {
 
 const SORT_LABEL: Record<Sort, string> = {
   cost: "Cost",
+  effort: "Least effort",
   priority: "Priority",
   title: "Title",
   updated: "Recently updated",

@@ -5,8 +5,9 @@ import itertools
 
 import pytest
 from board_helpers import STAGES, Note, run
+from todoimpl.board.needs import needs
 from todoimpl.board.state import SpecQuestion
-from todoimpl.board.status import Column, Status, column, compute, needs
+from todoimpl.board.status import Column, Status, column, compute
 
 W, Q, P, N, R, D, Y, S, C = (
     Status.WORKING,
@@ -145,4 +146,9 @@ def test_needs_kinds() -> None:
         assert got.text
         if text is not None:
             assert got.text == text
-    assert needs(run(error="e")).to_dict() == {"kind": "run_failed", "text": "e"}
+    assert needs(run(error="e")).to_dict() == {
+        "kind": "run_failed",
+        "text": "e",
+        "category": "action",
+        "effort": 4,
+    }

@@ -1,7 +1,7 @@
 /** View state in the URL hash (R3); defaults are omitted. */
 import { COLUMN_IDS, type ColumnId } from "@/lib/schemas-common";
 
-export const SORTS = ["priority", "updated", "title", "cost"] as const;
+export const SORTS = ["effort", "priority", "updated", "title", "cost"] as const;
 export type Sort = (typeof SORTS)[number];
 
 export const YOURS = "-";
@@ -15,7 +15,7 @@ export interface ViewState {
   task: null | string;
 }
 
-export const DEFAULT_STATE: ViewState = { col: null, q: "", repo: "", sort: "priority", task: null };
+export const DEFAULT_STATE: ViewState = { col: null, q: "", repo: "", sort: "effort", task: null };
 
 function oneOf<T extends string>(allowed: readonly T[], value: null | string, fallback: T): T {
   return allowed.find((candidate) => candidate === value) ?? fallback;

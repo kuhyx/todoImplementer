@@ -157,6 +157,12 @@
   overflow-wrap: anywhere;
 }
 
+.card-category,
+.card-partial {
+  font-size: var(--text-label);
+  color: var(--text-muted);
+}
+
 .card-needs {
   padding-left: var(--space-2);
   border-left: 2px solid var(--warning);
