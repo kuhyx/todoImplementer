@@ -10,6 +10,7 @@ import { label } from "@/usage/labels";
 import { formatRoute, parseRoute, type Route, tabFor, type ViewId, VIEWS } from "@/usage/route";
 import { abView } from "@/usage/view-ab";
 import { anomaliesView } from "@/usage/view-anomalies";
+import { autonomyView } from "@/usage/view-autonomy";
 import { contextView } from "@/usage/view-context";
 import { efficiencyView } from "@/usage/view-efficiency";
 import { fileView } from "@/usage/view-file";
@@ -27,6 +28,7 @@ type Render = (context: Context, signal: AbortSignal, argument: string) => Promi
 const RENDERERS: Record<ViewId, Render> = {
   ab: abView,
   anomalies: anomaliesView,
+  autonomy: autonomyView,
   context: contextView,
   efficiency: efficiencyView,
   f: (context, signal, argument) => fileView(context, signal, argument),

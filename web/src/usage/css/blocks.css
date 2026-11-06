@@ -25,6 +25,23 @@
   font-variant-numeric: tabular-nums;
 }
 
+.tile[data-level] {
+  border-left: 4px solid var(--success);
+}
+
+.tile[data-level="red"] {
+  border-left-color: var(--danger);
+}
+
+.tile[data-level="grey"] {
+  border-left-color: var(--text-muted);
+}
+
+.tile-note {
+  font-size: var(--text-caption);
+  color: var(--text-muted);
+}
+
 .banner {
   display: flex;
   gap: var(--space-2);

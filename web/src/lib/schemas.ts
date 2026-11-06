@@ -1,6 +1,7 @@
 /** Zod mirrors of the GET/POST/SSE contracts (board, task, usage, version, live, response). */
 import { z } from "zod";
 
+import { autonomy } from "@/lib/schemas-autonomy";
 import {
   actions, apiError, checks, column, epoch, itemId, lesson, limit, liveCheck, needs, question, selfCheck, stage, status,
   taskCard, usd,
@@ -51,6 +52,7 @@ const usageWindow = z
   .nullable();
 
 export const usage = z.strictObject({
+  autonomy,
   cost: z.strictObject({
     per_task: z.array(z.strictObject({ cost_usd: usd, id: itemId, title: z.string() })),
     today_usd: usd,

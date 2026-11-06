@@ -33,6 +33,8 @@ describe("formatRoute", () => {
 
   it("maps drill-downs to their tab", () => {
     expect(VIEWS.map((view) => view.id)).toContain("items");
+    expect(parseRoute("#/autonomy")).toMatchObject({ view: "autonomy" });
+    expect(tabFor("autonomy")).toBe("autonomy");
     expect([tabFor("s"), tabFor("f"), tabFor("ab")]).toEqual(["sessions", "context", "ab"]);
   });
 });

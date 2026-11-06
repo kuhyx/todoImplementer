@@ -195,3 +195,18 @@ web pages `web/src/pages/usage*.astro` with `web/src/usage/`. The SQLite DB stay
 Ingest runs as `python -m todoimpl.tokens.ingest --budget 45` (a unit file in `deploy/`, not installed). The join:
 a run's session ids give cost per item, repo and stage. The old code is removed only after kuhy confirms parity
 (the new API's answers equal the old `:8760/api/tokens` answers on the real DB, read-only, for the main endpoints).
+
+## Autonomy metrics (CHANGE 5)
+
+`GET /api/usage` carries `autonomy` (`contracts/autonomy.schema.json`), shown on the usage page tab Autonomy. Four
+metrics, each with value, target, direction and a per-ISO-week series; Ship is not an intervention.
+
+- `done_unassisted` (up, target 100 %): finished cards (Ready to ship, shipping, Done) with no recorded intervention.
+- `permission_asks` (down, 0): A: turns whose line asks for a permission or approval (`usage/asks.py`).
+- `questions_asked` (down, 0): spec question cards plus the questions of free Q: turns.
+- `criteria_failed` (down, 0): open plus deferred criteria of a settled live check (`extra.partial`, else the report).
+
+Interventions are appended to `<run dir>/interventions.jsonl` by the service when an action is accepted (`start`,
+`retry`, `spec_answers`, `spec_ok`, `send`, `cancel`, `credits`; any new kuhy click, such as `go`, calls
+`usage.interventions.record`). Cards without that file are backfilled from answers, Spec OK, credits, Send notes
+and Q:/A: turns; restarts, cancels and `go` clicks before the record cannot be recovered.

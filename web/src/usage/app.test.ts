@@ -33,7 +33,7 @@ afterEach(() => {
 describe("usage-app", () => {
   it("opens the overview by default with every tab and the filters", async () => {
     const app = await mount("");
-    expect(tabs(app)).toEqual(["Spend", "Sessions", "Per todo item", "Efficiency", "Levers", "Context files", "Anomalies", "A/B", "More panels"]);
+    expect(tabs(app)).toEqual(["Spend", "Sessions", "Per todo item", "Efficiency", "Autonomy", "Levers", "Context files", "Anomalies", "A/B", "More panels"]);
     expect(q(app, '.tabs [aria-current="page"]').textContent).toBe("Spend");
     expect(app.querySelectorAll(".filters select")).toHaveLength(4);
     expect(app.querySelectorAll(".chart svg").length).toBeGreaterThan(5);

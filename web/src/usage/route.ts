@@ -1,5 +1,5 @@
 /** `#/<view>[/<arg>][?filters&t.<table>.*]`: the whole page state lives in the hash (R3). */
-export type ViewId = "ab" | "anomalies" | "context" | "efficiency" | "f" | "items" | "levers" | "more" | "overview" | "s" | "sessions";
+export type ViewId = "ab" | "anomalies" | "autonomy" | "context" | "efficiency" | "f" | "items" | "levers" | "more" | "overview" | "s" | "sessions";
 
 export interface View {
   id: ViewId;
@@ -11,6 +11,7 @@ export const VIEWS: readonly View[] = [
   { id: "sessions", label: "Sessions" },
   { id: "items", label: "Per todo item" },
   { id: "efficiency", label: "Efficiency" },
+  { id: "autonomy", label: "Autonomy" },
   { id: "levers", label: "Levers" },
   { id: "context", label: "Context files" },
   { id: "anomalies", label: "Anomalies" },

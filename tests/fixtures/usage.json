@@ -25,5 +25,52 @@
         "cost_usd": 1.37
       }
     ]
+  },
+  "autonomy": {
+    "done_unassisted": {
+      "value": 50.0,
+      "count": 1,
+      "finished": 2,
+      "target": 100,
+      "direction": "up",
+      "weekly": [
+        {
+          "week": "2026-W45",
+          "value": 50.0,
+          "count": 1,
+          "finished": 2
+        }
+      ]
+    },
+    "permission_asks": {
+      "value": 0,
+      "target": 0,
+      "direction": "down",
+      "weekly": []
+    },
+    "questions_asked": {
+      "value": 4,
+      "target": 0,
+      "direction": "down",
+      "weekly": [
+        {
+          "week": "2026-W45",
+          "value": 4
+        }
+      ]
+    },
+    "criteria_failed": {
+      "value": 1,
+      "target": 0,
+      "direction": "down",
+      "weekly": [
+        {
+          "week": "2026-W45",
+          "value": 1
+        }
+      ]
+    },
+    "cards": 2,
+    "backfilled": 1
   }
 }

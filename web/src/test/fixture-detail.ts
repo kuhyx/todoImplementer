@@ -86,8 +86,27 @@ export function makeDetail(card: TaskCard): TaskDetail {
   };
 }
 
+export function makeAutonomy(): Usage["autonomy"] {
+  return {
+    backfilled: 3,
+    cards: 6,
+    criteria_failed: { direction: "down", target: 0, value: 3, weekly: [{ value: 1, week: "2026-W44" }, { value: 2, week: "2026-W45" }] },
+    done_unassisted: {
+      count: 2,
+      direction: "up",
+      finished: 5,
+      target: 100,
+      value: 40,
+      weekly: [{ count: 1, finished: 3, value: 33.3, week: "2026-W44" }, { count: 1, finished: 2, value: 50, week: "2026-W45" }],
+    },
+    permission_asks: { direction: "down", target: 0, value: 0, weekly: [] },
+    questions_asked: { direction: "down", target: 0, value: 12, weekly: [{ value: 12, week: "2026-W45" }] },
+  };
+}
+
 export function makeUsage(): Usage {
   return {
+    autonomy: makeAutonomy(),
     cost: { per_task: [{ cost_usd: 3.18, id: "17a1b2c3-0", title: "Escape hatch" }], today_usd: 12.37, total_usd: 80.5 },
     five_hour: { resets_at: NOW + 8100, status: "allowed", utilization: 0.42 },
     generated_at: NOW,
