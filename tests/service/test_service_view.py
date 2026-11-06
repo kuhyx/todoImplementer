@@ -59,3 +59,12 @@ def test_close_task_marks_one_section_and_pokes(rig: Rig) -> None:
     (note,) = rig.fake.store.notes.values()
     assert "## [x] a" in note.text
     assert note.status == "todo"
+
+
+def test_t1109_add_task_passes_through_and_pokes(rig: Rig) -> None:
+    rig.note(body="## a\nx")
+    added = view(rig).add_task("kuhyx/demo", "Demo — rest: C2", "- C2: open")
+    assert added.repo == "kuhyx/demo"
+    assert rig.backend.cache._wake.is_set()
+    rig.backend.cache.refresh()
+    assert "Demo — rest: C2" in {t.title for t in rig.backend.cache.snapshot().tasks}

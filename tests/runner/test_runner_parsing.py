@@ -47,12 +47,34 @@ def test_parse_self_check_and_live_rows() -> None:
     live = "# Live\n- [x] C1: ran `cat hello.txt` -> saw hi\n"
     live += "- [ ] C2: could not start the app\n* [X] no id here\nx"
     assert parsing.parse_live(live) == [
-        {"criterion": "C1", "done": True, "note": "ran `cat hello.txt` -> saw hi"},
-        {"criterion": "C2", "done": False, "note": "could not start the app"},
-        {"criterion": "no id here", "done": True, "note": "no id here"},
+        {"criterion": "C1", "done": True, "note": "ran `cat hello.txt` -> saw hi", "deferred": False},
+        {"criterion": "C2", "done": False, "note": "could not start the app", "deferred": False},
+        {"criterion": "no id here", "done": True, "note": "no id here", "deferred": False},
     ]
 
 
 def test_parse_criteria_reads_c_numbered_bullets() -> None:
     plan = "## Approach\n- touch x\n## Acceptance criteria\nC1. I run `cat hello.txt`, I see hi\nC2: second\n"
     assert parsing.parse_criteria(plan) == ["I run `cat hello.txt`, I see hi", "second"]
+
+
+def test_t1110_parse_live_tolerates_real_formats() -> None:
+    text = "[x] C1 ran it\n- [X] **C2**: saw it\n* [ ] **C3:** broke\n- [x] C4 - fine\n- [x] C5. dot"
+    rows = parsing.parse_live(text)
+    assert [(r["criterion"], r["done"]) for r in rows] == [
+        ("C1", True),
+        ("C2", True),
+        ("C3", False),
+        ("C4", True),
+        ("C5", True),
+    ]
+    assert [r["note"] for r in rows] == ["ran it", "saw it", "broke", "fine", "dot"]
+
+
+def test_t1108_parse_live_marks_deferred_rows() -> None:
+    rows = parsing.parse_live("- [~] C7: after ship: committed\n- [~] C8: needs phone: tap it")
+    assert [(r["criterion"], r["done"], r["deferred"]) for r in rows] == [
+        ("C7", False, True),
+        ("C8", False, True),
+    ]
+    assert rows[0]["note"] == "after ship: committed"

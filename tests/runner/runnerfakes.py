@@ -121,6 +121,8 @@ class FakeClient:
     fail_close: bool = False
     fail_get: bool = False
     unreachable: int = 0
+    fail_add: bool = False
+    added: list[tuple[str, str, str]] = field(default_factory=list)
 
     def get_task(self, card: str) -> CardTask:
         """Return the note section behind a card, or TodoError like the real view."""
@@ -141,6 +143,14 @@ class FakeClient:
             msg = "close refused"
             raise TodoError(msg)
         self.closed.append((card, evidence))
+
+    def add_task(self, repo: str, title: str, body: str = "") -> Task:
+        """Record a follow-up note (or fail when asked) and return it."""
+        if self.fail_add:
+            msg = "add refused"
+            raise TodoError(msg)
+        self.added.append((repo, title, body))
+        return Task(f"f0llow{len(self.added):02d}", title, body, repo, "todo", "medium", None)
 
     def item(self, id8: str, index: int = 0) -> Item:
         """Return the note's item at index."""

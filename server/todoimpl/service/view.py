@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from todoimpl.todo_mcp.model import TodoError
+from todoimpl.todo_mcp.model import Task, TodoError
 
 from .cards import CardTask, card_tasks
 
@@ -59,3 +59,9 @@ class ItemView:
         """Mark this section done; the note closes once all its sections are."""
         self._client.close_item(self.get_task(card).item, evidence)
         self._cache.poke()
+
+    def add_task(self, repo: str, title: str, body: str = "") -> Task:
+        """Add a section to the repo's open note (a follow-up) and refresh the cached cards."""
+        task = self._client.add_task(repo, title, body)
+        self._cache.poke()
+        return task

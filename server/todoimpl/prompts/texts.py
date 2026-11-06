@@ -105,6 +105,10 @@ def live_check(ctx: PromptContext) -> str:
         "Tests or reading code never count. No video. Never use kuhy's display :0.",
         f"Write {ctx.run_dir}/live_check.md, one line per criterion:",
         "- [x] C1: what I did -> what I saw   (use `- [ ]` if it failed or could not be tried, and say why)",
+        "A criterion that can only pass after the ship (committed, merged, deployed, restarted from main) or "
+        "needs kuhy's phone: `- [~] C7: after ship: <why>` or `- [~] C7: needs phone: <why>`.",
+        "Write the whole checklist yourself in this turn; no background agent, do not end with `R:`.",
+        ctx.failure_tail[-TAIL_CHARS:],
         f"Save screenshots to {ctx.run_dir}/shots/. Stop what you started. End with `D:`.",
     )
 

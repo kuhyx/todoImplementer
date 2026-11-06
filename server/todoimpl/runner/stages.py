@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 from .checks import discover, record, run_all
 from .files import NeedsYouError, write_json
+from .live import settle
 from .parsing import parse_criteria, parse_live, parse_questions, parse_self_check
 from .ship import CommitRefusedError, ShipPlan, ship
 from .worktree import base_ref, repo_dir
@@ -20,7 +21,6 @@ if TYPE_CHECKING:
     from .pipeline import Driver
 
 MAX_CHECK_FIXES = 2
-MAX_LIVE_FIXES = 1
 MAX_SHIP_FIXES = 2
 
 
@@ -85,23 +85,17 @@ def _live_check(d: Driver) -> str | None:
     report_file, shots = run_dir / "live_check.md", run_dir / "shots"
     report_file.unlink(missing_ok=True)
     shots.mkdir(parents=True, exist_ok=True)
-    res = d.turn("implement", "live_check")
+    res = d.turn("implement", "live_check", failure_tail=str(st.extra.pop("live_redo", "")))
     if res.tag in ("Q", "A"):
         return None
-    if not report_file.exists():
+    if not report_file.exists() and res.tag != "R":
         report_file.write_text(res.text, encoding="utf-8")
-    report = report_file.read_text(encoding="utf-8")
+    report = report_file.read_text(encoding="utf-8") if report_file.exists() else ""
     st.live_check = {
         "report_md": report,
         "shots": sorted(str(p.relative_to(run_dir)) for p in shots.rglob("*") if p.is_file()),
     }
-    rows = parse_live(report)
-    not_done = [str(r["criterion"]) for r in rows if not r["done"]] or ([] if rows else ["no `- [x]` lines"])
-    if not not_done:
-        st.extra.pop("live_fixes", None)
-        return "checks"
-    why = f"The live check still saw criteria not done: {', '.join(not_done)}"
-    return _retry(d, "live_fixes", MAX_LIVE_FIXES, report, NeedsYouError(why))
+    return settle(d, report)
 
 
 def _checks(d: Driver) -> str | None:
@@ -120,12 +114,14 @@ def _checks(d: Driver) -> str | None:
     return _retry(d, "check_fixes", MAX_CHECK_FIXES, tail, NeedsYouError(why, "checks_failed"))
 
 
+def _word(row: dict[str, object]) -> str:
+    return "deferred" if row["deferred"] else "done" if row["done"] else "not done"
+
+
 def live_summary(report: str) -> str:
     """One line per criterion of the live check, for the close evidence."""
     rows = parse_live(report)
-    return "\n".join(
-        f"live {r['criterion']}: {'done' if r['done'] else 'not done'} ({r['note']})" for r in rows
-    )
+    return "\n".join(f"live {r['criterion']}: {_word(r)} ({r['note']})" for r in rows)
 
 
 def _shipping(d: Driver) -> str | None:

@@ -30,3 +30,8 @@ One row per bug, ids global and never reused. The row's test is named `test_t<N>
 | T1225 | Retry of a failed ship restarted the whole run | tests/runner/test_runner_tagless.py |
 | T1226 | A commit hook failure at ship went to Needs you instead of a fix turn | tests/runner/test_runner_tagless.py |
 | T1227 | The ship error embedded the whole commit message and no cap bounded the fixes | tests/runner/test_runner_tagless.py |
+| T1103 | A plan criterion missing from the live-check report passed silently instead of counting as not done | tests/runner/test_runner_live.py |
+| T1104 | A live-check turn that delegated to a background agent and ended with `R:`/`D:` and no checklist failed the task ("no `- [x]` lines") instead of being re-run | tests/runner/test_runner_live.py |
+| T1108 | Criteria that can only pass after the ship (or need the phone) had no `- [~]` row and failed the live check | tests/runner/test_runner_parsing.py |
+| T1109 | One criterion still open after the live fix sent a card with the rest done to Needs you instead of accepting it partly with one follow-up note | tests/runner/test_runner_live.py |
+| T1110 | The live-check parser dropped rows without a dash, with `**C1**` or without a colon | tests/runner/test_runner_parsing.py |

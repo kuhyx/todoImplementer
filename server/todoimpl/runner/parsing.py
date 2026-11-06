@@ -15,7 +15,9 @@ BULLET = re.compile(r"^\s*(?:[-*]|\d+[.)]|C\d+[.:)])\s+(.*\S)")
 SELF_CHECK = re.compile(
     r"^\s*(?:[-*]\s*)?`?(C\d+|.{2,}?)`?:\s*`?(done|not done)\b`?[\s:,.;()-]*(.*?)\)?`?\s*$", re.IGNORECASE
 )
-LIVE = re.compile(r"^\s*[-*]\s*\[([ xX])\]\s*(?:(C\d+)\s*:\s*)?(.*?)\s*$")
+LIVE = re.compile(
+    r"^\s*(?:[-*]\s*)?\[([ xX~])\]\s*(?:\*{0,2}(C\d+)\*{0,2}\s*[:.)\u2013\u2014-]?\s*\*{0,2}\s*)?(.*?)\s*$"
+)
 
 
 def parse_questions(text: str) -> list[SpecQuestion]:
@@ -58,10 +60,15 @@ def parse_self_check(text: str) -> list[dict[str, object]]:
 
 
 def parse_live(text: str) -> list[dict[str, object]]:
-    """`- [x] C1: what I did -> what I saw` lines of live_check.md (`- [ ]` = failed or not tried)."""
+    """`- [x] C1: what I did -> what I saw` rows of live_check.md.
+
+    `[ ]` failed or not tried; `[~]` deferred (after ship, needs phone); no dash, `**C1**`, no colon all pass.
+    """
     rows: list[dict[str, object]] = []
     for line in text.splitlines():
         if found := LIVE.match(line):
             mark, cid, note = found.groups()
-            rows.append({"criterion": cid or note, "done": mark != " ", "note": note})
+            rows.append(
+                {"criterion": cid or note, "done": mark in "xX", "note": note, "deferred": mark == "~"}
+            )
     return rows

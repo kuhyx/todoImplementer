@@ -28,6 +28,7 @@ if TYPE_CHECKING:
 
     from todoimpl.board.state import RunState
     from todoimpl.service.cards import CardTask
+    from todoimpl.todo_mcp.model import Task
 
 log = logging.getLogger("todoimpl.runner")
 INBOX = "inbox.json"
@@ -39,6 +40,7 @@ class Client(Protocol):
 
     def get_task(self, card: str) -> CardTask: ...  # noqa: D102
     def close_task(self, card: str, evidence: str) -> None: ...  # noqa: D102
+    def add_task(self, repo: str, title: str, body: str = "") -> Task: ...  # noqa: D102
 
 
 class Engine:

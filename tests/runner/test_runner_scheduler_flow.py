@@ -98,7 +98,9 @@ def test_live_check_not_done_gets_one_fix_then_needs_you(world: Env) -> None:
         "text": "- [ ] C1: saw nothing\n",
     }
     sched, _ = boot(
-        world, PLAN, IMPL, (report, *reply("see live_check.md\n\nD: done")), IMPL, LIVE_BAD, done_check="true"
+        world,
+        *(PLAN, IMPL, (report, *reply("see live_check.md\n\nD: done")), IMPL, LIVE_BAD, IMPL, LIVE_BAD),
+        done_check="true",
     )
     try:
         sched.start(CARD)
