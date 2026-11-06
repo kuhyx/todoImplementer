@@ -44,7 +44,7 @@ def step_drawer(cdp: Cdp, url: str, out: Path, tag: str) -> dict[str, Any]:
     for name, task in (("drawer", WORKING), ("drawer-spec", SPEC), ("drawer-ready", READY)):
         goto(cdp, f"{url}#task={task}", 2.4)
         cdp.shot(out / f"{tag}-{name}.png")
-        selectors = [".drawer", ".drawer-bar .btn"] + (
+        selectors = [".drawer", "[data-close]"] + (
             [".drawer-send textarea", ".dtab"] if task == WORKING else []
         )
         results.append(probe(cdp, selectors))

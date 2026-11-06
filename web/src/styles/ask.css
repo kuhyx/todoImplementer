@@ -70,7 +70,9 @@
 .ask-body {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+
+  /* WCAG 1.4.8: paragraph spacing at least 1.5 times the line spacing. */
+  gap: 1.5lh;
 }
 
 .ask-card p {

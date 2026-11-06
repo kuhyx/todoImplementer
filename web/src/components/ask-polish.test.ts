@@ -73,6 +73,7 @@ describe("stylesheets", () => {
     expect(ask).toMatch(/\.ask textarea\s*\{[^\}]*field-sizing: content/v);
     expect(ask).toMatch(/\.ask \.ask-title\s*\{[^\}]*font-size: inherit/v);
     expect(ask).toMatch(/\.ask \.ask-title\s*\{[^\}]*font-weight: 600/v);
+    expect(ask).toMatch(/\.ask-body\s*\{[^\}]*gap: 1\.5lh/v);
     expect(ask).not.toMatch(/max-width: 52rem|\.ask-page|\.ask-label/v);
   });
 });
