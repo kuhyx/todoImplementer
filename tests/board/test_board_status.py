@@ -152,3 +152,10 @@ def test_needs_kinds() -> None:
         "category": "action",
         "effort": 4,
     }
+
+
+@pytest.mark.parametrize("tag", ["Q", "A", "R", "D"])
+def test_t1229_a_paused_retry_run_is_never_needs_you(tag: str) -> None:
+    waiting = run(stage="paused_retry", last_tag=tag)
+    assert compute(Note(), waiting, False, None) == Status.WORKING
+    assert compute(Note(), waiting, False, 5.0) != Status.NEEDS_YOU

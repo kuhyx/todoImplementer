@@ -91,7 +91,9 @@ def compute(  # noqa: PLR0911 - one return per rule of the spec table
 
 
 def _needs_you(run: RunState, live: bool) -> bool:
-    """Rule 6: the run waits on kuhy."""
+    """Rule 6: the run waits on kuhy; paused_retry waits on its own timer, whatever tag it carries."""
+    if run.stage == "paused_retry":
+        return False
     return (
         run.stage in ("failed", "spec_wait")
         or run.error is not None

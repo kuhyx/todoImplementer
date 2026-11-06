@@ -14,3 +14,4 @@ One row per bug, ids global and never reused. The row's test is named `test_t<N>
 | T1100 | A claude_action/claude_question card showed the generic "see the feed" text instead of the session's last `A:`/`Q:` line | tests/board/test_board_needs.py |
 | T1101 | Needs you cards had no category or effort and were not sorted easiest first | tests/board/test_board_needs.py |
 | T1107 | A card could not tell Ready to ship that the live check was only partly done (no `partial` object) | tests/board/test_board_needs.py |
+| T1229 | A run waiting in paused_retry with a stale Q/A tag showed in Needs you instead of Running | tests/board/test_board_status.py |
