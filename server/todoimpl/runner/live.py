@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Protocol, cast
+from typing import TYPE_CHECKING
 
 from todoimpl.todo_mcp.model import TodoError
 
@@ -12,8 +12,6 @@ from .files import NeedsYouError
 from .parsing import parse_criteria, parse_live
 
 if TYPE_CHECKING:
-    from todoimpl.todo_mcp.model import Task
-
     from .pipeline import Driver
 
 MAX_LIVE_FIXES = 1
@@ -22,12 +20,6 @@ NO_CHECKLIST = (
     "and finish it before you end. Do not delegate to a background agent and do not end with `R:`."
 )
 CRITERION_ID = re.compile(r"C\d+")
-
-
-class Adder(Protocol):
-    """The part of the service's ItemView that the follow-up needs."""
-
-    def add_task(self, repo: str, title: str, body: str = "") -> Task: ...  # noqa: D102
 
 
 @dataclass
@@ -86,9 +78,7 @@ def _followup(d: Driver, found: Verdict, criteria: list[str]) -> None:
         return
     title = f"{d.item.title} — rest: {', '.join(found.open_ids)}"
     try:
-        created = cast("Adder", d.ctx.client).add_task(
-            d.item.repo or "", title, followup_body(found, criteria)
-        )
+        created = d.ctx.client.add_task(d.item.repo or "", title, followup_body(found, criteria))
     except TodoError as exc:
         msg = f"Live check left {', '.join(found.open_ids)} open and the follow-up note failed: {exc}"
         raise NeedsYouError(msg) from exc

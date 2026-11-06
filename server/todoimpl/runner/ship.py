@@ -16,6 +16,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from todoimpl.todo_mcp.items import Item
+    from todoimpl.todo_mcp.model import Task
 
     from .checks import CheckResult
 
@@ -34,9 +35,10 @@ class CommitRefusedError(NeedsYouError):
 
 
 class Closer(Protocol):
-    """The part of the service's ItemView that Ship needs: closing one card (note section)."""
+    """The part of the service's ItemView a run needs: closing a card and adding the live-check follow-up."""
 
     def close_task(self, card: str, evidence: str) -> None: ...  # noqa: D102
+    def add_task(self, repo: str, title: str, body: str = "") -> Task: ...  # noqa: D102
 
 
 @dataclass(frozen=True)
