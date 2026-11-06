@@ -145,10 +145,38 @@ def test_t1109_end_to_end_zero_done_retries_then_needs_you(world: Env) -> None:
 
 
 def test_t1104_end_to_end_delegated_live_check_is_rerun(world: Env) -> None:
-    sched, _ = boot(world, PLAN, IMPL, reply("status\n\nR: agent running"), LIVE_OK, done_check="true")
+    sched, _ = boot(world, PLAN, IMPL, reply("status\n\nD: done"), LIVE_OK, done_check="true")
     try:
         sched.start(CARD)
         wait_stage(world, sched, "gate")
-        assert "yourself in this turn" in world.calls()[3]["prompt"]
+        assert NO_CHECKLIST in world.calls()[3]["prompt"]
+    finally:
+        sched.close()
+
+
+def test_t1228_an_r_live_check_continues_before_any_redo(world: Env) -> None:
+    turns = (PLAN, IMPL, reply("agent running\n\nR: waiting"), LIVE_OK)
+    sched, _ = boot(world, *turns, done_check="true")
+    try:
+        sched.start(CARD)
+        st = wait_stage(world, sched, "gate")
+        calls = world.calls()
+        assert "background work is done" in calls[3]["prompt"]
+        assert NO_CHECKLIST not in calls[3]["prompt"]
+        assert "live_redone" not in st.extra
+        assert "r_continues" not in st.extra
+    finally:
+        sched.close()
+
+
+def test_t1228_a_live_check_that_keeps_ending_r_is_redone_once_after_the_continues(world: Env) -> None:
+    running = reply("agent running\n\nR: waiting")
+    sched, _ = boot(world, PLAN, IMPL, *([running] * 4), LIVE_OK, done_check="true")
+    try:
+        sched.start(CARD)
+        wait_stage(world, sched, "gate")
+        calls = world.calls()
+        assert NO_CHECKLIST in calls[6]["prompt"]
+        assert len(calls) == 7
     finally:
         sched.close()

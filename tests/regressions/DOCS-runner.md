@@ -35,3 +35,4 @@ One row per bug, ids global and never reused. The row's test is named `test_t<N>
 | T1108 | Criteria that can only pass after the ship (or need the phone) had no `- [~]` row and failed the live check | tests/runner/test_runner_parsing.py |
 | T1109 | One criterion still open after the live fix sent a card with the rest done to Needs you instead of accepting it partly with one follow-up note | tests/runner/test_runner_live.py |
 | T1110 | The live-check parser dropped rows without a dash, with `**C1**` or without a colon | tests/runner/test_runner_parsing.py |
+| T1228 | A live check ending `R:` was redone as checklist-less instead of continued first | tests/runner/test_runner_live.py |

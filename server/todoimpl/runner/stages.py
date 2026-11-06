@@ -83,11 +83,17 @@ def _retry(d: Driver, key: str, cap: int, tail: str, stop: NeedsYouError) -> str
 def _live_check(d: Driver) -> str | None:
     st, run_dir = d.state, d.ctx.run_dir
     report_file, shots = run_dir / "live_check.md", run_dir / "shots"
-    report_file.unlink(missing_ok=True)
+    if not st.extra.get("r_continue"):  # a continued turn keeps the report it already wrote
+        report_file.unlink(missing_ok=True)
     shots.mkdir(parents=True, exist_ok=True)
     res = d.turn("implement", "live_check", failure_tail=str(st.extra.pop("live_redo", "")))
     if res.tag in ("Q", "A"):
         return None
+    if res.tag == "R":  # background work: continue first; settle's one redo only when this runs out
+        if (again := d.r_continue(res)) is not None:
+            return again
+    else:
+        st.extra.pop("r_continues", None)
     if not report_file.exists() and res.tag != "R":
         report_file.write_text(res.text, encoding="utf-8")
     report = report_file.read_text(encoding="utf-8") if report_file.exists() else ""
