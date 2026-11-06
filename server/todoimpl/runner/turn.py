@@ -25,6 +25,7 @@ class TurnEnv:
     publish: Callable[[dict[str, Any]], None]
     register: Callable[[subprocess.Popen[str] | None], None]
     now: Callable[[], float]
+    allow: tuple[str, ...] = ()
 
     def activity(self, kind: str, text: str, tool: str | None = None) -> None:  # noqa: D102
         self.publish({"type": "activity", "at": self.now(), "kind": kind, "text": text, "tool": tool})
@@ -59,7 +60,9 @@ def run_turn(
 ) -> TurnResult:
     """Run to exit; `prompt_for` gets the session situation (killed, idle or plain) and returns the prompt."""
     plan = session.plan_turn(_prior(env, state, role), now=env.now())
-    inv = claude.build(role, prompt_for(plan.situation), env.worktree, plan.resume, extra_dirs)
+    inv = claude.build(role, prompt_for(plan.situation), env.worktree, plan.resume, extra_dirs, env.allow)
+    for note in inv.notes:
+        env.activity("error", note)
     stream = files.new_stream(env.run_dir, role, env.now())
     parser = StreamParser()
     err_path = stream.with_name(stream.name.removesuffix(files.STREAM_SUFFIX) + ".stderr.log")
@@ -88,6 +91,7 @@ def run_turn(
         "finished": res.finished,
         "exit_code": code,
         "num_turns": res.num_turns,
+        "denials": [{"tool": d.tool_name, "hook": d.hook, "terminal": d.terminal} for d in res.denials],
     }
     files.write_json(files.result_path(stream), record)
     if res.session_id:

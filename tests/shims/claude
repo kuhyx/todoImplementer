@@ -7,7 +7,7 @@ script left it replays a plain successful turn ending in a `D:` tag. Every call 
 $FAKE_CLAUDE_DIR/calls.jsonl (argv, cwd, prompt, resume, model, CLAUDE_AUTO_CONTINUE, bg_wait).
 
 A script line is either a raw stream-json object (printed with the session id filled in) or a directive
-{"_fake": kind}: text, tool, result, limit, write, sleep, spawn_sleeper, raw, stderr, exit; a first `bare` line
+{"_fake": kind}: text, tool, tool_result, denied, result (optional `denials`), limit, write, sleep, spawn_sleeper, raw, stderr, exit; a first `bare` line
 suppresses the init event and the session id.
 """
 
@@ -70,12 +70,19 @@ def run(step: dict, sid: str, cwd: Path) -> int | None:
     elif kind == "text":
         emit({"type": "assistant", "message": {"content": [{"type": "text", "text": step["text"]}]}, "session_id": sid})
     elif kind == "tool":
-        block = {"type": "tool_use", "id": "toolu_fake", "name": step["name"], "input": step.get("input", {})}
+        block = {"type": "tool_use", "id": step.get("id", "toolu_fake"), "name": step["name"], "input": step.get("input", {})}
         emit({"type": "assistant", "message": {"content": [block]}, "session_id": sid})
+    elif kind == "tool_result":
+        block = {"type": "tool_result", "tool_use_id": step["id"], "content": step.get("text", ""), "is_error": step.get("error", False)}
+        emit({"type": "user", "message": {"content": [block]}, "session_id": sid})
+    elif kind == "denied":
+        emit({"type": "system", "subtype": "permission_denied", "tool_name": step["tool"], "tool_use_id": step["id"],
+              "decision_reason_type": step.get("reason", "rule"), "session_id": sid})
     elif kind == "result":
         emit({
             "type": "result", "subtype": "success", "is_error": step.get("is_error", False), "result": step["text"],
             "session_id": sid, "total_cost_usd": step.get("cost", 0.01), "num_turns": 1,
+            "permission_denials": step.get("denials", []),
         })
     elif kind == "limit":
         info = {"status": step.get("status", "rejected"), "resetsAt": step["resets_at"], "rateLimitType": "five_hour",

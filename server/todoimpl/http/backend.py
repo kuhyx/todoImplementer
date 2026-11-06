@@ -79,6 +79,14 @@ class Backend(Protocol):
         """Run on credits click."""
         ...
 
+    def go(self, id8: str) -> None:
+        """Go click on a permission block: run its one-line command, rerun on exit 0."""
+        ...
+
+    def rerun(self, id8: str) -> None:
+        """Done, rerun click: kuhy ran the command himself."""
+        ...
+
     def lesson_approve(self, id8: str, lesson_id: str) -> None:
         """Approve a drafted lesson."""
         ...

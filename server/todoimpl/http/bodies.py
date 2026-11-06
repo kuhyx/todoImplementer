@@ -7,7 +7,18 @@ from typing import Any
 
 QUESTION_ID = re.compile(r"Q[0-9]+")
 MAX_TEXT = 20000
-ACTIONS = ("start", "spec-answers", "spec-ok", "send", "ship", "cancel", "credits", "lesson-approve")
+ACTIONS = (
+    "start",
+    "spec-answers",
+    "spec-ok",
+    "send",
+    "ship",
+    "cancel",
+    "credits",
+    "lesson-approve",
+    "go",
+    "rerun",
+)
 
 
 def _only(body: dict[str, Any], key: str) -> str | None:

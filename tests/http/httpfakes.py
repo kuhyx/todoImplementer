@@ -11,7 +11,18 @@ from typing import Any
 from todoimpl.http.app import AppServer
 
 FIXTURES = Path(__file__).resolve().parent.parent / "fixtures"
-POST_ACTIONS = ("start", "spec-answers", "spec-ok", "send", "ship", "cancel", "credits", "lesson-approve")
+POST_ACTIONS = (
+    "start",
+    "spec-answers",
+    "spec-ok",
+    "send",
+    "ship",
+    "cancel",
+    "credits",
+    "lesson-approve",
+    "go",
+    "rerun",
+)
 
 
 def load(name: str) -> dict[str, Any]:
@@ -93,6 +104,12 @@ class FakeBackend:
 
     def credits(self, id8: str) -> None:
         self._record("credits", id8)
+
+    def go(self, id8: str) -> None:
+        self._record("go", id8)
+
+    def rerun(self, id8: str) -> None:
+        self._record("rerun", id8)
 
     def lesson_approve(self, id8: str, lesson_id: str) -> None:
         self._record("lesson_approve", id8, lesson_id)

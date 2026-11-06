@@ -42,6 +42,12 @@
       "description": "Ship click: rebase, recheck, commit, push, close note."
     },
     "cancel": {"type": "object", "additionalProperties": false},
+    "go": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Go click on a permission block: runs the card's one-line command as kuhy, reruns the stage on exit 0."
+    },
+    "rerun": {"type": "object", "additionalProperties": false, "description": "Done, rerun: kuhy ran the command himself."},
     "credits": {"type": "object", "additionalProperties": false, "description": "Run on credits click for this task only."},
     "lesson_approve": {
       "type": "object",

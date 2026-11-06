@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import IO, Any
 
+from . import policy
+
 ROLE_MODELS = {
     "spec": "sonnet",
     "plan": "sonnet",
@@ -32,6 +34,7 @@ class Invocation:
     argv: tuple[str, ...]
     env: dict[str, str]
     cwd: Path
+    notes: tuple[str, ...] = ()
 
 
 def claude_bin() -> str:
@@ -44,10 +47,19 @@ def model_for(role: str) -> str:  # noqa: D103
     return os.environ.get("TODOIMPL_MODEL") or ROLE_MODELS[role]
 
 
-def build(
-    role: str, prompt: str, worktree: Path, resume: str | None = None, extra_dirs: tuple[Path, ...] = ()
+def build(  # noqa: PLR0913, PLR0917 - one argv, built in one place
+    role: str,
+    prompt: str,
+    worktree: Path,
+    resume: str | None = None,
+    extra_dirs: tuple[Path, ...] = (),
+    allow: tuple[str, ...] = (),
 ) -> Invocation:
-    """Load kuhy's full setup (no strict MCP); the prompt goes right after -p, before the variadic flags."""
+    """Load kuhy's full setup (no strict MCP); the prompt goes right after -p, before the variadic flags.
+
+    `allow` = the learned allow rules; kuhy's session policy (runner/policy.py) can loosen the rest.
+    """
+    pol = policy.load()
     argv = [
         claude_bin(),
         "-p",
@@ -58,12 +70,25 @@ def build(
         "stream-json",
         "--verbose",
     ]
-    argv += ["--permission-mode", "acceptEdits", "--add-dir", str(worktree), *map(str, extra_dirs)]
+    argv += [
+        "--permission-mode",
+        pol.permission_mode,
+        "--add-dir",
+        str(worktree),
+        *map(str, extra_dirs),
+        *pol.add_dirs,
+    ]
     if resume:
         argv += ["--resume", resume]
-    deny = DENY_ALWAYS + (DENY_READONLY if role in READONLY_ROLES else ())
-    argv += ["--disallowedTools", *deny]
-    return Invocation(tuple(argv), {**os.environ, "CLAUDE_AUTO_CONTINUE": "0", BG_WAIT_VAR: "0"}, worktree)
+    if allow:
+        argv += ["--allowedTools", *allow]
+    deny = (DENY_ALWAYS if pol.deny is None else pol.deny) + (DENY_READONLY if role in READONLY_ROLES else ())
+    if deny:
+        argv += ["--disallowedTools", *deny]
+    if pol.disable_hooks:
+        argv += ["--settings", policy.HOOKS_OFF]
+    notes = (pol.warning,) if pol.warning else ()
+    return Invocation(tuple(argv), {**os.environ, "CLAUDE_AUTO_CONTINUE": "0", BG_WAIT_VAR: "0"}, worktree, notes)
 
 
 def spawn(inv: Invocation, stderr: IO[str]) -> subprocess.Popen[str]:

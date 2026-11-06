@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from .limits import LimitInfo, blocking, parse_event
@@ -30,6 +30,19 @@ class Activity:
     tool: str | None = None
 
 
+@dataclass(frozen=True)
+class Denial:
+    """A tool call claude was refused; `hook` = a PreToolUse hook said no (an allow rule cannot lift that)."""
+
+    tool_name: str
+    tool_use_id: str
+    tool_input: dict[str, Any]
+    hook: bool
+    message: str
+    terminal: bool  # no tool call succeeded afterwards: claude stopped on it
+    safety: bool = False  # Claude Code's own "sensitive file" check: bypass mode does not lift it
+
+
 @dataclass
 class TurnResult:
     """What one claude process reported; `finished` is False when no result event arrived."""
@@ -42,6 +55,7 @@ class TurnResult:
     num_turns: int = 0
     finished: bool = False
     limit: LimitInfo | None = None
+    denials: list[Denial] = field(default_factory=list)
 
 
 def parse_tag(text: str) -> str | None:
@@ -88,6 +102,10 @@ class StreamParser:
 
     def __init__(self) -> None:  # noqa: D107
         self.result = TurnResult()
+        self._seq = 0
+        self._last_ok = 0
+        self._errors: dict[str, tuple[int, str]] = {}
+        self._safety: set[str] = set()
 
     def feed(self, line: str) -> list[Activity]:  # noqa: PLR0911 - one return per event type
         """Parse one line; torn, non-JSON and uninteresting events (hooks, thinking) yield nothing."""
@@ -103,11 +121,20 @@ class StreamParser:
         kind = obj.get("type")
         if kind == "assistant":
             return self._assistant(obj.get("message"))
+        if kind == "user":
+            self._tool_results(obj.get("message"))
+            return []
         if kind == "result":
             return [self._result(obj)]
         if kind == "rate_limit_event":
             return self._limit(obj)
-        if kind == "system" and obj.get("subtype") == "init":
+        return self._system(obj) if kind == "system" else []
+
+    def _system(self, obj: dict[str, Any]) -> list[Activity]:
+        subtype = obj.get("subtype")
+        if subtype == "permission_denied" and obj.get("decision_reason_type") == "safetyCheck":
+            self._safety.add(str(obj.get("tool_use_id")))
+        if subtype == "init":
             return [Activity("system", f"session started ({obj.get('model')})")]
         return []
 
@@ -124,6 +151,37 @@ class StreamParser:
                 out.append(Activity("text", _clip(str(block["text"]).strip(), MAX_TEXT)))
         return out
 
+    def _tool_results(self, message: object) -> None:
+        """Remember each failed tool_result (order and text) and the order of the last successful one."""
+        content = message.get("content") if isinstance(message, dict) else None
+        for block in content if isinstance(content, list) else []:
+            if not isinstance(block, dict) or block.get("type") != "tool_result":
+                continue
+            self._seq += 1
+            if block.get("is_error") is not True:
+                self._last_ok = self._seq
+                continue
+            body = block.get("content")
+            text = body if isinstance(body, str) else json.dumps(body, ensure_ascii=False)
+            self._errors[str(block.get("tool_use_id"))] = (self._seq, text[:MAX_TEXT])
+
+    def _denials(self, raw: object) -> list[Denial]:
+        out: list[Denial] = []
+        for item in raw if isinstance(raw, list) else []:
+            if not isinstance(item, dict) or not isinstance(item.get("tool_name"), str):
+                continue
+            uid = str(item.get("tool_use_id"))
+            seq, text = self._errors.get(uid, (self._seq + 1, ""))
+            given = item.get("tool_input")
+            out.append(
+                Denial(
+                    item["tool_name"], uid, given if isinstance(given, dict) else {},
+                    text.startswith("PreToolUse:") and "hook error" in text[:120], text, seq > self._last_ok,
+                    uid in self._safety,
+                )
+            )  # fmt: skip
+        return out
+
     def _result(self, obj: dict[str, Any]) -> Activity:
         res = self.result
         text = obj.get("result")
@@ -135,6 +193,7 @@ class StreamParser:
         res.is_error = obj.get("is_error") is True
         res.tag = parse_tag(res.text)
         res.finished = True
+        res.denials = self._denials(obj.get("permission_denials"))
         shown = _clip(res.text.strip(), MAX_TEXT) or f"turn ended ({obj.get('subtype')})"
         return Activity("error" if res.is_error else "result", shown)
 

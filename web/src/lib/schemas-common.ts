@@ -20,21 +20,23 @@ export const STATUSES = [
 ] as const;
 export const COLUMN_IDS = ["backlog", "running", "needs_you", "ready", "done"] as const;
 export const NEEDS_KINDS = [
-  "spec_questions", "spec_ok", "claude_question", "claude_action", "phone", "checks_failed", "run_failed", "handed_to_you",
+  "spec_questions", "spec_ok", "claude_question", "claude_action", "phone", "checks_failed", "run_failed", "handed_to_you", "permission",
 ] as const;
 export const ACTION_IDS = [
-  "start", "spec-answers", "spec-ok", "send", "ship", "cancel", "credits", "lesson-approve", "copy-resume",
+  "start", "spec-answers", "spec-ok", "send", "ship", "cancel", "credits", "lesson-approve", "copy-resume", "go", "copy-fix",
+  "rerun",
 ] as const;
 
 export const stage = z.enum(STAGES);
 export const status = z.enum(STATUSES);
 export const column = z.enum(COLUMN_IDS);
 
-export const NEEDS_CATEGORIES = ["questions", "criteria", "action", "auto", "phone"] as const;
+export const NEEDS_CATEGORIES = ["questions", "criteria", "action", "auto", "phone", "permission"] as const;
 
 export const needs = z
   .strictObject({
     category: z.enum(NEEDS_CATEGORIES),
+    command: z.string().min(1).optional(),
     effort: z.number().int().min(1).max(5),
     kind: z.enum(NEEDS_KINDS),
     text: z.string().min(1),

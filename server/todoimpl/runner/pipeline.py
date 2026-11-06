@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 from todoimpl.board import state as store
 from todoimpl.prompts import PromptContext, build
 
-from . import limits, phone, retry, worktree
+from . import limits, permit, phone, retry, worktree
 from .files import NeedsYouError
 from .session import handoff_summary
 from .turn import TurnEnv, run_turn
@@ -131,6 +131,8 @@ class Driver:
         st = self.state
         st.extra["failed_stage"] = st.stage
         st.error = exc.text
+        if exc.kind != "permission":
+            st.extra.pop("permission", None)
         if exc.kind == "handed_to_you":
             st.assignee = "human"
         self.set_stage("failed")
@@ -187,8 +189,9 @@ class Driver:
                 return build("fresh_after_idle", self.context(handoff=handoff, nudge=nudge))
             return build(stage, self.context(failure_tail=failure_tail, nudge=nudge, cont=cont))
 
-        env = TurnEnv(ctx.run_dir, Path(str(st.worktree)), ctx.publish, ctx.register, ctx.now)
-        res = run_turn(env, st, role, prompt_for, (ctx.run_dir,))
+        allow = permit.allowed(ctx.root, self.item.repo, st.task_id)
+        env = TurnEnv(ctx.run_dir, Path(str(st.worktree)), ctx.publish, ctx.register, ctx.now, allow)
+        res = run_turn(env, st, role, permit.with_grant(st, prompt_for, role), (ctx.run_dir,))
         st.extra["last_reply"] = res.text[-1500:]
         if res.finished and not res.is_error:
             phone.after_turn(st, ctx.run_dir, res)
@@ -199,6 +202,8 @@ class Driver:
         if pause is not None:
             limits.write_until(ctx.root, pause)
             raise LimitHitError(pause)
+        if permit.gate(self, res, stage):
+            return self.turn(role, stage, failure_tail=failure_tail)
         if res.is_error or not res.finished:
             reason = res.text.strip()[:300] or retry.NO_RESULT
             tail = retry.stderr_tail(ctx.run_dir, role)

@@ -51,7 +51,8 @@
         "phone",
         "checks_failed",
         "run_failed",
-        "handed_to_you"
+        "handed_to_you",
+        "permission"
       ]
     },
     "needs": {
@@ -59,7 +60,8 @@
       "description": "Why the task is in Needs you; null in every other column. text names exactly what is needed.",
       "properties": {
         "kind": {"$ref": "#/$defs/needs_kind"}, "text": {"type": "string", "minLength": 1},
-        "category": {"enum": ["questions", "criteria", "action", "auto", "phone"], "description": "auto: the server heals it itself. phone: waiting for the phone."},
+        "category": {"enum": ["questions", "criteria", "action", "auto", "phone", "permission"], "description": "auto: the server heals it itself. phone: waiting for the phone."},
+        "command": {"type": "string", "minLength": 1, "description": "permission only: the one-line command that grants it (works from any directory)."},
         "effort": {"type": "integer", "minimum": 1, "maximum": 5, "description": "Server-computed; Needs you sorts by it, ascending."}
       },
       "required": ["kind", "text", "category", "effort"],
@@ -79,14 +81,17 @@
             "cancel",
             "credits",
             "lesson-approve",
-            "copy-resume"
+            "copy-resume",
+            "go",
+            "copy-fix",
+            "rerun"
           ]
         },
         "label": {"type": "string", "minLength": 1},
         "enabled": {"type": "boolean"},
         "reason": {"type": ["string", "null"]},
         "confirm": {"type": "boolean", "description": "Page asks 'sure?' first (ship, cancel, credits)."},
-        "value": {"type": "string", "description": "copy-resume only: the text to copy."},
+        "value": {"type": "string", "description": "copy-resume and copy-fix only: the text to copy."},
         "option": {
           "type": "object",
           "description": "start (Start/Restart) only: a checkbox sent with the click; disabled needs a reason.",

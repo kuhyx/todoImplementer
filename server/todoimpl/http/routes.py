@@ -219,5 +219,9 @@ class Router:
                 backend.cancel(id8)
             case "credits":
                 backend.credits(id8)
+            case "go":
+                backend.go(id8)
+            case "rerun":
+                backend.rerun(id8)
             case _:
                 backend.lesson_approve(id8, body["lesson_id"])

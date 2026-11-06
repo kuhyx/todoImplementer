@@ -74,6 +74,8 @@ def test_board_has_five_columns() -> None:
         ("ship", {}),
         ("cancel", {}),
         ("credits", {}),
+        ("go", {}),
+        ("rerun", {}),
         ("lesson_approve", {"lesson_id": "l1"}),
     ],
 )
@@ -85,6 +87,7 @@ def test_request_bodies_accept_valid(fragment: str, body: dict[str, Any]) -> Non
     ("fragment", "body"),
     [
         ("start", {"x": 1}),
+        ("go", {"x": 1}),
         ("spec_answers", {"answers": {}}),
         ("spec_answers", {"answers": {"foo": "x"}}),
         ("send", {"text": ""}),

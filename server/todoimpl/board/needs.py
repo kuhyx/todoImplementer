@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from .state import RunState
 
 FEW_QUESTIONS, SOME_QUESTIONS = 3, 8
+PHONE_TEXT = "Plug in the Pixel: the app passed on the emulator and the install is staged"
 
 
 @dataclass(frozen=True)
@@ -21,10 +22,19 @@ class Needs:
     text: str
     category: str = "action"
     effort: int = 3
+    command: str | None = None
 
     def to_dict(self) -> dict[str, object]:
-        """Return the contract object."""
-        return {"kind": self.kind, "text": self.text, "category": self.category, "effort": self.effort}
+        """Return the contract object (`command` only for a permission block that has a one-liner)."""
+        out: dict[str, object] = {
+            "kind": self.kind,
+            "text": self.text,
+            "category": self.category,
+            "effort": self.effort,
+        }
+        if self.command:
+            out["command"] = self.command
+        return out
 
 
 def _question_effort(count: int) -> int:
@@ -48,7 +58,13 @@ def _run_failed(run: RunState) -> Needs:
 def needs(run: RunState) -> Needs:  # noqa: PLR0911 - one return per kind
     """Return the Needs for a run whose status is NEEDS_YOU."""
     err = run.error
-    if run.extra.get("waiting_phone"):
+    perm = run.extra.get("permission")
+    if run.stage == "failed" and isinstance(perm, dict):
+        return Needs("permission", err or "A permission blocked Claude", "permission", 1, perm.get("command"))
+    waiting = bool(run.extra.get("waiting_phone"))
+    if waiting and run.last_tag == "A" and not err:
+        return Needs("phone", PHONE_TEXT, "phone", 1)
+    if waiting and run.last_tag != "Q":
         return Needs("claude_action", _reply_ask(run) or err or "Waiting for the phone", "phone", 1)
     if run.assignee == "human":
         return Needs(

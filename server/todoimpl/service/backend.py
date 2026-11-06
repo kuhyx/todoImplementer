@@ -20,6 +20,8 @@ from todoimpl.runner.scheduler import RunnerError
 from todoimpl.todo_mcp.model import TodoError
 from todoimpl.usage import limit_state, usage_summary
 
+from . import permission
+
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
 
@@ -52,6 +54,7 @@ class ServiceBackend:
         drafter: Callable[[str], str] | None = None,
         spawn: Callable[[Callable[[], None]], None] = _spawn,
         repo_missing: Callable[[str | None], str | None] | None = None,
+        fix_runner: Callable[[str], tuple[int, str]] = permission.run_command,
     ) -> None:
         """Wire the pieces; nothing is read until a request arrives."""
         self.cache = cache
@@ -62,6 +65,7 @@ class ServiceBackend:
         self.drafter = drafter  # lesson drafter; None = the real `claude -p` one
         self.spawn = spawn  # runs a background job; tests run it inline
         self._repo_missing = repo_missing or repo_checker()
+        self.fix_runner = fix_runner  # runs a permission block's one-liner; tests inject a fake
 
     # ---- reads ----
     def _context(self) -> Context:
@@ -202,6 +206,14 @@ class ServiceBackend:
     def credits(self, id8: str) -> None:
         """Run on credits click."""
         self._act(lambda: self.scheduler.credits(id8))
+
+    def go(self, id8: str) -> None:
+        """Go click: run the card's one-line command as kuhy, rerun the blocked stage on exit 0."""
+        self._act(lambda: permission.go(self.root, self.scheduler, id8, self.fix_runner, self._clock()))
+
+    def rerun(self, id8: str) -> None:
+        """Done, rerun click."""
+        self._act(lambda: permission.rerun(self.root, self.scheduler, id8))
 
     def lesson_approve(self, id8: str, lesson_id: str) -> None:
         """Write the drafted lesson into its skill."""

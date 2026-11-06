@@ -142,6 +142,8 @@ def _needs_you(run: RunState, block: str | None, repo_missing: str | None, cance
         return [_gate("Spec OK", "spec-ok", block), cancel]
     if kind == "handed_to_you":
         return [_gate("Hand back to Claude", "start", _missing(repo_missing, block)), cancel]
+    if kind == "permission":
+        return _permission(run, block, cancel)
     if kind in ("run_failed", "checks_failed"):
         return [_gate("Retry", "start", _missing(repo_missing, block)), cancel]
     return [cancel]
@@ -152,6 +154,18 @@ def _auto_ship(task: TaskLike) -> Option:
     if task.done_check is None:
         return Option("auto_ship", AUTO_SHIP, enabled=False, reason="the note has no done_check")
     return Option("auto_ship", AUTO_SHIP)
+
+
+def _permission(run: RunState, block: str | None, cancel: Action) -> list[Action]:
+    """Go runs the one-liner and reruns; Copy and Done-rerun cover a terminal command; no command = Retry."""
+    perm = run.extra.get("permission")
+    perm = perm if isinstance(perm, dict) else {}
+    command = perm.get("command")
+    if not command:
+        return [_gate("Retry", "start", block), cancel]
+    tty = bool(perm.get("tty"))
+    go = _gate("Go", "go", "needs a terminal: copy it" if tty else block)
+    return [go, Action("copy-fix", "Copy", value=command), _gate("Done, rerun", "rerun", block), cancel]
 
 
 def _credits(run: RunState | None, limit: Limit) -> Action:
