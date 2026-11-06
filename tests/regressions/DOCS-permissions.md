@@ -14,6 +14,7 @@ One row per bug, ids global and never reused. The row's test is named `test_t<N>
 | T1607 | The fix command needed a directory or was not one line | tests/runner/test_runner_permissions.py |
 | T1608 | The learned allow list lost scopes or broke on a corrupt allow.json | tests/runner/test_runner_permissions.py |
 | T1609 | The stream parser dropped permission denials, hook errors and which denial ended the turn | tests/runner/test_runner_permissions.py |
+| T1610 | A nice or timeout wrapper ended up in the rule, or an unbalanced quote crashed the splitter | tests/runner/test_runner_permissions.py |
 | T1620 | A permission stop sent the card to Needs you instead of learning the rule and rerunning | tests/runner/test_runner_permit_flow.py |
 | T1621 | A rule that never worked reran forever instead of capping at two and giving kuhy a command | tests/runner/test_runner_permit_flow.py |
 | T1622 | A sudo denial was auto-allowed or had no terminal command on the card | tests/runner/test_runner_permit_flow.py |
@@ -35,5 +36,7 @@ One row per bug, ids global and never reused. The row's test is named `test_t<N>
 | T1662 | A failing Go command lost its output or reran anyway | tests/service/test_service_permission.py |
 | T1663 | Done, rerun did not rerun | tests/service/test_service_permission.py |
 | T1664 | A card without a command accepted Go | tests/service/test_service_permission.py |
+| T1680 | The drawer hid a permission block's command | web/src/components/sections.test.ts |
+| T1681 | Copy and Go on a permission card did not copy the command or post to /go | web/src/components/drawer-actions.test.ts |
 | T1665 | The command runner lost output or the exit code | tests/service/test_service_permission.py |
 | T1666 | A Go command that hangs was never killed | tests/service/test_service_permission.py |

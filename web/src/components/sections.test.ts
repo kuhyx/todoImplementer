@@ -32,6 +32,14 @@ describe("drawer sections", () => {
     expect(yours.textContent).toContain("Yours (no repo)");
   });
 
+  it("[T1680] a permission need shows its one-line command in a code block", () => {
+    const base = makeDetail(byStatus("needs_you"));
+    const needs = { command: "cd /w && sudo true", kind: "permission" as const, text: "Blocked Bash sudo true" };
+    const node = renderNeeds({ ...base, card: { ...base.card, needs } });
+    expect(node?.querySelector("code[data-fix-command]")?.textContent).toBe("cd /w && sudo true");
+    expect(renderNeeds(base)?.querySelector("code")).toBeNull();
+  });
+
   it("needs banner names the need; an error shows alone or beside it", () => {
     const needy = makeDetail(byStatus("needs_you"));
     expect(renderNeeds(needy)?.textContent).toContain("Answer 2 questions so Claude can plan.");

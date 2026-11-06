@@ -31,6 +31,7 @@ export function renderNeeds(detail: TaskDetail, isQuiet = false): HTMLElement | 
     { attrs: { "data-kind": needs.kind }, class: "needs" },
     h("strong", { text: humanize(needs.kind) }),
     h("p", { text: needs.text }),
+    needs.command !== undefined && h("code", { attrs: { "data-fix-command": "" }, class: "fix-command", text: needs.command }),
     detail.error !== null && h("p", { class: "needs-error", text: detail.error }),
   );
 }

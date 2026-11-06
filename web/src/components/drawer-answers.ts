@@ -12,7 +12,7 @@ export async function postAnswers(cardId: string, answers: Record<string, string
 export async function copyText(text: string): Promise<void> {
   try {
     await navigator.clipboard.writeText(text);
-    showToast("Resume command copied");
+    showToast("Command copied");
   } catch {
     showToast(`Copy was blocked here. Command: ${text}`, "error");
   }

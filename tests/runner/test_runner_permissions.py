@@ -74,6 +74,13 @@ def test_t1603_never_list_allows_the_safe_look_alikes() -> None:
     assert rules("Bash", command="echo hi > out.log")
 
 
+def test_t1610_wrappers_are_stripped_and_an_unbalanced_quote_is_too_complex() -> None:
+    assert rules("Bash", command="nice -n 5 make fast") == ("Bash(make fast:*)",)
+    assert rules("Bash", command="nice make fast") == ("Bash(make fast:*)",)
+    assert classify(denial("Bash", command='echo "open'), WT, RUN).blocked == "too complex for a narrow rule"
+    assert classify(denial("Bash", command="FOO=1"), WT, RUN).blocked == "too complex for a narrow rule"
+
+
 def test_t1604_blocks_outside_paths_hooks_secrets_and_odd_tools() -> None:
     assert classify(denial("Write", file_path="/home/kuhy/x.md"), WT, RUN).grant
     assert classify(denial("Edit", file_path=f"{WT}/.git/config"), WT, RUN).blocked

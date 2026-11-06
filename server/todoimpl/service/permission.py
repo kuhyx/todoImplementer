@@ -15,6 +15,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
+    from todoimpl.board.state import RunState
+
     from .scheduling import SchedulerLike
 
 TIMEOUT = 55.0
@@ -46,14 +48,14 @@ def run_command(command: str, timeout: float = TIMEOUT) -> tuple[int, str]:
     return proc.returncode, out.strip()[-TAIL:]
 
 
-def _command(root: Path, id8: str) -> str:
+def _command(root: Path, id8: str) -> tuple[str, RunState]:
     run = load(run_dir(root, id8))
     perm = run.extra.get("permission") if run is not None else None
     command = perm.get("command") if isinstance(perm, dict) else None
-    if not command:
+    if run is None or not command:
         msg = "this card has no command to run"
         raise BackendError("disabled", msg)  # noqa: EM101
-    return str(command)
+    return str(command), run
 
 
 def _log(scheduler: SchedulerLike, id8: str, now: float, text: str) -> None:
@@ -62,13 +64,11 @@ def _log(scheduler: SchedulerLike, id8: str, now: float, text: str) -> None:
         bus.publish(id8, {"type": "activity", "at": now, "kind": "system", "text": text, "tool": None})
 
 
-def _rerun(root: Path, scheduler: SchedulerLike, id8: str, note: str) -> None:
-    run = load(run_dir(root, id8))
-    if run is not None:
-        for key in ("permission", "perm_reruns"):
-            run.extra.pop(key, None)
-        save(run_dir(root, id8), run)
-    scheduler.send(id8, note)
+def _rerun(root: Path, scheduler: SchedulerLike, run: RunState, note: str) -> None:
+    for key in ("permission", "perm_reruns"):
+        run.extra.pop(key, None)
+    save(run_dir(root, run.task_id), run)
+    scheduler.send(run.task_id, note)
 
 
 def go(
@@ -79,17 +79,17 @@ def go(
     now: float,
 ) -> None:
     """Run the card's command; exit 0 reruns the blocked stage, anything else is reported."""
-    command = _command(root, id8)
+    command, run = _command(root, id8)
     code, tail = runner(command)
     shown = f"Go: `{command}` exited {code}" + (f": {tail}" if tail else "")
     _log(scheduler, id8, now, shown)
     if code != 0:
         raise BackendError("conflict", shown)  # noqa: EM101
     result = f" (exit 0{': ' + tail if tail else ''})"
-    _rerun(root, scheduler, id8, NOTE.format(who="kuhy clicked Go: ran", command=command, result=result))
+    _rerun(root, scheduler, run, NOTE.format(who="kuhy clicked Go: ran", command=command, result=result))
 
 
 def rerun(root: Path, scheduler: SchedulerLike, id8: str) -> None:
     """Done, rerun: kuhy ran the command himself in a terminal."""
-    command = _command(root, id8)
-    _rerun(root, scheduler, id8, NOTE.format(who="kuhy ran", command=command, result=" himself"))
+    command, run = _command(root, id8)
+    _rerun(root, scheduler, run, NOTE.format(who="kuhy ran", command=command, result=" himself"))

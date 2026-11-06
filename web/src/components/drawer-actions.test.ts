@@ -94,11 +94,25 @@ describe("actions", () => {
     q("[data-action=copy-resume]").click();
     await settle(0);
     expect(writeText).toHaveBeenCalledWith("cd /tmp/wt && claude --resume 0b1c2d3e");
-    expect(document.querySelector("#toasts")?.textContent).toContain("Resume command copied");
+    expect(document.querySelector("#toasts")?.textContent).toContain("Command copied");
     vi.stubGlobal("navigator", { clipboard: { writeText: () => Promise.reject(new Error("denied")) } });
     q("[data-action=copy-resume]").click();
     await settle(0);
     expect(document.querySelector("#toasts")?.textContent).toContain("Copy was blocked here. Command: cd /tmp/wt");
+  });
+
+  it("[T1681] copy-fix copies the permission command and go posts to /go", async () => {
+    const copy = { enabled: true, id: "copy-fix" as const, label: "Copy", reason: null, value: "cd /w && sudo true" };
+    const c = { ...card("working"), actions: [{ enabled: true, id: "go" as const, label: "Go", reason: null }, copy] };
+    await open(c, { [`POST /api/task/${c.id}/go`]: () => ({ ok: true, task: c }) });
+    const writeText = vi.fn(() => Promise.resolve());
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    q("[data-action=copy-fix]").click();
+    await settle(0);
+    expect(writeText).toHaveBeenCalledWith("cd /w && sudo true");
+    q("[data-action=go]").click();
+    await settle(0);
+    expect(env.stub.calls.some((call) => call.init?.method === "POST" && String(call.url).endsWith("/go"))).toBe(true);
   });
 
   it("copy-resume without any command says so", async () => {

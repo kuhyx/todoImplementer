@@ -102,7 +102,7 @@ first match wins:
 | 10 | work stage, not live | queued | running |
 
 `needs.kind` explains rule 6: spec_questions (unanswered cards), spec_ok (all answered), claude_question (tag Q),
-claude_action (tag A, names the action), checks_failed, run_failed
+claude_action (tag A, names the action), permission (below), checks_failed, run_failed
 (crash, push refused), handed_to_you (a run whose assignee Claude switched to human, with a stated need). The card's `current` line says
 what is happening ("live_check", "waiting to start"); `stage` is never turned into extra badges.
 
@@ -113,14 +113,44 @@ never decides. `start` enabled when status is backlog or cancelled, the note has
 (never disabled for the number of runs; board `slots` is just `{used}`, the running count); `spec-answers` when at least one question is open;
 `spec-ok` when every question is answered; `send` while a session exists and the stage is not final (`shipped`, `cancelled`), including `failed` and stalled runs; `ship` only at
 Ready to ship; `cancel` on any status whose stage is not final; `credits` only while paused_limit and credits are available;
-`lesson-approve` when a lesson is drafted; `copy-resume` (not a POST, carries `value`) when a session id exists.
+`lesson-approve` when a lesson is drafted; `copy-resume` (not a POST, carries `value`) when a session id exists;
+`go`, `copy-fix` (not a POST, carries `value`) and `rerun` on a permission block (below).
 Start/Restart carry `option` `auto_ship` (a checkbox sent as `{auto_ship: bool}`), disabled without a done_check;
 Retry and Hand back send `{}` and keep the stored choice.
+
+## Permission blocks heal themselves
+
+kuhy, 2026-11-06: a turn stopped by a permission, not by a real question, is never left for kuhy first. The stream
+parser collects the final `result`'s `permission_denials` and hook errors; a denial is terminal when no tool call
+succeeded after it, and only terminal denials of a turn that did not end on `D:` or `Q:` count.
+
+1. Auto-allow. `runner/permissions.py` maps each denial to a narrow rule: Bash gets `Bash(<first 2-3 plain words>:*)`
+   per simple command (exact for `python -c` code), Edit/Write `Edit(//<abs path>)`, Read, the exact MCP tool name,
+   `WebFetch(domain:)`. Rules are learned in `$TODOIMPL_HOME/allow.json` (global, per repo, per task), passed as
+   `--allowedTools`, logged as an activity event, and the same stage reruns with a resume prompt, 2 times at most.
+2. Never-list, only while no session policy file exists: git push (a hard deny, not a gap), sudo, chattr, system
+   `systemctl`, `rm -r` outside the worktree and run dir, curl-to-shell, `~/.claude/settings*` and hooks, writes
+   outside the worktree and run dir, `.git/`, secrets, MCP tools that send, delete or update. Hook blocks and
+   "cannot be auto-allowed" refusals are never allowed by a rule.
+3. Needs you, kind `permission`: `needs.command` is a one-liner that works from any directory (`cd <abs> && ...` for a
+   blocked Bash call, a `jq` command on `~/.claude/settings.json` for a rule), kept in `extra["permission"]`. `go`
+   runs it as kuhy (55 s cap, no terminal; disabled with "needs a terminal: copy it" for sudo, ssh, pacman...),
+   puts exit code and output tail in the feed and reruns the failed stage on exit 0. `copy-fix` copies it; `rerun`
+   ("Done, rerun") reruns after kuhy ran it in a terminal. A card with no command (a hook block) offers Retry.
+4. Sensitive files. Claude Code's own "sensitive file" refusal (`decision_reason_type: safetyCheck`) is not lifted by
+   the permission mode, and `disableAllHooks` also kills the PermissionRequest hook that could lift it. Inside the
+   worktree it is answered with advice and a rerun: write the file with a Bash command (patch or python). Under a
+   session policy the implement prompts always carry that advice.
+5. Session policy `~/.config/todoImplementer/session-policy.json` (`$TODOIMPL_POLICY`): `permission_mode` (default
+   `acceptEdits`), `add_dirs` (default none, `~` expanded), `disable_hooks` (default false; passes
+   `--settings '{"disableAllHooks":true}'` to board sessions only), `deny` (null or missing = the built-in
+   `git push` list, `[]` = none; the read-only role keeps its Edit/Write deny). A missing file keeps today's
+   behaviour; an invalid one is ignored with a feed warning; a valid one lifts the never-list in item 2.
 
 ## Endpoints
 
 GET `/version`, `/api/board`, `/api/task/<item-id>`, `/api/usage`, `/api/live?id=<item-id>` (SSE); POST
-`/api/task/<item-id>/{start,spec-answers,spec-ok,send,ship,cancel,credits,lesson-approve}`. Shapes: `version`, `board`,
+`/api/task/<item-id>/{start,spec-answers,spec-ok,send,ship,cancel,credits,lesson-approve,go,rerun}`. Shapes: `version`, `board`,
 `task`, `usage`, `live`, `requests` (one def per POST), `response` (all POSTs). Cross-file refs use each schema's
 `$id` (`https://todoimplementer.local/contracts/<file>`); load every file into one registry
 (`scripts/contract_lib.py` in Python, `ajv.addSchema` in web). POSTs need `X-Todoimpl-Token` and a same-origin

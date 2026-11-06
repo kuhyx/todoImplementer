@@ -40,5 +40,10 @@ sessions. Spec and decisions: `DOCS-spec.md`. Lessons carried over from the pred
   the server on 127.0.0.1 with Origin and CSRF checks on every POST.
 - Ask first: new dependencies, new endpoints or schema changes, anything that touches `~/src/todo`, the Caddy
   or systemd setup, or a real repo; creating the GitHub repo.
-- Never: force-push, push before the Ship click (except a run started with Auto-ship), write outside a task's worktree and run dir, commit `*.zip`, secrets
-  or company identifiers, edit the todo app's code, add video recording, remote hosts, meetings or Windows/macOS.
+- Never: force-push, push before the Ship click (except a run started with Auto-ship), write outside a task's
+  worktree and run dir (defaults of a board session, see below), commit `*.zip`, secrets or company identifiers,
+  edit the todo app's code, add video recording, remote hosts, meetings or Windows/macOS.
+- Session policy (kuhy's call, 2026-11-06): `~/.config/todoImplementer/session-policy.json` (`$TODOIMPL_POLICY`; keys
+  `permission_mode`, `add_dirs`, `disable_hooks`, `deny`) can loosen the push and outside-worktree limits for board
+  sessions (loose mode, more dirs, hooks off, no deny list) and lifts the auto-allow never-list. See `DOCS-spec.md`,
+  "Permission blocks heal themselves". Tests keep the push-refusing shim.

@@ -143,7 +143,7 @@ export class TiDrawer extends HTMLElement {
       this.querySelector<HTMLElement>("[data-confirm]")?.focus();
       return;
     }
-    if (action.id === "copy-resume") {
+    if (action.id === "copy-resume" || action.id === "copy-fix") {
       const text = action.value ?? detail.resume_command;
       if (text === null) showToast("There is no resume command yet.", "error");
       else await copyText(text);

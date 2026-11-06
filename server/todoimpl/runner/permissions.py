@@ -178,7 +178,7 @@ def _bash(d: Denial, wt: Path, run_dir: Path, *, strict: bool) -> Verdict:
         return Verdict(blocked=why)
     stripped = [_strip(c) for c in cmds]
     rules = [r for c in stripped if c and (r := _bash_rule(c, " ".join(c)))]
-    if not cmds or any("(" in r.removeprefix("Bash(").removesuffix(")") for r in rules):
+    if not rules or any("(" in r.removeprefix("Bash(").removesuffix(")") for r in rules):
         return Verdict(blocked="too complex for a narrow rule")
     return Verdict(tuple(dict.fromkeys(rules)))
 
