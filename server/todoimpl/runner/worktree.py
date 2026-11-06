@@ -49,10 +49,15 @@ def git(
         msg = f"git {' '.join(args)} timed out after {timeout:g} s in {cwd}"
         raise GitError(msg, "run_failed") from exc
     if check and proc.returncode:
-        tail = (proc.stderr or proc.stdout).strip()[-600:]
-        msg = f"git {' '.join(args)} failed in {cwd}: {tail}"
+        msg = f"git {args[0]} failed in {cwd}: {output_tail(proc)}"
         raise GitError(msg, "run_failed")
     return proc
+
+
+def output_tail(proc: subprocess.CompletedProcess[str], limit: int = 600) -> str:
+    """Return the end of stdout then stderr of a finished command: findings print on either."""
+    both = "\n".join(part for part in (proc.stdout.strip(), proc.stderr.strip()) if part)
+    return both[-limit:]
 
 
 def repo_dir(repo: str | None) -> Path:

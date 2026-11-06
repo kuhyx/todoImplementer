@@ -4,10 +4,10 @@
 Scripts live in $FAKE_CLAUDE_DIR/<key>/NNN.jsonl and are consumed in name order; key is the first 8 chars
 of the run dir name (a worktree is `<root>/<id8>-<n>/wt`), falling back to $FAKE_CLAUDE_DIR/default/. With no
 script left it replays a plain successful turn ending in a `D:` tag. Every call is appended to
-$FAKE_CLAUDE_DIR/calls.jsonl (argv, cwd, prompt, resume, model, CLAUDE_AUTO_CONTINUE).
+$FAKE_CLAUDE_DIR/calls.jsonl (argv, cwd, prompt, resume, model, CLAUDE_AUTO_CONTINUE, bg_wait).
 
 A script line is either a raw stream-json object (printed with the session id filled in) or a directive
-{"_fake": kind}: text, tool, result, limit, write, sleep, spawn_sleeper, raw, exit; a first `bare` line
+{"_fake": kind}: text, tool, result, limit, write, sleep, spawn_sleeper, raw, stderr, exit; a first `bare` line
 suppresses the init event and the session id.
 """
 
@@ -93,6 +93,9 @@ def run(step: dict, sid: str, cwd: Path) -> int | None:
     elif kind == "raw":
         sys.stdout.write(step["text"] + "\n")
         sys.stdout.flush()
+    elif kind == "stderr":
+        sys.stderr.write(step["text"] + "\n")
+        sys.stderr.flush()
     elif kind == "exit":
         return int(step["code"])
     return None
@@ -102,7 +105,8 @@ def main() -> int:
     base = Path(os.environ["FAKE_CLAUDE_DIR"])
     opts = parse(sys.argv[1:])
     cwd = Path.cwd()
-    call = {"argv": sys.argv[1:], "cwd": str(cwd), **opts, "auto_continue": os.environ.get("CLAUDE_AUTO_CONTINUE")}
+    call = {"argv": sys.argv[1:], "cwd": str(cwd), **opts, "auto_continue": os.environ.get("CLAUDE_AUTO_CONTINUE"),
+            "bg_wait": os.environ.get("CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS")}
     with (base / "calls.jsonl").open("a", encoding="utf-8") as log:
         log.write(json.dumps(call) + "\n")
     key = (cwd.parent.name if cwd.name == "wt" else cwd.name)[:8]

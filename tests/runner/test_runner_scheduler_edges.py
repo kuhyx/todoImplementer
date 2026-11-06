@@ -168,20 +168,24 @@ def test_idle_session_starts_fresh_with_a_handoff(world: Env) -> None:
         sched.close()
 
 
-@pytest.mark.parametrize(
-    ("turn", "error"),
-    [
-        (reply("API Error: 500", is_error=True), "The implement turn failed: API Error: 500"),
-        (({"_fake": "exit", "code": 3},), "claude exited without a result"),
-    ],
-)
-def test_a_failed_turn_needs_you(world: Env, turn: tuple[dict[str, object], ...], error: str) -> None:
-    sched, _ = boot(world, PLAN, turn, done_check="true")
+def test_a_crashing_turn_needs_you_once_the_retries_are_spent(world: Env) -> None:
+    crash = ({"_fake": "exit", "code": 3},)
+    sched, _ = boot(world, PLAN, crash, crash, crash, crash, done_check="true")
     try:
         sched.start(CARD)
         st = wait_stage(world, sched, "failed")
         assert st.error is not None
-        assert error in st.error
+        assert "claude exited without a result" in st.error
+    finally:
+        sched.close()
+
+
+def test_an_api_error_turn_pauses_to_retry_instead_of_failing(world: Env) -> None:
+    sched, _ = boot(world, PLAN, reply("API Error: 500", is_error=True), done_check="true")
+    try:
+        sched.start(CARD)
+        st = wait_stage(world, sched, "paused_retry")
+        assert st.extra["retry_reason"] == "API Error: 500"
     finally:
         sched.close()
 

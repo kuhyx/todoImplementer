@@ -3,6 +3,7 @@
 
 import json
 import os
+import time
 from pathlib import Path
 
 import pytest
@@ -115,6 +116,16 @@ def test_resumes_at_falls_back_to_the_limit() -> None:
     assert card["resumes_at"] == LIMITED.until
     assert "resumes" in card["current"]
     assert current_line(Status.PAUSED_LIMIT, run(), None, NOW) == "paused by the usage limit"
+
+
+def test_t1214_a_run_waiting_to_retry_says_when_and_why() -> None:
+    at = time.strftime("%H:%M", time.localtime(NOW))
+    waiting = run(stage="paused_retry", resume_at=NOW, extra={"retry_reason": "offline"})
+    assert current_line(Status.WORKING, waiting, None, NOW) == f"retrying at {at}: offline"
+    assert current_line(Status.WORKING, run(stage="paused_retry"), None, NOW).endswith(": a failed turn")
+    card = build_card(Note(), waiting, ctx())
+    assert (card["status"], card["column"]) == ("working", "running")
+    validate("state", waiting.to_dict())
 
 
 def test_current_lines() -> None:

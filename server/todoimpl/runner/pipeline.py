@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 from todoimpl.board import state as store
 from todoimpl.prompts import PromptContext, build
 
-from . import limits, worktree
+from . import limits, retry, worktree
 from .files import NeedsYouError
 from .session import handoff_summary
 from .turn import TurnEnv, run_turn
@@ -30,6 +30,8 @@ log = logging.getLogger("todoimpl.runner")
 WORK_STAGES = ("spec", "plan", "implement", "live_check", "checks", "shipping")
 MAX_NUDGES = 2
 NUDGE = "(runner) Your last reply had no status tag line: finish the work and end with `D:`, `Q:` or `A:`."
+CONTINUE = "(runner) Continue. Report with a `D:`, `Q:` or `A:` tag line when your background work is done."
+MAX_R_CONTINUES = 3
 
 
 class CancelledError(Exception):
@@ -72,8 +74,9 @@ class Driver:
         from .stages import HANDLERS  # noqa: PLC0415 - stages imports this module
 
         st = self.state
-        if st.stage == "paused_limit":
+        if st.stage in ("paused_limit", retry.PAUSED):
             st.stage = st.extra.pop("resume_stage", "implement")
+            st.extra.pop("retry_reason", None)
             st.resume_at = None
         if st.using_credits and limits.active_until(self.ctx.root, self.ctx.now()) is None:
             st.using_credits = False
@@ -91,6 +94,10 @@ class Driver:
             st.extra["resume_stage"] = st.stage
             st.resume_at = hit.until
             self.set_stage("paused_limit")
+        except retry.RetryLaterError as later:
+            until, why = later.args
+            retry.pause(st, until, why)
+            self.set_stage(retry.PAUSED)
         except NeedsYouError as exc:
             self.fail(exc)
         except Exception as exc:
@@ -137,11 +144,14 @@ class Driver:
         plan = self.ctx.run_dir / "plan.md"
         return plan.read_text(encoding="utf-8") if plan.exists() else ""
 
-    def context(self, *, failure_tail: str = "", handoff: str = "", nudge: bool = False) -> PromptContext:
+    def context(
+        self, *, failure_tail: str = "", handoff: str = "", nudge: bool = False, cont: bool = False
+    ) -> PromptContext:
         """Build the prompts package's view of this run: item, plan, answers and kuhy's notes."""
         st, item = self.state, self.item
         answers = tuple((q.title, q.answer) for q in st.spec_questions if q.answer is not None)
-        notes = tuple(str(n) for n in st.extra.get("notes", [])) + ((NUDGE,) if nudge else ())
+        notes = tuple(str(n) for n in st.extra.get("notes", []))
+        notes += ((NUDGE,) if nudge else ()) + ((CONTINUE,) if cont else ())
         return PromptContext(
             title=item.title, body=item.body, repo=item.repo or "", worktree=Path(str(st.worktree)),
             run_dir=self.ctx.run_dir, done_check=item.done_check, plan_md=self.plan_md(),
@@ -156,16 +166,25 @@ class Driver:
         if until is not None and not st.using_credits:
             raise LimitHitError(until)
         nudge = bool(st.extra.pop("nudge", False))
+        cont = bool(st.extra.pop("r_continue", False))
+        new_session = bool(st.extra.pop("fresh", False))
+        if new_session:
+            st.sessions.pop(role, None)
         if fresh := ctx.inbox():
             st.extra.setdefault("notes", []).extend(fresh)
 
         def prompt_for(situation: Situation) -> str:
             if situation == "killed":
                 return build("resume_after_kill", self.context(nudge=nudge))
-            if situation == "idle" and stage != "spec":
-                handoff = handoff_summary(ctx.run_dir, str(st.extra.get("last_reply", "")))
+            if (situation == "idle" or new_session) and stage != "spec":
+                handoff = handoff_summary(
+                    ctx.run_dir,
+                    str(st.extra.get("last_reply", "")),
+                    st.self_check,
+                    str((st.live_check or {}).get("report_md", "")),
+                )
                 return build("fresh_after_idle", self.context(handoff=handoff, nudge=nudge))
-            return build(stage, self.context(failure_tail=failure_tail, nudge=nudge))
+            return build(stage, self.context(failure_tail=failure_tail, nudge=nudge, cont=cont))
 
         env = TurnEnv(ctx.run_dir, Path(str(st.worktree)), ctx.publish, ctx.register, ctx.now)
         res = run_turn(env, st, role, prompt_for, (ctx.run_dir,))
@@ -178,23 +197,35 @@ class Driver:
             limits.write_until(ctx.root, pause)
             raise LimitHitError(pause)
         if res.is_error or not res.finished:
-            reason = res.text.strip()[:300] or "claude exited without a result"
-            msg = f"The {stage} turn failed: {reason}"
-            raise NeedsYouError(msg, "run_failed")
+            reason = res.text.strip()[:300] or retry.NO_RESULT
+            tail = retry.stderr_tail(ctx.run_dir, role)
+            raise retry.failure(st, now=ctx.now(), stage=stage, reason=reason, tail=tail)
+        st.extra.pop("retries", None)
+        st.extra.pop("crash_retries", None)
         return res
 
     def after_tag(self, res: TurnResult, nxt: str) -> str | None:
-        """Q/A rests for kuhy, D moves on, no tag reruns the stage with a nudge note (twice at most)."""
+        """Q/A rests for kuhy, D moves on, R continues the session, no tag nudges, then one fresh retry."""
         st = self.state
         if res.tag in ("Q", "A"):
             return None
         if res.tag == "D":
-            st.extra.pop("nudges", None)
+            for key in ("nudges", "r_continues", "tagless_retry"):
+                st.extra.pop(key, None)
             return nxt
+        conts = int(st.extra.get("r_continues", 0))
+        if res.tag == "R" and conts < MAX_R_CONTINUES:
+            st.extra["r_continues"] = conts + 1
+            st.extra["r_continue"] = True
+            return st.stage
         nudges = int(st.extra.get("nudges", 0)) + 1
         if nudges > MAX_NUDGES:
-            msg = f"Claude ended {nudges} turns without a status tag: read the feed and send guidance"
-            raise NeedsYouError(msg, "run_failed")
+            if st.extra.get("tagless_retry"):
+                msg = f"Claude ended {nudges} turns without a status tag: read the feed and send guidance"
+                raise NeedsYouError(msg, "run_failed")
+            st.extra["tagless_retry"] = True
+            st.extra["fresh"] = True
+            return st.stage
         st.extra["nudges"] = nudges
         st.extra["nudge"] = True
         return st.stage

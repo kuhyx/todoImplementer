@@ -33,6 +33,7 @@ CLAUDE: dict[str, tuple[Status, ...]] = {
     "shipped": (D,) * 4,
     "failed": (N,) * 4,
     "paused_limit": (P,) * 4,
+    "paused_retry": (W, P, W, W),
     "cancelled": (C,) * 4,
 }
 HUMAN: dict[str, tuple[Status, ...]] = dict.fromkeys(STAGES, (Y,) * 4)

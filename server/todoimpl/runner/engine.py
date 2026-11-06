@@ -14,7 +14,7 @@ from todoimpl.board.parse import StateError
 from todoimpl.todo_mcp.model import TodoError
 from todoimpl.usage.limits import UNTIL_FILE
 
-from . import limits
+from . import limits, retry
 from .bus import Bus
 from .claude import kill_tree
 from .files import read_json, write_json
@@ -75,7 +75,7 @@ class Engine:
                 )
                 st.stage = "failed"
                 store.save(path.parent, st)
-            elif st.stage in (*WORK_STAGES, "paused_limit") and st.last_tag not in ("Q", "A"):
+            elif st.stage in (*WORK_STAGES, "paused_limit", retry.PAUSED) and st.last_tag not in ("Q", "A"):
                 self._queue.append(st.task_id)
 
     def close(self) -> None:
@@ -142,6 +142,13 @@ class Engine:
             return False
         return bool(st and st.using_credits)
 
+    def _retry_wait(self, card: str, now: float) -> float:
+        """Seconds a run in paused_retry still waits (its own timer, not the global limit file)."""
+        st = store.load_runs(self.root, [card]).get(card)
+        if st is None or st.stage != retry.PAUSED or st.resume_at is None:
+            return 0.0
+        return st.resume_at - now
+
     def _take(self) -> str | None:
         with self._cv:
             while not self._closed:
@@ -149,12 +156,15 @@ class Engine:
                 until = limits.active_until(self.root, now)
                 if until is None and (self.root / UNTIL_FILE).exists():
                     limits.clear(self.root)
-                for card in self._queue:
-                    if card not in self._active and (until is None or self._credited(card)):
+                wake = IDLE_WAIT if until is None else min(until - now, IDLE_WAIT)
+                for card in [c for c in self._queue if c not in self._active]:
+                    if (hold := self._retry_wait(card, now)) > 0:
+                        wake = min(wake, hold)
+                    elif until is None or self._credited(card):
                         self._queue.remove(card)
                         self._active.add(card)
                         return card
-                self._cv.wait(min(until - now, IDLE_WAIT) if until is not None else IDLE_WAIT)
+                self._cv.wait(wake)
             return None
 
     def _dispatch(self) -> None:
@@ -193,9 +203,13 @@ class Engine:
         try:
             item = self.client.get_task(card).item
         except TodoError as exc:
-            st.extra["failed_stage"] = st.stage
-            st.error = f"The todo app could not be read: {exc}"
-            st.stage = "failed"
+            if retry.is_transient(str(exc)):
+                wait = retry.later(st, self.clock(), f"todo app unreachable: {exc}")
+                retry.pause(st, *wait.args)
+            else:
+                st.extra["failed_stage"] = st.stage
+                st.error = f"The todo app could not be read: {exc}"
+                st.stage = "failed"
             with self._cv:
                 self.save(card, st)
             return

@@ -11,7 +11,7 @@ export const epoch = z.number().min(0);
 export const usd = z.number().min(0);
 
 export const STAGES = [
-  "spec", "spec_wait", "plan", "implement", "live_check", "checks", "gate", "shipping", "shipped", "failed", "paused_limit",
+  "spec", "spec_wait", "plan", "implement", "live_check", "checks", "gate", "shipping", "shipped", "failed", "paused_limit", "paused_retry",
   "cancelled",
 ] as const;
 export const STATUSES = [

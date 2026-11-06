@@ -8,3 +8,25 @@ One row per bug, ids global and never reused. The row's test is named `test_t<N>
 | T302 | A restart re-ran every run resting on a Q/A tag, re-sending its last turn | tests/runner/test_runner_scheduler_more.py |
 | T303 | Ship's commit and rebase used the 50 s git timeout, so slow pre-commit hooks failed the ship | tests/runner/test_runner_ship.py |
 | T902 | A restart left the old claude turn running (KillMode=process) and recovery resumed the same session in the same worktree, so two sessions edited it at once (only the recorded turn pid is reaped, never kuhy's own session) | tests/runner/test_runner_scheduler_more.py |
+| T1201 | A turn that died offline went to Needs you instead of waiting for the network | tests/runner/test_runner_selfheal.py |
+| T1202 | A crashing turn went to Needs you at once, and without the stderr that explains it | tests/runner/test_runner_selfheal.py |
+| T1203 | A turn killed by a signal with empty stderr was not retried | tests/runner/test_runner_selfheal.py |
+| T1204 | Retry waits were not 1 min, 5 min, 30 min, then hourly | tests/runner/test_runner_selfheal.py |
+| T1205 | Network, 5xx and overload text was not told apart from a crash | tests/runner/test_runner_selfheal.py |
+| T1206 | The stderr log of a turn was never read | tests/runner/test_runner_selfheal.py |
+| T1207 | An unreachable todo MCP at drive start failed the run | tests/runner/test_runner_selfheal.py |
+| T1208 | A restart lost a paused retry, or ran it before its resume time | tests/runner/test_runner_selfheal.py |
+| T1209 | Headless claude killed background subagents 10 min after the last turn | tests/runner/test_runner_selfheal_env.py |
+| T1210 | The fresh-session handoff dropped the self-check and the live-check report | tests/runner/test_runner_selfheal_env.py |
+| T1211 | state.json was replaced without an fsync of its directory | tests/runner/test_runner_selfheal_env.py |
+| T1212 | A repeated unreachable read lost the stage a paused retry resumes | tests/runner/test_runner_selfheal.py |
+| T1213 | A note from kuhy did not end a retry wait | tests/runner/test_runner_selfheal.py |
+| T1214 | A card waiting to retry showed the bare stage, not when and why | tests/board/test_board_board.py |
+| T1220 | Three turns without a status tag went straight to Needs you | tests/runner/test_runner_tagless.py |
+| T1221 | A fresh session that ended tagless again did not stop at Needs you | tests/runner/test_runner_tagless.py |
+| T1222 | An `R:` turn was nudged as tagless instead of continued | tests/runner/test_runner_tagless.py |
+| T1223 | `R:` continues had no cap of three | tests/runner/test_runner_tagless.py |
+| T1224 | Retry on a failed card restarted at plan, not at the failed stage | tests/runner/test_runner_tagless.py |
+| T1225 | Retry of a failed ship restarted the whole run | tests/runner/test_runner_tagless.py |
+| T1226 | A commit hook failure at ship went to Needs you instead of a fix turn | tests/runner/test_runner_tagless.py |
+| T1227 | The ship error embedded the whole commit message and no cap bounded the fixes | tests/runner/test_runner_tagless.py |

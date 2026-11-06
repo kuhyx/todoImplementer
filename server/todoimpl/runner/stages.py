@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 from .checks import discover, record, run_all
 from .files import NeedsYouError, write_json
 from .parsing import parse_criteria, parse_live, parse_questions, parse_self_check
-from .ship import ShipPlan, ship
+from .ship import CommitRefusedError, ShipPlan, ship
 from .worktree import base_ref, repo_dir
 
 if TYPE_CHECKING:
@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 
 MAX_CHECK_FIXES = 2
 MAX_LIVE_FIXES = 1
+MAX_SHIP_FIXES = 2
 
 
 def merge_questions(old: list[SpecQuestion], new: list[SpecQuestion]) -> list[SpecQuestion]:
@@ -64,7 +65,10 @@ def _implement(d: Driver) -> str | None:
     res = d.turn("implement", "fix" if tail else "implement", failure_tail=tail)
     d.state.extra.pop("failure_tail", None)
     d.state.self_check = parse_self_check(res.text)
-    return d.after_tag(res, "live_check")
+    nxt = d.after_tag(res, "shipping" if d.state.extra.get("reship") else "live_check")
+    if nxt == "shipping":
+        d.state.extra.pop("reship")
+    return nxt
 
 
 def _retry(d: Driver, key: str, cap: int, tail: str, stop: NeedsYouError) -> str:
@@ -131,7 +135,14 @@ def _shipping(d: Driver) -> str | None:
     plan = ShipPlan(
         repo_dir(d.item.repo), wt, str(st.branch), d.item, checks, d.ctx.run_dir, d.ctx.check_timeout, live
     )
-    st.ship = ship(plan, d.ctx.client, d.ctx.now, allow_empty=st.auto_ship)
+    try:
+        st.ship = ship(plan, d.ctx.client, d.ctx.now, allow_empty=st.auto_ship)
+    except CommitRefusedError as refused:
+        fixes = int(st.extra.get("ship_fixes", 0))
+        if fixes >= MAX_SHIP_FIXES:
+            raise
+        st.extra.update(ship_fixes=fixes + 1, failure_tail=refused.output, reship=True)
+        return "implement"
     sha = st.ship["commit"]
     if sha:
         st.head_sha = sha

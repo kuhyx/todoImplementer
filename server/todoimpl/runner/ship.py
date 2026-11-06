@@ -9,7 +9,7 @@ from todoimpl.todo_mcp.model import TodoError
 
 from .checks import run_all
 from .files import NeedsYouError
-from .worktree import base_ref, git, remove
+from .worktree import base_ref, git, output_tail, remove
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -22,6 +22,15 @@ if TYPE_CHECKING:
 SUBJECT_MAX = 50
 EVIDENCE_TAIL = 8
 PUSH_TIMEOUT = 600.0
+OUTPUT_TAIL = 3000
+
+
+class CommitRefusedError(NeedsYouError):
+    """`git commit` failed; `output` is what the hooks printed."""
+
+    def __init__(self, output: str) -> None:  # noqa: D107
+        super().__init__(f"git commit was refused: {output[-600:]}", "run_failed")
+        self.output = output
 
 
 class Closer(Protocol):
@@ -72,7 +81,9 @@ def _squash(plan: ShipPlan, ref: str, *, allow_empty: bool) -> bool:
         msg = "Nothing to ship: the worktree has no changes against its base"
         raise NeedsYouError(msg, "run_failed")
     message = commit_message(plan.item.title, plan.item.note_id)
-    git(wt, "commit", "--quiet", "-m", message, timeout=plan.timeout)
+    commit = git(wt, "commit", "--quiet", "-m", message, check=False, timeout=plan.timeout)
+    if commit.returncode:
+        raise CommitRefusedError(output_tail(commit, OUTPUT_TAIL))
     return True
 
 

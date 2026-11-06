@@ -20,6 +20,7 @@ STAGES = (
     "shipped",
     "failed",
     "paused_limit",
+    "paused_retry",
     "cancelled",
 )
 

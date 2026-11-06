@@ -22,6 +22,7 @@ ROLE_MODELS = {
 DENY_ALWAYS = ("Bash(git push:*)", "Bash(git push *)")
 DENY_READONLY = ("Edit", "Write", "NotebookEdit")
 READONLY_ROLES = frozenset({"classify"})
+BG_WAIT_VAR = "CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS"  # 0: headless claude waits for background subagents
 
 
 @dataclass(frozen=True)
@@ -62,7 +63,7 @@ def build(
         argv += ["--resume", resume]
     deny = DENY_ALWAYS + (DENY_READONLY if role in READONLY_ROLES else ())
     argv += ["--disallowedTools", *deny]
-    return Invocation(tuple(argv), {**os.environ, "CLAUDE_AUTO_CONTINUE": "0"}, worktree)
+    return Invocation(tuple(argv), {**os.environ, "CLAUDE_AUTO_CONTINUE": "0", BG_WAIT_VAR: "0"}, worktree)
 
 
 def spawn(inv: Invocation, stderr: IO[str]) -> subprocess.Popen[str]:

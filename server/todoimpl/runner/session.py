@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Literal
 from .stream import StreamParser
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Mapping, Sequence
     from pathlib import Path
 
 # The prompt cache expires after an hour; past that a resume re-reads the whole transcript at full price.
@@ -62,12 +62,19 @@ def lost_prior(stream: Path, entry: Mapping[str, Any] | None) -> Prior:
     return Prior(sid, stream.stat().st_mtime, last)
 
 
-def handoff_summary(run_dir: Path, last_reply: str) -> str:
-    """Built from files, never by a model: plan.md and the last reply."""
+def handoff_summary(
+    run_dir: Path, last_reply: str, self_check: Sequence[Mapping[str, Any]] = (), live_report: str = ""
+) -> str:
+    """Built from files, never by a model: plan.md, the self-check, the live-check tail and the last reply."""
     plan = run_dir / "plan.md"
     parts = []
     if plan.exists():
         parts.append("Plan (plan.md):\n" + plan.read_text(encoding="utf-8")[:3000])
+    if self_check:
+        rows = (f"{r['criterion']}: {'done' if r['done'] else 'not done'} - {r['note']}" for r in self_check)
+        parts.append("Self-check:\n" + "\n".join(rows))
+    if live_report.strip():
+        parts.append("Live check report (tail):\n" + live_report.strip()[-1500:])
     if last_reply:
         parts.append("Last reply:\n" + last_reply[-1500:])
     return "\n\n".join(parts) or "No plan or reply was recorded yet."

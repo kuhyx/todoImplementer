@@ -120,9 +120,14 @@ class FakeClient:
     closed: list[tuple[str, str]] = field(default_factory=list)
     fail_close: bool = False
     fail_get: bool = False
+    unreachable: int = 0
 
     def get_task(self, card: str) -> CardTask:
         """Return the note section behind a card, or TodoError like the real view."""
+        if self.unreachable > 0:
+            self.unreachable -= 1
+            msg = "cannot reach MCP server at http://127.0.0.1:1: connection refused"
+            raise TodoError(msg)
         note, _, index = card.partition("-")
         items = split_items(self.tasks[note]) if note in self.tasks and not self.fail_get else []
         if not index.isdigit() or int(index) >= len(items):

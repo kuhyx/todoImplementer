@@ -88,7 +88,7 @@ def compute(  # noqa: PLR0911 - one return per rule of the spec table
         return Status.SHIPPING
     if run.stage == "paused_limit" or (limit_until is not None and not live and not run.using_credits):
         return Status.PAUSED_LIMIT
-    return Status.WORKING if live else Status.QUEUED
+    return Status.WORKING if live or run.stage == "paused_retry" else Status.QUEUED
 
 
 def _needs_you(run: RunState, live: bool) -> bool:

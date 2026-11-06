@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
@@ -47,7 +48,10 @@ def current_line(status: Status, run: RunState | None, resumes_at: float | None,
 
 
 def _working(run: RunState) -> str:
-    """Return the stage line."""
+    """Return the stage line; a run waiting to retry says when and why."""
+    if run.stage == "paused_retry":
+        at = time.strftime("%H:%M", time.localtime(run.resume_at or 0))
+        return f"retrying at {at}: {run.extra.get('retry_reason', 'a failed turn')}"
     return run.stage
 
 

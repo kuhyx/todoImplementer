@@ -27,6 +27,7 @@ STAGES = (
     "shipped",
     "failed",
     "paused_limit",
+    "paused_retry",
     "cancelled",
 )
 ASSIGNEES = ("human", "claude")
@@ -200,6 +201,11 @@ def save(directory: Path, state: RunState) -> None:
             handle.flush()
             os.fsync(handle.fileno())
         tmp.replace(directory / FILE)
+        dir_fd = os.open(directory, os.O_RDONLY)
+        try:
+            os.fsync(dir_fd)
+        finally:
+            os.close(dir_fd)
 
 
 def load_runs(root: Path, task_ids: list[str]) -> dict[str, RunState]:

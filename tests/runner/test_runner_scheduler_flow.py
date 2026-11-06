@@ -133,8 +133,9 @@ def test_question_tag_rests_and_send_answers_it(world: Env) -> None:
         sched.close()
 
 
-def test_no_status_tag_is_nudged_twice_then_needs_you(world: Env) -> None:
-    sched, _ = boot(world, PLAN, reply("done-ish"), reply("still"), reply("hm"), done_check="true")
+def test_no_status_tag_is_nudged_twice_then_retried_fresh_then_needs_you(world: Env) -> None:
+    tagless = [reply(text) for text in ("done-ish", "still", "hm", "no")]
+    sched, _ = boot(world, PLAN, *tagless, done_check="true")
     try:
         sched.start(CARD)
         st = wait_stage(world, sched, "failed")

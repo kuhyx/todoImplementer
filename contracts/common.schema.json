@@ -21,6 +21,7 @@
         "shipped",
         "failed",
         "paused_limit",
+        "paused_retry",
         "cancelled"
       ],
       "description": "Run stage as written by the runner. See DOCS-spec.md for transitions."

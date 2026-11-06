@@ -28,7 +28,7 @@
     "started_at": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"},
     "resume_at": {
       "anyOf": [{"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"}, {"type": "null"}],
-      "description": "paused_limit: when to resume."
+      "description": "paused_limit and paused_retry: when to resume."
     },
     "using_credits": {"type": "boolean", "description": "Set by the Run on credits click for this task only."},
     "auto_ship": {"type": "boolean", "description": "Ticked at Start/Restart: a done_check note ships itself (checks -> shipping) once every check is green."},

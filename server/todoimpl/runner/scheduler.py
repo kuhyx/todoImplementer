@@ -9,7 +9,7 @@ from todoimpl.board import state as store
 from todoimpl.board.state import RunState
 from todoimpl.todo_mcp.model import TodoError
 
-from . import limits
+from . import limits, retry
 from .engine import Client, Engine, default_clock
 from .files import read_json
 
@@ -22,7 +22,11 @@ if TYPE_CHECKING:
 SPEC_MARKER = re.compile(r"^\s*(done|verify|done_check)\s*:", re.IGNORECASE | re.MULTILINE)
 RESTARTABLE = ("failed", "cancelled")
 FINAL = ("shipped", "cancelled")
-COUNTERS = ("failure_tail", "live_fixes", "check_fixes", "nudges", "nudge", "failed_stage", "resume_stage")
+RESUMABLE = ("spec", "plan", "implement", "live_check", "checks")
+COUNTERS = (
+    "failure_tail", "live_fixes", "check_fixes", "nudges", "nudge", "failed_stage", "resume_stage",
+    "retries", "crash_retries", "r_continues", "r_continue", "tagless_retry", "fresh", "ship_fixes", "reship",
+)  # fmt: skip
 
 
 class RunnerError(Exception):
@@ -84,12 +88,18 @@ class Scheduler(Engine):
             if st is None or st.stage == "cancelled":
                 st = st or RunState(task_id=card, stage="spec", started_at=self.clock(), repo=item.repo)
                 st.auto_ship = bool(auto_ship)
+            failed = st.extra.get("failed_stage") if st.stage == "failed" else None
             st.stage = "plan" if st.extra.get("spec_ok") or not needs_spec(item) else "spec"
+            if failed in RESUMABLE:
+                st.stage = str(failed)
             st.error, st.last_tag, st.assignee = None, None, "claude"
             for key in COUNTERS:
                 st.extra.pop(key, None)
+            if failed in ("shipping", "gate"):
+                st.stage = "gate"
             self.save(card, st)
-            self.enqueue(card)
+            if st.stage != "gate":
+                self.enqueue(card)
 
     def spec_answers(self, card: str, answers: dict[str, str]) -> None:  # noqa: D102
         with self._cv:
@@ -131,8 +141,10 @@ class Scheduler(Engine):
         elif st.stage == "failed":
             failed = str(st.extra.pop("failed_stage", "implement"))
             st.stage = "implement" if failed in ("shipping", "gate") else failed
+        elif st.stage == retry.PAUSED:
+            st.resume_at = None
         st.error, st.last_tag, st.assignee = None, None, "claude"
-        for key in ("live_fixes", "check_fixes", "nudges"):
+        for key in ("live_fixes", "check_fixes", "nudges", "ship_fixes", "reship"):
             st.extra.pop(key, None)
 
     def send(self, card: str, text: str) -> None:  # noqa: D102
@@ -163,7 +175,7 @@ class Scheduler(Engine):
         st = store.load(self.root / card)
         if st is None:  # pragma: no cover - a drive always saves
             return
-        if st.stage == "paused_limit":
+        if st.stage in ("paused_limit", retry.PAUSED):
             self.enqueue(card, first=True)
         elif read_json(self.root / card / "inbox.json") and st.stage not in (*FINAL, "shipping"):
             self._route(st)
