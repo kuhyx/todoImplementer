@@ -20,13 +20,15 @@ function emptyText(column: ColumnView): string {
   return column.total === 0 ? "Nothing in this column." : "No note here matches the search or repo filter.";
 }
 
+/** A group with an empty label is the flat Least-effort list: no heading, the repo goes on each card. */
 function renderGroup(group: ColumnView["groups"][number], now: number, handlers: ColumnHandlers): HTMLElement {
+  const isFlat = group.label === "";
   return h(
     "section",
-    { attrs: { "aria-label": group.label }, class: "group" },
-    h("h3", { class: "group-head" }, h("span", { class: "group-name", text: group.label }), h("span", { class: "count", text: String(group.cards.length) })),
+    { attrs: { "aria-label": isFlat ? "Easiest first" : group.label }, class: "group" },
+    !isFlat && h("h3", { class: "group-head" }, h("span", { class: "group-name", text: group.label }), h("span", { class: "count", text: String(group.cards.length) })),
     ...group.cards.map((card) => {
-      const button = renderCard(card, now);
+      const button = renderCard(card, now, isFlat);
       button.addEventListener("click", () => {
         handlers.onOpen(card.id);
       });

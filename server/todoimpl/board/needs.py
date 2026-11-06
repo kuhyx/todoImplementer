@@ -1,4 +1,4 @@
-"""Why a card is in Needs you: kind, the specific ask, a category and a server-computed effort (1-5)."""
+"""Why a card is in Needs you: kind, the specific ask, a category and effort (answers or clicks needed)."""
 
 from __future__ import annotations
 
@@ -10,7 +10,6 @@ from todoimpl.runner.stream import last_tag_line
 if TYPE_CHECKING:
     from .state import RunState
 
-FEW_QUESTIONS, SOME_QUESTIONS = 3, 8
 PHONE_TEXT = "Plug in the Pixel: the app passed on the emulator and the install is staged"
 
 
@@ -35,10 +34,6 @@ class Needs:
         if self.command:
             out["command"] = self.command
         return out
-
-
-def _question_effort(count: int) -> int:
-    return 1 if count <= FEW_QUESTIONS else 2 if count <= SOME_QUESTIONS else 3
 
 
 def _reply_ask(run: RunState) -> str | None:
@@ -77,7 +72,7 @@ def needs(run: RunState) -> Needs:  # noqa: PLR0911 - one return per kind
                 "spec_questions",
                 f"{count} open question(s) from Claude",
                 "questions",
-                _question_effort(count),
+                count,
             )
         if run.last_tag not in ("Q", "A") and not err:
             return Needs(
@@ -92,7 +87,7 @@ def needs(run: RunState) -> Needs:  # noqa: PLR0911 - one return per kind
         return Needs("checks_failed", err or "Checks are still red after the fix attempts", "action", 4)
     if run.stage != "failed" and run.last_tag == "Q":
         text = _reply_ask(run) or err or "Claude asked a question: answer it with Send to Claude"
-        return Needs("claude_question", text, "questions", 2)
+        return Needs("claude_question", text, "questions", 1)
     if run.stage != "failed" and run.last_tag == "A":
         text = _reply_ask(run) or err or "Claude needs you to do something: see the feed"
         return Needs("claude_action", text, "action", 3)

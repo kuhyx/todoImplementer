@@ -16,9 +16,21 @@ describe("buildView", () => {
   });
 
   it("groups by repo with Yours first and repos A-Z", () => {
-    const labels = backlog(buildView(board, DEFAULT_STATE))?.groups.map((g) => g.label) ?? [];
+    const labels = backlog(buildView(board, { ...DEFAULT_STATE, sort: "priority" }))?.groups.map((g) => g.label) ?? [];
     expect(labels[0]).toBe("Yours");
     expect(labels.slice(1)).toEqual(labels.slice(1).toSorted((a, b) => a.localeCompare(b)));
+  });
+
+  it("[T1802] Least effort is one list per column across repos, easiest first globally", () => {
+    const base = board.tasks.find((c) => c.needs !== null);
+    if (base?.needs == null) throw new Error("fixture");
+    const card = (id: string, repo: null | string, effort: number) => ({ ...base, id, needs: { ...base.needs!, effort }, repo });
+    const tasks = [card("aaaaaaaa-0", "alpha", 20), card("zzzzzzzz-0", "zeta", 1), card("yyyyyyyy-0", null, 3)];
+    const needsYou = buildView({ ...board, tasks }, DEFAULT_STATE).find((c) => c.id === "needs_you");
+    expect(needsYou?.groups).toHaveLength(1);
+    expect(needsYou?.groups[0]?.label).toBe("");
+    expect(needsYou?.groups[0]?.cards.map((c) => c.id)).toEqual(["zzzzzzzz-0", "yyyyyyyy-0", "aaaaaaaa-0"]);
+    expect(backlog(buildView({ ...board, tasks }, DEFAULT_STATE))?.groups).toEqual([]);
   });
 
   it("filters by repo and by Yours", () => {

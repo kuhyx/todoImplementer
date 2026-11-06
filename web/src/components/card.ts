@@ -58,9 +58,10 @@ function resumeLine(card: TaskCard, now: number): null | string {
   return card.resumes_at === null ? null : `resumes ${formatIn(card.resumes_at, now)} (${formatClock(card.resumes_at)})`;
 }
 
-export function renderCard(card: TaskCard, now: number): HTMLButtonElement {
+export function renderCard(card: TaskCard, now: number, shouldShowRepo = false): HTMLButtonElement {
   const resume = resumeLine(card, now);
   const meta = [
+    shouldShowRepo ? (card.repo ?? "Yours") : null,
     `#${card.id}`,
     card.cost_usd > 0 ? formatUsd(card.cost_usd) : null,
     formatAgo(card.updated, now),
@@ -77,7 +78,7 @@ export function renderCard(card: TaskCard, now: number): HTMLButtonElement {
     h("span", { class: "card-title", text: card.title }),
     h("span", { class: "card-current", text: card.current }),
     resume !== null && h("span", { class: "card-current", text: resume }),
-    card.needs !== null && h("span", { class: "card-needs", text: card.needs.text }),
+    card.needs !== null && card.needs.text !== card.current && h("span", { class: "card-needs", text: card.needs.text }),
     card.needs !== null && h("span", { attrs: { "data-category": card.needs.category }, class: "card-category", text: CATEGORY_LABEL[card.needs.category] }),
     card.partial !== null && h("span", { class: "card-partial", text: partialLine(card.partial) }),
     h("span", { class: "card-meta", text: meta.join(" · ") }),

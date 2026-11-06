@@ -37,7 +37,7 @@ export const needs = z
   .strictObject({
     category: z.enum(NEEDS_CATEGORIES),
     command: z.string().min(1).optional(),
-    effort: z.number().int().min(1).max(5),
+    effort: z.number().int().min(1),
     kind: z.enum(NEEDS_KINDS),
     text: z.string().min(1),
   })

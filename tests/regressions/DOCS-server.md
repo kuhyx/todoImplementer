@@ -16,3 +16,4 @@ One row per bug, ids global and never reused. The row's test is named `test_t<N>
 | T1107 | A card could not tell Ready to ship that the live check was only partly done (no `partial` object) | tests/board/test_board_needs.py |
 | T1229 | A run waiting in paused_retry with a stale Q/A tag showed in Needs you instead of Running | tests/board/test_board_status.py |
 | T1800 | A usage-limit pause disabled Send answers and Spec OK, so kuhy could not answer a spec question until the limit ended | tests/board/test_board_limit_answers.py |
+| T1804 | Effort bucketed open questions (1-3 all scored 1, 9-20 all scored 3), so a 1-question card did not sort above a 3-question one | tests/board/test_board_needs.py |

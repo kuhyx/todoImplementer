@@ -34,6 +34,24 @@ describe("renderCard", () => {
     expect(renderCard({ ...card, needs: { ...card.needs!, category: "auto" } }, NOW).textContent).toContain("Fixing itself");
   });
 
+  it("[T1803] does not repeat the needs text when it equals the current line", () => {
+    const card = makeCards().find((c) => c.status === "needs_you");
+    if (card?.needs == null) throw new Error("fixture");
+    const same = { ...card, current: "5 open question(s) from Claude", needs: { ...card.needs, text: "5 open question(s) from Claude" } };
+    const element = renderCard(same, NOW);
+    expect(element.querySelector(".card-needs")).toBeNull();
+    expect(element.textContent.split("5 open question(s)")).toHaveLength(2);
+  });
+
+  it("[T1802] names the repo in the meta line only when asked", () => {
+    const card = makeCards().find((c) => c.repo !== null);
+    const mine = makeCards().find((c) => c.repo === null);
+    if (mine === undefined || card?.repo == null) throw new Error("fixture");
+    expect(renderCard(card, NOW, true).querySelector(".card-meta")?.textContent).toContain(card.repo);
+    expect(renderCard(mine, NOW, true).querySelector(".card-meta")?.textContent).toContain("Yours");
+    expect(renderCard(card, NOW).querySelector(".card-meta")?.textContent).not.toContain(card.repo);
+  });
+
   it("shows server words only, no raw objects", () => {
     const card = makeCards().find((c) => c.status === "needs_you");
     if (card === undefined) throw new Error("fixture");
@@ -67,7 +85,11 @@ describe("renderBoard", () => {
     const root = mount(renderBoard(buildView(board, DEFAULT_STATE), DEFAULT_STATE, NOW, handlers()));
     expect([...root.querySelectorAll(".col")].map((c) => c.getAttribute("data-col"))).toEqual(["backlog", "running", "needs_you", "ready", "done"]);
     expect(root.querySelectorAll(".card")).toHaveLength(38);
-    expect(root.querySelector('.col[data-col="backlog"] .group-name')?.textContent).toBe("Yours");
+    expect(root.querySelector('.col[data-col="backlog"] .group-name')).toBeNull();
+    expect(root.querySelector('.col[data-col="needs_you"] .card-meta')?.textContent).toMatch(/ · /v);
+    const grouped = { ...DEFAULT_STATE, sort: "priority" as const };
+    const byRepo = mount(renderBoard(buildView(board, grouped), grouped, NOW, handlers()));
+    expect(byRepo.querySelector('.col[data-col="backlog"] .group-name')?.textContent).toBe("Yours");
     expect(root.querySelector(".col[data-active]")?.getAttribute("data-col")).toBe("needs_you");
     expect(root.querySelector('.tab[aria-current="true"]')?.textContent).toContain("Needs you");
   });

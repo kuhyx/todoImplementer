@@ -69,7 +69,9 @@ function compareGroups(a: Group, b: Group): number {
   return Number(b.repo === null) - Number(a.repo === null) || a.label.localeCompare(b.label);
 }
 
+/** Least effort is one unlabelled list across repos; every other sort groups by repo. */
 function group(cards: TaskCard[], sort: Sort): Group[] {
+  if (sort === "effort") return cards.length === 0 ? [] : [{ cards: sortCards(cards, sort), label: "", repo: null }];
   const byRepository = new Map<null | string, TaskCard[]>();
   for (const card of cards) byRepository.set(card.repo, [...(byRepository.get(card.repo) ?? []), card]);
   return [...byRepository]

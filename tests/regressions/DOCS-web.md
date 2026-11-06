@@ -11,3 +11,5 @@ Ids are global and never reused; the row's test is titled `[T<N>] ...` (vitest).
 | T1105 | The board could not order Needs you by the server's effort, easiest first | web/src/lib/board-model.test.ts |
 | T1106 | A card showed neither its needs category nor the partial live-check outcome | web/src/components/board.test.ts |
 | T1801 | With spec-answers disabled (usage limit) a questions card fell back to a read-only stacked list of every question instead of one question with its prefilled box and OK | web/src/components/ask-disabled.test.ts |
+| T1802 | Least effort still grouped cards by repo, so the easiest card overall was not at the top of its column | web/src/lib/board-model.test.ts, web/src/components/board.test.ts |
+| T1803 | A Needs-you card printed the same ask twice (current line and needs quote) | web/src/components/board.test.ts |

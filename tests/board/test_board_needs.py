@@ -20,7 +20,7 @@ def test_t1100_claude_action_shows_the_last_a_line() -> None:
     assert got.text == "attach the phone with ADB authorized, then re-run the implementation stage."
     assert (got.kind, got.category, got.effort) == ("claude_action", "action", 3)
     asked = needs(run(last_tag="Q", extra={"last_reply": "**Q:** which name?"}))
-    assert (asked.text, asked.category, asked.effort) == ("which name?", "questions", 2)
+    assert (asked.text, asked.category, asked.effort) == ("which name?", "questions", 1)
 
 
 def test_t1100_generic_text_only_without_a_matching_reply() -> None:
@@ -34,11 +34,13 @@ def test_last_tag_line_forms() -> None:
     assert last_tag_line("Q: last line without newline") == ("Q", "last line without newline")
 
 
-@pytest.mark.parametrize(("count", "effort"), [(1, 1), (3, 1), (4, 2), (8, 2), (9, 3), (20, 3)])
-def test_t1101_question_effort_by_count(count: int, effort: int) -> None:
+@pytest.mark.parametrize("count", [1, 3, 20])
+def test_t1804_question_effort_is_the_open_question_count(count: int) -> None:
     cards = [SpecQuestion(f"Q{i}", "t") for i in range(count)]
-    got = needs(run(stage="spec_wait", spec_questions=cards))
-    assert (got.category, got.effort) == ("questions", effort)
+    state = run(stage="spec_wait", spec_questions=cards)
+    got = needs(state)
+    assert (got.category, got.effort) == ("questions", count)
+    validate("common", build_card(Note(), state, ctx()), "task_card")
 
 
 def test_t1101_other_kinds_category_and_effort() -> None:
