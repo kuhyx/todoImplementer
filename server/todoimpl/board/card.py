@@ -35,6 +35,9 @@ def current_line(status: Status, run: RunState | None, resumes_at: float | None,
     if status == Status.QUEUED and run is not None:
         return f"waiting to continue {run.stage}"
     if status == Status.PAUSED_LIMIT:
+        if run is not None and run.stage == "spec" and any(q.answer for q in run.spec_questions):
+            when = f"after {fmt_when(resumes_at, now)}" if resumes_at else "when the limit passes"
+            return f"answers saved; Claude continues {when}"
         return "paused by the usage limit" + (f", resumes {fmt_when(resumes_at, now)}" if resumes_at else "")
     if status == Status.NEEDS_YOU and run is not None:
         return needs(run).text

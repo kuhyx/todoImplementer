@@ -129,17 +129,21 @@ def _primary(  # noqa: PLR0911, PLR0913, PLR0917 - one branch per status keeps t
 
 
 def _needs_you(run: RunState, block: str | None, repo_missing: str | None, cancel: Action) -> list[Action]:
-    """Return the buttons that answer the kind of need."""
+    """Return the buttons that answer the kind of need.
+
+    Answers and Spec OK only store a decision; the turn they release waits in the queue through a usage limit,
+    so the limit never disables them.
+    """
     kind = needs(run).kind
     if kind == "spec_questions":
         waiting = len(run.open_questions())
         return [
-            _gate("Send answers", "spec-answers", block),
+            Action("spec-answers", "Send answers"),
             _gate("Spec OK", "spec-ok", f"{waiting} question(s) still unanswered"),
             cancel,
         ]
     if kind == "spec_ok":
-        return [_gate("Spec OK", "spec-ok", block), cancel]
+        return [Action("spec-ok", "Spec OK"), cancel]
     if kind == "handed_to_you":
         return [_gate("Hand back to Claude", "start", _missing(repo_missing, block)), cancel]
     if kind == "permission":

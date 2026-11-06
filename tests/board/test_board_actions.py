@@ -131,7 +131,6 @@ def test_spec_ok_actions() -> None:
     got = acts(S.NEEDS_YOU, state)
     assert got["spec-ok"].enabled
     assert "spec-answers" not in got
-    assert acts(S.NEEDS_YOU, state, limit=LIMITED)["spec-ok"].reason.startswith("usage limit")  # type: ignore[union-attr]
 
 
 def test_failed_run_offers_retry_and_handed_over_run_hands_back() -> None:
@@ -207,5 +206,5 @@ def test_every_combination_is_contract_valid_and_honest(
         assert len({a.id for a in got}) == len(got)
         for a in got:
             assert a.enabled == (a.reason is None)
-            if a.id in ("start", "spec-ok", "spec-answers") and a.enabled:
+            if a.id == "start" and a.enabled:
                 assert not limit.active or (state is not None and state.using_credits)
