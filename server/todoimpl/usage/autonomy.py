@@ -82,11 +82,15 @@ def _tally_card(tally: Tally, directory: Path, state: RunState) -> None:
     if (finished_at := _finished_at(state)) is not None:
         tally.finished[week_of(finished_at)] += 1
         tally.unassisted[week_of(finished_at)] += 0 if assisted else 1
+    last_counted = False
     for turn in found:
-        if turn.tag == "A" and turn.ask is not None and is_permission_ask(turn.ask):
+        last_counted = turn.tag == "A" and turn.ask is not None and is_permission_ask(turn.ask)
+        if last_counted:
             tally.add("permission_asks", turn.at, 1)
         if turn.tag == "Q" and turn.role != "spec":
             tally.add("questions_asked", turn.at, turn.questions)
+    if state.extra.get("permission") and not last_counted:  # the stored block, whatever the ask's wording
+        tally.add("permission_asks", state.updated, 1)
     if state.spec_questions:
         tally.add("questions_asked", state.started_at or state.updated, len(state.spec_questions))
     if (live := _criteria(directory, state)) is not None:

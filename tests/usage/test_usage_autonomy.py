@@ -87,6 +87,16 @@ def test_permission_asks_are_a_tagged_turns_that_ask_for_approval(tmp_path: Path
     assert weekly(metric) == {"2026-W45": 1}
 
 
+def test_a_stored_permission_block_counts_once_whatever_the_ask_says(tmp_path: Path) -> None:
+    block = {"command": "sudo true", "tty": True}
+    stored = make_run(tmp_path, "aaaaaaaa-0", "failed", updated=WEEK46, extra={"permission": block})
+    add_turn(stored, "implement", WEEK45, "A", tail("blocked", "A: run the command for me"))
+    both = make_run(tmp_path, "bbbbbbbb-0", "failed", updated=WEEK46, extra={"permission": block})
+    add_turn(both, "implement", WEEK45, "A", tail("blocked", "A: approve the gate edit"))
+    metric = autonomy_summary(tmp_path)["permission_asks"]
+    assert weekly(metric) == {"2026-W45": 1, "2026-W46": 1}
+
+
 def test_questions_count_spec_cards_and_free_asks_not_cards(tmp_path: Path) -> None:
     run = make_run(tmp_path, "aaaaaaaa-0", "implement", started_at=WEEK45, updated=WEEK46, questions=3)
     add_turn(run, "spec", WEEK45, "Q", tail(CARDS, "Q:"))  # already counted through spec_questions

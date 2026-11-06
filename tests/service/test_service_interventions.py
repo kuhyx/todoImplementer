@@ -29,3 +29,12 @@ def test_a_refused_action_leaves_no_record(rig: Rig) -> None:
     with pytest.raises(BackendError):
         rig.backend.send("t1", "hi")
     assert recorded(rig.root / "t1") is None
+
+
+def test_go_and_rerun_clicks_are_recorded(rig: Rig) -> None:
+    for kind in ("go", "rerun"):
+        tid = rig.note()
+        rig.run(tid, "failed", extra={"permission": {"command": "echo hi", "tty": False}})
+        rig.backend.fix_runner = lambda _command: (0, "")
+        getattr(rig.backend, kind)(tid)
+        assert [k for _, k in recorded(rig.root / tid) or []] == [kind]

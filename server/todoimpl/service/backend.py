@@ -216,11 +216,12 @@ class ServiceBackend:
 
     def go(self, id8: str) -> None:
         """Go click: run the card's one-line command as kuhy, rerun the blocked stage on exit 0."""
-        self._act(lambda: permission.go(self.root, self.scheduler, id8, self.fix_runner, self._clock()))
+        run = permission.go
+        self._click(id8, "go", lambda: run(self.root, self.scheduler, id8, self.fix_runner, self._clock()))
 
     def rerun(self, id8: str) -> None:
         """Done, rerun click."""
-        self._act(lambda: permission.rerun(self.root, self.scheduler, id8))
+        self._click(id8, "rerun", lambda: permission.rerun(self.root, self.scheduler, id8))
 
     def lesson_approve(self, id8: str, lesson_id: str) -> None:
         """Write the drafted lesson into its skill."""
