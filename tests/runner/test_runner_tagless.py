@@ -70,14 +70,14 @@ def test_t1223_r_continues_are_capped_at_three_then_fall_back_to_nudges(world: E
 
 
 def test_t1224_retry_resumes_the_failed_stage_not_the_plan(world: Env) -> None:
-    sched, _ = boot(world, PLAN, IMPL, LIVE_BAD, FIX, LIVE_BAD, LIVE_OK, done_check="true")
+    sched, _ = boot(world, PLAN, IMPL, LIVE_BAD, FIX, LIVE_BAD, FIX, LIVE_BAD, LIVE_OK, done_check="true")
     try:
         sched.start(CARD)
         st = wait_stage(world, sched, "failed")
         assert st.extra["failed_stage"] == "live_check"
         sched.start(CARD)
         st = wait_stage(world, sched, "gate")
-        assert len(world.calls()) == 6
+        assert len(world.calls()) == 8
         assert "failed_stage" not in st.extra
     finally:
         sched.close()
