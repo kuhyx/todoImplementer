@@ -81,3 +81,13 @@ def test_client_reset_during_plain_response_is_swallowed(live: Live) -> None:
     sock.close()
     time.sleep(0.2)
     assert call(live.port, "GET", "/version").status == 200
+
+
+def test_t104_snapshot_of_a_card_never_run_matches_contract(live: Live) -> None:
+    card = live.backend.task_data["card"]
+    card.update(stage=None, status="backlog", column="backlog", current="not started", needs=None)
+    live.backend.events = [{"type": "done", "status": "backlog"}]
+    _, body = read_sse(live, f"/api/live?id={live.backend.task_id}")
+    snapshot = sse_payloads(body)[0]
+    assert snapshot["stage"] is None
+    validate("live", snapshot)

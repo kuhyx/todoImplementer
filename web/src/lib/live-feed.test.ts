@@ -44,6 +44,23 @@ describe("live stage contract", () => {
     expect(handlers.onBad).not.toHaveBeenCalled();
     expect(handlers.onEvent).toHaveBeenCalledWith(RUNNING_STAGE);
   });
+
+  it("[T104] the connect snapshot of a card never run (stage null) parses in both", () => {
+    const backlog = {
+      actions: [{ enabled: true, id: "start", label: "Start", reason: null }],
+      column: "backlog",
+      current: "not started",
+      needs: null,
+      stage: null,
+      status: "backlog",
+      type: "stage",
+    };
+    expect(contractValidator("live")(backlog)).toBe(true);
+    const { handlers, source } = setup();
+    source.emit("stage", backlog);
+    expect(handlers.onBad).not.toHaveBeenCalled();
+    expect(handlers.onEvent).toHaveBeenCalledWith(backlog);
+  });
 });
 
 describe("bad live frames", () => {

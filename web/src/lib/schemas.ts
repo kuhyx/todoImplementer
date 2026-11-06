@@ -84,7 +84,7 @@ export const liveEvent = z.discriminatedUnion("type", [
     column,
     current: z.string(),
     needs,
-    stage,
+    stage: stage.nullable(),
     status,
     type: z.literal("stage"),
   }),

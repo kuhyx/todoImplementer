@@ -26,7 +26,7 @@
       "description": "The stage or status changed (also the connect snapshot). The page replaces the card with these fields.",
       "properties": {
         "type": {"const": "stage"},
-        "stage": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/stage"},
+        "stage": {"anyOf": [{"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/stage"}, {"type": "null"}], "description": "null before a run, as on the card."},
         "status": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/status"},
         "column": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/column"},
         "current": {"type": "string"},
