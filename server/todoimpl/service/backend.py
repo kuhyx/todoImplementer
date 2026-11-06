@@ -19,6 +19,7 @@ from todoimpl.lessons import LessonError, approve, draft_lesson, latest_lesson, 
 from todoimpl.runner.scheduler import RunnerError
 from todoimpl.todo_mcp.model import TodoError
 from todoimpl.usage import limit_state, usage_summary
+from todoimpl.usage.interventions import record
 
 from . import permission
 
@@ -169,24 +170,30 @@ class ServiceBackend:
             raise BackendError(UPSTREAM, f"todo MCP: {exc}") from exc
         self.cache.poke()
 
+    def _click(self, id8: str, kind: str, call: Callable[[], object]) -> None:
+        """Run an action of kuhy's and, once it is accepted, record it as an intervention (never Ship)."""
+        self._act(call)
+        record(self.root, id8, kind, self._clock())
+
     def start(self, id8: str, *, auto_ship: bool | None = None) -> None:
-        """Start click; `auto_ship` None keeps the run's stored choice."""
-        self._act(lambda: self.scheduler.start(id8, auto_ship=auto_ship))
+        """Start click; `auto_ship` None keeps the run's stored choice. On a card that already has a run it is a retry."""
+        kind = "start" if load(run_dir(self.root, id8)) is None else "retry"
+        self._click(id8, kind, lambda: self.scheduler.start(id8, auto_ship=auto_ship))
 
     def spec_answers(self, id8: str, answers: dict[str, str]) -> None:
         """Answers to spec questions."""
-        self._act(lambda: self.scheduler.spec_answers(id8, answers))
+        self._click(id8, "spec_answers", lambda: self.scheduler.spec_answers(id8, answers))
 
     def spec_ok(self, id8: str) -> None:
         """Spec OK click."""
-        self._act(lambda: self.scheduler.spec_ok(id8))
+        self._click(id8, "spec_ok", lambda: self.scheduler.spec_ok(id8))
 
     def send(self, id8: str, text: str) -> None:
         """Send to Claude; at the gate this is a rejection, so a lesson is drafted in the background."""
         run = load(run_dir(self.root, id8))
         if run is not None and run.stage == "gate":
             self.spawn(lambda: self._draft(id8, text))
-        self._act(lambda: self.scheduler.send(id8, text))
+        self._click(id8, "send", lambda: self.scheduler.send(id8, text))
 
     def _draft(self, id8: str, note: str) -> None:
         directory = run_dir(self.root, id8)
@@ -201,11 +208,11 @@ class ServiceBackend:
 
     def cancel(self, id8: str) -> None:
         """Cancel click."""
-        self._act(lambda: self.scheduler.cancel(id8))
+        self._click(id8, "cancel", lambda: self.scheduler.cancel(id8))
 
     def credits(self, id8: str) -> None:
         """Run on credits click."""
-        self._act(lambda: self.scheduler.credits(id8))
+        self._click(id8, "credits", lambda: self.scheduler.credits(id8))
 
     def go(self, id8: str) -> None:
         """Go click: run the card's one-line command as kuhy, rerun the blocked stage on exit 0."""

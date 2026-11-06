@@ -6,6 +6,7 @@ import time
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
+from todoimpl.usage.autonomy import autonomy_summary
 from todoimpl.usage.cost import session_costs
 from todoimpl.usage.events import iter_events, stream_files
 from todoimpl.usage.limits import limit_state
@@ -55,7 +56,7 @@ def _fold_rate_limits(streams: list[Path]) -> tuple[dict[str, Any], dict[str, An
 def usage_summary(
     root: Path, now: float | None = None, titles: Mapping[str, str] | None = None
 ) -> dict[str, Any]:
-    """Everything the usage strip needs.
+    """Everything the usage strip and the autonomy tab need.
 
     Result events carry no timestamp, so a session's cost counts as "today" when
     its newest stream file was last written today (local time). `titles` maps item id to the note
@@ -87,6 +88,7 @@ def usage_summary(
     return {
         "generated_at": now,
         **windows,
+        "autonomy": autonomy_summary(root),
         "overage": overage,
         "limit": {
             "active": active,
