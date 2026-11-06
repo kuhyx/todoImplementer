@@ -1,6 +1,7 @@
 /** Shared helpers for the AskPanel tests: a fake host, a mount with the card actions, and DOM shortcuts. */
 import { afterEach, beforeEach, vi } from "vitest";
 
+import type { TaskDetail } from "@/lib/schemas";
 import type { Action } from "@/lib/schemas-common";
 
 import { AskPanel } from "@/components/ask-view";
@@ -44,6 +45,10 @@ export function mount(panel: AskPanel, detail = askDetail(ASK_ID), without: stri
   });
   if (root !== null) document.body.append(root);
   return root;
+}
+/** The ask detail with its spec-answers action changed (disabled with a reason). */
+export function withAction(change: Partial<Action>, detail = askDetail(ASK_ID)): TaskDetail {
+  return { ...detail, card: { ...detail.card, actions: detail.card.actions.map((a) => (a.id === "spec-answers" ? { ...a, ...change } : a)) } };
 }
 export const fresh = (): AskPanel => new AskPanel(host);
 

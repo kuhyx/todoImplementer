@@ -10,3 +10,4 @@ Ids are global and never reused; the row's test is titled `[T<N>] ...` (vitest).
 | T1401 | routes.shot kept only the last path segment, so nested live-check screenshots requested the wrong URL and rendered broken | web/src/lib/routes.test.ts |
 | T1105 | The board could not order Needs you by the server's effort, easiest first | web/src/lib/board-model.test.ts |
 | T1106 | A card showed neither its needs category nor the partial live-check outcome | web/src/components/board.test.ts |
+| T1801 | With spec-answers disabled (usage limit) a questions card fell back to a read-only stacked list of every question instead of one question with its prefilled box and OK | web/src/components/ask-disabled.test.ts |

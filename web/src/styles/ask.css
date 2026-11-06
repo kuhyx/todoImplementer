@@ -61,6 +61,28 @@
   line-height: 1.25;
 }
 
+/* The single question is the whole screen: a big title, the body, the box right under it, one big OK. */
+.ask-step .ask-title {
+  font-size: clamp(1.5rem, 1rem + 3vw, 2.25rem);
+  line-height: 1.15;
+}
+
+.ask-ok {
+  min-height: 3rem;
+  font-size: var(--text-subtitle);
+}
+
+.ask-back {
+  align-self: flex-start;
+  padding: var(--space-1) 0;
+  font-size: var(--text-label);
+  color: var(--text-muted);
+  text-decoration: underline;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
 .ask-card p {
   overflow-wrap: anywhere;
 }
@@ -122,6 +144,8 @@
 }
 
 .drawer--only-ask [data-slot="actions"],
+.drawer--only-ask [data-slot="pending"],
+.drawer--only-ask [data-slot="send"],
 .drawer--only-ask [data-slot="lesson"],
 .drawer--only-ask .dtabs,
 .drawer--only-ask .drawer-chips,
@@ -138,6 +162,10 @@
 
   .ask-title {
     font-size: var(--text-body);
+  }
+
+  .ask-step .ask-title {
+    font-size: var(--text-subtitle);
   }
 }
 

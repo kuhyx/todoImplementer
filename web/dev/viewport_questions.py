@@ -1,10 +1,11 @@
-"""R1 `questions` step: the question flow shows ONLY questions, one at a time, and every control stays on screen.
+"""R1 `questions` step: the question flow shows ONLY ONE big question, its box and OK, and every control stays on screen.
 
 Asserts, per viewport, on the dev mock's real-shaped ask cards (web/src/test/fixture-ask.ts):
  - the drawer shows no tab strip (only a "Details" toggle), the answer box is focused, prefilled and inside the viewport;
- - Back and Accept are inside the viewport and topmost; the progress reads "1 / 5" and moves to "2 / 5" on Accept;
+ - exactly one question card, no Send-to-Claude box; Back and OK are inside the viewport and topmost; the progress
+   reads "1 / 5" and moves to "2 / 5" on OK;
  - "All questions" lists every box and keeps "Accept all" inside the viewport;
- - 9 questions step to "9 / 9" with "Accept and send 9" reachable; the free-text question still has its box.
+ - 9 questions step to "9 / 9" with OK reachable; the free-text question still has its box.
 """
 
 from __future__ import annotations
@@ -32,6 +33,9 @@ METRICS = """(() => {
     boxInside: !!r && r.width > 0 && r.bottom <= innerHeight && r.right <= innerWidth,
     boxChars: box ? box.value.length : 0,
     boxes: document.querySelectorAll('.ask textarea').length,
+    cards: document.querySelectorAll('.ask .ask-card').length,
+    sendBox: vis(q('.drawer-send')),
+    titlepx: parseFloat(getComputedStyle(q('.ask-title') || document.body).fontSize),
     tabsVisible: vis(q('.dtabs')),
     toggleVisible: vis(toggle),
     scrollOver: scroll ? scroll.scrollHeight - scroll.clientHeight : null,
@@ -55,6 +59,8 @@ def common(m: dict[str, Any], where: str) -> list[str]:
         problems.append(
             f"{where}: tabs {m['tabsVisible']} / Details toggle {m['toggleVisible']} (want only the toggle)"
         )
+    if m["sendBox"]:
+        problems.append(f"{where}: the Send to Claude box is visible")
     if m["scrollOver"] is None or m["scrollOver"] > 1:
         problems.append(f"{where}: drawer-scroll scrolls by {m['scrollOver']}")
     if m["badText"]:
@@ -70,6 +76,10 @@ def step_one(cdp: Cdp, out: Path, tag: str) -> list[str]:
     if m["label"].strip() != "1 / 5" or not m["focused"] or m["boxChars"] == 0 or not m["boxInside"]:
         problems.append(
             f"first question: label {m['label']!r} focused {m['focused']} chars {m['boxChars']} inside {m['boxInside']}"
+        )
+    if m["cards"] != 1 or m["titlepx"] < 22:
+        problems.append(
+            f"first question: {m['cards']} cards, title {m['titlepx']}px (want 1 card, a big title)"
         )
     problems += probe(cdp, ["textarea[name=Q1]", "[data-ask=back]", "[data-ask=accept]"])["problems"]
     click(cdp, "[data-ask=accept]")
@@ -93,7 +103,7 @@ def step_nine(cdp: Cdp, out: Path, tag: str) -> list[str]:
     cdp.shot(out / f"{tag}-questions9.png")
     m = read(cdp)
     problems = common(m, "9 questions")
-    if m["label"].strip() != "9 / 9" or m["accept"].strip() != "Accept and send 9":
+    if m["label"].strip() != "9 / 9" or m["accept"].strip() != "OK":
         problems.append(f"last of 9: label {m['label']!r} button {m['accept']!r}")
     problems += probe(cdp, ["textarea[name=Q9]", "[data-ask=accept]"])["problems"]
     return problems

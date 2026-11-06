@@ -1,7 +1,7 @@
 /** Pure model of the question flow: ask kind, effective answers, first open question, swipes, labels. */
 import { describe, expect, it } from "vitest";
 
-import { answersOf, askOf, effective, firstOpen, isOnlyAsk, progressLabel, sendingLabel, swipeOf } from "@/components/ask-model";
+import { answersOf, askOf, effective, firstOpen, isOnlyAsk, nextOpen, progressLabel, sendingLabel, swipeOf, waitingNote } from "@/components/ask-model";
 import { ASK_ID, askDetail, askQuestions, FREE_ID, freeDetail } from "@/test/fixture-ask";
 import { makeDetail } from "@/test/fixture-detail";
 import { makeCards } from "@/test/fixtures";
@@ -35,6 +35,20 @@ describe("ask model", () => {
     expect(firstOpen([{ ...a!, answer: "x" }, { ...b!, answer: "" }, c!])).toBe(1);
     expect(firstOpen([{ ...a!, answer: "x" }])).toBe(0);
     expect(firstOpen([])).toBe(0);
+  });
+
+  it("walks to the next unanswered question and says -1 after the last", () => {
+    const [a, b, c, d] = askQuestions(4);
+    const list = [{ ...a!, answer: "x" }, b!, { ...c!, answer: "y" }, d!];
+    expect(nextOpen(list, 0)).toBe(1);
+    expect(nextOpen(list, 1)).toBe(3);
+    expect(nextOpen(list, 3)).toBe(-1);
+    expect(nextOpen([{ ...a!, answer: "" }, { ...b!, answer: "z" }], 0)).toBe(-1);
+  });
+
+  it("explains why OK cannot send yet", () => {
+    expect(waitingNote("usage limit")).toBe("Cannot send yet: usage limit. Your answers are kept here and sent as soon as Claude can take them.");
+    expect(waitingNote("")).toBe("Your answers are kept here and sent as soon as Claude can take them.");
   });
 
   it("builds the payload from every question and drops empty answers", () => {

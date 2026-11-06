@@ -18,7 +18,7 @@ describe("ask store", () => {
   });
 
   it("round-trips a state and drops it", () => {
-    const state = { ...blankState(2), accepted: ["Q1"], drafts: { Q1: "x" }, mode: "all" as const };
+    const state = { ...blankState(2), drafts: { Q1: "x" }, queued: true };
     saveState("k", state);
     expect(loadState("k")).toEqual(state);
     dropState("k");

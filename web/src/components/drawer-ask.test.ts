@@ -58,9 +58,7 @@ describe("question card", () => {
     await open(c, { [`POST /api/task/${c.id}/spec-answers`]: () => gate.promise });
     field().value = "IndexedDB";
     field().dispatchEvent(new Event("input"));
-    enter();
-    expect(q(".ask-page").textContent).toBe("2 / 2");
-    expect(posts()).toHaveLength(0);
+    expect(q(".ask-page").textContent).toBe("1 / 2");
     enter();
     await settle(0);
     expect(q(".loader").textContent).toBe("Sending 2 answers…");
@@ -77,7 +75,6 @@ describe("question card", () => {
     field().value = "Mine";
     field().dispatchEvent(new Event("input"));
     enter();
-    enter();
     await settle(0);
     expect(q("[role=alert]").textContent).toContain("Claude is busy");
     env.stub.routes.set(`POST /api/task/${c.id}/spec-answers`, () => ({ ok: true, task: c }));
@@ -89,7 +86,6 @@ describe("question card", () => {
   it("explains a page without a CSRF token instead of sending", async () => {
     await open(card("needs_you"));
     document.head.replaceChildren();
-    enter();
     enter();
     await settle(0);
     expect(q("[role=alert]").textContent).toContain("no CSRF token");
@@ -110,7 +106,6 @@ describe("question card", () => {
     const c = card("needs_you");
     const gate = Promise.withResolvers<unknown>();
     await open(c, { [`POST /api/task/${c.id}/spec-answers`]: () => gate.promise });
-    enter();
     enter();
     await settle(0);
     env.drawer.close(false);

@@ -39,21 +39,9 @@ export function questionParts(question: Question, drafts: Readonly<Record<string
   return [
     h("h4", { class: "ask-title", text: titleOf(question) }),
     question.body !== "" && h("p", { class: "ask-body", text: question.body }),
-    hint,
     field,
+    hint,
   ].filter((node) => node !== false);
-}
-
-/** The read-only card shown once the answers were sent (or cannot be sent yet). */
-export function readCard(question: Question, drafts: Readonly<Record<string, string>>): HTMLElement {
-  return h(
-    "article",
-    { class: "ask-card" },
-    h("h4", { class: "ask-title", text: titleOf(question) }),
-    question.body !== "" && h("p", { class: "ask-body", text: question.body }),
-    h("span", { class: "ask-label", text: question.answer === null ? "Recommended" : "Your answer" }),
-    h("p", { text: effective(question, drafts) }),
-  );
 }
 
 /** What the send is doing: a loader naming it, or the error with Retry (the answers stay). */

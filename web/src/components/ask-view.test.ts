@@ -73,7 +73,7 @@ describe("step view", () => {
     type("One");
     key("Enter");
     key("Enter");
-    expect(q("[data-ask=accept]").textContent).toBe("Accept and send 3");
+    expect(q("[data-ask=accept]").textContent).toBe("OK");
     const gate = Promise.withResolvers<undefined>();
     host.send.mockReturnValue(gate.promise);
     key("Enter");
@@ -120,35 +120,6 @@ describe("step view", () => {
 });
 
 describe("other asks", () => {
-  it("shows read-only questions with the reason when the send action is disabled", () => {
-    const detail = askDetail(ASK_ID);
-    const blocked = { ...detail, card: { ...detail.card, actions: detail.card.actions.map((a) => (a.id === "spec-answers" ? { ...a, enabled: false, reason: "Claude is working" } : a)) } };
-    const panel = fresh();
-    mount(panel, blocked);
-    expect(panel.interactive).toBe(false);
-    expect(q(".ask-reason").textContent).toBe("Claude is working");
-    expect(document.querySelectorAll("textarea")).toHaveLength(0);
-    expect(document.querySelectorAll(".ask-card")).toHaveLength(5);
-    panel.focus();
-  });
-
-  it("shows no reason text when the disabled action gives none", () => {
-    const detail = askDetail(ASK_ID);
-    const blocked = { ...detail, card: { ...detail.card, actions: detail.card.actions.map((a) => (a.id === "spec-answers" ? { ...a, enabled: false, reason: null } : a)) } };
-    mount(fresh(), blocked);
-    expect(document.querySelectorAll(".ask-reason")).toHaveLength(0);
-    expect(document.querySelectorAll(".ask-card")).toHaveLength(5);
-  });
-
-  it("shows read-only questions without a reason once the action is gone, with saved answers", () => {
-    const detail = askDetail(ASK_ID);
-    const answered = { ...detail, card: { ...detail.card, actions: [] }, questions: [{ ...detail.questions[0]!, answer: "Saved" }] };
-    mount(fresh(), answered);
-    expect(document.querySelectorAll(".ask-reason")).toHaveLength(0);
-    expect(q(".ask-card p:last-child").textContent).toBe("Saved");
-    expect(q(".ask-label").textContent).toBe("Your answer");
-  });
-
   it("answers a free question from its own box with the card's send button", () => {
     const panel = fresh();
     mount(panel, freeDetail());

@@ -20,10 +20,22 @@ describe("all questions", () => {
     second.dispatchEvent(new Event("input"));
     second.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Enter" }));
     expect(host.send).not.toHaveBeenCalled();
-    expect(q("[data-ask=accept-all]").textContent).toBe("Accept all 3");
+    expect(q("[data-ask=accept-all]").textContent).toBe("OK, send all 3");
     q("[data-ask=accept-all]").click();
     await flush();
     expect(host.send).toHaveBeenCalledWith(detail.card.id, { Q1: askQuestions(1)[0]?.recommendation, Q2: "Two", Q3: askQuestions(3)[2]?.recommendation });
+  });
+
+  it("always opens one question at a time, even after All questions was the last view", () => {
+    const panel = fresh();
+    mount(panel);
+    q("[data-mode=all]").click();
+    panel.reset();
+    document.body.replaceChildren();
+    mount(panel);
+    expect(document.querySelectorAll(".ask-step")).toHaveLength(1);
+    expect(q("[data-mode=step]").getAttribute("aria-pressed")).toBe("true");
+    expect(document.querySelectorAll(".ask-card")).toHaveLength(1);
   });
 
   it("can switch back to one by one", () => {
@@ -46,7 +58,7 @@ describe("persistence", () => {
     q("[data-ask=back]").click();
     expect(field().value).toBe("Draft");
     document.body.replaceChildren();
-    localStorage.setItem(`todoimpl.ask.${askDetail(ASK_ID).card.id}.Q1,Q2`, JSON.stringify({ accepted: [], drafts: {}, mode: "step", step: 9 }));
+    localStorage.setItem(`todoimpl.ask.${askDetail(ASK_ID).card.id}.Q1,Q2`, JSON.stringify({ drafts: {}, mode: "all", step: 9 }));
     mount(fresh(), { ...askDetail(ASK_ID), questions: askQuestions(2) });
     expect(page()).toBe("2 / 2");
   });

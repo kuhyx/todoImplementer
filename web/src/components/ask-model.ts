@@ -25,6 +25,18 @@ export const effective = (question: Question, drafts: Readonly<Record<string, st
 export const firstOpen = (questions: readonly Question[]): number =>
   Math.max(0, questions.findIndex((question) => (question.answer ?? "") === ""));
 
+/** The next question after `step` with no saved answer, or -1 when none is left (the flow then sends). */
+export const nextOpen = (questions: readonly Question[], step: number): number =>
+  questions.findIndex((question, index) => index > step && (question.answer ?? "") === "");
+
+/** Why OK cannot send yet; the answers stay on this device and go out by themselves once it can. */
+export const waitingNote = (reason: string): string => {
+  const why = reason === "" ? "" : `Cannot send yet: ${reason}. `;
+  return `${why}Your answers are kept here and sent as soon as Claude can take them.`;
+};
+
+export const NOT_WAITING = "These questions are not waiting for an answer.";
+
 export function answersOf(questions: readonly Question[], drafts: Readonly<Record<string, string>>): Record<string, string> {
   const answers: Record<string, string> = {};
   for (const question of questions) {
