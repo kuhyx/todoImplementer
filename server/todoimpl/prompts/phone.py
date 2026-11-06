@@ -10,19 +10,28 @@ if TYPE_CHECKING:
 IMPLEMENT = (
     "If a criterion needs the Pixel, still build its release APK: live_check tests it on the emulator."
 )
+BUILD = (
+    "ADB_SERIAL=emulator-5554 PHONE_DEPLOY_ABI=android-arm64,android-x64 ~/.claude/scripts/phone_deploy.sh "
+    "<app_dir> --release --stage prep|dart|kotlin|assemble (one call each, never install)"
+)
 EMULATOR = "~/.claude/scripts/emulator_run.sh boot|install <apk>|launch <pkg>|shot <png>|stop"
+DEPLOY = (
+    "PHONE_DEPLOY_ABI=android-arm64,android-x64 ~/.claude/scripts/phone_deploy.sh <app_dir> --release "
+    "--stage prep|dart|kotlin|assemble|install (one call each)"
+)
 STAGE = (
     '{run_dir}/phone_ready.json = {{"apk": abs path, "pkg", "app_dir": abs path, "versionCode", '
-    '"deploy_cmd": "~/.claude/scripts/phone_deploy.sh <app_dir> --release", "criteria": ["C7"], '
-    '"checks": what to verify on the phone}}'
+    '"deploy_cmd": "{deploy}", "criteria": ["C7"], "checks": what to verify on the phone}}'
 )
 
 
 def staging(ctx: PromptContext) -> str:
     """Rules for criteria that need the Pixel: emulator first, phone install staged, rows marked `[~]`."""
     return (
-        f"Criteria that need the Pixel: never wait for it. (a) Build the release APK, test the flow on the "
-        f"emulator: `{EMULATOR}` (adb -s emulator-5554 only). (b) Write {STAGE.format(run_dir=ctx.run_dir)}. "
+        "Criteria that need the Pixel: never wait for it. "
+        f"(a) Build one APK for both: `{BUILD}`; test the flow on the emulator (no Google account there) "
+        f"with `{EMULATOR}`, adb -s emulator-5554 only. "
+        f"(b) Write {STAGE.format(run_dir=ctx.run_dir, deploy=DEPLOY)}. "
         "(c) Mark those rows `- [~] Cn: needs phone: <why>` and end with `A: phone: <one line>`."
     )
 
@@ -33,7 +42,7 @@ def attached(ctx: PromptContext) -> str:
     criteria = ", ".join(str(c) for c in info.get("criteria") or []) or "the staged criteria"
     return (
         "The Pixel is attached now: skip the emulator. "
-        f"Deploy: {info.get('deploy_cmd') or 'the staged build'}. "
+        f"Deploy, one call per stage: {info.get('deploy_cmd') or 'the staged build'}. "
         f"Verify only {criteria} on it ({info.get('checks') or 'see the plan'}) "
         "with ~/.claude/scripts/phone_vd.sh; "
         "never uninstall or `pm clear`. "

@@ -19,7 +19,9 @@ def test_t1520_live_check_stages_the_phone_after_the_emulator(ctx: PromptContext
     assert "/run/ab12cd34/phone_ready.json" in text
     assert "`- [~] Cn: needs phone: <why>`" in text
     assert "`A: phone: <one line>`" in text
-    assert "emulator-5554 only" in text
+    assert "adb -s emulator-5554 only" in text
+    assert "PHONE_DEPLOY_ABI=android-arm64,android-x64" in text
+    assert "never install" in text
 
 
 def test_implement_still_builds_the_release_apk(ctx: PromptContext) -> None:
@@ -38,5 +40,5 @@ def test_t1521_attached_live_check_deploys_and_verifies_only_the_staged_criteria
 
 def test_attached_live_check_survives_a_bare_phone_note(ctx: PromptContext) -> None:
     text = build("live_check", replace(ctx, phone={"note": "plug in"}))
-    assert "Deploy: the staged build." in text
+    assert "Deploy, one call per stage: the staged build." in text
     assert "Verify only the staged criteria on it (see the plan)" in text
