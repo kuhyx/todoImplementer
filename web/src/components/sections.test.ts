@@ -34,7 +34,7 @@ describe("drawer sections", () => {
 
   it("[T1680] a permission need shows its one-line command in a code block", () => {
     const base = makeDetail(byStatus("needs_you"));
-    const needs = { command: "cd /w && sudo true", kind: "permission" as const, text: "Blocked Bash sudo true" };
+    const needs = { category: "permission" as const, command: "cd /w && sudo true", effort: 1, kind: "permission" as const, text: "Blocked Bash sudo true" };
     const node = renderNeeds({ ...base, card: { ...base.card, needs } });
     expect(node?.querySelector("code[data-fix-command]")?.textContent).toBe("cd /w && sudo true");
     expect(renderNeeds(base)?.querySelector("code")).toBeNull();

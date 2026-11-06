@@ -88,7 +88,8 @@ def build(  # noqa: PLR0913, PLR0917 - one argv, built in one place
     if pol.disable_hooks:
         argv += ["--settings", policy.HOOKS_OFF]
     notes = (pol.warning,) if pol.warning else ()
-    return Invocation(tuple(argv), {**os.environ, "CLAUDE_AUTO_CONTINUE": "0", BG_WAIT_VAR: "0"}, worktree, notes)
+    env = {**os.environ, "CLAUDE_AUTO_CONTINUE": "0", BG_WAIT_VAR: "0"}
+    return Invocation(tuple(argv), env, worktree, notes)
 
 
 def spawn(inv: Invocation, stderr: IO[str]) -> subprocess.Popen[str]:

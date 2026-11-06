@@ -73,18 +73,8 @@
       "properties": {
         "id": {
           "enum": [
-            "start",
-            "spec-answers",
-            "spec-ok",
-            "send",
-            "ship",
-            "cancel",
-            "credits",
-            "lesson-approve",
-            "copy-resume",
-            "go",
-            "copy-fix",
-            "rerun"
+            "start", "spec-answers", "spec-ok", "send", "ship", "cancel", "credits", "lesson-approve",
+            "copy-resume", "go", "copy-fix", "rerun"
           ]
         },
         "label": {"type": "string", "minLength": 1},

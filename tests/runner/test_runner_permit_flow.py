@@ -4,7 +4,8 @@ import pytest
 from runnerfakes import Env, task
 from schedfakes import CARD, IMPL, LIVE_OK, PLAN, boot, wait_stage
 from todoimpl.board.actions import actions
-from todoimpl.board.status import Status, needs
+from todoimpl.board.needs import needs
+from todoimpl.board.status import Status
 from todoimpl.board.types import Limit
 from todoimpl.http.backend import BackendError
 from todoimpl.service import permission

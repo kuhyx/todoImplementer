@@ -112,7 +112,7 @@ describe("actions", () => {
     expect(writeText).toHaveBeenCalledWith("cd /w && sudo true");
     q("[data-action=go]").click();
     await settle(0);
-    expect(env.stub.calls.some((call) => call.init?.method === "POST" && String(call.url).endsWith("/go"))).toBe(true);
+    expect(env.stub.calls.some((call) => call.init?.method === "POST" && call.url.endsWith("/go"))).toBe(true);
   });
 
   it("copy-resume without any command says so", async () => {

@@ -204,13 +204,16 @@ class Driver:
             raise LimitHitError(pause)
         if permit.gate(self, res, stage):
             return self.turn(role, stage, failure_tail=failure_tail)
-        if res.is_error or not res.finished:
-            reason = res.text.strip()[:300] or retry.NO_RESULT
-            tail = retry.stderr_tail(ctx.run_dir, role)
-            raise retry.failure(st, now=ctx.now(), stage=stage, reason=reason, tail=tail)
+        self._raise_if_unfinished(res, role, stage)
         st.extra.pop("retries", None)
         st.extra.pop("crash_retries", None)
         return res
+
+    def _raise_if_unfinished(self, res: TurnResult, role: str, stage: str) -> None:
+        if res.is_error or not res.finished:
+            reason = res.text.strip()[:300] or retry.NO_RESULT
+            tail = retry.stderr_tail(self.ctx.run_dir, role)
+            raise retry.failure(self.state, now=self.ctx.now(), stage=stage, reason=reason, tail=tail)
 
     def r_continue(self, res: TurnResult) -> str | None:
         """Resume the same stage with a continue prompt after an `R:` turn, up to MAX_R_CONTINUES times."""

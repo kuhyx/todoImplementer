@@ -38,6 +38,7 @@ const CATEGORY_LABEL: Record<NeedsCategory, string> = {
   action: "Action",
   auto: "Fixing itself",
   criteria: "Criteria",
+  permission: "Permission",
   phone: "Phone",
   questions: "Questions",
 };

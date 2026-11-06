@@ -24,6 +24,8 @@ def test_t1660_the_card_shows_the_command_and_validates_against_the_contract(rig
     card = rig.card(tid)
     assert card["needs"] == {
         "kind": "permission",
+        "category": "permission",
+        "effort": 1,
         "text": "Blocked Bash x: nope",
         "command": "cd /w && sudo pacman -S foo",
     }
