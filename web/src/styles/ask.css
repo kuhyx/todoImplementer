@@ -1,7 +1,11 @@
-/* Question cards: the drawer widens and the grid is sized to fit, never scrolled (ask-view.ts measures and pages). */
+/* Question flow: one question at a time, or all at once. Only the answer field grows; the buttons stay inside the screen. */
 
 .drawer--ask {
-  width: 90%;
+  width: min(60rem, 100%);
+}
+
+.drawer-bar {
+  gap: var(--space-2);
 }
 
 [data-slot="questions"] {
@@ -16,18 +20,29 @@
   flex: 1;
   flex-direction: column;
   gap: var(--space-3);
+  width: 100%;
+  max-width: 52rem;
+  min-height: 0;
+  margin-inline: auto;
+}
+
+.ask-modes {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.ask-step,
+.ask-all {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-2);
   min-height: 0;
 }
 
-.ask-grid {
-  display: grid;
-  flex: 1;
-  grid-template-columns: repeat(var(--cols, 1), minmax(0, 1fr));
-  gap: var(--space-3);
-  grid-auto-rows: max-content;
-  align-content: start;
-  min-height: 0;
-  overflow: hidden;
+/* Horizontal pans reach the swipe handler; vertical ones still scroll. */
+.ask-step {
+  touch-action: pan-y;
 }
 
 .ask-card {
@@ -35,11 +50,9 @@
   flex-direction: column;
   gap: var(--space-2);
   min-width: 0;
-  max-height: var(--ask-h, none);
   padding: var(--space-3);
   background: var(--surface-2);
   border-radius: var(--radius-md);
-  overflow-y: auto;
 }
 
 .ask-title {
@@ -52,6 +65,11 @@
   overflow-wrap: anywhere;
 }
 
+.ask-body {
+  max-height: 30vh;
+  overflow-y: auto;
+}
+
 .ask-label {
   display: block;
   font-size: var(--text-label);
@@ -59,59 +77,60 @@
 }
 
 .ask-card textarea {
-  field-sizing: content;
-  min-height: calc(3lh + var(--space-3));
+  flex: 1 1 8rem;
+  min-height: 6rem;
+  resize: vertical;
 }
 
-.ask-links {
+.ask-list {
   display: flex;
+  flex: 1;
+  flex-direction: column;
   gap: var(--space-3);
+  min-height: 0;
+  overflow-y: auto;
 }
 
-.link {
-  padding: 0;
-  background: none;
-  border: 0;
-  color: var(--accent);
-  text-decoration: underline;
-  cursor: pointer;
+.ask-list .ask-card textarea {
+  flex: none;
+  field-sizing: content;
+}
+
+.ask-page {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
 }
 
 .ask-foot {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
   gap: var(--space-2) var(--space-3);
-  min-height: calc(var(--space-5) + var(--space-2));
+  justify-content: space-between;
 }
 
-.ask-pager {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.ask-page {
-  min-width: 6ch;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
-
-.ask-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: var(--space-2) var(--space-3);
-  margin-left: auto;
-}
-
-.ask-actions .btn {
+.ask-foot .btn {
   padding-inline: var(--space-4);
+}
+
+.ask-reason,
+.ask-status {
+  margin: 0;
+}
+
+.ask-status:empty {
+  display: none;
+}
+
+.drawer--only-ask [data-slot="actions"],
+.drawer--only-ask [data-slot="lesson"],
+.drawer--only-ask .dtabs,
+.drawer--only-ask .drawer-chips,
+.drawer--only-ask .drawer-current {
+  display: none;
 }
 
 @media (max-height: 800px) {
   .ask-card {
-    gap: var(--space-1);
     padding: var(--space-2) var(--space-3);
     font-size: var(--text-label);
     line-height: 1.3;
@@ -119,61 +138,6 @@
 
   .ask-title {
     font-size: var(--text-body);
-  }
-
-  .ask {
-    gap: var(--space-2);
-  }
-
-  .drawer--ask .drawer-title {
-    font-size: var(--text-subtitle);
-  }
-
-  .drawer--ask .drawer-chips {
-    margin-bottom: var(--space-1);
-  }
-}
-
-@media (max-height: 800px), (max-width: 719.98px) {
-  .drawer--ask .drawer-current {
-    display: none;
-  }
-
-  .drawer--ask .dtabs {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-
-  .drawer--ask .dtab {
-    white-space: nowrap;
-  }
-}
-
-@media (max-height: 800px) and (min-width: 720px) {
-  .drawer--ask .drawer-bar {
-    position: absolute;
-    top: 0;
-    right: 0;
-    z-index: 1;
-    border: 0;
-  }
-
-  .drawer--ask .drawer-scroll {
-    gap: var(--space-2);
-    padding-top: var(--space-2);
-  }
-
-  .drawer--ask .drawer-headline {
-    padding-right: var(--space-6);
-  }
-
-  .drawer--ask .actions .action {
-    flex-wrap: nowrap;
-  }
-
-  .drawer--ask .actions .reason {
-    flex-basis: auto;
   }
 }
 
@@ -186,15 +150,8 @@
     flex-wrap: nowrap;
   }
 
-  .ask-pager {
-    gap: var(--space-1);
-  }
-
-  .ask-page {
-    min-width: 5ch;
-  }
-
-  .ask-actions .btn {
+  .ask-foot .btn {
+    flex: 1;
     padding-inline: var(--space-3);
   }
 }

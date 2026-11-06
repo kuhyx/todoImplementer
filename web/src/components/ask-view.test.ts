@@ -1,229 +1,188 @@
-/** AskPanel: card fitting, paging, the phone stepper, Edit and the tab choice. jsdom has no layout, so sizes are faked. */
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+/** AskPanel step view: prefilled editable box, Enter and swipe accept, other asks, tab choice. */
+import { describe, expect, it } from "vitest";
 
-import type { Action } from "@/lib/schemas-common";
-
-import { AskPanel } from "@/components/ask-view";
+import { field, flush, fresh, host, key, mount, page, q, swipe, type, useAskHarness } from "@/test/ask-harness";
 import { ASK_ID, askDetail, askQuestions, freeDetail } from "@/test/fixture-ask";
 import { makeDetail } from "@/test/fixture-detail";
 import { makeCards } from "@/test/fixtures";
 
-const GAP = 16;
-const size = { cardHeight: 300, height: 700, width: 1100 };
-const q = <T extends HTMLElement = HTMLElement>(selector: string): T => {
-  const found = document.querySelector<T>(selector);
-  if (found === null) throw new Error(selector);
-  return found;
-};
-const shown = (): string[] => [...document.querySelectorAll<HTMLElement>(".ask-card")].filter((card) => !card.hidden).map((card) => card.querySelector("h4")?.textContent.slice(0, 2) ?? "");
-const label = (): string => q(".ask-page").textContent;
+useAskHarness();
 
-function fakeLayout(): void {
-  vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(() => size.width);
-  vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(() => size.height);
-  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function rect(this: HTMLElement) {
-    if (this.classList.contains("ask-grid")) return { bottom: size.height } as DOMRect;
-    const cols = Number(this.parentElement?.style.getPropertyValue("--cols") ?? 1);
-    const index = [...(this.parentElement?.children ?? [])].filter((card) => !(card as HTMLElement).hidden).indexOf(this);
-    const row = Math.floor(index / cols);
-    return { bottom: (row + 1) * size.cardHeight + row * GAP } as DOMRect;
-  });
-}
-
-const actions = (detail = askDetail(ASK_ID)): Map<string, Action> => new Map(detail.card.actions.map((action) => [action.id, action]));
-function mount(panel: AskPanel, detail = askDetail(ASK_ID), without: string[] = []): HTMLElement | null {
-  const known = actions(detail);
-  const root = panel.build(detail, (id) => {
-    const action = known.get(id);
-    if (action === undefined || without.includes(id)) return null;
-    const button = document.createElement("button");
-    button.dataset.action = id;
-    button.textContent = action.label;
-    return button;
-  });
-  if (root !== null) document.body.append(root);
-  panel.fit();
-  return root;
-}
-
-beforeEach(() => {
-  document.body.replaceChildren();
-  Object.assign(size, { cardHeight: 300, height: 700, width: 1100 });
-  fakeLayout();
-});
-
-afterEach(() => {
-  vi.restoreAllMocks();
-  vi.unstubAllGlobals();
-});
-
-describe("ask panel", () => {
-  it("shows every card on one page when they fit, without a pager", () => {
-    mount(new AskPanel());
-    expect(shown()).toEqual(["Q1", "Q2", "Q3", "Q4", "Q5"]);
-    expect(q(".ask-pager").hidden).toBe(true);
-    expect(q(".ask-actions").hidden).toBe(false);
-    expect(q(".ask-grid").style.getPropertyValue("--cols")).toBe("3");
-    expect(q("[data-action=spec-answers]").textContent).toBe("Send answers");
-    expect(q(".ask").dataset.mode).toBe("grid");
-  });
-
-  it("pages by what fits, keeps Send answers visible and walks back", () => {
-    size.height = 400;
-    mount(new AskPanel());
-    expect(shown()).toEqual(["Q1", "Q2", "Q3"]);
-    expect(label()).toBe("1–3 of 5");
-    expect(q<HTMLButtonElement>("[data-ask=back]").disabled).toBe(true);
-    expect(q(".ask-actions").hidden).toBe(false);
-    q("[data-ask=next]").click();
-    expect(shown()).toEqual(["Q4", "Q5"]);
-    expect(label()).toBe("4–5 of 5");
-    expect(q<HTMLButtonElement>("[data-ask=next]").disabled).toBe(true);
-    expect(q<HTMLButtonElement>("[data-ask=back]").disabled).toBe(false);
-    q("[data-ask=back]").click();
-    expect(shown()).toEqual(["Q1", "Q2", "Q3"]);
-  });
-
-  it("steps one question at a time on a phone and offers Send answers on the last", () => {
-    size.width = 360;
-    mount(new AskPanel());
-    expect(shown()).toEqual(["Q1"]);
-    expect(label()).toBe("1 / 5");
-    expect(q(".ask-actions").hidden).toBe(true);
-    for (let step = 0; step < 4; step += 1) q("[data-ask=next]").click();
-    expect(shown()).toEqual(["Q5"]);
-    expect(label()).toBe("5 / 5");
-    expect(q(".ask-actions").hidden).toBe(false);
-    expect(q<HTMLButtonElement>("[data-ask=next]").disabled).toBe(true);
-  });
-
-  it("uses a single card in one column and a lone card without a label", () => {
-    const panel = new AskPanel();
-    mount(panel, freeDetail());
-    expect(q(".ask-grid").style.getPropertyValue("--cols")).toBe("1");
-    expect(label()).toBe("");
-    expect(shown()).toEqual(["An"]);
-  });
-
-  it("labels a single card page as 'N of M'", () => {
-    size.height = 200;
-    size.width = 600;
-    mount(new AskPanel());
-    expect(shown()).toEqual(["Q1"]);
-    expect(label()).toBe("1 of 5");
-  });
-
-  it("edits a card: textarea after Edit, Use recommended, Done, and one payload", () => {
-    const panel = new AskPanel();
+describe("step view", () => {
+  it("shows the first question with its recommendation in a focused, editable box and no Edit link", () => {
+    const panel = fresh();
     mount(panel);
-    const firstField = q<HTMLTextAreaElement>("textarea[name=Q1]");
-    expect(firstField.hidden).toBe(true);
-    expect(q(".ask-card .ask-label").textContent).toBe("Recommended");
-    q(".ask-card .link").click();
-    const field = q<HTMLTextAreaElement>("textarea[name=Q1]");
-    expect(field.hidden).toBe(false);
-    expect(document.activeElement).toBe(field);
-    expect(document.querySelectorAll(".ask-card .link")).toHaveLength(2 + 4);
-    field.value = "Mine";
-    field.dispatchEvent(new Event("input"));
-    expect(panel.answers().Q1).toBe("Mine");
-    expect(document.querySelectorAll(".ask-card .link")[1]?.textContent).toBe("Use recommended");
-    q(".ask-card .link:nth-child(2)").click();
-    expect(q<HTMLTextAreaElement>("textarea[name=Q1]").value).toBe(askQuestions(1)[0]?.recommendation);
-    q(".ask-card .link").click();
-    expect(q<HTMLTextAreaElement>("textarea[name=Q1]").hidden).toBe(true);
-    expect(q(".ask-card .ask-label").textContent).toBe("Your answer");
-    expect(Object.keys(panel.answers())).toEqual(["Q1", "Q2", "Q3", "Q4", "Q5"]);
+    panel.focus();
+    expect(q("h4").textContent).toBe("Q1 · Verification");
+    expect(field().value).toBe(askQuestions(1)[0]?.recommendation);
+    expect(field().readOnly).toBe(false);
+    expect(document.activeElement).toBe(field());
+    expect(page()).toBe("1 / 5");
+    expect(q(".ask-label").textContent).toContain("Recommended");
+    expect(document.querySelectorAll(".link, [data-action=spec-answers]")).toHaveLength(0);
+    expect(q<HTMLButtonElement>("[data-ask=back]").getAttribute("aria-disabled")).toBe("false");
   });
 
-  it("shows a saved answer as the answer and drops empty ones from the payload", () => {
+  it("starts on the first unanswered question and prefills answered ones", () => {
     const detail = askDetail(ASK_ID);
-    const [first, second] = detail.questions;
-    const saved = { ...detail, questions: [{ ...first!, answer: "Saved" }, { ...second!, recommendation: "" }] };
-    const panel = new AskPanel();
-    mount(panel, saved);
-    expect(q(".ask-card .ask-label").textContent).toBe("Your answer");
-    expect(panel.answers()).toEqual({ Q1: "Saved" });
+    const [a, b, ...rest] = detail.questions;
+    mount(fresh(), { ...detail, questions: [{ ...a!, answer: "Done A" }, { ...b!, answer: "Done B" }, ...rest] });
+    expect(page()).toBe("3 / 5");
+    q("[data-ask=back]").click();
+    expect(field().value).toBe("Done B");
+    expect(q(".ask-label").textContent).toBe("Your answer");
   });
 
-  it("is read-only without the Send answers action, and a free ask has no answers", () => {
-    const panel = new AskPanel();
-    mount(panel, askDetail(ASK_ID), ["spec-answers"]);
+  it("edits without a click and accepts with the button, going back keeps the edit", () => {
+    const panel = fresh();
+    mount(panel);
+    type("Mine");
+    expect(q(".ask-label").textContent).toBe("Your answer");
+    q("[data-ask=accept]").click();
+    expect(page()).toBe("2 / 5");
+    expect(field().value).toBe(askQuestions(2)[1]?.recommendation);
+    q("[data-ask=back]").click();
+    expect(field().value).toBe("Mine");
+    expect(host.send).not.toHaveBeenCalled();
+  });
+
+  it("accepts on Enter but not on Shift+Enter or while composing", () => {
+    mount(fresh());
+    expect(key("Enter", { shiftKey: true }).defaultPrevented).toBe(false);
+    expect(key("Enter", { isComposing: true }).defaultPrevented).toBe(false);
+    expect(key("a").defaultPrevented).toBe(false);
+    expect(page()).toBe("1 / 5");
+    expect(key("Enter").defaultPrevented).toBe(true);
+    expect(page()).toBe("2 / 5");
+  });
+
+  it("swipes right to accept and left to go back, and cannot go back from the first", () => {
+    mount(fresh());
+    swipe(-150);
+    expect(page()).toBe("1 / 5");
+    swipe(150);
+    expect(page()).toBe("2 / 5");
+    swipe(-150);
+    expect(page()).toBe("1 / 5");
+  });
+
+  it("sends once, with every answer, when the last one is accepted", async () => {
+    const detail = { ...askDetail(ASK_ID), questions: askQuestions(3) };
+    const panel = fresh();
+    mount(panel, detail);
+    type("One");
+    key("Enter");
+    key("Enter");
+    expect(q("[data-ask=accept]").textContent).toBe("Accept and send 3");
+    const gate = Promise.withResolvers<undefined>();
+    host.send.mockReturnValue(gate.promise);
+    key("Enter");
+    expect(q(".loader").textContent).toBe("Sending 3 answers…");
+    key("Enter");
+    swipe(150);
+    q("[data-ask=accept]").click();
+    expect(host.send).toHaveBeenCalledTimes(1);
+    expect(host.send).toHaveBeenCalledWith(detail.card.id, { Q1: "One", Q2: askQuestions(2)[1]?.recommendation, Q3: askQuestions(3)[2]?.recommendation });
+    gate.resolve(undefined);
+    await flush();
+    expect(host.done).toHaveBeenCalledWith(detail.card.id);
+    expect(q(".ask-status").textContent).toBe("");
+    expect(localStorage).toHaveLength(0);
+    expect(page()).toBe("1 / 3");
+  });
+
+  it("keeps the answers and offers Retry when the send fails", async () => {
+    const detail = { ...askDetail(ASK_ID), questions: askQuestions(1) };
+    host.send.mockRejectedValueOnce(new Error("HTTP 500"));
+    mount(fresh(), detail);
+    type("Keep me");
+    key("Enter");
+    await flush();
+    expect(q("[role=alert]").textContent).toContain("HTTP 500");
+    expect(field().value).toBe("Keep me");
+    expect(host.done).not.toHaveBeenCalled();
+    q("[data-ask=retry]").click();
+    await flush();
+    expect(host.send).toHaveBeenCalledTimes(2);
+    expect(host.send).toHaveBeenLastCalledWith(detail.card.id, { Q1: "Keep me" });
+    expect(host.done).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses to send when every answer is empty", async () => {
+    const detail = { ...askDetail(ASK_ID), questions: [{ answer: null, body: "", id: "Q1", recommendation: "", title: "Storage" }] };
+    mount(fresh(), detail);
+    expect(document.querySelectorAll(".ask-body")).toHaveLength(0);
+    key("Enter");
+    await flush();
+    expect(q("[role=alert]").textContent).toContain("Write at least one answer first.");
+    expect(host.send).not.toHaveBeenCalled();
+  });
+});
+
+describe("other asks", () => {
+  it("shows read-only questions with the reason when the send action is disabled", () => {
+    const detail = askDetail(ASK_ID);
+    const blocked = { ...detail, card: { ...detail.card, actions: detail.card.actions.map((a) => (a.id === "spec-answers" ? { ...a, enabled: false, reason: "Claude is working" } : a)) } };
+    const panel = fresh();
+    mount(panel, blocked);
     expect(panel.interactive).toBe(false);
-    expect(document.querySelectorAll(".ask-card .link")).toHaveLength(0);
-    document.body.replaceChildren();
-    mount(panel, freeDetail(), ["send"]);
+    expect(q(".ask-reason").textContent).toBe("Claude is working");
     expect(document.querySelectorAll("textarea")).toHaveLength(0);
-    expect(panel.answers()).toEqual({});
-    document.body.replaceChildren();
+    expect(document.querySelectorAll(".ask-card")).toHaveLength(5);
+    panel.focus();
+  });
+
+  it("shows no reason text when the disabled action gives none", () => {
+    const detail = askDetail(ASK_ID);
+    const blocked = { ...detail, card: { ...detail.card, actions: detail.card.actions.map((a) => (a.id === "spec-answers" ? { ...a, enabled: false, reason: null } : a)) } };
+    mount(fresh(), blocked);
+    expect(document.querySelectorAll(".ask-reason")).toHaveLength(0);
+    expect(document.querySelectorAll(".ask-card")).toHaveLength(5);
+  });
+
+  it("shows read-only questions without a reason once the action is gone, with saved answers", () => {
+    const detail = askDetail(ASK_ID);
+    const answered = { ...detail, card: { ...detail.card, actions: [] }, questions: [{ ...detail.questions[0]!, answer: "Saved" }] };
+    mount(fresh(), answered);
+    expect(document.querySelectorAll(".ask-reason")).toHaveLength(0);
+    expect(q(".ask-card p:last-child").textContent).toBe("Saved");
+    expect(q(".ask-label").textContent).toBe("Your answer");
+  });
+
+  it("answers a free question from its own box with the card's send button", () => {
+    const panel = fresh();
     mount(panel, freeDetail());
     expect(panel.interactive).toBe(true);
     expect(q("textarea[name=ask-send]").getAttribute("placeholder")).toBe("Your answer to Claude");
-    expect(panel.answers()).toEqual({});
+    expect(q("[data-action=send]").textContent).toBe("Send to Claude");
+    document.body.replaceChildren();
+    mount(panel, freeDetail(), ["send"]);
+    expect(panel.interactive).toBe(false);
+    expect(document.querySelectorAll("textarea")).toHaveLength(0);
   });
 
-  it("builds nothing without a question and resets its state", () => {
-    const panel = new AskPanel();
+  it("builds nothing without a question", () => {
+    const panel = fresh();
     const working = makeCards().find((card) => card.status === "working");
     expect(mount(panel, makeDetail(working ?? makeCards()[0]!))).toBeNull();
     expect(panel.interactive).toBe(false);
-    panel.fit();
-    expect(panel.answers()).toEqual({});
-    mount(panel);
-    q(".ask-card .link").click();
-    panel.reset();
-    document.body.replaceChildren();
-    mount(panel, askDetail(ASK_ID));
-    expect(q<HTMLTextAreaElement>("textarea[name=Q1]").hidden).toBe(true);
+    panel.focus();
   });
 
-  it("goes back to the first page when the questions shrink below the pager", () => {
-    size.height = 400;
-    const panel = new AskPanel();
-    mount(panel);
-    q("[data-ask=next]").click();
-    document.body.replaceChildren();
-    mount(panel, { ...askDetail(ASK_ID), questions: askQuestions(2) });
-    expect(shown()).toEqual(["Q1", "Q2"]);
+  it("does not focus a detached or hidden panel", () => {
+    const panel = fresh();
+    const root = mount(panel);
+    root!.hidden = true;
+    panel.focus();
+    expect(document.activeElement).not.toBe(field());
+    root!.remove();
+    panel.focus();
   });
+});
 
-  it("does nothing while hidden, detached or without a height", () => {
-    size.width = 0;
-    const panel = new AskPanel();
-    mount(panel);
-    expect(shown()).toEqual(["Q1", "Q2", "Q3", "Q4", "Q5"]);
-    expect(q(".ask").dataset.mode).toBeUndefined();
-    size.width = 360;
-    size.height = 0;
-    panel.fit();
-    expect(q(".ask").dataset.mode).toBeUndefined();
-    expect(label()).toBe("1 / 5");
-    q(".ask").remove();
-    panel.fit();
-  });
-
-  it("refits on resize and stops watching the replaced grid", () => {
-    const callbacks: (() => void)[] = [];
-    const disconnect = vi.fn();
-    class Observer {
-      disconnect = disconnect;
-      observe = vi.fn();
-      constructor(callback: () => void) {
-        callbacks.push(callback);
-      }
-    }
-    vi.stubGlobal("ResizeObserver", Observer);
-    const panel = new AskPanel();
-    mount(panel);
-    size.height = 400;
-    callbacks[0]?.();
-    expect(shown()).toEqual(["Q1", "Q2", "Q3"]);
-    mount(panel);
-    expect(disconnect).toHaveBeenCalledTimes(1);
-  });
-
+describe("tab choice", () => {
   it("opens Questions when an answer is needed and returns to Activity once it is given", () => {
-    const panel = new AskPanel();
+    const panel = fresh();
     const spec = askDetail(ASK_ID);
     expect(panel.tabFor(spec, "activity")).toBe("questions");
     expect(panel.tabFor(spec, "activity")).toBe("activity");

@@ -1,9 +1,7 @@
-/** Pure render model of the question UI: layout, page fitting, pager and the Send answers payload. */
+/** Pure model of the question flow: ask kind, effective answers, first open question, swipes, labels. */
 import { describe, expect, it } from "vitest";
 
-import {
-  answersOf, askOf, clampPager, effective, firstPage, fitCount, isLast, layoutFor, nextPage, pageLabel, previousPage,
-} from "@/components/ask-model";
+import { answersOf, askOf, effective, firstOpen, isOnlyAsk, progressLabel, sendingLabel, swipeOf } from "@/components/ask-model";
 import { ASK_ID, askDetail, askQuestions, FREE_ID, freeDetail } from "@/test/fixture-ask";
 import { makeDetail } from "@/test/fixture-detail";
 import { makeCards } from "@/test/fixtures";
@@ -17,54 +15,44 @@ describe("ask model", () => {
     expect(FREE_ID).not.toBe(ASK_ID);
   });
 
-  it("steps on a phone and uses 1, 2 or 3 columns elsewhere", () => {
-    expect(layoutFor(360)).toEqual({ cols: 1, mode: "step" });
-    expect(layoutFor(479)).toEqual({ cols: 1, mode: "step" });
-    expect(layoutFor(480)).toEqual({ cols: 1, mode: "grid" });
-    expect(layoutFor(760)).toEqual({ cols: 2, mode: "grid" });
-    expect(layoutFor(1100)).toEqual({ cols: 3, mode: "grid" });
-    expect(layoutFor(5000)).toEqual({ cols: 3, mode: "grid" });
+  it("shows only questions for a spec_questions card with questions", () => {
+    expect(isOnlyAsk(askDetail(ASK_ID))).toBe(true);
+    expect(isOnlyAsk(freeDetail())).toBe(false);
+    expect(isOnlyAsk({ ...askDetail(ASK_ID), questions: [] })).toBe(false);
   });
 
-  it("counts the leading cards that end inside the area, at least one", () => {
-    expect(fitCount([], 500)).toBe(0);
-    expect(fitCount([300, 300, 300, 620, 620], 640)).toBe(5);
-    expect(fitCount([300, 300, 300, 620, 620], 600)).toBe(3);
-    expect(fitCount([700, 700], 600)).toBe(1);
-    expect(fitCount([300, 700, 300], 600)).toBe(1);
-    expect(fitCount([600.4], 600)).toBe(1);
+  it("prefers the draft, then the saved answer, then the recommendation", () => {
+    const [question] = askQuestions(1);
+    expect(effective(question!, {})).toBe(question?.recommendation);
+    expect(effective({ ...question!, answer: "Saved" }, {})).toBe("Saved");
+    expect(effective({ ...question!, answer: "Saved" }, { Q1: "Mine" })).toBe("Mine");
   });
 
-  it("pages forward and back over measured counts", () => {
-    let pager = firstPage;
-    expect(pager).toEqual({ back: [], start: 0 });
-    pager = nextPage(pager, 6, 9);
-    expect(pager).toEqual({ back: [0], start: 6 });
-    expect(nextPage(pager, 3, 9)).toBe(pager);
-    expect(previousPage(pager)).toEqual({ back: [], start: 0 });
-    expect(previousPage(firstPage)).toBe(firstPage);
-    expect(clampPager(pager, 9)).toBe(pager);
-    expect(clampPager(pager, 5)).toBe(firstPage);
+  it("starts on the first unanswered question and on 0 when all are answered", () => {
+    const [a, b, c] = askQuestions(3);
+    expect(firstOpen([a!, b!, c!])).toBe(0);
+    expect(firstOpen([{ ...a!, answer: "x" }, { ...b!, answer: "y" }, c!])).toBe(2);
+    expect(firstOpen([{ ...a!, answer: "x" }, { ...b!, answer: "" }, c!])).toBe(1);
+    expect(firstOpen([{ ...a!, answer: "x" }])).toBe(0);
+    expect(firstOpen([])).toBe(0);
   });
 
-  it("labels the page, empty when one page holds everything", () => {
-    expect(pageLabel("grid", 0, 5, 5)).toBe("");
-    expect(pageLabel("grid", 0, 6, 9)).toBe("1–6 of 9");
-    expect(pageLabel("grid", 6, 3, 9)).toBe("7–9 of 9");
-    expect(pageLabel("grid", 8, 1, 9)).toBe("9 of 9");
-    expect(pageLabel("step", 2, 1, 5)).toBe("3 / 5");
-    expect(pageLabel("step", 0, 1, 1)).toBe("");
-    expect(isLast(6, 3, 9)).toBe(true);
-    expect(isLast(0, 6, 9)).toBe(false);
+  it("builds the payload from every question and drops empty answers", () => {
+    const [a, b] = askQuestions(2);
+    expect(answersOf([a!, b!], { Q2: "  Two  " })).toEqual({ Q1: a?.recommendation, Q2: "Two" });
+    expect(answersOf([a!, b!], { Q1: "  ", Q2: "" })).toEqual({});
   });
 
-  it("sends every answer, recommended or edited, in one payload", () => {
-    const questions = askQuestions(3);
-    const answered = [{ ...questions[0]!, answer: "Already answered" }, questions[1]!, { ...questions[2]!, recommendation: "" }];
-    expect(effective(answered[0]!, new Map())).toBe("Already answered");
-    expect(effective(answered[1]!, new Map())).toBe(questions[1]!.recommendation);
-    expect(effective(answered[1]!, new Map([["Q2", "mine"]]))).toBe("mine");
-    expect(answersOf(answered, new Map([["Q2", "  mine  "]]))).toEqual({ Q1: "Already answered", Q2: "mine" });
-    expect(answersOf(questions, new Map([["Q1", "  "]]))).toEqual({ Q2: questions[1]!.recommendation, Q3: questions[2]!.recommendation });
+  it("reads a long, mostly horizontal move as a swipe", () => {
+    expect(swipeOf(120, 10)).toBe("next");
+    expect(swipeOf(-120, -10)).toBe("back");
+    expect(swipeOf(79, 0)).toBeNull();
+    expect(swipeOf(100, 60)).toBeNull();
+  });
+
+  it("labels progress and the sending loader", () => {
+    expect(progressLabel(2, 10)).toBe("3 / 10");
+    expect(sendingLabel(10)).toBe("Sending 10 answers…");
+    expect(sendingLabel(1)).toBe("Sending 1 answer…");
   });
 });

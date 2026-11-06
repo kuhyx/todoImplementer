@@ -128,7 +128,7 @@ describe("ti-app", () => {
     expect(q("ti-drawer").hidden).toBe(false);
     await settle(0);
     expect(q("#drawer-title").textContent).toBe("Widget shows next three tasks");
-    q(".drawer-bar .btn").click();
+    q(".drawer-bar .btn:last-child").click();
     expect(location.hash).toBe("#col=ready");
     expect(q("ti-drawer").hidden).toBe(true);
     q(`.card[data-id="${READY}"]`).click();

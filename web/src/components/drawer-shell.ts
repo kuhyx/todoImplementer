@@ -20,6 +20,7 @@ const SLOTS = ["head", "needs", "actions", "pending", "lesson"];
 
 export interface ShellHandlers {
   onClose: () => void;
+  onDetails: () => void;
   onKey: (event: KeyboardEvent) => void;
   onSend: () => void;
 }
@@ -52,6 +53,7 @@ export function buildShell(feed: HTMLElement, handlers: ShellHandlers): HTMLElem
   const bar = h(
     "div",
     { class: "drawer-bar" },
+    h("button", { attrs: { "aria-expanded": false, "data-details": true, hidden: true, type: "button" }, class: "btn", on: { click: handlers.onDetails }, text: "Details" }),
     h("button", { attrs: { type: "button" }, class: "btn", on: { click: handlers.onClose }, text: "Close" }),
   );
   const footer = h(
@@ -100,6 +102,15 @@ export function paintTabs(root: HTMLElement, detail: null | TaskDetail, active: 
   for (const panel of root.querySelectorAll<HTMLElement>("[data-panel]")) panel.hidden = panel.dataset.panel !== active;
   must<HTMLElement>(root, '[data-slot="questions"]').hidden = active !== "questions";
   must(root, ".drawer").classList.toggle("drawer--ask", active === "questions");
+}
+
+/** A card that needs answers shows only the questions; one Details toggle brings the tabs and header actions back. */
+export function paintFocus(root: HTMLElement, isOnlyAsk: boolean, isOpen: boolean): void {
+  const toggle = must<HTMLElement>(root, "[data-details]");
+  toggle.hidden = !isOnlyAsk;
+  toggle.setAttribute("aria-expanded", String(isOpen));
+  toggle.textContent = isOpen ? "Hide details" : "Details";
+  must(root, ".drawer").classList.toggle("drawer--only-ask", isOnlyAsk && !isOpen);
 }
 
 /** Keep Tab inside the dialog (aria-modal). */

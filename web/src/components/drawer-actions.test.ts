@@ -151,35 +151,6 @@ describe("send and spec answers", () => {
     expect(box.value).toBe("");
   });
 
-  it("sends every answer in one call and keeps an edit across polls", async () => {
-    const c = card("needs_you");
-    await open(c, { [`POST /api/task/${c.id}/spec-answers`]: { ok: true, task: c } });
-    expect(q("[data-slot=needs]").textContent).toBe("");
-    expect(q<HTMLTextAreaElement>("textarea[name=Q1]").hidden).toBe(true);
-    q(".ask-card .link").click();
-    const first = q<HTMLTextAreaElement>("textarea[name=Q1]");
-    expect(first.hidden).toBe(false);
-    expect(document.activeElement).toBe(first);
-    first.value = "IndexedDB";
-    first.dispatchEvent(new Event("input"));
-    await settle(5000);
-    expect(q<HTMLTextAreaElement>("textarea[name=Q1]").value).toBe("IndexedDB");
-    expect(q<HTMLTextAreaElement>("textarea[name=Q1]").hidden).toBe(false);
-    q("[data-action=spec-answers]").click();
-    await settle(0);
-    const post = env.stub.calls.find((call) => call.init?.method === "POST");
-    expect(post?.init?.body).toBe('{"answers":{"Q1":"IndexedDB","Q2":"Yes"}}');
-    expect(q("[data-action=spec-ok]").getAttribute("aria-disabled")).toBe("true");
-  });
-
-  it("refuses to send with every answer empty", async () => {
-    const c = card("needs_you");
-    const empty = { ...makeDetail(c), questions: [{ answer: null, body: "", id: "Q1", recommendation: "", title: "Storage" }] };
-    await open(c, { [`GET /api/task/${c.id}`]: empty });
-    q("[data-action=spec-answers]").click();
-    expect(document.querySelector("#toasts")?.textContent).toContain("Write at least one answer first.");
-  });
-
   it("answers a plain Claude question from the card's own box and clears it", async () => {
     const c = freeDetail().card;
     await open(c, { [`GET /api/task/${c.id}`]: freeDetail(), [`POST /api/task/${c.id}/send`]: { ok: true, task: c } });
@@ -201,6 +172,7 @@ describe("send and spec answers", () => {
     await open(c);
     expect(q("[data-tab=questions]").getAttribute("aria-pressed")).toBe("true");
     expect(q("[data-slot=questions]").hidden).toBe(false);
+    q("[data-details]").click();
     q("[data-tab=plan]").click();
     await settle(5000);
     expect(q("[data-tab=plan]").getAttribute("aria-pressed")).toBe("true");

@@ -55,7 +55,7 @@ describe("opening", () => {
     env.drawer.addEventListener("drawer-close", onClose);
     await open(card("working"));
     q("#opener").blur();
-    q(".drawer-bar .btn").click();
+    q(".drawer-bar .btn:last-child").click();
     expect(env.drawer.hidden).toBe(true);
     expect(document.activeElement).toBe(q("#opener"));
     await open(card("working"));
@@ -67,7 +67,7 @@ describe("opening", () => {
 
   it("traps Tab inside the drawer", async () => {
     await open(card("working"));
-    const buttons = [...env.drawer.querySelectorAll<HTMLElement>("button, textarea, summary")].filter((item) => item.getAttribute("aria-disabled") !== "true");
+    const buttons = [...env.drawer.querySelectorAll<HTMLElement>("button, textarea, summary")].filter((item) => item.getAttribute("aria-disabled") !== "true" && !item.hidden);
     const first = buttons[0];
     const last = buttons.at(-1);
     last?.focus();

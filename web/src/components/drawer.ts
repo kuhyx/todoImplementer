@@ -2,9 +2,11 @@ import type { Action } from "@/lib/schemas-common";
 
 import { type BarState, idleBar, optionValue, renderAction, slowTimer } from "@/components/action-bar";
 /** Side drawer for one task: live feed, plan, diff, live check, check output, spec questions, actions and the Send-to-Claude box. */
+import { isOnlyAsk } from "@/components/ask-model";
 import { AskPanel } from "@/components/ask-view";
+import { copyText, postAnswers } from "@/components/drawer-answers";
 import { paintDetail } from "@/components/drawer-render";
-import { buildShell, paintTabs, type Tab, trapTab } from "@/components/drawer-shell";
+import { buildShell, paintFocus, paintTabs, type Tab, trapTab } from "@/components/drawer-shell";
 import { createFeed } from "@/components/feed-view";
 import { loader, showToast } from "@/components/feedback";
 import { csrfToken, restoreInputs, snapshotInputs } from "@/lib/boot";
@@ -18,9 +20,16 @@ import { type LiveEvent, type TaskDetail, taskDetail } from "@/lib/schemas";
 const DETAIL_POLL_MS = 5000;
 
 export class TiDrawer extends HTMLElement {
-  readonly #ask = new AskPanel();
+  readonly #ask = new AskPanel({
+    done: async (id) => {
+      if (this.#id === id) await this.#refresh(id);
+      this.dispatchEvent(new CustomEvent("task-changed", { bubbles: true }));
+    },
+    send: postAnswers,
+  });
   #bar: BarState = idleBar();
   #detail: null | TaskDetail = null;
+  #details = false;
   #feed = createFeed();
   #id: null | string = null;
   #opener: HTMLElement | null = null;
@@ -33,6 +42,10 @@ export class TiDrawer extends HTMLElement {
       ...buildShell(this.#feed.el, {
         onClose: () => {
           this.close();
+        },
+        onDetails: () => {
+          this.#details = !this.#details;
+          this.#render();
         },
         onKey: (event) => {
           this.#onKey(event);
@@ -49,8 +62,9 @@ export class TiDrawer extends HTMLElement {
     paintTabs(this, this.#detail, this.#tab, (tab) => {
       this.#tab = tab;
       this.#paintTabs();
+      if (tab === "questions") this.#ask.focus();
     });
-    this.#ask.fit();
+    paintFocus(this, this.#detail !== null && isOnlyAsk(this.#detail), this.#details);
   }
 
   async #refresh(id: string): Promise<void> {
@@ -92,14 +106,17 @@ export class TiDrawer extends HTMLElement {
   #render(): void {
     const detail = this.#detail;
     if (detail === null) return;
+    const before = this.#tab;
     this.#tab = this.#ask.tabFor(detail, this.#tab);
-    const signature = JSON.stringify([detail, this.#bar, this.#tab]);
+    if (isOnlyAsk(detail) && !this.#details) this.#tab = "questions";
+    const signature = JSON.stringify([detail, this.#bar, this.#tab, this.#details]);
     if (signature === this.#signature) return;
     this.#signature = signature;
     const snapshot = snapshotInputs(this);
     paintDetail(this, detail, this.#host(detail), this.#bar, this.#ask);
     this.#paintTabs();
     restoreInputs(this, snapshot);
+    if (before !== "questions" && this.#tab === "questions") this.#ask.focus();
   }
 
   #cancelConfirm(): void {
@@ -129,19 +146,10 @@ export class TiDrawer extends HTMLElement {
     if (action.id === "copy-resume") {
       const text = action.value ?? detail.resume_command;
       if (text === null) showToast("There is no resume command yet.", "error");
-      else await this.#copy(text);
+      else await copyText(text);
       return;
     }
     await this.#post(detail, action);
-  }
-
-  async #copy(text: string): Promise<void> {
-    try {
-      await navigator.clipboard.writeText(text);
-      showToast("Resume command copied");
-    } catch {
-      showToast(`Copy was blocked here. Command: ${text}`, "error");
-    }
   }
 
   async #post(detail: TaskDetail, action: Action): Promise<void> {
@@ -151,14 +159,9 @@ export class TiDrawer extends HTMLElement {
       return;
     }
     const sendBox = this.querySelector<HTMLTextAreaElement>("textarea[name=ask-send]") ?? must<HTMLTextAreaElement>(this, "textarea[name=send]");
-    const answers = this.#ask.answers();
     const text = sendBox.value.trim();
     if (text === "" && action.id === "send") {
       showToast("Write a message first.", "error");
-      return;
-    }
-    if (Object.keys(answers).length === 0 && action.id === "spec-answers") {
-      showToast("Write at least one answer first.", "error");
       return;
     }
     this.#bar = { confirming: null, pending: action.id, slow: false };
@@ -169,7 +172,7 @@ export class TiDrawer extends HTMLElement {
     });
     try {
       const autoShip = optionValue(action, this);
-      await postAction(detail.card.id, action.id, { answers, autoShip, lessonId: detail.lesson?.id ?? "", text }, csrf);
+      await postAction(detail.card.id, action.id, { autoShip, lessonId: detail.lesson?.id ?? "", text }, csrf);
       if (action.id === "send") for (const box of this.querySelectorAll<HTMLTextAreaElement>("textarea[name$=send]")) box.value = "";
       showToast(`${action.label}: done`);
     } catch (error) {
@@ -197,6 +200,7 @@ export class TiDrawer extends HTMLElement {
     this.#id = id;
     this.#opener = opener;
     this.#detail = null;
+    this.#details = false;
     this.#signature = "";
     this.#ask.reset();
     this.#bar = idleBar();
