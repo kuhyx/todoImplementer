@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import re
+import shlex
 import subprocess
 import time
 from dataclasses import dataclass
@@ -15,6 +16,8 @@ from .claude import kill_tree
 DEFAULT_TIMEOUT = 600.0
 TAIL_LINES = 40
 MAKE_TEST = re.compile(r"^test\s*:", re.MULTILINE)
+ASSIGNMENT = re.compile(r"^[A-Za-z_]\w*=")
+SENTENCE_NOTE = "a sentence, not a command: the board does not run it, so cover it with a plan criterion"
 
 
 @dataclass(frozen=True)
@@ -36,9 +39,39 @@ def capped() -> str:  # noqa: D103
     return os.environ.get("TODOIMPL_CAPPED") or str(Path.home() / ".claude" / "scripts" / "capped.sh")
 
 
+def is_command(done_check: str, wt: Path) -> bool:
+    """Return True when bash parses it and its first word is a builtin, keyword, program or worktree file.
+
+    A done_check written as prose ("a regression test exists under tests/") is a criterion, not a
+    command: running it only fails with a syntax error or "command not found" (T1814).
+    """
+    try:
+        words = shlex.split(done_check)
+    except ValueError:
+        return False
+    words = [w for w in words if not ASSIGNMENT.match(w)]
+    if not words:
+        return False
+    parse = ["bash", "-n", "-c", done_check]
+    parsed = subprocess.run(parse, capture_output=True, check=False)  # noqa: S603 - only parsed, never run
+    if parsed.returncode != 0:
+        return False
+    first = words[0].lstrip("({")
+    if not first or (wt / first).is_file():
+        return True
+    lookup = ["bash", "-c", 'type -t -- "$1"', "_", first]  # the word is only an argument to `type`
+    known = subprocess.run(lookup, cwd=wt, capture_output=True, check=False)  # noqa: S603
+    return known.returncode == 0
+
+
+def shown_done_check(check: str | None, wt: Path) -> str | None:
+    """Return the done_check as the prompt shows it: a sentence says the board will not run it."""
+    return f"{check} ({SENTENCE_NOTE})" if check and not is_command(check, wt) else check
+
+
 def discover(wt: Path, done_check: str | None) -> list[tuple[str, str]]:
-    """List the note's done_check first, then `make test` and pre-commit when the repo has them."""
-    found = [("done_check", done_check)] if done_check else []
+    """List the note's done_check (when it is a command) first, then `make test` and pre-commit."""
+    found = [("done_check", done_check)] if done_check and is_command(done_check, wt) else []
     makefile = wt / "Makefile"
     if makefile.exists() and MAKE_TEST.search(makefile.read_text(encoding="utf-8", errors="replace")):
         found.append(("tests", "make test"))

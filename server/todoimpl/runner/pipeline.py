@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 from todoimpl.board import state as store
 from todoimpl.prompts import PromptContext, build
 
-from . import limits, phone, retry, worktree
+from . import checks, limits, phone, retry, worktree
 from .files import NeedsYouError
 from .permit import gate, with_grant
 from .session import handoff_summary
@@ -154,9 +154,9 @@ class Driver:
         notes = tuple(str(n) for n in st.extra.get("notes", []))
         notes += ((NUDGE,) if nudge else ()) + ((CONTINUE,) if cont else ())
         return PromptContext(
-            title=item.title, body=item.body, repo=item.repo or "", worktree=Path(str(st.worktree)),
-            run_dir=self.ctx.run_dir, done_check=item.done_check, plan_md=self.plan_md(),
-            spec_answers=answers,
+            title=item.title, body=item.body, repo=item.repo or "", worktree=(wt := Path(str(st.worktree))),
+            run_dir=self.ctx.run_dir, done_check=checks.shown_done_check(item.done_check, wt),
+            plan_md=self.plan_md(), spec_answers=answers,
             notes=notes, failure_tail=failure_tail, handoff=handoff,
             phone=st.extra.get("waiting_phone") if st.extra.get("phone_attached") else None,
         )  # fmt: skip

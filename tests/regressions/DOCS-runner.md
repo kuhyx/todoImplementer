@@ -40,3 +40,4 @@ One row per bug, ids global and never reused. The row's test is named `test_t<N>
 | T1809 | Runs failed at the live check before partial acceptance landed (12 of 13 done) stayed in Needs you: a failed run was never judged again when the rules changed | tests/runner/test_runner_rejudge.py |
 | T1810 | A follow-up note the todo app failed to add sent a run with done criteria to Needs you instead of retrying on a timer with no turn | tests/runner/test_runner_rejudge.py |
 | T1813 | A follow-up note listed only the open criteria with no link back, so it read as if the earlier task did nothing | tests/runner/test_runner_live.py, web/src/components/sections.test.ts |
+| T1814 | A done_check written as a sentence ran as a bash command, so its run could never pass Checks | tests/runner/test_runner_checks.py |

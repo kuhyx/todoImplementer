@@ -6,7 +6,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from .checks import discover, record, run_all
+from .checks import SENTENCE_NOTE, discover, record, run_all
 from .files import NeedsYouError, write_json
 from .live import rejudge, settle
 from .parsing import parse_criteria, parse_live, parse_questions, parse_self_check
@@ -109,7 +109,10 @@ def _live_check(d: Driver) -> str | None:
 
 def _checks(d: Driver) -> str | None:
     st, wt = d.state, Path(str(d.state.worktree))
-    results, log = run_all(discover(wt, d.item.done_check), wt, d.ctx.run_dir, d.ctx.check_timeout)
+    found = discover(wt, d.item.done_check)
+    if d.item.done_check and not any(name == "done_check" for name, _ in found):
+        d.activity(f"checks: done_check not run, {SENTENCE_NOTE}")
+    results, log = run_all(found, wt, d.ctx.run_dir, d.ctx.check_timeout)
     st.checks = record(results, log, d.ctx.now())
     red = [r for r in results if not r.passed]
     d.activity(
