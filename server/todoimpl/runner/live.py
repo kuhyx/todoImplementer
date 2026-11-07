@@ -16,8 +16,8 @@ if TYPE_CHECKING:
 
 MAX_LIVE_FIXES = 1
 NO_CHECKLIST = (
-    "Your last live check ended without the checklist. Write the `- [x] Cn:` checklist yourself in this turn "
-    "and finish it before you end. Do not delegate to a background agent and do not end with `R:`."
+    "Your last live check ended without the checklist. Do not re-run or re-verify anything: write the "
+    "`- [x] Cn:` checklist now from what you already saw in this session. No background agent, no `R:`."
 )
 CRITERION_ID = re.compile(r"C\d+")
 
@@ -90,12 +90,7 @@ def settle(d: Driver, report: str) -> str | None:
     extra = d.state.extra
     rows = parse_live(report)
     if not rows:
-        if extra.get("live_redone"):
-            msg = "The live check wrote no checklist twice: read the feed and send guidance"
-            raise NeedsYouError(msg)
-        extra["live_redone"] = 1
-        extra["live_redo"] = NO_CHECKLIST
-        return "live_check"
+        return _no_checklist(d)
     extra.pop("live_redone", None)
     criteria = parse_criteria(d.plan_md())
     found = verdict(rows, criteria)
@@ -106,6 +101,22 @@ def settle(d: Driver, report: str) -> str | None:
     if found.deferred:
         extra["partial"] = {"done": found.done, "open": [], "deferred": found.deferred}
     return "checks"
+
+
+def _no_checklist(d: Driver) -> str:
+    """Miss 1: a checklist-only turn in the same session. Miss 2: the whole live check in a fresh session."""
+    extra = d.state.extra
+    misses = int(extra.get("live_redone", 0))
+    if misses >= 2:  # noqa: PLR2004 - the two rungs above
+        msg = "The live check wrote no checklist, not even when asked for it alone or in a fresh session"
+        raise NeedsYouError(msg)
+    extra["live_redone"] = misses + 1
+    if misses == 0:
+        extra["live_redo"] = NO_CHECKLIST
+    else:
+        extra.pop("live_redo", None)
+        d.state.sessions.pop("implement", None)
+    return "live_check"
 
 
 def _unfinished(d: Driver, report: str, found: Verdict, criteria: list[str]) -> str | None:

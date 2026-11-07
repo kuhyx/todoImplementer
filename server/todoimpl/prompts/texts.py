@@ -116,6 +116,17 @@ def live_check(ctx: PromptContext) -> str:
     )
 
 
+def live_checklist(ctx: PromptContext) -> str:
+    """Redo of a live check that ended without its checklist: the checklist alone, nothing re-run."""
+    return _post(
+        ctx.failure_tail[-TAIL_CHARS:],
+        _plan(ctx),
+        f"Write {ctx.run_dir}/live_check.md, one line per plan criterion, and reply with the same lines:",
+        "- [x] C1: what I did -> what I saw   (`- [ ]` not seen working, `- [~] C7: after ship: <why>`)",
+        "Then end with `D:`.",
+    )
+
+
 def fix(ctx: PromptContext) -> str:
     """Repair after a failed live_check or checks run, given the output tail."""
     tail = ctx.failure_tail[-TAIL_CHARS:]
@@ -160,6 +171,7 @@ STAGES: dict[str, Callable[[PromptContext], str]] = {
     "plan": plan,
     "implement": implement,
     "live_check": live_check,
+    "live_checklist": live_checklist,
     "fix": fix,
     "resume_after_kill": resume_after_kill,
     "fresh_after_idle": fresh_after_idle,

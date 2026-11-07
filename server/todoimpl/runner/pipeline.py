@@ -161,8 +161,8 @@ class Driver:
             phone=st.extra.get("waiting_phone") if st.extra.get("phone_attached") else None,
         )  # fmt: skip
 
-    def turn(self, role: str, stage: str, *, failure_tail: str = "") -> TurnResult:
-        """One claude turn; raises on cancel, the plan limit, or a turn that failed outright."""
+    def turn(self, role: str, stage: str, *, failure_tail: str = "", prompt: str = "") -> TurnResult:
+        """One claude turn (`prompt` picks the builder, else `stage`); raises on cancel, limit, failure."""
         st, ctx = self.state, self.ctx
         until = limits.active_until(ctx.root, ctx.now())
         if until is not None and not st.using_credits:
@@ -186,7 +186,7 @@ class Driver:
                     str((st.live_check or {}).get("report_md", "")),
                 )
                 return build("fresh_after_idle", self.context(handoff=handoff, nudge=nudge))
-            return build(stage, self.context(failure_tail=failure_tail, nudge=nudge, cont=cont))
+            return build(prompt or stage, self.context(failure_tail=failure_tail, nudge=nudge, cont=cont))
 
         env = TurnEnv(ctx.run_dir, Path(str(st.worktree)), ctx.publish, ctx.register, ctx.now)
         res = run_turn(env, st, role, with_grant(st, prompt_for, role), (ctx.run_dir,))
@@ -196,7 +196,7 @@ class Driver:
         self.save()
         self._check_turn(res)
         if gate(self, res, stage):
-            return self.turn(role, stage, failure_tail=failure_tail)
+            return self.turn(role, stage, failure_tail=failure_tail, prompt=prompt)
         return self._finished(res, role, stage)
 
     def _check_turn(self, res: TurnResult) -> None:

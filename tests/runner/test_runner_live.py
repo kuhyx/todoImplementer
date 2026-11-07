@@ -57,7 +57,8 @@ def test_t1104_no_checklist_reruns_once_then_asks() -> None:
     d = stub()
     assert settle(d, "R: live-check agent re-running") == "live_check"
     assert d.state.extra["live_redo"] == NO_CHECKLIST
-    with pytest.raises(NeedsYouError, match="no checklist twice"):
+    assert settle(d, "") == "live_check"
+    with pytest.raises(NeedsYouError, match="fresh session"):
         settle(d, "")
     assert settle(d, "- [x] C1: ok\n- [x] C2: ok") == "checks"
     assert "live_redone" not in d.state.extra

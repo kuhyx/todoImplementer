@@ -36,3 +36,4 @@ One row per bug, ids global and never reused. The row's test is named `test_t<N>
 | T1109 | One criterion still open after the live fix sent a card with the rest done to Needs you instead of accepting it partly with one follow-up note | tests/runner/test_runner_live.py |
 | T1110 | The live-check parser dropped rows without a dash, with `**C1**` or without a colon | tests/runner/test_runner_parsing.py |
 | T1228 | A live check ending `R:` was redone as checklist-less instead of continued first | tests/runner/test_runner_live.py |
+| T1808 | A live check that ended on a prose summary twice failed the run as "Needs you"; the redo resent the whole verify prompt in the same long session, so the model re-verified and summarised again | tests/runner/test_runner_live_ladder.py |

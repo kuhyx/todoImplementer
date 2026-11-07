@@ -86,7 +86,8 @@ def _live_check(d: Driver) -> str | None:
     if not st.extra.get("r_continue"):  # a continued turn keeps the report it already wrote
         report_file.unlink(missing_ok=True)
     shots.mkdir(parents=True, exist_ok=True)
-    res = d.turn("implement", "live_check", failure_tail=str(st.extra.pop("live_redo", "")))
+    redo = str(st.extra.pop("live_redo", ""))  # set: ask for the checklist only, verify nothing again
+    res = d.turn("implement", "live_check", failure_tail=redo, prompt="live_checklist" if redo else "")
     if res.tag in ("Q", "A"):
         return None
     if res.tag == "R":  # background work: continue first; settle's one redo only when this runs out
