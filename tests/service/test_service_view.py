@@ -2,7 +2,9 @@
 
 import pytest
 from servicefakes import Rig
+from todoimpl.runner import retry
 from todoimpl.service import ItemView
+from todoimpl.service.cache import TaskCache
 from todoimpl.todo_mcp.client import TodoClient
 from todoimpl.todo_mcp.model import TodoError
 
@@ -68,3 +70,12 @@ def test_t1109_add_task_passes_through_and_pokes(rig: Rig) -> None:
     assert rig.backend.cache._wake.is_set()
     rig.backend.cache.refresh()
     assert "Demo — rest: C2" in {t.title for t in rig.backend.cache.snapshot().tasks}
+
+
+def test_t1807_a_card_asked_before_the_first_load_is_a_transient_miss(rig: Rig) -> None:
+    rig.note(title="one")
+    card = rig.backend.cache.snapshot().tasks[0].id
+    cold = ItemView(TodoClient(rig.fake.url, rig.fake.token), TaskCache(list))
+    with pytest.raises(TodoError) as caught:
+        cold.get_task(card)
+    assert retry.is_transient(str(caught.value)), caught.value

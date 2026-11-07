@@ -25,10 +25,12 @@ class ItemView:
         self._cache = cache
 
     def _note_of(self, card: str) -> str:
-        for task in self._cache.snapshot().tasks:
+        snap = self._cache.snapshot()
+        for task in snap.tasks:
             if task.id == card:
                 return task.item.note_id
-        msg = f"unknown task {card}"
+        # Before the first good load (boot, MCP still down) a miss proves nothing: report it as transient.
+        msg = f"unknown task {card}" if snap.loaded else f"todo app offline, {snap.error}"
         raise TodoError(msg)
 
     def get_task(self, card: str) -> CardTask:
