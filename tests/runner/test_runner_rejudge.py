@@ -71,7 +71,7 @@ def test_t1809_zero_done_stays_in_needs_you_after_a_start(world: Env) -> None:
 
 def _stub(client: FakeClient) -> Any:
     fake = SimpleNamespace(
-        state=SimpleNamespace(extra={"live_fixes": 1}, sessions={}),
+        state=SimpleNamespace(extra={"live_fixes": 1}, sessions={}, task_id=""),
         item=SimpleNamespace(title="Demo", repo="kuhyx/demo"),
         ctx=SimpleNamespace(client=client, now=lambda: 100.0),
         plan_md=lambda: "## Acceptance criteria\n- one\n- two\n",

@@ -23,6 +23,7 @@ NO_CHECKLIST = (
     "`- [x] Cn:` checklist now from what you already saw in this session. No background agent, no `R:`."
 )
 CRITERION_ID = re.compile(r"C\d+")
+BOARD_URL = "http://127.0.0.1:8786"  # the loopback board (auth.DEFAULT_ORIGINS[0]); its #task= opens a card
 STILL_OPEN = "The live check still saw criteria not done"
 JUDGED = (STILL_OPEN, "follow-up note failed")  # errors the judge wrote; a rule change may undo them
 
@@ -34,6 +35,7 @@ class Verdict:
     done: list[str] = field(default_factory=list)
     open: list[tuple[str, str]] = field(default_factory=list)
     deferred: list[str] = field(default_factory=list)
+    seen: dict[str, str] = field(default_factory=dict)  # what the live check saw for each done criterion
 
     @property
     def open_ids(self) -> list[str]:
@@ -60,19 +62,32 @@ def verdict(rows: list[dict[str, object]], criteria: list[str]) -> Verdict:
             out.deferred.append(cid)
         elif row["done"]:
             out.done.append(cid)
+            out.seen[cid] = str(row["note"])
         else:
             out.open.append((cid, str(row["note"])))
     return out
 
 
-def followup_body(found: Verdict, criteria: list[str]) -> str:
-    """List every open criterion with its plan text and the live-check note."""
-    lines = ["Left open by the live check:"]
+def _criterion(cid: str, criteria: list[str]) -> str:
+    index = int(cid[1:]) - 1 if CRITERION_ID.fullmatch(cid) else -1
+    text = criteria[index] if 0 <= index < len(criteria) else ""
+    return f"- {cid}: {text}" if text else f"- {cid}"
+
+
+def followup_body(found: Verdict, criteria: list[str], card: str, title: str) -> str:
+    """Link the earlier card, then what it got done and what is left here, each with the plan text."""
+    lines = [f"Earlier task: {title} ({card}) {BOARD_URL}/#task={card}", ""] if card else []
+    if found.done:
+        lines.append("Done in the earlier task:")
+        for cid in found.done:
+            lines += [_criterion(cid, criteria), f"  live check: {found.seen[cid]}"]
+        lines.append("")
+    lines.append("To do here:")
     for cid, note in found.open:
-        index = int(cid[1:]) - 1 if CRITERION_ID.fullmatch(cid) else -1
-        text = criteria[index] if 0 <= index < len(criteria) else ""
-        lines.append(f"- {cid}: {text}" if text else f"- {cid}")
-        lines.append(f"  live check: {note}")
+        lines += [_criterion(cid, criteria), f"  live check: {note}"]
+    if found.deferred:
+        lines += ["", "Deferred until after the ship:"]
+        lines += [_criterion(cid, criteria) for cid in found.deferred]
     return "\n".join(lines)
 
 
@@ -83,7 +98,8 @@ def _followup(d: Driver, found: Verdict, criteria: list[str]) -> None:
         return
     title = f"{d.item.title} — rest: {', '.join(found.open_ids)}"
     try:
-        created = d.ctx.client.add_task(d.item.repo or "", title, followup_body(found, criteria))
+        body = followup_body(found, criteria, d.state.task_id, d.item.title)
+        created = d.ctx.client.add_task(d.item.repo or "", title, body)
     except TodoError as exc:  # never Needs you: retry on the backoff, judging the stored report again
         extra["resettle"] = True
         raise retry.later(d.state, d.ctx.now(), f"follow-up note not added yet: {exc}") from exc

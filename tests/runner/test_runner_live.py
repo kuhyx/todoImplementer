@@ -25,7 +25,7 @@ ONE_OF_TWO = reply("- [x] C1: ran a -> saw x\n\nD: done")
 def stub(plan: str = "## Acceptance criteria\n- one\n- two\n", client: FakeClient | None = None) -> Any:
     """Return a Driver look-alike: state extras, item, client and the plan text."""
     fake = SimpleNamespace(
-        state=SimpleNamespace(extra={}, sessions={"implement": {"session_id": "s"}}),
+        state=SimpleNamespace(extra={}, sessions={"implement": {"session_id": "s"}}, task_id=""),
         item=SimpleNamespace(title="Demo", repo="kuhyx/demo"),
         ctx=SimpleNamespace(client=client or FakeClient()),
         plan_md=lambda: plan,
@@ -77,7 +77,7 @@ def test_t1109_partial_after_the_fix_makes_one_follow_up() -> None:
         (
             "kuhyx/demo",
             "Demo — rest: C2",
-            followup_body(verdict(parse_live(report), ["one", "two"]), ["one", "two"]),
+            followup_body(verdict(parse_live(report), ["one", "two"]), ["one", "two"], "", "Demo"),
         )
     ]
     assert d.state.extra["followup_id"] == "f0llow01"
@@ -100,16 +100,28 @@ def test_t1109_zero_done_retries_fresh_once_then_asks() -> None:
     assert d.ctx.client.added == []
 
 
-def test_followup_body_lists_plan_text_and_notes() -> None:
-    found = verdict(parse_live("- [ ] odd: x\n- [ ] C9: y"), ["only"])
-    assert followup_body(found, ["only"]).splitlines()[1:] == [
-        "- C1: only",
+def test_t1813_follow_up_links_the_earlier_task_and_splits_done_from_to_do() -> None:
+    report = "- [x] C2: saw y\n- [ ] odd: x\n- [ ] C9: y\n- [~] C3: after ship"
+    found = verdict(parse_live(report), ["a", "b", "c"])
+    assert followup_body(found, ["a", "b", "c"], "abcd1234-0", "Demo").splitlines() == [
+        "Earlier task: Demo (abcd1234-0) http://127.0.0.1:8786/#task=abcd1234-0",
+        "",
+        "Done in the earlier task:",
+        "- C2: b",
+        "  live check: saw y",
+        "",
+        "To do here:",
+        "- C1: a",
         "  live check: missing from the live check report",
         "- odd: x",
         "  live check: odd: x",
         "- C9",
         "  live check: y",
+        "",
+        "Deferred until after the ship:",
+        "- C3: c",
     ]
+    assert "Done in" not in followup_body(verdict(parse_live("- [ ] C1: no"), ["a"]), ["a"], "x", "t")
 
 
 def test_t1109_end_to_end_partial_reaches_the_gate(world: Env) -> None:

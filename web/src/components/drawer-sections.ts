@@ -5,6 +5,7 @@ import type { ActionId } from "@/lib/schemas-common";
 import { statusChip } from "@/components/card";
 import { type Child, h } from "@/lib/dom";
 import { formatClock, humanize } from "@/lib/format";
+import { linkify } from "@/lib/linkify";
 import { renderMarkdown } from "@/lib/markdown";
 import { routes } from "@/lib/routes";
 
@@ -133,7 +134,7 @@ export function renderDetails(detail: TaskDetail): HTMLElement {
   return h(
     "dl",
     { class: "details" },
-    ...row("Note", h("span", { class: "pre", text: detail.body })),
+    ...row("Note", h("span", { class: "pre" }, ...linkify(detail.body))),
     ...row("Done check", detail.done_check === null ? null : h("code", { text: detail.done_check })),
     ...row("Stages", stages.length > 0 ? stages.join(" → ") : null),
     ...row("Skills loaded", detail.skills_loaded.length > 0 ? detail.skills_loaded.join(", ") : null),

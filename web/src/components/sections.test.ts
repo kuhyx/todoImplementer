@@ -119,6 +119,15 @@ describe("drawer sections", () => {
   });
 });
 
+describe("[T1813] note links", () => {
+  it("makes URLs in the note clickable; a board link stays on this page", () => {
+    const body = "Earlier task: Demo (abcd1234-0) http://127.0.0.1:8786/#task=abcd1234-0\nsee https://example.org/x. and javascript:alert(1)";
+    const links = [...renderDetails({ ...makeDetail(byStatus("backlog")), body }).querySelectorAll("a")];
+    expect(links.map((a) => a.getAttribute("href"))).toEqual(["#task=abcd1234-0", "https://example.org/x"]);
+    expect(links[1]?.getAttribute("rel")).toBe("noopener noreferrer");
+  });
+});
+
 describe("markdown", () => {
   it("renders headings, lists, checkboxes, code and inline code", () => {
     const element = renderMarkdown("# H1\n## H2\n#### not\n- [ ] open `x`\n- [x] done\n- plain\n1. one\n\n```\ncode <b>\n```\ntext `a` b\nunterminated\n```\nopen");
