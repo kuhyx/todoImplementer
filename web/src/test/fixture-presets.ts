@@ -24,7 +24,7 @@ export function preset(status: TaskCard["status"], hasRepository: boolean): Pres
       return { actions: [start], column: "backlog", current: status === "yours" ? "Yours" : "Not started", needs: null, stage: null, status };
     }
     case "cancelled": {
-      return { actions: [start], column: "backlog", current: "Cancelled; run dir kept", needs: null, stage: "cancelled", status };
+      return { actions: [start], column: "done", current: "Abandoned; run dir kept", needs: null, stage: "cancelled", status };
     }
     case "done": {
       return { actions: [], column: "done", current: "shipped", needs: null, stage: "shipped", status };

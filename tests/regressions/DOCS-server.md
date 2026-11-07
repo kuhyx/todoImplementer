@@ -20,3 +20,4 @@ One row per bug, ids global and never reused. The row's test is named `test_t<N>
 | T1807 | After a reboot the board resumed a run before the todo MCP was up; the empty cache read as "unknown task" and failed the run instead of retrying | tests/service/test_service_view.py |
 | T1812 | A retried follow-up could add the same section twice after a lost add_task reply | tests/service/test_service_view.py |
 | T1811 | Least effort put a 9-question card after criteria-not-done cards; every question card must come first | tests/board/test_board_needs.py, web/src/lib/board-model.test.ts |
+| T1815 | A cancelled card sat in Backlog as a to-do and its note stayed open; Cancel now abandons the note where it can and the card shows Abandoned under Done | tests/board/test_board_status.py, tests/service/test_service_view.py, tests/runner/test_runner_abandon.py |

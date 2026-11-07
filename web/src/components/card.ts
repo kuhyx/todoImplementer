@@ -6,7 +6,7 @@ import { formatAgo, formatClock, formatIn, formatUsd } from "@/lib/format";
 
 export const STATUS_LABEL: Record<Status, string> = {
   backlog: "Backlog",
-  cancelled: "Cancelled",
+  cancelled: "Abandoned",
   done: "Done",
   needs_you: "Needs you",
   paused_limit: "Paused: plan limit",

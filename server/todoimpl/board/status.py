@@ -44,7 +44,7 @@ class Column(StrEnum):
 _COLUMNS = {
     Status.BACKLOG: Column.BACKLOG,
     Status.YOURS: Column.BACKLOG,
-    Status.CANCELLED: Column.BACKLOG,
+    Status.CANCELLED: Column.DONE,
     Status.QUEUED: Column.RUNNING,
     Status.WORKING: Column.RUNNING,
     Status.PAUSED_LIMIT: Column.RUNNING,
@@ -71,12 +71,12 @@ def compute(  # noqa: PLR0911 - one return per rule of the spec table
     `live` = a runner thread/process is active for the task; `limit_until` = end of the active plan limit.
     A run with `using_credits` ignores the limit.
     """
-    if task.status in CLOSED or (run is not None and run.stage == "shipped"):
+    if task.status == "done" or (run is not None and run.stage == "shipped"):
         return Status.DONE
+    if task.status == "abandoned" or (run is not None and run.stage == "cancelled"):
+        return Status.CANCELLED
     if run is None:
         return Status.YOURS if task.repo is None else Status.BACKLOG
-    if run.stage == "cancelled":
-        return Status.CANCELLED
     if run.assignee == "human" and not run.error:
         return Status.YOURS
     if run.stage == "gate":

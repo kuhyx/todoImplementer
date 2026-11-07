@@ -60,7 +60,13 @@ def test_every_stage_assignee_live_limit(
 
 def test_closed_note_is_done_even_with_a_failed_run() -> None:
     assert compute(Note(status="done"), run(stage="failed", error="x"), False, None) == Status.DONE
-    assert compute(Note(status="abandoned"), None, False, None) == Status.DONE
+    assert compute(Note(status="abandoned"), None, False, None) == Status.CANCELLED
+
+
+def test_t1815_cancelled_or_abandoned_leaves_the_backlog_for_done() -> None:
+    assert compute(Note(status="abandoned"), run(stage="failed", error="x"), False, None) == Status.CANCELLED
+    assert compute(Note(), run(stage="cancelled"), False, None) == Status.CANCELLED
+    assert column(Status.CANCELLED).value == "done"
 
 
 def test_no_run_is_backlog_or_yours() -> None:
@@ -110,7 +116,7 @@ def test_columns() -> None:
     assert {s: column(s).value for s in Status} == {
         Status.BACKLOG: "backlog",
         Status.YOURS: "backlog",
-        Status.CANCELLED: "backlog",
+        Status.CANCELLED: "done",
         Status.QUEUED: "running",
         Status.WORKING: "running",
         Status.PAUSED_LIMIT: "running",

@@ -41,6 +41,7 @@ class Client(Protocol):
     def get_task(self, card: str) -> CardTask: ...  # noqa: D102
     def close_task(self, card: str, evidence: str) -> None: ...  # noqa: D102
     def add_task(self, repo: str, title: str, body: str = "") -> Task: ...  # noqa: D102
+    def abandon(self, card: str) -> bool: ...  # noqa: D102
 
 
 class Engine:

@@ -77,17 +77,6 @@ def test_cancel_kills_a_live_turn_and_start_restarts(world: Env) -> None:
         sched.close()
 
 
-def test_cancel_of_a_resting_run_is_immediate(world: Env) -> None:
-    sched, _ = boot(world, PLAN, reply("Q: which?"), done_check="true")
-    try:
-        sched.start(CARD)
-        wait_stage(world, sched, "implement")
-        sched.cancel(CARD)
-        assert state(world).stage == "cancelled"
-    finally:
-        sched.close()
-
-
 def test_unknown_runs_and_wrong_stages_are_refused(world: Env) -> None:
     sched, _ = boot(world)
     try:

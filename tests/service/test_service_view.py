@@ -99,3 +99,14 @@ def test_t1812_a_finished_follow_up_does_not_block_a_new_one(rig: Rig) -> None:
     view(rig).add_task("kuhyx/demo", "Demo — rest: C2", "- C2: open again")
     (note,) = rig.fake.store.notes.values()
     assert note.text.count("Demo — rest: C2") == 2
+
+
+def test_t1815_cancel_abandons_the_note_only_when_no_other_section_is_open(rig: Rig) -> None:
+    rig.note(body="## a\nx\n\n## b\ny")
+    first, second = rig.backend.cache.snapshot().tasks
+    assert view(rig).abandon(first.id) is False
+    (note,) = rig.fake.store.notes.values()
+    assert note.status == "todo"
+    view(rig).close_task(second.id, "ran: ok")
+    assert view(rig).abandon(first.id) is True
+    assert note.status == "abandoned"

@@ -106,7 +106,7 @@ describe("renderBoard", () => {
   it("shows filtered counts and says why a column is empty", () => {
     const state: ViewState = { ...DEFAULT_STATE, q: "zzzz" };
     const root = mount(renderBoard(buildView(board, state), state, NOW, handlers()));
-    expect(root.querySelector(".tab .count")?.textContent).toBe("0 of 22");
+    expect(root.querySelector(".tab .count")?.textContent).toBe("0 of 21");
     expect(root.querySelector(".empty")?.textContent).toContain("No note here matches");
     const none = makeBoard([]);
     const empty = mount(renderBoard(buildView(none, DEFAULT_STATE), DEFAULT_STATE, NOW, handlers()));

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from typing import TYPE_CHECKING, Any
 
@@ -20,6 +21,7 @@ if TYPE_CHECKING:
 
     from todoimpl.todo_mcp.items import Item
 
+log = logging.getLogger("todoimpl.runner")
 SPEC_MARKER = re.compile(r"^\s*(done|verify|done_check)\s*:", re.IGNORECASE | re.MULTILINE)
 RESTARTABLE = ("failed", "cancelled")
 FINAL = ("shipped", "cancelled")
@@ -202,12 +204,16 @@ class Scheduler(PhoneEngine):
                 raise RunnerError(msg, "disabled")
             if card in self._active:
                 self.kill(card)
-                return
-            if card in self._queue:
-                self._queue.remove(card)
-            st.stage = "cancelled"
-            self.save(card, st)
-        self.bus.publish(card, {"type": "done"})
+            else:
+                if card in self._queue:
+                    self._queue.remove(card)
+                st.stage = "cancelled"
+                self.save(card, st)
+                self.bus.publish(card, {"type": "done"})
+        try:  # a cancelled card is abandoned in the todo app too, where a whole note can be (T1815)
+            self.client.abandon(card)
+        except TodoError as exc:
+            log.warning("cancel %s: the note stays open, the todo app refused: %s", card, exc)
 
     def credits(self, card: str) -> None:  # noqa: D102
         with self._cv:

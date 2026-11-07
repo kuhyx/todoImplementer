@@ -94,9 +94,9 @@ first match wins:
 | # | Rule | Status | Column |
 |---|---|---|---|
 | 1 | todo status done, or stage shipped | done | done |
+| 1b | todo status abandoned, or stage cancelled (Cancel abandons the note when no other section is open) | cancelled | done |
 | 2 | no run and repo null | yours | backlog |
 | 3 | no run | backlog | backlog |
-| 4 | stage cancelled | cancelled | backlog |
 | 5 | stage gate | ready_to_ship | ready |
 | 6 | stage failed, or `error` set, or `last_tag` in Q/A while not live, or stage spec_wait | needs_you | needs_you |
 | 7 | stage shipping | shipping | running |

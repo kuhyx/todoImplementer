@@ -123,6 +123,8 @@ class FakeClient:
     unreachable: int = 0
     fail_add: int = 0
     added: list[tuple[str, str, str]] = field(default_factory=list)
+    abandoned: list[str] = field(default_factory=list)
+    fail_abandon: bool = False
 
     def get_task(self, card: str) -> CardTask:
         """Return the note section behind a card, or TodoError like the real view."""
@@ -152,6 +154,14 @@ class FakeClient:
             raise TodoError(msg)
         self.added.append((repo, title, body))
         return Task(f"f0llow{len(self.added):02d}", title, body, repo, "todo", "medium", None)
+
+    def abandon(self, card: str) -> bool:
+        """Record the abandon (or fail when asked); True like a note with no other open section."""
+        if self.fail_abandon:
+            msg = "abandon refused"
+            raise TodoError(msg)
+        self.abandoned.append(card)
+        return True
 
     def item(self, id8: str, index: int = 0) -> Item:
         """Return the note's item at index."""

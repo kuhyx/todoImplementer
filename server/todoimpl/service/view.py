@@ -62,6 +62,16 @@ class ItemView:
         self._client.close_item(self.get_task(card).item, evidence)
         self._cache.poke()
 
+    def abandon(self, card: str) -> bool:
+        """Set the note abandoned when this card is its only open section; True when it did (T1815)."""
+        note = self._note_of(card)
+        cards = card_tasks(self._client.get_task(note))
+        if any(t.id != card and t.status != "done" for t in cards):
+            return False
+        self._client.update_task(note, status="abandoned")
+        self._cache.poke()
+        return True
+
     def add_task(self, repo: str, title: str, body: str = "") -> Task:
         """Add a section to the repo's open note (a follow-up) and refresh the cached cards.
 
