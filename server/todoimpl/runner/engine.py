@@ -14,7 +14,7 @@ from todoimpl.board.parse import StateError
 from todoimpl.todo_mcp.model import TodoError
 from todoimpl.usage.limits import UNTIL_FILE
 
-from . import limits, retry
+from . import limits, live, retry
 from .bus import Bus
 from .claude import kill_tree
 from .files import read_json, write_json
@@ -77,6 +77,12 @@ class Engine:
                 )
                 st.stage = "failed"
                 store.save(path.parent, st)
+            elif live.rejudgeable(st):  # judged under older rules: judge the stored report again, no turn
+                st.stage, st.error, st.last_tag, st.assignee = "live_check", None, None, "claude"
+                st.extra.pop("failed_stage", None)
+                st.extra["resettle"] = True
+                store.save(path.parent, st)
+                self._queue.append(st.task_id)
             elif st.stage in (*WORK_STAGES, "paused_limit", retry.PAUSED) and st.last_tag not in ("Q", "A"):
                 self._queue.append(st.task_id)
 

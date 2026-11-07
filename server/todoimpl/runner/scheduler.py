@@ -26,7 +26,8 @@ FINAL = ("shipped", "cancelled")
 RESUMABLE = ("spec", "plan", "implement", "live_check", "checks")
 COUNTERS = (
     "failure_tail", "live_fixes", "check_fixes", "nudges", "nudge", "failed_stage", "resume_stage",
-    "retries", "crash_retries", "r_continues", "r_continue", "tagless_retry", "fresh", "ship_fixes", "reship",
+    "resettle", "retries", "crash_retries", "r_continues", "r_continue", "tagless_retry", "fresh",
+    "ship_fixes", "reship",
 )  # fmt: skip
 
 

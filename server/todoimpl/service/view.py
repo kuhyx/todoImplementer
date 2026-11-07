@@ -63,7 +63,13 @@ class ItemView:
         self._cache.poke()
 
     def add_task(self, repo: str, title: str, body: str = "") -> Task:
-        """Add a section to the repo's open note (a follow-up) and refresh the cached cards."""
+        """Add a section to the repo's open note (a follow-up) and refresh the cached cards.
+
+        Idempotent by title: a retry after a lost reply finds the section it already added.
+        """
+        for note in self._client.list_tasks(repo=repo, full=True):
+            if any(card.title == title for card in card_tasks(note)):
+                return note
         task = self._client.add_task(repo, title, body)
         self._cache.poke()
         return task

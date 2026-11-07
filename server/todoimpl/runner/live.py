@@ -8,10 +8,13 @@ from typing import TYPE_CHECKING
 
 from todoimpl.todo_mcp.model import TodoError
 
+from . import retry
 from .files import NeedsYouError
 from .parsing import parse_criteria, parse_live
 
 if TYPE_CHECKING:
+    from todoimpl.board.state import RunState
+
     from .pipeline import Driver
 
 MAX_LIVE_FIXES = 1
@@ -20,6 +23,8 @@ NO_CHECKLIST = (
     "`- [x] Cn:` checklist now from what you already saw in this session. No background agent, no `R:`."
 )
 CRITERION_ID = re.compile(r"C\d+")
+STILL_OPEN = "The live check still saw criteria not done"
+JUDGED = (STILL_OPEN, "follow-up note failed")  # errors the judge wrote; a rule change may undo them
 
 
 @dataclass
@@ -79,10 +84,11 @@ def _followup(d: Driver, found: Verdict, criteria: list[str]) -> None:
     title = f"{d.item.title} — rest: {', '.join(found.open_ids)}"
     try:
         created = d.ctx.client.add_task(d.item.repo or "", title, followup_body(found, criteria))
-    except TodoError as exc:
-        msg = f"Live check left {', '.join(found.open_ids)} open and the follow-up note failed: {exc}"
-        raise NeedsYouError(msg) from exc
+    except TodoError as exc:  # never Needs you: retry on the backoff, judging the stored report again
+        extra["resettle"] = True
+        raise retry.later(d.state, d.ctx.now(), f"follow-up note not added yet: {exc}") from exc
     extra["followup_id"] = created.id
+    d.save()  # a restart right now must not add the note twice
 
 
 def settle(d: Driver, report: str) -> str | None:
@@ -135,5 +141,33 @@ def _unfinished(d: Driver, report: str, found: Verdict, criteria: list[str]) -> 
         extra["failure_tail"] = report
         d.state.sessions.pop("implement", None)
         return "implement"
-    why = f"The live check still saw criteria not done: {', '.join(found.open_ids)}"
-    raise NeedsYouError(why)
+    msg = f"{STILL_OPEN}: {', '.join(found.open_ids)}"
+    raise NeedsYouError(msg)
+
+
+def _report(st: RunState) -> str:
+    return str((st.live_check or {}).get("report_md", ""))
+
+
+def rejudgeable(st: RunState) -> bool:
+    """Return True for a run the judge failed at live_check whose stored report has a done criterion."""
+    judged = st.stage == "failed" and st.extra.get("failed_stage") == "live_check"
+    if not judged or not any(mark in (st.error or "") for mark in JUDGED):
+        return False
+    return _has_done(_report(st))
+
+
+def _has_done(report: str) -> bool:
+    return any(row["done"] and not row["deferred"] for row in parse_live(report))
+
+
+def rejudge(d: Driver) -> str | None:
+    """Settle the stored report again with today's rules, spending no turn: the fix round counts as used."""
+    extra = d.state.extra
+    extra.pop("resettle", None)
+    extra["live_fixes"] = MAX_LIVE_FIXES
+    report = _report(d.state)
+    if not _has_done(report):
+        msg = f"{STILL_OPEN}: none done in the stored report"
+        raise NeedsYouError(msg)
+    return settle(d, report)

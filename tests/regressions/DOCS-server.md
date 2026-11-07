@@ -18,3 +18,5 @@ One row per bug, ids global and never reused. The row's test is named `test_t<N>
 | T1800 | A usage-limit pause disabled Send answers and Spec OK, so kuhy could not answer a spec question until the limit ended | tests/board/test_board_limit_answers.py |
 | T1804 | Effort bucketed open questions (1-3 all scored 1, 9-20 all scored 3), so a 1-question card did not sort above a 3-question one | tests/board/test_board_needs.py |
 | T1807 | After a reboot the board resumed a run before the todo MCP was up; the empty cache read as "unknown task" and failed the run instead of retrying | tests/service/test_service_view.py |
+| T1812 | A retried follow-up could add the same section twice after a lost add_task reply | tests/service/test_service_view.py |
+| T1811 | Least effort put a 9-question card after criteria-not-done cards; every question card must come first | tests/board/test_board_needs.py, web/src/lib/board-model.test.ts |

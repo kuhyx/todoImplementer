@@ -79,3 +79,12 @@ def test_t1807_a_card_asked_before_the_first_load_is_a_transient_miss(rig: Rig) 
     with pytest.raises(TodoError) as caught:
         cold.get_task(card)
     assert retry.is_transient(str(caught.value)), caught.value
+
+
+def test_t1812_a_retried_follow_up_never_adds_the_same_section_twice(rig: Rig) -> None:
+    rig.note(body="## a\nx")
+    first = view(rig).add_task("kuhyx/demo", "Demo — rest: C2", "- C2: open")
+    again = view(rig).add_task("kuhyx/demo", "Demo — rest: C2", "- C2: open")
+    assert again.id == first.id
+    (note,) = rig.fake.store.notes.values()
+    assert note.text.count("Demo — rest: C2") == 1

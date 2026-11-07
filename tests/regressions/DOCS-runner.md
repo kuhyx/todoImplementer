@@ -37,3 +37,5 @@ One row per bug, ids global and never reused. The row's test is named `test_t<N>
 | T1110 | The live-check parser dropped rows without a dash, with `**C1**` or without a colon | tests/runner/test_runner_parsing.py |
 | T1228 | A live check ending `R:` was redone as checklist-less instead of continued first | tests/runner/test_runner_live.py |
 | T1808 | A live check that ended on a prose summary twice failed the run as "Needs you"; the redo resent the whole verify prompt in the same long session, so the model re-verified and summarised again | tests/runner/test_runner_live_ladder.py |
+| T1809 | Runs failed at the live check before partial acceptance landed (12 of 13 done) stayed in Needs you: a failed run was never judged again when the rules changed | tests/runner/test_runner_rejudge.py |
+| T1810 | A follow-up note the todo app failed to add sent a run with done criteria to Needs you instead of retrying on a timer with no turn | tests/runner/test_runner_rejudge.py |

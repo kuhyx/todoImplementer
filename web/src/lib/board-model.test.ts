@@ -79,6 +79,13 @@ describe("sortCards", () => {
     const easy = { ...base, id: "eeeeeeee-0", needs: { ...base.needs, effort: 1 }, priority: "low" };
     expect(sortCards([hard, easy], "effort").map((c) => c.id)).toEqual(["eeeeeeee-0", "hhhhhhhh-0"]);
   });
+  it("[T1811] Least effort puts every question card first, however many questions", () => {
+    const base = cards.find((c) => c.needs !== null);
+    if (base?.needs == null) throw new Error("fixture");
+    const many = { ...base, id: "qqqqqqqq-0", needs: { ...base.needs, category: "questions" as const, effort: 9 } };
+    const crit = { ...base, id: "cccccccc-0", needs: { ...base.needs, category: "criteria" as const, effort: 2 } };
+    expect(sortCards([crit, many], "effort").map((c) => c.id)).toEqual(["qqqqqqqq-0", "cccccccc-0"]);
+  });
   it("ranks unknown priorities last and breaks ties by id", () => {
     const [a, b] = cards;
     if (a === undefined || b === undefined) throw new Error("fixture");

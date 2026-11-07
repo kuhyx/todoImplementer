@@ -74,6 +74,28 @@ def test_t1101_needs_you_sorted_by_effort_then_age() -> None:
     assert ids == ["bbbbbbbb-0", "dddddddd-0", "cccccccc-0", "aaaaaaaa-0"]
 
 
+def test_t1811_questions_come_first_however_many_then_criteria() -> None:
+    questions = [SpecQuestion(id=f"q{i}", title=f"Q{i}") for i in range(9)]
+    pairs = [
+        (
+            Note(id="aaaaaaaa-0"),
+            run(
+                task_id="aaaaaaaa-0",
+                stage="failed",
+                error="x",
+                extra={"failed_stage": "live_check"},
+                updated=NOW,
+            ),
+        ),
+        (
+            Note(id="bbbbbbbb-0"),
+            run(task_id="bbbbbbbb-0", stage="spec_wait", spec_questions=questions, updated=NOW),
+        ),
+    ]
+    out = board.build_board([n for n, _ in pairs], {r.task_id: r for _, r in pairs}, ctx(), "b")
+    assert [card["id"] for card in out["tasks"]] == ["bbbbbbbb-0", "aaaaaaaa-0"]
+
+
 def test_t1107_card_partial_object_validates() -> None:
     state = run(
         stage="gate",

@@ -121,7 +121,7 @@ class FakeClient:
     fail_close: bool = False
     fail_get: bool = False
     unreachable: int = 0
-    fail_add: bool = False
+    fail_add: int = 0
     added: list[tuple[str, str, str]] = field(default_factory=list)
 
     def get_task(self, card: str) -> CardTask:
@@ -147,6 +147,7 @@ class FakeClient:
     def add_task(self, repo: str, title: str, body: str = "") -> Task:
         """Record a follow-up note (or fail when asked) and return it."""
         if self.fail_add:
+            self.fail_add -= 1
             msg = "add refused"
             raise TodoError(msg)
         self.added.append((repo, title, body))

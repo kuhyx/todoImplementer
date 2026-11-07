@@ -45,10 +45,12 @@ def repo_checker(src_root: Path | None = None) -> Callable[[str | None], str | N
     return missing
 
 
-def _ask_order(card: dict[str, Any]) -> tuple[int, float]:
-    """Needs-you cards: least effort first, then the longest waiting; other columns keep their order."""
+def _ask_order(card: dict[str, Any]) -> tuple[int, int, float]:
+    """Needs-you cards: questions first (however many), then least effort, then the longest waiting."""
     ask = card["needs"]
-    return (0, 0.0) if ask is None else (ask["effort"], card["updated"] or 0.0)
+    if ask is None:
+        return (0, 0, 0.0)
+    return (ask["category"] != "questions", ask["effort"], card["updated"] or 0.0)
 
 
 def build_board(

@@ -50,7 +50,11 @@ function matchesRepository(card: TaskCard, repository: string): boolean {
 
 const COMPARE: Record<Sort, (a: TaskCard, b: TaskCard) => number> = {
   cost: (a, b) => b.cost_usd - a.cost_usd,
-  effort: (a, b) => (a.needs?.effort ?? 0) - (b.needs?.effort ?? 0) || COMPARE.priority(a, b),
+  effort: (a, b) => {
+    return Number(a.needs?.category !== "questions") - Number(b.needs?.category !== "questions") ||
+    (a.needs?.effort ?? 0) - (b.needs?.effort ?? 0) ||
+    COMPARE.priority(a, b);
+  },
   priority: (a, b) =>
     (PRIORITY_RANK[a.priority] ?? UNKNOWN_RANK) - (PRIORITY_RANK[b.priority] ?? UNKNOWN_RANK),
   title: (a, b) => a.title.localeCompare(b.title),

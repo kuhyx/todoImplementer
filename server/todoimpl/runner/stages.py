@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from .checks import discover, record, run_all
 from .files import NeedsYouError, write_json
-from .live import settle
+from .live import rejudge, settle
 from .parsing import parse_criteria, parse_live, parse_questions, parse_self_check
 from .ship import CommitRefusedError, ShipPlan, ship
 from .worktree import base_ref, repo_dir
@@ -82,6 +82,8 @@ def _retry(d: Driver, key: str, cap: int, tail: str, stop: NeedsYouError) -> str
 
 def _live_check(d: Driver) -> str | None:
     st, run_dir = d.state, d.ctx.run_dir
+    if st.extra.get("resettle"):
+        return rejudge(d)
     report_file, shots = run_dir / "live_check.md", run_dir / "shots"
     if not st.extra.get("r_continue"):  # a continued turn keeps the report it already wrote
         report_file.unlink(missing_ok=True)

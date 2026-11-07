@@ -29,6 +29,7 @@ def stub(plan: str = "## Acceptance criteria\n- one\n- two\n", client: FakeClien
         item=SimpleNamespace(title="Demo", repo="kuhyx/demo"),
         ctx=SimpleNamespace(client=client or FakeClient()),
         plan_md=lambda: plan,
+        save=lambda: None,
     )
     return cast("Driver", fake)
 
@@ -85,14 +86,6 @@ def test_t1109_partial_after_the_fix_makes_one_follow_up() -> None:
     body = client.added[0][2]
     assert "- C2: two" in body
     assert "live check: broke" in body
-
-
-def test_t1109_follow_up_failure_asks_kuhy() -> None:
-    d = stub(client=FakeClient(fail_add=True))
-    d.state.extra["live_fixes"] = 1
-    with pytest.raises(NeedsYouError, match="follow-up note failed"):
-        settle(d, "- [x] C1: ok\n- [ ] C2: broke")
-    assert "followup_id" not in d.state.extra
 
 
 def test_t1109_zero_done_retries_fresh_once_then_asks() -> None:
