@@ -88,3 +88,14 @@ def test_t1812_a_retried_follow_up_never_adds_the_same_section_twice(rig: Rig) -
     assert again.id == first.id
     (note,) = rig.fake.store.notes.values()
     assert note.text.count("Demo — rest: C2") == 1
+
+
+def test_t1812_a_finished_follow_up_does_not_block_a_new_one(rig: Rig) -> None:
+    rig.note(body="## a\nx")
+    view(rig).add_task("kuhyx/demo", "Demo — rest: C2", "- C2: open")
+    rig.backend.cache.refresh()
+    done = next(t for t in rig.backend.cache.snapshot().tasks if t.title == "Demo — rest: C2")
+    view(rig).close_task(done.id, "ran: ok")
+    view(rig).add_task("kuhyx/demo", "Demo — rest: C2", "- C2: open again")
+    (note,) = rig.fake.store.notes.values()
+    assert note.text.count("Demo — rest: C2") == 2

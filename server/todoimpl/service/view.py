@@ -68,7 +68,7 @@ class ItemView:
         Idempotent by title: a retry after a lost reply finds the section it already added.
         """
         for note in self._client.list_tasks(repo=repo, full=True):
-            if any(card.title == title for card in card_tasks(note)):
+            if any(card.title == title and card.status != "done" for card in card_tasks(note)):
                 return note
         task = self._client.add_task(repo, title, body)
         self._cache.poke()
