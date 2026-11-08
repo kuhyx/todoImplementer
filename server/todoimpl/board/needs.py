@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from todoimpl.runner.stream import last_tag_line
+from .ask import NO_REPLY, concrete_ask
 
 if TYPE_CHECKING:
     from .state import RunState
@@ -36,13 +36,8 @@ class Needs:
         return out
 
 
-def _reply_ask(run: RunState) -> str | None:
-    found = last_tag_line(str(run.extra.get("last_reply", "")))
-    return found[1] if found is not None and found[0] == run.last_tag and found[1] else None
-
-
 def _run_failed(run: RunState) -> Needs:
-    text = run.error or "The run stopped without a message"
+    text = run.error or f"The run stopped in stage {run.stage} without an error message: open Activity"
     perm = run.extra.get("permission")
     if run.stage == "failed" and isinstance(perm, dict):
         return Needs("permission", text, "permission", 1, perm.get("command"))
@@ -53,6 +48,13 @@ def _run_failed(run: RunState) -> Needs:
     return Needs("run_failed", text, "action", 4)
 
 
+def _phone_wait_text(wait: object) -> str:
+    """Return the criteria Claude wants checked on the Pixel, for a reply that says nothing."""
+    criteria = wait.get("criteria") if isinstance(wait, dict) else None
+    names = ", ".join(str(c) for c in criteria) if isinstance(criteria, list) else ""
+    return f"Plug in the Pixel: Claude is waiting to check {names or 'its criteria'} on it"
+
+
 def _phone_needs(run: RunState) -> Needs | None:
     """Needs of a phone wait, or None when the run does not rest on one."""
     wait, err = run.extra.get("waiting_phone"), run.error
@@ -60,15 +62,22 @@ def _phone_needs(run: RunState) -> Needs | None:
         return None
     if isinstance(wait, dict) and wait.get("tried_attached") and run.last_tag == "A" and not err:
         # The phone was in when Claude asked this, so plugging it in is not the answer.
-        text = (
-            str(wait.get("note") or "") or _reply_ask(run) or "Claude needs you to do something: see the feed"
-        )
+        text = str(wait.get("note") or "") or concrete_ask(run) or NO_REPLY
         return Needs("claude_action", text, "action", 3)
     if run.last_tag == "A" and not err:
         return Needs("phone", PHONE_TEXT, "phone", 1)
     if run.last_tag != "Q":
-        return Needs("claude_action", _reply_ask(run) or err or "Waiting for the phone", "phone", 1)
+        return Needs("claude_action", concrete_ask(run) or err or _phone_wait_text(wait), "phone", 1)
     return None
+
+
+def _red_checks(run: RunState) -> str:
+    """Name the checks that are still red, with their exit codes."""
+    rows = (run.checks or {}).get("results")
+    red = [f"{r['command']} (exit {r['exit']})" for r in rows or [] if r.get("exit") != 0]
+    return "Checks are still red after the fix attempts" + (
+        f": {', '.join(red)}" if red else ": open Activity"
+    )
 
 
 def needs(run: RunState) -> Needs:  # noqa: PLR0911 - one return per kind
@@ -77,17 +86,13 @@ def needs(run: RunState) -> Needs:  # noqa: PLR0911 - one return per kind
     if (phone := _phone_needs(run)) is not None:
         return phone
     if run.assignee == "human":
-        return Needs(
-            "handed_to_you", err or "Claude handed this to you without saying what it needs", "action", 4
-        )
+        return Needs("handed_to_you", err or concrete_ask(run) or NO_REPLY, "action", 4)
     if run.stage == "spec_wait":
         if run.open_questions():
             count = len(run.open_questions())
+            first = run.open_questions()[0].title
             return Needs(
-                "spec_questions",
-                f"{count} open question(s) from Claude",
-                "questions",
-                count,
+                "spec_questions", f"{count} question{'' if count == 1 else 's'}: {first}", "questions", count
             )
         if run.last_tag not in ("Q", "A") and not err:
             return Needs(
@@ -99,11 +104,11 @@ def needs(run: RunState) -> Needs:  # noqa: PLR0911 - one return per kind
         and not run.checks.get("passed", True)
         and not run.extra.get("permission")
     ):
-        return Needs("checks_failed", err or "Checks are still red after the fix attempts", "action", 4)
+        return Needs("checks_failed", err or _red_checks(run), "action", 4)
     if run.stage != "failed" and run.last_tag == "Q":
-        text = _reply_ask(run) or err or "Claude asked a question: answer it with Send to Claude"
+        text = concrete_ask(run) or err or NO_REPLY
         return Needs("claude_question", text, "questions", 1)
     if run.stage != "failed" and run.last_tag == "A":
-        text = _reply_ask(run) or err or "Claude needs you to do something: see the feed"
+        text = concrete_ask(run) or err or NO_REPLY
         return Needs("claude_action", text, "action", 3)
     return _run_failed(run)

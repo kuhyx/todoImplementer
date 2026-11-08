@@ -66,17 +66,27 @@ def parse_tag(text: str) -> str | None:
     return tag
 
 
-def last_tag_line(text: str) -> tuple[str, str] | None:
-    """Return (letter, text after the colon) of the last status-tag line, None without one."""
+def last_tag_match(text: str) -> re.Match[str] | None:
+    """Return the match of the last status-tag line in `text`, None without one."""
     found = None
     for match in TAG_LINE.finditer(text):
         found = match
+    return found
+
+
+def tag_letter(match: re.Match[str]) -> str:
+    """Return the status letter (D/R/Q/A/C) a TAG_LINE match stands for."""
+    return match.group(3) or LONG[match.group(1) or match.group(2)]
+
+
+def last_tag_line(text: str) -> tuple[str, str] | None:
+    """Return (letter, text after the colon) of the last status-tag line, None without one."""
+    found = last_tag_match(text)
     if found is None:
         return None
-    letter = found.group(3) or LONG[found.group(1) or found.group(2)]
     line_end = text.find("\n", found.end())
     rest = text[found.end() : None if line_end < 0 else line_end]
-    return letter, rest.strip(" \t*_`")
+    return tag_letter(found), rest.strip(" \t*_`")
 
 
 def state_tag(tag: str | None) -> str | None:

@@ -133,7 +133,7 @@ def test_needs_kinds() -> None:
     cases = [
         (run(assignee="human", error="log in to X"), "handed_to_you", "log in to X"),
         (run(assignee="human"), "handed_to_you", None),
-        (run(stage="spec_wait", spec_questions=asked), "spec_questions", "1 open question(s) from Claude"),
+        (run(stage="spec_wait", spec_questions=asked), "spec_questions", "1 question: Scope"),
         (run(stage="spec_wait", spec_questions=answered), "spec_ok", None),
         (run(stage="spec_wait", last_tag="Q"), "claude_question", None),
         (run(stage="spec_wait", last_tag="A"), "claude_action", None),

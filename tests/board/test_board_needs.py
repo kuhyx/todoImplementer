@@ -23,11 +23,6 @@ def test_t1100_claude_action_shows_the_last_a_line() -> None:
     assert (asked.text, asked.category, asked.effort) == ("which name?", "questions", 1)
 
 
-def test_t1100_generic_text_only_without_a_matching_reply() -> None:
-    for extra in ({}, {"last_reply": "no tag here"}, {"last_reply": "D: done"}, {"last_reply": "A:"}):
-        assert "see the feed" in needs(run(last_tag="A", extra=extra)).text
-
-
 def test_last_tag_line_forms() -> None:
     assert last_tag_line("nothing") is None
     assert last_tag_line("R: x\nNEEDS ACTION: do it") == ("A", "do it")
