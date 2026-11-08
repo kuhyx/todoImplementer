@@ -40,3 +40,4 @@ One row per bug, ids global and never reused. The row's test is named `test_t<N>
 | T1830 | The nudge turn of an attached run lost the attached prompt and fell back to staging | tests/runner/test_runner_phone_hands.py |
 | T1831 | A lost-phone `A: phone:` on an attached turn was nudged to do the impossible | tests/runner/test_runner_phone_hands.py |
 | T1832 | A note from kuhy did not reset the nudge counter, so the next ask never got its nudge | tests/runner/test_runner_phone_hands.py |
+| T1833 | Each board turn is a new claude process, so a card lost its phone test slot between turns | tests/runner/test_runner_claude.py |

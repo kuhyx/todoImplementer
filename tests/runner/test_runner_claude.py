@@ -69,3 +69,10 @@ def test_kill_tree_escalates_to_sigkill_and_tolerates_dead_groups(tmp_path: Path
     done = subprocess.Popen(["true"], start_new_session=True)
     done.wait()
     claude.kill_tree(done, grace=0.1)
+
+
+def test_t1833_every_turn_of_a_card_holds_the_same_phone_slot_owner(world: Env, tmp_path: Path) -> None:
+    worktree = tmp_path / "abcd1234-0" / "wt"
+    first = claude.build("implement", "go", worktree)
+    again = claude.build("implement", "go", worktree, resume="s1")
+    assert first.env["PHONE_LEASE_OWNER"] == again.env["PHONE_LEASE_OWNER"] == "todoimpl:abcd1234-0"
