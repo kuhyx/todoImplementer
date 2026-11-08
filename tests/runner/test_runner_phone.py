@@ -92,7 +92,7 @@ def test_t1505_a_phone_turn_that_ends_done_clears_the_wait(tmp_path: Path) -> No
 def test_t1506_a_phone_turn_that_loses_the_phone_waits_again(tmp_path: Path) -> None:
     run, res = st(waiting_phone=READY, phone_attached=True), TurnResult(text="A: phone: unplugged", tag="A")
     phone.after_turn(run, tmp_path, res)
-    assert run.extra["waiting_phone"] == {**READY, "note": "unplugged"}
+    assert run.extra["waiting_phone"] == {**READY, "note": "unplugged", "tried_attached": True}
     assert "phone_attached" not in run.extra
 
 

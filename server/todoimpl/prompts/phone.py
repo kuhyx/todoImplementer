@@ -49,5 +49,6 @@ def attached(ctx: PromptContext) -> str:
         "with ~/.claude/scripts/phone_vd.sh; "
         "never uninstall or `pm clear`. "
         f"Copy the `- [x]` rows of {ctx.run_dir}/live_check.emulator.md unchanged; the rest are yours. "
-        "If the phone is gone, end with `A: phone: <why>`."
+        "If the phone is gone, end with `A: phone: <why>`; anything else you need from kuhy is a plain "
+        "`A:` or `Q:`, never `A: phone:`."
     )

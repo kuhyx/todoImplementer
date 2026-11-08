@@ -53,14 +53,29 @@ def _run_failed(run: RunState) -> Needs:
     return Needs("run_failed", text, "action", 4)
 
 
+def _phone_needs(run: RunState) -> Needs | None:
+    """Needs of a phone wait, or None when the run does not rest on one."""
+    wait, err = run.extra.get("waiting_phone"), run.error
+    if not wait:
+        return None
+    if isinstance(wait, dict) and wait.get("tried_attached") and run.last_tag == "A" and not err:
+        # The phone was in when Claude asked this, so plugging it in is not the answer.
+        text = (
+            str(wait.get("note") or "") or _reply_ask(run) or "Claude needs you to do something: see the feed"
+        )
+        return Needs("claude_action", text, "action", 3)
+    if run.last_tag == "A" and not err:
+        return Needs("phone", PHONE_TEXT, "phone", 1)
+    if run.last_tag != "Q":
+        return Needs("claude_action", _reply_ask(run) or err or "Waiting for the phone", "phone", 1)
+    return None
+
+
 def needs(run: RunState) -> Needs:  # noqa: PLR0911 - one return per kind
     """Return the Needs for a run whose status is NEEDS_YOU."""
     err = run.error
-    waiting = bool(run.extra.get("waiting_phone"))
-    if waiting and run.last_tag == "A" and not err:
-        return Needs("phone", PHONE_TEXT, "phone", 1)
-    if waiting and run.last_tag != "Q":
-        return Needs("claude_action", _reply_ask(run) or err or "Waiting for the phone", "phone", 1)
+    if (phone := _phone_needs(run)) is not None:
+        return phone
     if run.assignee == "human":
         return Needs(
             "handed_to_you", err or "Claude handed this to you without saying what it needs", "action", 4

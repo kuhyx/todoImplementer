@@ -11,7 +11,7 @@ from todoimpl.board import state as store
 from todoimpl.board.parse import StateError
 
 from .engine import Engine
-from .phone import READY, SERIAL, adb_command, attached_serials
+from .phone import READY, SERIAL, TRIED, adb_command, attached_serials
 from .pipeline import WORK_STAGES
 
 if TYPE_CHECKING:
@@ -41,8 +41,11 @@ class PhoneWatcher(threading.Thread):
 
     def tick(self) -> bool:
         """One poll; adb runs only while some run waits, and every waiting run is requeued."""
-        cards = self.engine.phone_waiting()
-        if not cards or self.serial not in attached_serials(self.adb or adb_command()):
+        cards, tried = self.engine.phone_waiting(), self.engine.phone_tried()
+        if not cards and not tried:
+            return False
+        if self.serial not in attached_serials(self.adb or adb_command()):
+            self.engine.phone_unplugged(tried)
             return False
         requeued = [self.engine.phone_attached(card) for card in cards]
         return any(requeued)
@@ -76,12 +79,23 @@ class PhoneEngine(Engine):
             self.watcher.join(timeout=2)
         super().close()
 
-    def _waiting(self, card: str) -> RunState | None:
+    def _resting(self, card: str) -> RunState | None:
         """Return the run's state if it rests on a phone wait with no drive; callers hold the lock."""
         st = self._peek(self.root / card)
         resting = card not in self._active and card not in self._queue
         waits = st is not None and st.extra.get("waiting_phone") and st.last_tag == "A"
         return st if st is not None and resting and waits and st.stage in WORK_STAGES else None
+
+    def _waiting(self, card: str, *, tried: bool = False) -> RunState | None:
+        """`_resting`, split by whether a phone-attached turn already asked again (it waits on a replug)."""
+        st = self._resting(card)
+        wait = st.extra["waiting_phone"] if st is not None else None
+        return st if isinstance(wait, dict) and bool(wait.get(TRIED)) == tried else None
+
+    def _cards(self, *, tried: bool) -> list[str]:
+        with self._cv:
+            ids = (path.parent.name for path in sorted(self.root.glob("*/state.json")))
+            return [card for card in ids if self._waiting(card, tried=tried) is not None]
 
     def _peek(self, run_dir: Path) -> RunState | None:
         try:
@@ -90,10 +104,20 @@ class PhoneEngine(Engine):
             return None
 
     def phone_waiting(self) -> list[str]:
-        """Cards resting on the phone, by id."""
+        """Cards resting on the phone that the next attach requeues, by id."""
+        return self._cards(tried=False)
+
+    def phone_tried(self) -> list[str]:
+        """Cards whose phone-attached turn asked again: they rerun only after an unplug and replug."""
+        return self._cards(tried=True)
+
+    def phone_unplugged(self, cards: list[str]) -> None:
+        """Re-arm the given tried cards once the Pixel is gone, so the next plug-in runs them once."""
         with self._cv:
-            ids = (path.parent.name for path in sorted(self.root.glob("*/state.json")))
-            return [card for card in ids if self._waiting(card) is not None]
+            for card in cards:
+                if (st := self._waiting(card, tried=True)) is not None:
+                    st.extra["waiting_phone"].pop(TRIED)
+                    self.save(card, st)
 
     def phone_attached(self, card: str) -> bool:
         """Requeue a waiting run into a phone-attached live check; False when it no longer waits."""

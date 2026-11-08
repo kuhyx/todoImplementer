@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 
 READY = "phone_ready.json"
 SERIAL = "23181JEGR08034"
+TRIED = "tried_attached"
 ADB_TIMEOUT = 5.0
 DEVICE_COLUMNS = 2
 PHONE_TAG = re.compile(r"^[\s>*_#-]*A[*_]*:[*_]*\s*phone\s*:\s*(.*?)\s*$", re.IGNORECASE | re.MULTILINE)
@@ -44,7 +45,11 @@ def after_turn(st: RunState, run_dir: Path, res: TurnResult) -> None:
         st.extra.pop("waiting_phone", None)
         return
     info = staged if isinstance(staged, dict) else st.extra.get("waiting_phone") or {}
-    st.extra["waiting_phone"] = {**info, "note": line} if line else dict(info)
+    wait = {**info, "note": line} if line else dict(info)
+    if attached and line is not None:
+        # The phone was in for this turn, so its ask is not the cable: wait for a replug, not a requeue.
+        wait[TRIED] = True
+    st.extra["waiting_phone"] = wait
     res.tag = st.last_tag = "A"
 
 

@@ -25,3 +25,6 @@ One row per bug, ids global and never reused. The row's test is named `test_t<N>
 | T1540 | The board could not tell a phone wait from any other action Claude asked for | tests/board/test_board_phone.py |
 | T1541 | A requeued phone run still showed as needing kuhy | tests/board/test_board_phone.py |
 | T1550 | The server never started the phone watcher, so plugging in the Pixel did nothing | tests/service/test_service_phone.py |
+| T1818 | A phone-attached turn that still ended `A: phone:` was requeued every 20 s while the Pixel stayed plugged in | tests/runner/test_runner_phone_loop.py |
+| T1819 | After such a turn, an unplug and replug never ran the phone check again | tests/runner/test_runner_phone_loop.py |
+| T1820 | The board said "Plug in the Pixel" while the phone was in and Claude was asking for something else | tests/runner/test_runner_phone_loop.py |
