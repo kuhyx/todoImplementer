@@ -113,6 +113,7 @@ def server_env(state: State) -> dict[str, str]:
         env["TODOIMPL_MODEL"] = "haiku"
     else:
         env["FAKE_CLAUDE_DIR"] = str(work / "fake")
+        env["TODOIMPL_TURN_LAUNCH"] = "direct"  # fake turns never go through the user's systemd
         env["TODOIMPL_CLAUDE"] = str(work / "bin" / "claude")
     return env
 

@@ -14,21 +14,20 @@ from todoimpl.board.parse import StateError
 from todoimpl.todo_mcp.model import TodoError
 from todoimpl.usage.limits import UNTIL_FILE
 
-from . import limits, live, retry
+from . import adopt, limits, live, orphans, retry
 from .bus import Bus
-from .claude import kill_tree
 from .files import read_json, write_json
-from .orphans import reap
 from .pipeline import WORK_STAGES, Ctx, Driver
 
 if TYPE_CHECKING:
-    import subprocess
     from collections.abc import Callable
     from pathlib import Path
 
     from todoimpl.board.state import RunState
     from todoimpl.service.cards import CardTask
     from todoimpl.todo_mcp.model import Task
+
+    from .launch import Handle
 
 log = logging.getLogger("todoimpl.runner")
 INBOX = "inbox.json"
@@ -54,7 +53,7 @@ class Engine:
         self._cv = threading.Condition()
         self._queue: deque[str] = deque()
         self._active: set[str] = set()
-        self._procs: dict[str, subprocess.Popen[str]] = {}
+        self._procs: dict[str, Handle] = {}
         self._cancel: set[str] = set()
         self._closed = False
         self.recover()
@@ -84,7 +83,9 @@ class Engine:
                 st.extra["resettle"] = True
                 store.save(path.parent, st)
                 self._queue.append(st.task_id)
-            elif st.stage in (*WORK_STAGES, "paused_limit", retry.PAUSED) and st.last_tag not in ("Q", "A"):
+            elif st.stage in (*WORK_STAGES, "paused_limit", retry.PAUSED) and (
+                st.last_tag not in ("Q", "A") or orphans.read(path.parent) is not None
+            ):  # a turn still recorded means last_tag is stale: it is running or its result waits
                 self._queue.append(st.task_id)
 
     def close(self) -> None:
@@ -96,6 +97,8 @@ class Engine:
         self._dispatcher.join(timeout=10)
         with self._cv:
             drives = list(self._drives)
+            for handle in self._procs.values():
+                handle.detach.set()  # the drive lets go of its turn; the turn itself keeps running
         for drive in drives:
             drive.join(timeout=10)
 
@@ -127,22 +130,22 @@ class Engine:
             path.unlink(missing_ok=True)
             return notes
 
-    def _register(self, card: str, proc: subprocess.Popen[str] | None) -> None:
+    def _register(self, card: str, handle: Handle | None) -> None:
         with self._cv:
-            if proc is None:
+            if handle is None:
                 self._procs.pop(card, None)
                 return
-            self._procs[card] = proc
+            self._procs[card] = handle
             if card not in self._cancel:
                 return
-        threading.Thread(target=kill_tree, args=(proc,), daemon=True).start()
+        threading.Thread(target=handle.stop, daemon=True).start()
 
     def kill(self, card: str) -> None:
-        """Cancel a live drive: flag it and kill its claude process tree; callers hold the lock."""
+        """Cancel a live drive: flag it and stop its turn (an adopted one too); callers hold the lock."""
         self._cancel.add(card)
-        proc = self._procs.get(card)
-        if proc is not None:
-            threading.Thread(target=kill_tree, args=(proc,), daemon=True).start()
+        handle = self._procs.get(card)
+        if handle is not None:
+            threading.Thread(target=handle.stop, daemon=True).start()
 
     def _credited(self, card: str) -> bool:
         try:
@@ -187,6 +190,8 @@ class Engine:
     def _work(self, card: str) -> None:
         try:
             self._drive(card)
+        except adopt.Detached:
+            log.info("drive of %s let go of its turn: the server is closing", card)
         except Exception:
             log.exception("drive of %s crashed", card)
         finally:
@@ -207,8 +212,11 @@ class Engine:
         st = store.load(run_dir)
         if st is None:
             return
-        # A turn the old server left running (KillMode=process) must not write beside this drive.
-        reap(run_dir)
+        if adopt.reap_legacy(run_dir):  # a pipe-spawned turn of the previous version has no reader
+            lost = "turn lost: a turn started by the previous server version has no exit record"
+            self.bus.publish(
+                card, {"type": "activity", "at": self.clock(), "kind": "error", "text": lost, "tool": None}
+            )
         try:
             item = self.client.get_task(card).item
         except TodoError as exc:

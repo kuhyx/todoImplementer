@@ -13,7 +13,7 @@ Environment=CLAUDE_AUTO_CONTINUE=0
 ExecStart=%h/.local/bin/uv run --python 3.15 --project %h/src/todoImplementer python -m todoimpl.http.main
 Restart=on-failure
 RestartSec=3
-# Runs are claude/git children: a restart of the server must not kill them.
+# Claude turns are transient units of their own (runner/launch.py); process mode also lets a git push finish.
 KillMode=process
 TimeoutStopSec=15
 

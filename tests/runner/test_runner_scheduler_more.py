@@ -7,7 +7,7 @@ from runnerfakes import Env, FakeClient, make_repo, task
 from schedfakes import CARD, IMPL, LIVE_OK, PLAN, boot, reply, state, wait, wait_stage
 from todoimpl.board import state as store
 from todoimpl.board.state import RunState, SpecQuestion
-from todoimpl.runner import files, limits, orphans
+from todoimpl.runner import files, launch, limits, orphans
 from todoimpl.runner.scheduler import RunnerError, Scheduler
 from todoimpl.runner.stages import merge_questions
 from todoimpl.service.cards import CardTask
@@ -122,7 +122,7 @@ def test_a_result_without_a_session_keeps_the_old_one(world: Env) -> None:
         sched.close()
 
 
-def test_engine_internals_survive_odd_states(world: Env) -> None:
+def test_engine_internals_survive_odd_states(world: Env, monkeypatch: pytest.MonkeyPatch) -> None:
     make_repo(world)
     store.save(world.root / "gggg7777-0", RunState(task_id="gggg7777-0", stage="gate"))
     sched = Scheduler(FakeClient({}), world.root)
@@ -133,9 +133,16 @@ def test_engine_internals_survive_odd_states(world: Env) -> None:
         sched._drive("none0000-0")
         with sched._cv:
             sched.kill("none0000-0")
-        proc = subprocess.Popen(["sleep", "30"], start_new_session=True, text=True)
-        sched._register("none0000-0", proc)
-        wait(lambda: proc.poll() is not None)
+        stopped: list[list[str]] = []
+
+        def fake_run(argv: list[str], **_kw: object) -> subprocess.CompletedProcess[str]:
+            stopped.append(argv)
+            return subprocess.CompletedProcess(argv, 0)
+
+        monkeypatch.setattr(launch, "_run", fake_run)
+        sched._register("none0000-0", launch.Handle(world.root / "none0000-0", "s", "todoimpl-turn-x"))
+        wait(lambda: bool(stopped))  # a cancel that came before the turn registered stops it at once
+        assert stopped == [["systemctl", "--user", "stop", "todoimpl-turn-x"]]
         assert sched.running() == set()
         assert "gggg7777-0" not in sched._queue
     finally:
@@ -208,6 +215,8 @@ def test_t902_recover_kills_a_recorded_turn_but_spares_kuhys_own_session(world: 
     try:
         assert orphan.wait(timeout=10) < 0  # killed by a signal, not left running beside the resumed turn
         assert mine.poll() is None  # same cwd and group leader, but never recorded by the runner
+        feed = run_dir / "events.jsonl"
+        wait(lambda: feed.exists() and "turn lost" in feed.read_text(encoding="utf-8"))  # kuhy sees it too
     finally:
         orphan.kill()
         mine.kill()

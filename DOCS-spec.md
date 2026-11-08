@@ -171,7 +171,8 @@ item marks its section `## [x]` and adds a `closed:` line; the note closes with 
 
 - `state.json` atomic (tmp + os.replace under flock); `plan.md`; `questions.json` (spec cards)
 - `<role>-<epoch>.stream.jsonl` raw stream-json of each turn, in the run dir itself; `<role>-<epoch>.result.json`
-  its `result` event, written after claude exits (a stream without it is a killed turn: resume it with a kill note)
+  its `result` event, written after claude exits (a stream without it is a killed turn: resume it with a kill note);
+  `.exit.json` (code, written by the turn host), `.stderr.log`, `.fed` (feed offset), and `turn.pid` (see Turns)
 - `evidence/` check output logs and live-check screenshots (`live_check.shots` paths are relative to the run dir)
 - `logs/checks-<epoch>.log`, `live_check.md` (the report), `self_check.json`
 - `limit-until` (one epoch; shared in the root, not per task), `limit-credits`
@@ -187,6 +188,28 @@ session's `total_cost_usd` is cumulative, so the runner stores the latest value 
 
 A Ship failure (conflict, red recheck, push refused) sets stage `failed` with `error`; the Send click reopens the
 task at `implement`, keeping the session. Sessions get `CLAUDE_AUTO_CONTINUE=0`.
+
+## Turns outlive the server (T1817)
+
+Why: kuhy edits, restarts and deploys this server while sessions run, so nothing a turn needs may live in the
+server. Each turn is `python -m todoimpl.runner.turnhost <run_dir> <stem>`, launched as its own transient unit
+(`systemd-run --user --collect`, `KillMode=control-group`; `TODOIMPL_TURN_LAUNCH=direct` is a detached child, for
+tests only). A transient unit does not inherit the server's env (probed: no `CLAUDE_*` arrives), so argv, cwd and
+env travel in `<stem>.invoke.json` (mode 0600, deleted by the host). The host runs claude in its own session with
+stdout going straight into `<stem>.stream.jsonl` (a file, not a pipe: no reader has to exist), records
+`{unit, pid, start, stem, role, host_pid}` in `turn.pid`, and writes `<stem>.exit.json` when claude exits. No shell
+wrapper: bash reads a script as it runs, so an edit would corrupt a live turn; the host imports everything up front.
+
+The server only tails the stream (50 ms polls) and finishes when the exit record exists and the stream is read.
+After a restart `Engine.recover` queues every run with a recorded turn, and `run_turn` adopts it before anything
+else: a live turn is re-read (the feed is not replayed past `.fed`), a finished one is consumed from its files, a
+host that is gone without an exit record is a lost turn (error line, then the usual "killed" resume), and a
+record without a stem (pipe-spawned by the old server) is reaped once. A turn of another role than the one asked
+for is waited for, charged, its result dropped, then the asked turn runs. Cost and session are applied once:
+`extra.consumed_turn` is saved in the same write. The one window left is a crash after that save and before the
+stage saves: the stage then reruns its turn (cost not doubled). Cancel stops the unit (`systemctl --user stop`;
+direct launch: the recorded process group); `Engine.close` makes drives let go without signalling a turn.
+`scripts/deploy.sh` restarts the unit and checks `/version` reports `git rev-parse --short HEAD`.
 
 ## Token usage (CHANGE 4)
 

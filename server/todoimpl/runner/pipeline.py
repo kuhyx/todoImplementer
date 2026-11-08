@@ -17,12 +17,12 @@ from .session import handoff_summary
 from .turn import TurnEnv, run_turn
 
 if TYPE_CHECKING:
-    import subprocess
     from collections.abc import Callable
 
     from todoimpl.board.state import RunState
     from todoimpl.todo_mcp.items import Item
 
+    from .launch import Handle
     from .session import Situation
     from .ship import Closer
     from .stream import TurnResult
@@ -55,7 +55,7 @@ class Ctx:
     run_dir: Path
     client: Closer
     publish: Callable[[dict[str, Any]], None]
-    register: Callable[[subprocess.Popen[str] | None], None]
+    register: Callable[[Handle | None], None]
     now: Callable[[], float]
     cancelled: Callable[[], bool]
     check_timeout: float

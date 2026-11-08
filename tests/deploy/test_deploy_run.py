@@ -1,7 +1,8 @@
-"""run.sh: install tools, build, refresh the user unit, restart, wait for /version, open the page."""
+"""run.sh: deploy (scripts/deploy.sh: tools, build, unit, restart, /version check), then open the page."""
 
 from __future__ import annotations
 
+import subprocess
 import time
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -12,13 +13,20 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 RUN = DEPLOY.parent / "run.sh"
+HEAD = subprocess.run(
+    ["git", "-C", str(DEPLOY.parent), "rev-parse", "--short", "HEAD"],
+    capture_output=True,
+    text=True,
+    check=True,
+).stdout.strip()
+VERSION_OK = f'echo \'{{"build": "{HEAD}", "version": "0.1.0"}}\''  # what /version says
 URL = "http://127.0.0.1:8786/"
 FAST_WAIT = {"RUN_WAIT_TRIES": "3", "RUN_WAIT_INTERVAL": "0.01"}
 # Direct systemctl stub body: the preview unit is active unless PREVIEW_RC says otherwise.
 SYSTEMCTL = 'case "$*" in *is-active*) exit "${PREVIEW_RC:-0}";; esac'
 
 
-def _stubs(stub: Stubber, *, pnpm: str = "", curl: str = "") -> None:
+def _stubs(stub: Stubber, *, pnpm: str = "", curl: str = VERSION_OK) -> None:
     for tool in ("uv", "xdg-open"):
         stub(tool)
     stub("pnpm", pnpm)

@@ -5,7 +5,7 @@ sessions. Spec and decisions: `DOCS-spec.md`. Lessons carried over from the pred
 
 ## Commands
 
-- run: `./run.sh` (installs deps, builds, restarts the user unit, opens the page)
+- run: `./run.sh` (`scripts/deploy.sh`: deps, build, restart, check `/version`; then opens the page)
 - test: `make test`
 - test-changed: `scripts/test_changed.sh`
 - lint: `make lint`
@@ -18,6 +18,8 @@ sessions. Spec and decisions: `DOCS-spec.md`. Lessons carried over from the pred
 - **Done means `make fast` is green** (line cap, private scan, markdown names, regression tags, ruff, mypy strict,
   pytest at 100 % line and branch, web lint and tests once `web/` exists). Run heavy commands through
   `~/.claude/scripts/capped.sh`; every single command stays under 60 s.
+- **Restarting or deploying the server (`scripts/deploy.sh`) is always safe while sessions run**: turns are their
+  own systemd units and the new server adopts them on start (DOCS-spec.md, "Turns outlive the server").
 - **250 lines per file**, code and prose (lockfiles exempt by name). Split by concern.
 - **Bugs are regressions first.** A bug gets a row in `tests/regressions/DOCS-*.md` (`| T<N> | what | test |`) and a
   test named `test_t<N>_...` (pytest) or titled `[T<N>] ...` (vitest) that is red before the fix. A pragma or a

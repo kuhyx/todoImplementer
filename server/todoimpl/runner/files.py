@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 
 STREAM_SUFFIX = ".stream.jsonl"
 RESULT_SUFFIX = ".result.json"
+EXIT_SUFFIX = ".exit.json"  # written by the turn host when claude exits: the turn is over
 
 
 class NeedsYouError(Exception):
@@ -53,6 +54,11 @@ def new_stream(run_dir: Path, role: str, now: float) -> Path:
 
 def result_path(stream: Path) -> Path:  # noqa: D103
     return stream.with_name(stream.name.removesuffix(STREAM_SUFFIX) + RESULT_SUFFIX)
+
+
+def sibling(run_dir: Path, stem: str, suffix: str) -> Path:
+    """Return `<run_dir>/<stem><suffix>`: the stem names every file of one turn."""
+    return run_dir / f"{stem}{suffix}"
 
 
 def killed_stream(run_dir: Path, role: str) -> Path | None:

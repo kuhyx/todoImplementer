@@ -10,7 +10,7 @@ from todoimpl.board import state as store
 from todoimpl.board.state import RunState
 from todoimpl.todo_mcp.model import TodoError
 
-from . import limits, retry
+from . import adopt, limits, retry
 from .engine import Client, default_clock
 from .files import read_json
 from .phone_sched import PhoneEngine
@@ -207,6 +207,7 @@ class Scheduler(PhoneEngine):
             else:
                 if card in self._queue:
                     self._queue.remove(card)
+                adopt.abandon(self.root / card)  # a turn no drive follows must not go on editing the worktree
                 st.stage = "cancelled"
                 self.save(card, st)
                 self.bus.publish(card, {"type": "done"})

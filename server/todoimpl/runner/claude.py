@@ -1,4 +1,4 @@
-"""Build and spawn one headless `claude -p` turn: argv, env, cwd, and its own process group."""
+"""Build one headless `claude -p` turn (argv, env, cwd); `launch` starts it, `kill_tree` ends a child tree."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import signal
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import IO, Any
+from typing import Any
 
 from . import policy
 
@@ -90,22 +90,6 @@ def build(  # noqa: PLR0913, PLR0917 - one argv, built in one place
     notes = (pol.warning,) if pol.warning else ()
     env = {**os.environ, "CLAUDE_AUTO_CONTINUE": "0", BG_WAIT_VAR: "0"}
     return Invocation(tuple(argv), env, worktree, notes)
-
-
-def spawn(inv: Invocation, stderr: IO[str]) -> subprocess.Popen[str]:
-    """Start the turn as a new session (process group) so cancel can kill the whole tree."""
-    return subprocess.Popen(  # noqa: S603 - argv list, no shell
-        list(inv.argv),
-        cwd=inv.cwd,
-        env=inv.env,
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.PIPE,
-        stderr=stderr,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        start_new_session=True,
-    )
 
 
 def _signal_group(pgid: int, sig: signal.Signals) -> None:

@@ -13,6 +13,7 @@ from deploy_testkit import DEPLOY, Env, Stubber
 
 SCRIPTS = [
     DEPLOY.parent / "run.sh",
+    DEPLOY.parent / "scripts" / "deploy.sh",
     DEPLOY / "lib.sh",
     DEPLOY / "install.sh",
     DEPLOY / "oauth2-proxy" / "run.sh",
