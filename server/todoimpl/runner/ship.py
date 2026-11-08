@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any, Protocol
 
 from todoimpl.todo_mcp.model import TodoError
 
+from . import gate
 from .checks import run_all
 from .files import NeedsYouError
 from .worktree import base_ref, git, output_tail, remove
@@ -23,6 +24,7 @@ if TYPE_CHECKING:
 SUBJECT_MAX = 50
 EVIDENCE_TAIL = 8
 PUSH_TIMEOUT = 600.0
+PUSH_TRIES = 3  # a push that lost a race is rebased and gated again, this many pushes in all
 OUTPUT_TAIL = 3000
 
 
@@ -100,17 +102,41 @@ def _rebase(plan: ShipPlan, ref: str) -> None:
     raise NeedsYouError(msg, "run_failed")
 
 
-def _push(plan: ShipPlan, branch: str) -> str:
-    """Push HEAD to origin's default branch and return its sha; a refusal raises NeedsYouError."""
+def _verified(plan: ShipPlan, ref: str, *, changed: bool) -> list[CheckResult]:
+    """Rerun the checks on the rebased tree, then the repo's pre-push gate (it leaves the hook's receipt)."""
+    results, _ = run_all(plan.checks, plan.worktree, plan.run_dir, plan.timeout)
+    red = [r.name for r in results if not r.passed]
+    if red:
+        msg = f"Checks went red after the rebase on {ref}: {', '.join(red)}"
+        raise NeedsYouError(msg, "checks_failed")
+    card = f"{plan.item.note_id}-{plan.item.index}"
+    return results + (gate.run(plan.worktree, plan.run_dir, card) if changed else [])
+
+
+def _push(plan: ShipPlan, branch: str) -> tuple[str, str]:
+    """Push HEAD to origin's default branch; return (sha, "") or ("", what git said when it refused)."""
     sha = git(plan.worktree, "rev-parse", "HEAD").stdout.strip()
     push = git(
         plan.worktree, "push", "origin", f"HEAD:refs/heads/{branch}", check=False, timeout=PUSH_TIMEOUT
     )
-    if push.returncode:
-        tail = push.stderr.strip()[-400:]
-        msg = f"Push of {sha[:8]} to origin/{branch} was refused: {tail}"
-        raise NeedsYouError(msg, "run_failed")
-    return sha
+    return ("", output_tail(push, 400)) if push.returncode else (sha, "")
+
+
+def _push_rebasing(plan: ShipPlan, ref: str, branch: str, results: list[CheckResult]) -> str:
+    """Push; if origin moved meanwhile, rebase, verify and gate the new tree, and push again (T1838)."""
+    for attempt in range(1, PUSH_TRIES + 1):
+        sha, refusal = _push(plan, branch)
+        if sha:
+            return sha
+        git(plan.worktree, "fetch", "--quiet", "origin")
+        raced = git(plan.worktree, "merge-base", "--is-ancestor", ref, "HEAD", check=False).returncode != 0
+        if attempt == PUSH_TRIES or not raced:
+            head = git(plan.worktree, "rev-parse", "HEAD").stdout.strip()
+            msg = f"Push of {head[:8]} to origin/{branch} was refused: {refusal}"
+            raise NeedsYouError(msg, "run_failed")
+        _rebase(plan, ref)
+        results[:] = _verified(plan, ref, changed=True)
+    raise AssertionError  # pragma: no cover - the loop always returns or raises
 
 
 def ship(
@@ -126,14 +152,10 @@ def ship(
     changed = _squash(plan, ref, allow_empty=allow_empty)
     if changed:
         _rebase(plan, ref)
-    results, _ = run_all(plan.checks, wt, plan.run_dir, plan.timeout)
-    red = [r.name for r in results if not r.passed]
-    if red:
-        msg = f"Checks went red after the rebase on {ref}: {', '.join(red)}"
-        raise NeedsYouError(msg, "checks_failed")
+    results = _verified(plan, ref, changed=changed)
     info: dict[str, Any] = {"commit": ""}
     if changed:
-        info.update(commit=_push(plan, branch), pushed_at=now())
+        info.update(commit=_push_rebasing(plan, ref, branch, results), pushed_at=now())
     sha = str(info["commit"])
     try:
         client.close_task(
