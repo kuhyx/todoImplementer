@@ -146,13 +146,13 @@ class Driver:
         return plan.read_text(encoding="utf-8") if plan.exists() else ""
 
     def context(
-        self, *, failure_tail: str = "", handoff: str = "", nudge: bool = False, cont: bool = False
+        self, *, failure_tail: str = "", handoff: str = "", nudge: bool | str = False, cont: bool = False
     ) -> PromptContext:
         """Build the prompts package's view of this run: item, plan, answers and kuhy's notes."""
         st, item = self.state, self.item
         answers = tuple((q.title, q.answer) for q in st.spec_questions if q.answer is not None)
         notes = tuple(str(n) for n in st.extra.get("notes", []))
-        notes += ((NUDGE,) if nudge else ()) + ((CONTINUE,) if cont else ())
+        notes += ((NUDGE if nudge is True else str(nudge),) if nudge else ()) + ((CONTINUE,) if cont else ())
         return PromptContext(
             title=item.title, body=item.body, repo=item.repo or "", worktree=(wt := Path(str(st.worktree))),
             run_dir=self.ctx.run_dir, done_check=checks.shown_done_check(item.done_check, wt),
@@ -167,7 +167,7 @@ class Driver:
         until = limits.active_until(ctx.root, ctx.now())
         if until is not None and not st.using_credits:
             raise LimitHitError(until)
-        nudge = bool(st.extra.pop("nudge", False))
+        nudge = st.extra.pop("nudge", False)
         cont = bool(st.extra.pop("r_continue", False))
         new_session = bool(st.extra.pop("fresh", False))
         if new_session:

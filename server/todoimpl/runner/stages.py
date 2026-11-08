@@ -6,6 +6,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from . import phone
 from .checks import SENTENCE_NOTE, discover, record, run_all
 from .files import NeedsYouError, write_json
 from .live import rejudge, settle
@@ -89,7 +90,10 @@ def _live_check(d: Driver) -> str | None:
         report_file.unlink(missing_ok=True)
     shots.mkdir(parents=True, exist_ok=True)
     redo = str(st.extra.pop("live_redo", ""))  # set: ask for the checklist only, verify nothing again
+    attached, info = bool(st.extra.get("phone_attached")), st.extra.get("waiting_phone")
     res = d.turn("implement", "live_check", failure_tail=redo, prompt="live_checklist" if redo else "")
+    if phone.hands_nudge(st, res, attached=attached, info=info):
+        return "live_check"
     if res.tag in ("Q", "A"):
         return None
     if res.tag == "R":  # background work: continue first; settle's one redo only when this runs out

@@ -36,9 +36,10 @@ HINTS: dict[Kind, str] = {
     ),
     Kind.FLUTTER: (
         "Flutter web: flutter-web-drive MCP (`start`, `tree`, `tap`/`text`/`key`, `wait`, `shot`). "
-        "Phone companion app (com.kuhy.*): skill `phone-deploy`, "
-        "`~/.claude/scripts/phone_deploy.sh <app> --shot <png>`, steps via "
-        "`~/.claude/scripts/phone_vd.sh`. Never uninstall or `pm clear`."
+        "Phone companion app (com.kuhy.*), Pixel attached: on your own slot only, never kuhy's app: "
+        "`~/.claude/scripts/phone_slot.sh acquire`, `phone_deploy.sh <app> --release --slot --stage "
+        "prep|dart|kotlin|assemble|install`, `~/.claude/scripts/phone_vd.sh start <slot pkg>` then "
+        "tap/swipe/text/shot, `phone_slot.sh release`. Never uninstall or `pm clear`."
     ),
     Kind.GODOT: (
         "godot-mcp-runtime: `run_project`, `simulate_input`, `take_screenshot`. Or the repo's "

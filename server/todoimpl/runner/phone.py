@@ -8,6 +8,7 @@ import subprocess
 from typing import TYPE_CHECKING
 
 from .files import read_json
+from .stream import last_tag_line
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -21,12 +22,52 @@ SERIAL = "23181JEGR08034"
 TRIED = "tried_attached"
 ADB_TIMEOUT = 5.0
 DEVICE_COLUMNS = 2
+HANDS = "hands_nudged"
+HANDS_ASK = r"\btaps?\b|open .* on the (pixel|phone)|real screen|\bpause\b|look at the phone|\bfeel\b"
+PLUG_ASK = r"plug"
+HANDS_NUDGE = (
+    "(runner) Your last `A:` asks kuhy for phone hands-on work; do not ask kuhy. With the Pixel attached, "
+    "do it yourself on your own slot: `~/.claude/scripts/phone_slot.sh acquire`, "
+    "`phone_deploy.sh <app_dir> --release --slot`, `phone_vd.sh start <slot pkg>`, then tap/swipe/text/shot "
+    "(slot data is sandboxed). A criterion that needs a human sense is `- [~] Cn: skipped: needs a human "
+    "sense`. Without the Pixel, stage phone_ready.json and end `A: phone: <one line>`. Then end with "
+    "`D:`, `Q:` or `A:`."
+)
 PHONE_TAG = re.compile(r"^[\s>*_#-]*A[*_]*:[*_]*\s*phone\s*:\s*(.*?)\s*$", re.IGNORECASE | re.MULTILINE)
 
 
 def phone_line(text: str) -> str | None:  # noqa: D103
     found = PHONE_TAG.findall(text)
     return found[-1] if found else None
+
+
+def asks_for_hands(text: str, *, plug: bool = True) -> bool:
+    """Return whether the final `A:` line asks kuhy for hands-on phone work (`plug` counts when `plug`)."""
+    found = last_tag_line(text)
+    if found is None or found[0] != "A":
+        return False
+    pattern = f"{HANDS_ASK}|{PLUG_ASK}" if plug else HANDS_ASK
+    return re.search(pattern, found[1], re.IGNORECASE) is not None
+
+
+def hands_nudge(st: RunState, res: TurnResult, *, attached: bool, info: object) -> bool:
+    """Queue ONE runner nudge when a live-check turn asked kuhy for phone hands-on work; True if queued.
+
+    An unattached `A: phone:` is the staged wait for the cable, and an attached `A: phone:` is a lost phone
+    (so `plug` is no hands-on ask there). The nudge turn keeps the attached prompt; a second ask just rests.
+    """
+    if res.tag != "A":
+        st.extra.pop(HANDS, None)
+        return False
+    tagged = phone_line(res.text) is not None
+    if st.extra.get(HANDS) or (tagged and not attached) or not asks_for_hands(res.text, plug=not tagged):
+        return False
+    st.extra[HANDS] = True
+    st.extra["nudge"] = HANDS_NUDGE
+    st.last_tag = None
+    if attached and isinstance(info, dict):
+        st.extra.update(phone_attached=True, waiting_phone=info)
+    return True
 
 
 def adb_command() -> str:  # noqa: D103

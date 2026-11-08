@@ -211,6 +211,18 @@ stage saves: the stage then reruns its turn (cost not doubled). Cancel stops the
 direct launch: the recorded process group); `Engine.close` makes drives let go without signalling a turn.
 `scripts/deploy.sh` restarts the unit and checks `/version` reports `git rev-parse --short HEAD`.
 
+## Phone criteria test themselves (kuhy, 2026-11-08)
+
+A board session never needs kuhy at the phone. Criteria that need the Pixel are built once and tried on the
+emulator, then staged in `phone_ready.json` (`A: phone:` rests the card until the Pixel shows). With the Pixel in,
+the live check runs on the session's own slot, in parallel with other runs: `phone_slot.sh acquire` (private
+`com.kuhy.slotN`), `phone_deploy.sh --slot` (sandbox RTDB namespace `SYNC_NAMESPACE`, no icon, muted), steps on its
+own virtual display via `phone_vd.sh`, `phone_slot.sh release`. Never over kuhy's app, never the real screen.
+Feel/audio criteria are `[~] skipped: needs a human sense` and never block; the note can ask for an `after ship` row.
+Runner side (`runner/phone.py`, `hands_nudge`): when a live-check turn ends on an `A:` asking kuhy to tap, open,
+look, plug, pause or feel, ONE runner nudge turn tells Claude to do it on its slot; a second ask rests as Needs you
+with the ask text. An unattached `A: phone:` (the cable wait) and an attached one (a lost phone) are never nudged.
+
 ## Token usage (CHANGE 4)
 
 The token-usage tracker lives in this repo, no longer in its three old homes. Layout: `server/todoimpl/tokens/`

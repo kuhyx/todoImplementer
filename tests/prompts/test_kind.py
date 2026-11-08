@@ -42,3 +42,12 @@ def test_marker_must_be_a_file(tmp_path: Path) -> None:
 
 def test_every_kind_has_a_hint() -> None:
     assert set(HINTS) == set(Kind)
+
+
+def test_t1825_flutter_hint_drives_the_phone_on_its_own_slot() -> None:
+    hint = HINTS[Kind.FLUTTER]
+    assert "phone_slot.sh acquire" in hint
+    assert "--release --slot --stage" in hint
+    assert "phone_vd.sh start <slot pkg>" in hint
+    assert "phone_slot.sh release" in hint
+    assert "--shot" not in hint

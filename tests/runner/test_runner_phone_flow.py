@@ -46,7 +46,7 @@ def test_t1531_plugging_in_the_pixel_runs_the_staged_deploy_and_the_live_check(w
         st = wait_stage(world, sched, "gate")
         prompt = world.calls()[-1]["prompt"]
         assert "The Pixel is attached now" in prompt
-        assert READY["deploy_cmd"] in prompt
+        assert "phone_deploy.sh /apps/demo --release --slot --stage" in prompt
         assert "Verify only C1" in prompt
         assert "waiting_phone" not in st.extra
         assert "phone_attached" not in st.extra

@@ -28,3 +28,15 @@ One row per bug, ids global and never reused. The row's test is named `test_t<N>
 | T1818 | A phone-attached turn that still ended `A: phone:` was requeued every 20 s while the Pixel stayed plugged in | tests/runner/test_runner_phone_loop.py |
 | T1819 | After such a turn, an unplug and replug never ran the phone check again | tests/runner/test_runner_phone_loop.py |
 | T1820 | The board said "Plug in the Pixel" while the phone was in and Claude was asking for something else | tests/runner/test_runner_phone_loop.py |
+| T1821 | The attached phone check deployed over kuhy's own app and used the real screen instead of a private slot | tests/prompts/test_phone.py |
+| T1822 | A live-check session could ask kuhy to tap, plug, pause music or confirm data use | tests/prompts/test_phone.py |
+| T1823 | A feel/audio criterion blocked the card instead of being skipped with a `[~]` row | tests/prompts/test_phone.py |
+| T1824 | The staged deploy command lacked `--slot`, so a replug would install over the prod app | tests/prompts/test_phone.py |
+| T1825 | The Flutter driver hint pointed at deploying straight onto kuhy's phone | tests/prompts/test_kind.py |
+| T1826 | Nothing told a phone hands-on ask apart from any other `A:` ask | tests/runner/test_runner_phone_hands.py |
+| T1827 | A live check that asked kuhy to tap rested in Needs you with no runner nudge | tests/runner/test_runner_phone_hands.py |
+| T1828 | After the one nudge a repeated ask was nudged again instead of resting with its text | tests/runner/test_runner_phone_hands.py |
+| T1829 | The staged `A: phone: plug in` wait for the cable was nudged as a hands-on ask | tests/runner/test_runner_phone_hands.py |
+| T1830 | The nudge turn of an attached run lost the attached prompt and fell back to staging | tests/runner/test_runner_phone_hands.py |
+| T1831 | A lost-phone `A: phone:` on an attached turn was nudged to do the impossible | tests/runner/test_runner_phone_hands.py |
+| T1832 | A note from kuhy did not reset the nudge counter, so the next ask never got its nudge | tests/runner/test_runner_phone_hands.py |
