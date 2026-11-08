@@ -49,7 +49,12 @@ def build_backend(
         scheduler = module.Scheduler(ItemView(client, cache), root)
     if callable(start_watch := getattr(scheduler, "start_phone_watch", None)):
         start_watch()
-    backend = ServiceBackend(cache, scheduler, root, build or git_build_id(REPO))
+    # Imported here: apikey.monitor needs service.cards, so a top-level import would be circular.
+    from todoimpl.apikey.monitor import KeyMonitor  # noqa: PLC0415
+
+    monitor = KeyMonitor(client, root, after_write=cache.poke)
+    backend = ServiceBackend(cache, scheduler, root, build or git_build_id(REPO), key_monitor=monitor)
     if refresh:
         cache.start()
+        monitor.start()  # first check runs on its own thread: a slow network never delays startup
     return backend

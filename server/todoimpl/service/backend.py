@@ -9,6 +9,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from todoimpl.apikey.keystatus import board_field
 from todoimpl.board.board import build_board, build_task, repo_checker
 from todoimpl.board.card import Context, build_card
 from todoimpl.board.diff import worktree_diff
@@ -26,6 +27,7 @@ from . import permission
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
 
+    from todoimpl.apikey.monitor import KeyMonitor
     from todoimpl.board.state import RunState
 
     from .cache import TaskCache
@@ -56,6 +58,7 @@ class ServiceBackend:
         spawn: Callable[[Callable[[], None]], None] = _spawn,
         repo_missing: Callable[[str | None], str | None] | None = None,
         fix_runner: Callable[[str], tuple[int, str]] = permission.run_command,
+        key_monitor: KeyMonitor | None = None,
     ) -> None:
         """Wire the pieces; nothing is read until a request arrives."""
         self.cache = cache
@@ -67,6 +70,7 @@ class ServiceBackend:
         self.spawn = spawn  # runs a background job; tests run it inline
         self._repo_missing = repo_missing or repo_checker()
         self.fix_runner = fix_runner  # runs a permission block's one-liner; tests inject a fake
+        self.key_monitor = key_monitor  # the API key's newest status rides on the board
 
     # ---- reads ----
     def _context(self) -> Context:
@@ -107,6 +111,9 @@ class ServiceBackend:
         board = build_board(tasks, extended, self._context(), self.build)  # type: ignore[arg-type]
         if snap.error:  # stale cards plus a banner, never an empty board that looks healthy
             board["error"] = {"code": UPSTREAM, "message": f"todo MCP: {snap.error}"}
+        latest = self.key_monitor.latest() if self.key_monitor else None
+        if latest is not None:  # before the first check there is nothing honest to say
+            board["api_key"] = board_field(latest)
         return board
 
     def task(self, id8: str) -> dict[str, Any] | None:

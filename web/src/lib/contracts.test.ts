@@ -23,6 +23,13 @@ describe("contract mirror", () => {
     expect(agree("board", board, { ...makeBoard(), error: null })).toEqual([true, true]);
   });
 
+  it("agrees on the api_key banner field, good and bad", () => {
+    const key = { expires: null, level: "warn", state: "expiring", text: "expires soon" };
+    expect(agree("board", board, { ...makeBoard(), api_key: key })).toEqual([true, true]);
+    expect(agree("board", board, { ...makeBoard(), api_key: { ...key, state: "weird" } })).toEqual([false, false]);
+    expect(agree("board", board, { ...makeBoard(), api_key: { ...key, extra: 1 } })).toEqual([false, false]);
+  });
+
   it("accepts every task detail fixture in both", () => {
     for (const card of makeCards()) {
       expect(agree("task", taskDetail, makeDetail(card))).toEqual([true, true]);

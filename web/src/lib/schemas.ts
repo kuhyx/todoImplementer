@@ -7,7 +7,17 @@ import {
   taskCard, usd,
 } from "@/lib/schemas-common";
 
+const keyState = z.enum(["ok", "expiring", "expired", "invalid", "missing", "check_failed"]);
+
 export const board = z.strictObject({
+  api_key: z
+    .strictObject({
+      expires: z.iso.date().nullable(),
+      level: z.enum(["ok", "warn", "error"]),
+      state: keyState,
+      text: z.string().min(1),
+    })
+    .optional(),
   build: z.string().min(1),
   columns: z
     .array(z.strictObject({ count: z.number().int().min(0), id: column, label: z.string().min(1) }))

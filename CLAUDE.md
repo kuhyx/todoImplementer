@@ -1,7 +1,7 @@
 # todoImplementer
 
 Board that plans, implements, reviews, verifies and (on kuhy's click) ships todo-app notes with headless Claude Code
-sessions. Spec and decisions: `DOCS-spec.md`. Lessons carried over from the predecessor: `DOCS-lessons.md`.
+sessions. Spec and decisions: `DOCS-spec.md`. Lessons carried over from the predecessor: `DOCS-lessons.md`. Claude API key lifecycle: `DOCS-apikey.md`.
 
 ## Commands
 

@@ -38,6 +38,17 @@ function limitNote(board: Board | null, now: number): HTMLElement | null {
   return h("p", { attrs: { role: "status" }, class: "limit-note", text: `Plan limit reached: runs resume ${until}. ${credits}` });
 }
 
+/** The API key banner: the server words it (`api_key.text`); red alert for errors, amber status for a warning. */
+function keyBanner(board: Board | null): HTMLElement | null {
+  const key = board?.api_key;
+  if (!key || key.level === "ok") return null;
+  return h("p", {
+    attrs: { "data-level": key.level, "data-state": key.state, role: key.level === "error" ? "alert" : "status" },
+    class: "banner key-banner",
+    text: key.text,
+  });
+}
+
 export function renderUsage(usage: null | Usage, board: Board | null, error: null | string, build: null | string, now: number): HTMLElement {
   return h(
     "div",
@@ -52,6 +63,7 @@ export function renderUsage(usage: null | Usage, board: Board | null, error: nul
     ),
     usage !== null && h("div", { class: "usage-row" }, meter("5 h", usage.five_hour, now), meter("7 d", usage.seven_day, now)),
     error !== null && h("p", { attrs: { role: "alert" }, class: "banner", text: error }),
+    keyBanner(board),
     limitNote(board, now),
   );
 }
