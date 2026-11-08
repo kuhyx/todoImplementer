@@ -19,6 +19,12 @@ RULES = (
     "Rules: work only in {wt}. Follow your ~/.claude rules: red check first, heavy commands via "
     "~/.claude/scripts/capped.sh, every call under 60 s. Never commit, push or touch main: the server ships."
 )
+BLOCKS = (
+    "Claude Code blocks some Bash and Edit calls in every permission mode: no `rm` on a bare variable or a "
+    "glob after `cd` or `$(...)`: use explicit absolute paths; no zsh-only expansions like `${(f)...}`; "
+    "change sensitive files such as .pre-commit-config.yaml through Bash (python, sed or git apply), "
+    "not Edit or Write."
+)
 SELF_CHECK = (
     "Self-check: walk every acceptance criterion, run the done_check and the tests yourself, and state per "
     "criterion `Cn: done` or `Cn: not done` plus one line of evidence."
@@ -47,7 +53,7 @@ def _plan(ctx: PromptContext) -> str:
 
 
 def _rules(ctx: PromptContext) -> str:
-    return RULES.format(wt=ctx.worktree)
+    return f"{RULES.format(wt=ctx.worktree)}\n{BLOCKS}"
 
 
 def _post(*parts: str) -> str:

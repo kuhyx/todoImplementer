@@ -10,4 +10,5 @@ kuhy's notes:
 - also check mobile width
 Plan: read /run/ab12cd34/plan.md.
 Rules: work only in /wt/todo. Follow your ~/.claude rules: red check first, heavy commands via ~/.claude/scripts/capped.sh, every call under 60 s. Never commit, push or touch main: the server ships.
+Claude Code blocks some Bash and Edit calls in every permission mode: no `rm` on a bare variable or a glob after `cd` or `$(...)`: use explicit absolute paths; no zsh-only expansions like `${(f)...}`; change sensitive files such as .pre-commit-config.yaml through Bash (python, sed or git apply), not Edit or Write.
 Check `git status`, then continue where the summary stops. End with `D:`.

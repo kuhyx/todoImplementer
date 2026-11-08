@@ -47,6 +47,17 @@ def test_work_stages_forbid_commit_and_push(stage: str, ctx: PromptContext) -> N
     assert "under 60 s" in text
 
 
+@pytest.mark.parametrize("stage", ["implement", "fix", "resume_after_kill", "fresh_after_idle"])
+def test_work_stages_say_how_to_avoid_the_blocks_no_permission_mode_lifts(
+    stage: str, ctx: PromptContext
+) -> None:
+    text = build(stage, ctx)
+    assert "no `rm` on a bare variable or a glob after `cd` or `$(...)`: use explicit absolute paths" in text
+    assert "no zsh-only expansions like `${(f)...}`" in text
+    assert ".pre-commit-config.yaml" in text
+    assert "through Bash (python, sed or git apply), not Edit or Write" in text
+
+
 def test_implement_ends_with_self_check_and_red_first(ctx: PromptContext) -> None:
     text = build("implement", ctx)
     assert "failing check first" in text
