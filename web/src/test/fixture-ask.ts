@@ -76,3 +76,10 @@ export function freeDetail(): TaskDetail {
 }
 
 export const askCards = (): TaskCard[] => ASK_IDS.map((id) => (id === FREE_ID ? freeDetail() : askDetail(id)).card);
+
+/** T1816: a Claude question asked mid-run, after every spec question was answered: the reply's cards arrive as `asks`. */
+export function laterDetail(asks = 2): TaskDetail {
+  const card = needsCard(FREE_ID, "claude_question", "allow request pacing so the cache repair can finish?");
+  const answered = askQuestions(3).map((question) => ({ ...question, answer: question.recommendation }));
+  return { ...makeDetail(card), asks: askQuestions(asks), questions: answered };
+}

@@ -33,6 +33,7 @@
   "body": "Do the demo.",
   "done_check": "python demo.py",
   "plan_md": "# Plan",
+  "asks": [],
   "questions": [],
   "diff": {
     "files": [

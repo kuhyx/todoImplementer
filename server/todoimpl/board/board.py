@@ -7,6 +7,8 @@ import shlex
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from todoimpl.runner.parsing import parse_questions
+
 from .card import Context, build_card
 from .repos import repo_path
 
@@ -98,16 +100,26 @@ def _stages(run: RunState | None) -> list[dict[str, Any]]:
     return [{"stage": run.stage, "started": run.started_at or run.updated, "ended": None}]
 
 
+def _asks(card: dict[str, Any], run: RunState | None) -> list[dict[str, Any]]:
+    """Return the cards of an open Claude question, so it reaches the spec questions' answer view (T1816)."""
+    needs = card.get("needs")
+    if run is None or needs is None or needs["kind"] != "claude_question":
+        return []
+    return [vars(q) for q in parse_questions(str(run.extra.get("last_reply", "")))]
+
+
 def build_task(
     task: TaskLike, run: RunState | None, directory: Path, ctx: Context, diff: dict[str, Any] | None = None
 ) -> dict[str, Any]:
     """Return the /api/task/<item-id> object: card, plan, questions, live check, checks, diff, session."""
+    card = build_card(task, run, ctx)
     return {
-        "card": build_card(task, run, ctx),
+        "card": card,
         "body": task.body,
         "done_check": task.done_check,
         "plan_md": _read(directory / "plan.md"),
         "questions": [vars(q).copy() for q in run.spec_questions] if run is not None else [],
+        "asks": _asks(card, run),
         "checks": run.checks if run is not None else None,
         "live_check": run.live_check if run is not None else None,
         "self_check": run.self_check if run is not None else [],

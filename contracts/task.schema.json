@@ -9,6 +9,13 @@
     "body": {"type": "string", "description": "The todo note text."},
     "done_check": {"type": ["string", "null"]},
     "plan_md": {"type": ["string", "null"], "description": "plan.md with the acceptance criteria; null before Plan."},
+    "asks": {
+      "description": "Question cards of a Claude question asked after the spec stage (needs.kind claude_question); empty otherwise.",
+      "type": "array",
+      "items": {
+        "$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/question"
+      }
+    },
     "questions": {
       "type": "array",
       "items": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/question"}
@@ -81,6 +88,7 @@
     "done_check",
     "plan_md",
     "questions",
+    "asks",
     "diff",
     "stages",
     "skills_loaded",

@@ -2,23 +2,34 @@
 import type { TaskDetail } from "@/lib/schemas";
 import type { Question } from "@/lib/schemas-common";
 
-export type Ask = { kind: "free"; text: string } | { kind: "spec"; questions: Question[] };
+export type Ask = { kind: "free"; questions: Question[]; text: string } | { kind: "spec"; questions: Question[] };
 
 /** A horizontal move this long (and mostly horizontal) counts as a swipe. */
 export const SWIPE_PX = 80;
 
-/** Structured spec questions, or a plain "Q:" rest whose only text is the card's needs text. */
+/** An open Claude question (its parsed cards, else the card's needs text as one question), else structured spec questions. */
 export function askOf(detail: TaskDetail): Ask | null {
-  if (detail.questions.length > 0) return { kind: "spec", questions: detail.questions };
+  // An open Claude question wins over spec questions answered earlier in the run (T1816).
   const { needs } = detail.card;
-  return needs?.kind === "claude_question" ? { kind: "free", text: needs.text } : null;
+  if (needs?.kind === "claude_question") {
+    return { kind: "free", questions: detail.asks.length > 0 ? detail.asks : [freeQuestion(needs.text)], text: needs.text };
+  }
+  return detail.questions.length > 0 ? { kind: "spec", questions: detail.questions } : null;
 }
 
 /** A plain Claude question goes through the same one-question view: one synthetic question whose answer is sent as a message. */
 export const freeQuestion = (text: string): Question => ({ answer: null, body: text, id: "Q1", recommendation: "", title: "Claude asks" });
 
 /** The questions the flow walks: the structured ones, or the one synthetic question of a plain Claude question. */
-export const questionsOf = (ask: Ask): Question[] => (ask.kind === "spec" ? ask.questions : [freeQuestion(ask.text)]);
+export const questionsOf = (ask: Ask): Question[] => ask.questions;
+
+/** The one message a Claude question's answers go out as: the bare answer for one question, one labelled paragraph each for several. */
+export function replyOf(questions: readonly Question[], answers: Readonly<Record<string, string>>): string {
+  return questions.length === 1 ? Object.values(answers).join("") : questions
+    .filter((question) => answers[question.id] !== undefined)
+    .map((question) => `${question.id} (${question.title}): ${answers[question.id] ?? ""}`)
+    .join("\n\n");
+}
 
 /** A card that waits for an answer shows only the question flow until "Details" is opened. */
 export const isOnlyAsk = (detail: TaskDetail): boolean =>

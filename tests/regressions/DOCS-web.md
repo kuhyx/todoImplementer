@@ -15,3 +15,4 @@ Ids are global and never reused; the row's test is titled `[T<N>] ...` (vitest).
 | T1803 | A Needs-you card printed the same ask twice (current line and needs quote) | web/src/components/board.test.ts |
 | T1805 | A plain Claude question still showed the old free-text card and Send button instead of the one-question view, and could not be answered during a usage limit | web/src/components/ask-free.test.ts, web/src/components/drawer-free.test.ts |
 | T1806 | The answer view moved title, question, answer and Back/OK with text length and sat in a side panel instead of the middle of the browser | web/src/components/drawer-free.test.ts, web/dev/viewport_questions.py |
+| T1816 | A Claude question asked after every spec question was answered opened on Activity: the old answered spec cards hid it, and its ❓ cards never reached the page | tests/board/test_board_asks.py, web/src/components/drawer-later.test.ts |

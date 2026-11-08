@@ -21,6 +21,7 @@ export const board = z.strictObject({
 });
 
 export const taskDetail = z.strictObject({
+  asks: z.array(question),
   body: z.string(),
   branch: z.string().nullable(),
   card: taskCard,

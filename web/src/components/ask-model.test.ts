@@ -1,7 +1,7 @@
 /** Pure model of the question flow: ask kind, effective answers, first open question, swipes, labels. */
 import { describe, expect, it } from "vitest";
 
-import { answersOf, askOf, effective, firstOpen, isOnlyAsk, nextOpen, sendingLabel, swipeOf, waitingNote } from "@/components/ask-model";
+import { answersOf, askOf, effective, firstOpen, freeQuestion, isOnlyAsk, nextOpen, sendingLabel, swipeOf, waitingNote } from "@/components/ask-model";
 import { ASK_ID, askDetail, askQuestions, FREE_ID, freeDetail } from "@/test/fixture-ask";
 import { makeDetail } from "@/test/fixture-detail";
 import { makeCards } from "@/test/fixtures";
@@ -9,7 +9,8 @@ import { makeCards } from "@/test/fixtures";
 describe("ask model", () => {
   it("picks the ask kind from the detail", () => {
     expect(askOf(askDetail(ASK_ID))).toEqual({ kind: "spec", questions: askQuestions(5) });
-    expect(askOf(freeDetail())).toEqual({ kind: "free", text: "Claude asked a question: answer it with Send to Claude" });
+    const text = "Claude asked a question: answer it with Send to Claude";
+    expect(askOf(freeDetail())).toEqual({ kind: "free", questions: [freeQuestion(text)], text });
     const working = makeCards().find((card) => card.status === "working");
     expect(askOf(makeDetail(working ?? makeCards()[0]!))).toBeNull();
     expect(FREE_ID).not.toBe(ASK_ID);

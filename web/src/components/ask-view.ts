@@ -5,7 +5,7 @@ import type { TaskDetail } from "@/lib/schemas";
 import type { Question } from "@/lib/schemas-common";
 
 import { type FieldHooks, type Status, statusView } from "@/components/ask-cards";
-import { answersOf, askOf, firstOpen, nextOpen, NOT_WAITING, questionsOf, waitingNote } from "@/components/ask-model";
+import { answersOf, askOf, firstOpen, nextOpen, NOT_WAITING, questionsOf, replyOf, waitingNote } from "@/components/ask-model";
 import { allView, retryButton, type StepProps, stepView } from "@/components/ask-step";
 import { type AskState, blankState, dropState, loadState, saveState, storeKey } from "@/components/ask-store";
 import { iconButton, setIcon } from "@/components/icons";
@@ -141,7 +141,7 @@ export class AskPanel {
     this.#status = { count, kind: "sending" };
     this.#paint();
     try {
-      if (this.#free) await this.#host.reply(cardId, Object.values(answers).join(""));
+      if (this.#free) await this.#host.reply(cardId, replyOf(this.#questions, answers));
       else await this.#host.send(cardId, answers);
     } catch (error) {
       this.#status = { kind: "error", message: errorText(error) };
@@ -160,7 +160,8 @@ export class AskPanel {
 
   /** The top-bar icon that flips between one question at a time and all of them; null when there is nothing to switch. */
   get switcher(): HTMLElement | null {
-    return this.#questions.length > 0 && !this.#free ? this.#switch : null;
+    const least = this.#free ? 2 : 1;
+    return this.#questions.length >= least ? this.#switch : null;
   }
 
   get interactive(): boolean {
