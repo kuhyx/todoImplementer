@@ -21,7 +21,9 @@ they mean. Lessons from the predecessor are in `DOCS-lessons.md`.
   2026-11-05: no AI review loop and no verify/proof stage, ever. Screenshots are allowed, video is not. Excluded for good, never added to any backlog: video
   recording, remote hosts, meetings, Windows/macOS.
 - **Q5** Automatic: everything up to Gate. Only kuhy's click: Ship, Spec OK, Run on credits (also Start, Cancel,
-  lesson approval). Never force-push; never write outside the task worktree and its run dir.
+  lesson approval). CHANGE 2026-11-08: a done_check note started with "Auto-ship when checks pass" ticked (off by
+  default, kept by Retry and Hand back) skips the Gate and ships itself; a run with no diff then closes the note
+  without a push. Never force-push; never write outside the task worktree and its run dir.
 - **Q6** Headless `claude -p` with stream-json, resume by session id, live feed (SSE), a Send-to-Claude box, a "copy
   resume command" button (`cd <worktree> && claude --resume <id>`); never open a terminal on :0.
 - **Q7** No cap on concurrent runs (kuhy, 2026-11-05: the tool exists to run many at once): every Start drives at once. Opus implements, Sonnet specs, Haiku classifies. A plan limit pauses
@@ -64,11 +66,12 @@ resting stages; the rest are work stages. "auto" = no click; "click" = kuhy.
 | live_check | checks | report written (what was run, what was seen per criterion) | auto |
 | live_check | implement | report says a criterion is not met, fix attempt left (max 2) | auto |
 | checks | gate | all checks green | auto |
+| checks | shipping | all checks green, `auto_ship` set and the note has a done_check | auto |
 | checks | implement | checks red, fix attempt left (max 2) | auto |
 | checks | failed | checks still red after the attempts | auto |
 | gate | shipping | ship | click |
 | gate | implement | send (kuhy rejects with a note; lesson drafted) | click |
-| shipping | shipped | push + close_task done | auto |
+| shipping | shipped | push + close_task done (auto-ship with no diff: close_task only) | auto |
 | shipping | failed | rebase conflict, red recheck, push refused | auto |
 | any work stage | paused_limit | plan limit seen; `resume_at` = resetsAt | auto |
 | paused_limit | stage before | `resume_at` passed, or credits click | auto / click |
@@ -111,6 +114,8 @@ never decides. `start` enabled when status is backlog or cancelled, the note has
 `spec-ok` when every question is answered; `send` while a session exists and the stage is not final (`shipped`, `cancelled`), including `failed` and stalled runs; `ship` only at
 Ready to ship; `cancel` on any status whose stage is not final; `credits` only while paused_limit and credits are available;
 `lesson-approve` when a lesson is drafted; `copy-resume` (not a POST, carries `value`) when a session id exists.
+Start/Restart carry `option` `auto_ship` (a checkbox sent as `{auto_ship: bool}`), disabled without a done_check;
+Retry and Hand back send `{}` and keep the stored choice.
 
 ## Endpoints
 
@@ -144,7 +149,7 @@ item marks its section `## [x]` and adds a `closed:` line; the note closes with 
 Every work session (spec, plan, implement, live_check) runs with kuhy's full setup: his `~/.claude` rules, skills,
 hooks, agents, the target repo's project memory and ALL his user and project MCP servers. There is no
 `--strict-mcp-config`, no per-role MCP list and no `--setting-sources` narrowing; only the one-shot Haiku lesson
-drafter stays minimal. `git push` is denied to every session with `--disallowedTools`; only Ship pushes. A resumed
+drafter stays minimal. `git push` is denied to every session with `--disallowedTools`; only Ship (click or auto-ship) pushes. A resumed
 session's `total_cost_usd` is cumulative, so the runner stores the latest value rather than adding turns.
 
 A Ship failure (conflict, red recheck, push refused) sets stage `failed` with `error`; the Send click reopens the

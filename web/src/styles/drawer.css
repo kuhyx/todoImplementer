@@ -101,6 +101,13 @@ ti-drawer {
   max-width: 100%;
 }
 
+.action-option label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-label);
+}
+
 .reason {
   flex-basis: 100%;
   font-size: var(--text-label);

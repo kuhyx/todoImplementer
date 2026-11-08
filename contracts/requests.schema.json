@@ -6,6 +6,12 @@
   "$defs": {
     "start": {
       "type": "object",
+      "properties": {
+        "auto_ship": {
+          "type": "boolean",
+          "description": "Start/Restart only: ship without a Ship click once every check is green (done_check notes). Omitted (Retry, Hand back): keep the run's stored choice."
+        }
+      },
       "additionalProperties": false,
       "description": "Start the next stage chain (Spec or Plan)."
     },

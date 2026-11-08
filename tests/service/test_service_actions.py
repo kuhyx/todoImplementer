@@ -18,6 +18,7 @@ DRAFT = '{"skill": "build-backend", "mistake": "m", "rule": "r", "evidence": "e"
 def test_every_action_goes_to_the_scheduler_and_pokes_the_cache(rig: Rig) -> None:
     b = rig.backend
     b.start("t1")
+    b.start("t1", auto_ship=True)
     b.spec_answers("t1", {"Q1": "a"})
     b.spec_ok("t1")
     b.send("t1", "hi")
@@ -25,7 +26,8 @@ def test_every_action_goes_to_the_scheduler_and_pokes_the_cache(rig: Rig) -> Non
     b.cancel("t1")
     b.credits("t1")
     assert rig.scheduler.calls == [
-        ("start", "t1"),
+        ("start", "t1", None),
+        ("start", "t1", True),
         ("spec_answers", "t1", {"Q1": "a"}),
         ("spec_ok", "t1"),
         ("send", "t1", "hi"),

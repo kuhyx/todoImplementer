@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 class SchedulerLike(Protocol):
     """Scheduler(client, root) as the brief specifies it."""
 
-    def start(self, id8: str) -> None:  # noqa: D102
+    def start(self, id8: str, *, auto_ship: bool | None = None) -> None:  # noqa: D102
         ...
 
     def spec_answers(self, id8: str, answers: dict[str, str]) -> None:  # noqa: D102

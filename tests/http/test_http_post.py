@@ -24,7 +24,7 @@ def test_every_post_action_calls_the_backend_and_returns_the_card(live: Live, ac
     assert body["ok"] is True
     assert body["task"]["id"] == live.backend.task_id
     expect = {
-        "start": ("start",),
+        "start": ("start", None),
         "spec-answers": ("spec_answers", {"Q1": "yes"}),
         "spec-ok": ("spec_ok",),
         "send": ("send", "hello"),

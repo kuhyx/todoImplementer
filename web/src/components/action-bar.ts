@@ -1,4 +1,4 @@
-import type { Action } from "@/lib/schemas-common";
+import type { Action, ActionOption } from "@/lib/schemas-common";
 
 /**
  * Buttons come only from the server's actions[]. A disabled action stays on
@@ -56,7 +56,28 @@ export function renderAction(action: Action, host: BarHost, taskId: string): HTM
       text: isBusy ? `${action.label}…` : action.label,
     }),
     !action.enabled && h("span", { attrs: { id: reasonId }, class: "reason", text: action.reason ?? "" }),
+    action.option !== undefined && renderOption(action.option, `${reasonId}-option`),
   );
+}
+
+/** The action's checkbox; `data-keep` carries the tick across repaints. A disabled one names why. */
+function renderOption(option: ActionOption, reasonId: string): HTMLElement {
+  const box = h("input", {
+    attrs: { "aria-describedby": option.enabled ? null : reasonId, "data-keep": "", disabled: !option.enabled, name: option.id, type: "checkbox" },
+  });
+  return h(
+    "span",
+    { class: "action-option" },
+    h("label", {}, box, option.label),
+    !option.enabled && h("span", { attrs: { id: reasonId }, class: "reason", text: option.reason ?? "" }),
+  );
+}
+
+/** What the action's checkbox sends: undefined without one; a disabled one never sends true. */
+export function optionValue(action: Action, root: ParentNode): boolean | undefined {
+  if (action.option === undefined) return undefined;
+  const box = root.querySelector<HTMLInputElement>(`input[name=${CSS.escape(action.option.id)}]`);
+  return action.option.enabled && box?.checked === true;
 }
 
 export function pendingLoader(action: Action | undefined, taskId: string, state: BarState): HTMLElement | null {

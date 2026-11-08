@@ -13,11 +13,12 @@ export interface InputSnapshot {
 }
 
 type KeptField = HTMLInputElement | HTMLTextAreaElement;
+const isBox = (field: KeptField): field is HTMLInputElement => field instanceof HTMLInputElement && field.type === "checkbox";
 
 export function snapshotInputs(root: ParentNode): InputSnapshot {
   const values = new Map<string, string>();
   for (const field of root.querySelectorAll<KeptField>("[data-keep]")) {
-    values.set(field.name, field.value);
+    values.set(field.name, isBox(field) ? String(field.checked) : field.value);
   }
   const active = document.activeElement;
   const isField = active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement;
@@ -28,7 +29,8 @@ export function snapshotInputs(root: ParentNode): InputSnapshot {
 export function restoreInputs(root: ParentNode, snapshot: InputSnapshot): void {
   for (const field of root.querySelectorAll<KeptField>("[data-keep]")) {
     const kept = snapshot.values.get(field.name);
-    if (kept !== undefined) field.value = kept;
+    if (kept !== undefined && isBox(field)) field.checked = kept === "true";
+    else if (kept !== undefined) field.value = kept;
     if (snapshot.focus === field.name) field.focus();
   }
 }

@@ -80,7 +80,21 @@
         "enabled": {"type": "boolean"},
         "reason": {"type": ["string", "null"]},
         "confirm": {"type": "boolean", "description": "Page asks 'sure?' first (ship, cancel, credits)."},
-        "value": {"type": "string", "description": "copy-resume only: the text to copy."}
+        "value": {"type": "string", "description": "copy-resume only: the text to copy."},
+        "option": {
+          "type": "object",
+          "description": "start (Start/Restart) only: a checkbox sent with the click; disabled needs a reason.",
+          "properties": {
+            "id": {"enum": ["auto_ship"]},
+            "label": {"type": "string", "minLength": 1},
+            "enabled": {"type": "boolean"},
+            "reason": {"type": ["string", "null"]}
+          },
+          "required": ["id", "label", "enabled", "reason"],
+          "additionalProperties": false,
+          "if": {"properties": {"enabled": {"const": false}}},
+          "then": {"properties": {"reason": {"type": "string", "minLength": 1}}}
+        }
       },
       "required": ["id", "label", "enabled", "reason"],
       "additionalProperties": false,

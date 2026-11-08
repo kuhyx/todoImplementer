@@ -15,6 +15,17 @@ if TYPE_CHECKING:
     from .types import Limit, TaskLike
 
 FINAL_STAGES = ("shipped", "cancelled")
+AUTO_SHIP = "Auto-ship when checks pass"
+
+
+@dataclass(frozen=True)
+class Option:
+    """A checkbox sent with its action's click; `reason` is set exactly when it is disabled."""
+
+    id: str
+    label: str
+    enabled: bool = True
+    reason: str | None = None
 
 
 @dataclass(frozen=True)
@@ -27,9 +38,10 @@ class Action:
     reason: str | None = None
     confirm: bool = False
     value: str | None = None
+    option: Option | None = None
 
     def to_dict(self) -> dict[str, object]:
-        """Return the contract object (confirm/value only when set)."""
+        """Return the contract object (confirm/value/option only when set)."""
         out: dict[str, object] = {
             "id": self.id,
             "label": self.label,
@@ -40,6 +52,8 @@ class Action:
             out["confirm"] = True
         if self.value is not None:
             out["value"] = self.value
+        if self.option is not None:
+            out["option"] = vars(self.option).copy()
         return out
 
 
@@ -98,7 +112,8 @@ def _primary(  # noqa: PLR0911, PLR0913, PLR0917 - one branch per status keeps t
     cancel = Action("cancel", "Cancel", confirm=True)
     if status in (Status.BACKLOG, Status.CANCELLED):
         label = "Restart" if status == Status.CANCELLED else "Start"
-        return [_gate(label, "start", _start_block(task, block, repo_missing))]
+        reason = _start_block(task, block, repo_missing)
+        return [Action("start", label, reason is None, reason, option=_auto_ship(task))]
     if status in (Status.QUEUED, Status.WORKING):
         return [cancel]
     if status == Status.SHIPPING:
@@ -129,6 +144,13 @@ def _needs_you(run: RunState, block: str | None, repo_missing: str | None, cance
     if kind in ("run_failed", "checks_failed"):
         return [_gate("Retry", "start", _missing(repo_missing, block)), cancel]
     return [cancel]
+
+
+def _auto_ship(task: TaskLike) -> Option:
+    """Return the Auto-ship checkbox of Start/Restart: only a done_check note can ship itself."""
+    if task.done_check is None:
+        return Option("auto_ship", AUTO_SHIP, enabled=False, reason="the note has no done_check")
+    return Option("auto_ship", AUTO_SHIP)
 
 
 def _credits(run: RunState | None, limit: Limit) -> Action:

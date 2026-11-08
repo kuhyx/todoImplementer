@@ -73,8 +73,8 @@ class FakeBackend:
         self._maybe_fail()
         self.calls.append(call)
 
-    def start(self, id8: str) -> None:
-        self._record("start", id8)
+    def start(self, id8: str, *, auto_ship: bool | None = None) -> None:
+        self._record("start", id8, auto_ship)
 
     def spec_answers(self, id8: str, answers: dict[str, str]) -> None:
         self._record("spec_answers", id8, answers)

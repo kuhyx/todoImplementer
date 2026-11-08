@@ -40,5 +40,5 @@ sessions. Spec and decisions: `DOCS-spec.md`. Lessons carried over from the pred
   the server on 127.0.0.1 with Origin and CSRF checks on every POST.
 - Ask first: new dependencies, new endpoints or schema changes, anything that touches `~/src/todo`, the Caddy
   or systemd setup, or a real repo; creating the GitHub repo.
-- Never: force-push, push before the Ship click, write outside a task's worktree and run dir, commit `*.zip`, secrets
+- Never: force-push, push before the Ship click (except a run started with Auto-ship), write outside a task's worktree and run dir, commit `*.zip`, secrets
   or company identifiers, edit the todo app's code, add video recording, remote hosts, meetings or Windows/macOS.

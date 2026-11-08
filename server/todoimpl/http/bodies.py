@@ -40,8 +40,18 @@ def _lesson(body: dict[str, Any]) -> str | None:
     return None if isinstance(lesson, str) and lesson else "lesson_id must be non-empty text"
 
 
+def _start(body: dict[str, Any]) -> str | None:
+    if not body:
+        return None
+    if (bad := _only(body, "auto_ship")) is not None:
+        return bad
+    return None if isinstance(body["auto_ship"], bool) else "auto_ship must be true or false"
+
+
 def check(action: str, body: dict[str, Any]) -> str | None:
     """Return what is wrong with the body for this action, or None when it is valid."""
+    if action == "start":
+        return _start(body)
     if action == "spec-answers":
         return _answers(body)
     if action == "send":

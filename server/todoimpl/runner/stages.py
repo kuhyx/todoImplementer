@@ -10,7 +10,7 @@ from .checks import discover, record, run_all
 from .files import NeedsYouError, write_json
 from .parsing import parse_criteria, parse_live, parse_questions, parse_self_check
 from .ship import ShipPlan, ship
-from .worktree import repo_dir
+from .worktree import base_ref, repo_dir
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -110,7 +110,7 @@ def _checks(d: Driver) -> str | None:
     )
     if not red:
         st.extra.pop("check_fixes", None)
-        return "gate"
+        return "shipping" if st.auto_ship and d.item.done_check else "gate"
     tail = "\n\n".join(f"== {r.name}: {r.command} (exit {r.exit_code})\n{r.tail}" for r in red)
     why = f"Checks still red after {MAX_CHECK_FIXES} fix attempts: {', '.join(r.name for r in red)}"
     return _retry(d, "check_fixes", MAX_CHECK_FIXES, tail, NeedsYouError(why, "checks_failed"))
@@ -131,8 +131,13 @@ def _shipping(d: Driver) -> str | None:
     plan = ShipPlan(
         repo_dir(d.item.repo), wt, str(st.branch), d.item, checks, d.ctx.run_dir, d.ctx.check_timeout, live
     )
-    st.ship = ship(plan, d.ctx.client, d.ctx.now)
-    st.head_sha = st.ship["commit"]
+    st.ship = ship(plan, d.ctx.client, d.ctx.now, allow_empty=st.auto_ship)
+    sha = st.ship["commit"]
+    if sha:
+        st.head_sha = sha
+    d.activity(
+        f"shipped {sha[:12]} to origin/{base_ref(plan.repo)[1]}" if sha else "closed with no code change"
+    )
     return "shipped"
 
 

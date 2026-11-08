@@ -112,3 +112,12 @@ def test_t303_ship_waits_for_a_slow_commit_hook(world: Env, monkeypatch: pytest.
     monkeypatch.setattr(worktree, "GIT_TIMEOUT", 0.5)
     info = ship.ship(_plan(world, repo, wt), client, lambda: 1.0)
     assert info["commit"]
+
+
+def test_auto_ship_with_no_diff_reports_a_failed_close_and_keeps_the_worktree(world: Env) -> None:
+    repo, wt, client = _setup(world)
+    (wt.path / "hello.txt").unlink()
+    client.fail_close = True
+    with pytest.raises(NeedsYouError, match="Nothing to push but closing the note failed"):
+        ship.ship(_plan(world, repo, wt), client, lambda: 1.0, allow_empty=True)
+    assert wt.path.exists()

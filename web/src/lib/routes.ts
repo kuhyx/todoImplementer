@@ -14,6 +14,7 @@ export const routes = {
 
 export interface Payload {
   answers?: Record<string, string>;
+  autoShip?: boolean | undefined;
   lessonId?: string;
   text?: string;
 }
@@ -29,6 +30,9 @@ export function bodyFor(action: ActionId, payload: Payload): Record<string, unkn
     }
     case "spec-answers": {
       return { answers: payload.answers ?? {} };
+    }
+    case "start": {
+      return payload.autoShip === undefined ? {} : { auto_ship: payload.autoShip };
     }
     default: {
       return {};

@@ -31,6 +31,7 @@
       "description": "paused_limit: when to resume."
     },
     "using_credits": {"type": "boolean", "description": "Set by the Run on credits click for this task only."},
+    "auto_ship": {"type": "boolean", "description": "Ticked at Start/Restart: a done_check note ships itself (checks -> shipping) once every check is green."},
     "sessions": {
       "type": "object",
       "description": "Per role (spec, plan, implement, review, verify): session id and when its last turn ended (fresh session after 1 h idle).",

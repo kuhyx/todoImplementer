@@ -66,7 +66,8 @@ class Scheduler(Engine):
             raise RunnerError(msg, "conflict")
         return self._load(card)
 
-    def start(self, card: str) -> None:  # noqa: D102
+    def start(self, card: str, *, auto_ship: bool | None = None) -> None:
+        """Start, Restart, Retry or Hand back; a failed run (Retry, Hand back) keeps its auto-ship choice."""
         try:
             item = self.client.get_task(card).item
         except TodoError as exc:
@@ -80,7 +81,9 @@ class Scheduler(Engine):
             if st is not None and st.stage not in RESTARTABLE:
                 msg = f"{card} already has a run ({st.stage})"
                 raise RunnerError(msg, "conflict")
-            st = st or RunState(task_id=card, stage="spec", started_at=self.clock(), repo=item.repo)
+            if st is None or st.stage == "cancelled":
+                st = st or RunState(task_id=card, stage="spec", started_at=self.clock(), repo=item.repo)
+                st.auto_ship = bool(auto_ship)
             st.stage = "plan" if st.extra.get("spec_ok") or not needs_spec(item) else "spec"
             st.error, st.last_tag, st.assignee = None, None, "claude"
             for key in COUNTERS:

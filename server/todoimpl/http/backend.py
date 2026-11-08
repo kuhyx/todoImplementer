@@ -51,8 +51,8 @@ class Backend(Protocol):
         """Live events (activity|stage|cost|done) for one task; blocks between events."""
         ...
 
-    def start(self, id8: str) -> None:
-        """Start the next stage chain."""
+    def start(self, id8: str, *, auto_ship: bool | None = None) -> None:
+        """Start the next stage chain; `auto_ship` None keeps the run's stored choice."""
         ...
 
     def spec_answers(self, id8: str, answers: dict[str, str]) -> None:

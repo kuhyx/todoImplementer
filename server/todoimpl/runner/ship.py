@@ -1,4 +1,4 @@
-"""Ship click: one commit with a `Todo: <id8>` trailer, rebase, recheck, push, close the item, clean up."""
+"""Ship (click or auto-ship): one `Todo: <id8>` commit, rebase, recheck, push, close the item, clean up."""
 
 from __future__ import annotations
 
@@ -52,24 +52,28 @@ def commit_message(title: str, id8: str) -> str:  # noqa: D103
 
 
 def evidence(sha: str, branch: str, results: list[CheckResult], live: str = "") -> str:
-    """Return the close evidence: the commit, the live-check summary and each check's output tail."""
-    parts = [f"Shipped {sha[:12]} to origin/{branch}.", *([live] if live else [])]
+    """Return the close evidence: the commit (or no code change), the live-check summary, each check tail."""
+    head = f"Shipped {sha[:12]} to origin/{branch}." if sha else "Closed with no code change."
+    parts = [head, *([live] if live else [])]
     for r in results:
         tail = "\n".join(r.tail.splitlines()[-EVIDENCE_TAIL:])
         parts.append(f"{r.name} `{r.command}` exit {r.exit_code}:\n{tail}".rstrip())
     return "\n".join(parts if results else [*parts, "No checks were found."])
 
 
-def _squash(plan: ShipPlan, ref: str) -> None:
-    """Fold the implementer's commits and uncommitted work into one commit on the current merge base."""
+def _squash(plan: ShipPlan, ref: str, *, allow_empty: bool) -> bool:
+    """Fold the work into one commit on the merge base; return False when there is nothing to commit."""
     wt = plan.worktree
     git(wt, "add", "--all")
     git(wt, "reset", "--soft", git(wt, "merge-base", "HEAD", ref).stdout.strip())
     if git(wt, "diff", "--cached", "--quiet", check=False).returncode == 0:
+        if allow_empty:
+            return False
         msg = "Nothing to ship: the worktree has no changes against its base"
         raise NeedsYouError(msg, "run_failed")
     message = commit_message(plan.item.title, plan.item.note_id)
     git(wt, "commit", "--quiet", "-m", message, timeout=plan.timeout)
+    return True
 
 
 def _rebase(plan: ShipPlan, ref: str) -> None:
@@ -83,31 +87,48 @@ def _rebase(plan: ShipPlan, ref: str) -> None:
     raise NeedsYouError(msg, "run_failed")
 
 
-def ship(plan: ShipPlan, client: Closer, now: Callable[[], float]) -> dict[str, Any]:
-    """Run the whole ship; any refusal raises NeedsYouError and leaves the worktree in place."""
+def _push(plan: ShipPlan, branch: str) -> str:
+    """Push HEAD to origin's default branch and return its sha; a refusal raises NeedsYouError."""
+    sha = git(plan.worktree, "rev-parse", "HEAD").stdout.strip()
+    push = git(
+        plan.worktree, "push", "origin", f"HEAD:refs/heads/{branch}", check=False, timeout=PUSH_TIMEOUT
+    )
+    if push.returncode:
+        tail = push.stderr.strip()[-400:]
+        msg = f"Push of {sha[:8]} to origin/{branch} was refused: {tail}"
+        raise NeedsYouError(msg, "run_failed")
+    return sha
+
+
+def ship(
+    plan: ShipPlan, client: Closer, now: Callable[[], float], *, allow_empty: bool = False
+) -> dict[str, Any]:
+    """Run the whole ship; any refusal raises NeedsYouError and leaves the worktree in place.
+
+    `allow_empty` (auto-ship only) closes a run with no diff without a commit or push; `commit` is then "".
+    """
     wt = plan.worktree
     git(wt, "fetch", "--quiet", "origin")
     ref, branch = base_ref(plan.repo)
-    _squash(plan, ref)
-    _rebase(plan, ref)
+    changed = _squash(plan, ref, allow_empty=allow_empty)
+    if changed:
+        _rebase(plan, ref)
     results, _ = run_all(plan.checks, wt, plan.run_dir, plan.timeout)
     red = [r.name for r in results if not r.passed]
     if red:
         msg = f"Checks went red after the rebase on {ref}: {', '.join(red)}"
         raise NeedsYouError(msg, "checks_failed")
-    sha = git(wt, "rev-parse", "HEAD").stdout.strip()
-    push = git(wt, "push", "origin", f"HEAD:refs/heads/{branch}", check=False, timeout=PUSH_TIMEOUT)
-    if push.returncode:
-        tail = push.stderr.strip()[-400:]
-        msg = f"Push of {sha[:8]} to origin/{branch} was refused: {tail}"
-        raise NeedsYouError(msg, "run_failed")
-    pushed = now()
+    info: dict[str, Any] = {"commit": ""}
+    if changed:
+        info.update(commit=_push(plan, branch), pushed_at=now())
+    sha = str(info["commit"])
     try:
         client.close_task(
             f"{plan.item.note_id}-{plan.item.index}", evidence(sha, branch, results, plan.live_summary)
         )
     except TodoError as exc:
-        msg = f"Pushed {sha[:8]} but closing the note failed: {exc}"
+        done = f"Pushed {sha[:8]}" if sha else "Nothing to push"
+        msg = f"{done} but closing the note failed: {exc}"
         raise NeedsYouError(msg, "run_failed") from exc
     remove(plan.repo, wt, plan.branch)
-    return {"commit": sha, "pushed_at": pushed, "closed_at": now()}
+    return {**info, "closed_at": now()}

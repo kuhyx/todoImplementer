@@ -1,6 +1,6 @@
 import type { Action } from "@/lib/schemas-common";
 
-import { type BarState, idleBar, renderAction, slowTimer } from "@/components/action-bar";
+import { type BarState, idleBar, optionValue, renderAction, slowTimer } from "@/components/action-bar";
 /** Side drawer for one task: live feed, plan, diff, live check, check output, spec questions, actions and the Send-to-Claude box. */
 import { AskPanel } from "@/components/ask-view";
 import { paintDetail } from "@/components/drawer-render";
@@ -168,7 +168,8 @@ export class TiDrawer extends HTMLElement {
       this.#render();
     });
     try {
-      await postAction(detail.card.id, action.id, { answers, lessonId: detail.lesson?.id ?? "", text }, csrf);
+      const autoShip = optionValue(action, this);
+      await postAction(detail.card.id, action.id, { answers, autoShip, lessonId: detail.lesson?.id ?? "", text }, csrf);
       if (action.id === "send") for (const box of this.querySelectorAll<HTMLTextAreaElement>("textarea[name$=send]")) box.value = "";
       showToast(`${action.label}: done`);
     } catch (error) {

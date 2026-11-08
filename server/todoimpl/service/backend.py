@@ -162,9 +162,9 @@ class ServiceBackend:
             raise BackendError(UPSTREAM, f"todo MCP: {exc}") from exc
         self.cache.poke()
 
-    def start(self, id8: str) -> None:
-        """Start click."""
-        self._act(lambda: self.scheduler.start(id8))
+    def start(self, id8: str, *, auto_ship: bool | None = None) -> None:
+        """Start click; `auto_ship` None keeps the run's stored choice."""
+        self._act(lambda: self.scheduler.start(id8, auto_ship=auto_ship))
 
     def spec_answers(self, id8: str, answers: dict[str, str]) -> None:
         """Answers to spec questions."""

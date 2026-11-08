@@ -188,6 +188,8 @@ class Router:
         if offered is None or not offered["enabled"]:
             reason = offered["reason"] if offered else None
             return error_reply("disabled", reason or "action not available")
+        if body.get("auto_ship") is True and not (option := offered.get("option") or {}).get("enabled"):
+            return error_reply("disabled", option.get("reason") or "Auto-ship is not offered here")
         self._invoke(action, id8, body)
         fresh = self.backend.task(id8) or detail
         return json_reply({"ok": True, "task": fresh["card"]})
@@ -204,7 +206,7 @@ class Router:
         backend = self.backend
         match action:
             case "start":
-                backend.start(id8)
+                backend.start(id8, auto_ship=body.get("auto_ship"))
             case "spec-answers":
                 backend.spec_answers(id8, body["answers"])
             case "spec-ok":

@@ -34,18 +34,24 @@ export const needs = z
   .strictObject({ kind: z.enum(NEEDS_KINDS), text: z.string().min(1) })
   .nullable();
 
+const hasReason = (a: { enabled: boolean; reason: null | string }): boolean => a.enabled || (a.reason !== null && a.reason.length > 0);
+
+/** A checkbox sent with its action's click (Start/Restart: auto_ship). */
+export const actionOption = z
+  .strictObject({ enabled: z.boolean(), id: z.enum(["auto_ship"]), label: z.string().min(1), reason: z.string().nullable() })
+  .refine(hasReason, { message: "a disabled option needs a reason" });
+
 export const action = z
   .strictObject({
     confirm: z.boolean().optional(),
     enabled: z.boolean(),
     id: z.enum(ACTION_IDS),
     label: z.string().min(1),
+    option: actionOption.optional(),
     reason: z.string().nullable(),
     value: z.string().optional(),
   })
-  .refine((a) => a.enabled || (a.reason !== null && a.reason.length > 0), {
-    message: "a disabled action needs a reason",
-  });
+  .refine(hasReason, { message: "a disabled action needs a reason" });
 export const actions = z.array(action);
 
 export const question = z.strictObject({
@@ -107,6 +113,7 @@ export const taskCard = z.strictObject({
 });
 
 export type Action = z.infer<typeof action>;
+export type ActionOption = z.infer<typeof actionOption>;
 export type Question = z.infer<typeof question>;
 export type TaskCard = z.infer<typeof taskCard>;
 export type ColumnId = z.infer<typeof column>;
