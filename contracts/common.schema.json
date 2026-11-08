@@ -9,21 +9,7 @@
     "usd": {"type": "number", "minimum": 0},
     "assignee": {"enum": ["human", "claude"]},
     "stage": {
-      "enum": [
-        "spec",
-        "spec_wait",
-        "plan",
-        "implement",
-        "live_check",
-        "checks",
-        "gate",
-        "shipping",
-        "shipped",
-        "failed",
-        "paused_limit",
-        "paused_retry",
-        "cancelled"
-      ],
+      "enum": ["spec", "spec_wait", "plan", "implement", "live_check", "checks", "gate", "shipping", "shipped", "failed", "paused_limit", "paused_retry", "cancelled"],
       "description": "Run stage as written by the runner. See DOCS-spec.md for transitions."
     },
     "status": {
@@ -179,21 +165,8 @@
         "actions": {"$ref": "#/$defs/actions"}
       },
       "required": [
-        "id",
-        "title",
-        "repo",
-        "priority",
-        "assignee",
-        "stage",
-        "status",
-        "column",
-        "current",
-        "needs",
-        "partial",
-        "cost_usd",
-        "resumes_at",
-        "updated",
-        "actions"
+        "id", "title", "repo", "priority", "assignee", "stage", "status", "column", "current", "needs",
+        "partial", "cost_usd", "resumes_at", "updated", "actions"
       ],
       "additionalProperties": false
     },

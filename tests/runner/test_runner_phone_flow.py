@@ -5,8 +5,9 @@ from phonefakes import READY, SERIAL, adb_calls, fake_adb, phone_turn
 from runnerfakes import Env
 from schedfakes import CARD, IMPL, LIVE_OK, PLAN, boot, state, wait, wait_stage
 from todoimpl.board import state as store
+from todoimpl.board.needs import needs
 from todoimpl.board.state import RunState
-from todoimpl.board.status import compute, needs
+from todoimpl.board.status import compute
 from todoimpl.runner.phone_sched import PhoneWatcher
 from todoimpl.runner.scheduler import Scheduler
 

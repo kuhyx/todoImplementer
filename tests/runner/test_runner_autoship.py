@@ -83,7 +83,8 @@ def test_auto_ship_with_no_diff_closes_once_and_pushes_nothing(world: Env) -> No
 def test_auto_ship_red_recheck_fails_and_send_reopens_implement(world: Env) -> None:
     count = world.tmp / "runs"
     # The second run of the check (the recheck after the rebase) is red, every other run is green.
-    check = f'n=$(cat {count} 2>/dev/null || echo 0); echo $((n+1)) > {count}; [ "$n" -ne 1 ]'
+    # Leading `:` so the check reads as a command and not as a sentence (it is not run otherwise).
+    check = f': ; n=$(cat {count} 2>/dev/null || echo 0); echo $((n+1)) > {count}; [ "$n" -ne 1 ]'
     sched, client = boot(world, PLAN, IMPL, LIVE_OK, done_check=check)
     try:
         sched.start(CARD, auto_ship=True)
@@ -140,13 +141,14 @@ def test_auto_ship_survives_a_limit_pause(world: Env) -> None:
 
 
 def test_retry_keeps_auto_ship_and_restart_takes_the_new_choice(world: Env) -> None:
-    sched, _ = boot(world, PLAN, reply("done-ish"), reply("still"), reply("hm"), done_check="true")
+    turns = [PLAN, IMPL, LIVE_OK, IMPL, LIVE_OK, IMPL, LIVE_OK]
+    sched, _ = boot(world, *turns, done_check="test -f nope.txt")
     try:
         sched.start(CARD, auto_ship=True)
         wait_stage(world, sched, "failed")
         world.script("abcd1234", *reply("x\n\nQ: which file?"))
         sched.start(CARD)
-        assert wait_stage(world, sched, "plan", tag="Q").auto_ship
+        assert wait_stage(world, sched, "implement", tag="Q").auto_ship
         sched.cancel(CARD)
         sched.start(CARD, auto_ship=False)
         sched.cancel(CARD)

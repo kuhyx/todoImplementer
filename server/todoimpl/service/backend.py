@@ -176,7 +176,7 @@ class ServiceBackend:
         record(self.root, id8, kind, self._clock())
 
     def start(self, id8: str, *, auto_ship: bool | None = None) -> None:
-        """Start click; `auto_ship` None keeps the run's stored choice. On a card that already has a run it is a retry."""
+        """Start click (a retry on a card that has a run); `auto_ship` None keeps the stored choice."""
         kind = "start" if load(run_dir(self.root, id8)) is None else "retry"
         self._click(id8, kind, lambda: self.scheduler.start(id8, auto_ship=auto_ship))
 

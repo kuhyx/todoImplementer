@@ -1,5 +1,6 @@
 from board_helpers import Note, run
-from todoimpl.board.status import Status, compute, needs
+from todoimpl.board.needs import needs
+from todoimpl.board.status import Status, compute
 
 WAIT = {"apk": "/a.apk", "criteria": ["C1"]}
 
