@@ -5,6 +5,8 @@ from __future__ import annotations
 from enum import StrEnum
 from pathlib import Path
 
+from .phone import PROTECT
+
 
 class Kind(StrEnum):
     """Project kinds that need a different way to drive the live thing."""
@@ -39,7 +41,7 @@ HINTS: dict[Kind, str] = {
         "Phone companion app (com.kuhy.*), Pixel attached: on your own slot only, never kuhy's app: "
         "`~/.claude/scripts/phone_slot.sh acquire`, `phone_deploy.sh <app> --release --slot --stage "
         "prep|dart|kotlin|assemble|install`, `~/.claude/scripts/phone_vd.sh start <slot pkg>` then "
-        "tap/swipe/text/shot, `phone_slot.sh release`. Never uninstall or `pm clear`."
+        "tap/swipe/text/shot, `phone_slot.sh release`. " + PROTECT
     ),
     Kind.GODOT: (
         "godot-mcp-runtime: `run_project`, `simulate_input`, `take_screenshot`. Or the repo's "

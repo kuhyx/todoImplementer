@@ -29,6 +29,11 @@ SENSES = (
     "sense`, never a blocker, unless the note says kuhy wants to check it himself: then "
     "`- [~] Cn: after ship: kuhy checks <what>`, still no blocker."
 )
+PROTECT = (
+    "Never install, force-stop, kill, clear, uninstall or launch any non-slot package, in particular kuhy's "
+    "running workout app (com.kuhy.workout_app): phone_deploy exit 46 means stop and report, never work "
+    "around it."
+)
 STAGE = (
     '{run_dir}/phone_ready.json = {{"apk": abs path, "pkg", "app_dir": abs path, "versionCode", '
     '"deploy_cmd": "{deploy}", "criteria": ["C7"], "checks": what to verify on the phone}}'
@@ -45,7 +50,7 @@ def staging(ctx: PromptContext) -> str:
         "would be overwritten): sign-in and sync criteria are phone criteria. "
         f"(b) Write {STAGE.format(run_dir=ctx.run_dir, deploy=DEPLOY.format(app_dir='<app_dir>'))}. "
         "(c) Mark those rows `- [~] Cn: needs phone: <why>` and end with `A: phone: <one line>`. "
-        f"{NO_HANDS} {SENSES}"
+        f"{NO_HANDS} {SENSES} {PROTECT}"
     )
 
 
@@ -64,7 +69,7 @@ def attached(ctx: PromptContext) -> str:
         "(--dart-define), add that support (crdt_sync define) first: the one code change this stage allows. "
         f"Verify only {criteria} ({info.get('checks') or 'see the plan'}); never uninstall or `pm clear`. "
         f"Copy the `- [x]` rows of {ctx.run_dir}/live_check.emulator.md unchanged; the rest are yours. "
-        f"{NO_HANDS} {SENSES} "
+        f"{NO_HANDS} {SENSES} {PROTECT} "
         "If the phone is gone, end with `A: phone: <why>`; anything else you need from kuhy is a plain "
         "`A:` or `Q:`, never `A: phone:`."
     )

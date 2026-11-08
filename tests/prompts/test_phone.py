@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import replace
 
 from todoimpl.prompts import PromptContext, build
+from todoimpl.prompts.kind import HINTS, Kind
 
 READY = {
     "app_dir": "/apps/demo",
@@ -84,3 +85,18 @@ def test_t1823_human_sense_criteria_are_skipped_not_blocking(ctx: PromptContext)
 def test_t1824_staged_deploy_command_builds_the_slot_variant(ctx: PromptContext) -> None:
     text = build("live_check", ctx)
     assert "phone_deploy.sh <app_dir> --release --slot --stage prep|dart|kotlin|assemble|install" in text
+
+
+RULE = "Never install, force-stop, kill, clear, uninstall or launch any non-slot package"
+
+
+def test_t1834_phone_prompts_protect_kuhys_running_workout_app(ctx: PromptContext) -> None:
+    for text in (build("live_check", ctx), build("live_check", replace(ctx, phone=READY))):
+        assert RULE in text
+        assert "kuhy's running workout app" in text
+        assert "phone_deploy exit 46 means stop and report, never work around" in text
+
+
+def test_t1834_flutter_driver_hint_carries_the_rule() -> None:
+    assert "any non-slot package" in HINTS[Kind.FLUTTER]
+    assert "exit 46" in HINTS[Kind.FLUTTER]
