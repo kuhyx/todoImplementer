@@ -1,3 +1,5 @@
+import os
+import sys
 from pathlib import Path
 
 import pytest
@@ -97,3 +99,24 @@ def test_t1814_a_sentence_done_check_reaches_the_gate_unrun(world: Env) -> None:
         assert "done_check not run" in feed
     finally:
         sched.close()
+
+
+def test_t1836_checks_and_git_do_not_inherit_the_servers_venv(
+    world: Env, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    venv = tmp_path / "srv" / ".venv"
+    monkeypatch.setenv("VIRTUAL_ENV", str(venv))
+    monkeypatch.setenv("PATH", f"{venv}/bin:{os.environ['PATH']}")
+    probe = 'echo "VE=[${VIRTUAL_ENV-}]"; echo "PATH=$PATH"'
+    shown = checks.run_check("env", probe, tmp_path, tmp_path / "run", 10).tail
+    assert "VE=[]" in shown
+    assert f"{venv}/bin" not in shown
+    assert str(world.bin) in shown  # the rest of PATH stays
+    env = checks.clean_env()
+    assert "VIRTUAL_ENV" not in env
+    assert f"{venv}/bin" not in env["PATH"].split(os.pathsep)
+    extra = checks.clean_env({"CAP_MEM": "4G"})
+    assert extra["CAP_MEM"] == "4G"
+    monkeypatch.delenv("VIRTUAL_ENV")
+    monkeypatch.setattr(sys, "prefix", sys.base_prefix)  # not inside a venv at all
+    assert "VIRTUAL_ENV" not in checks.clean_env()

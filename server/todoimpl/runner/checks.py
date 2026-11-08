@@ -6,12 +6,16 @@ import os
 import re
 import shlex
 import subprocess
+import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from .claude import kill_tree
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 DEFAULT_TIMEOUT = 600.0
 TAIL_LINES = 40
@@ -33,6 +37,22 @@ class CheckResult:
     @property
     def passed(self) -> bool:  # noqa: D102
         return self.exit_code == 0
+
+
+def clean_env(extra: Mapping[str, str] | None = None) -> dict[str, str]:
+    """Return the server's env without its own venv: `VIRTUAL_ENV` and the venv's `bin` on `PATH`.
+
+    A target repo's pre-commit and tools must pick their own python, not the server's (T1836).
+    """
+    env = dict(os.environ)
+    venvs = {env.pop("VIRTUAL_ENV", "")}
+    if sys.prefix != sys.base_prefix:
+        venvs.add(sys.prefix)
+    drop = {f"{v}/bin" for v in venvs if v}
+    env["PATH"] = os.pathsep.join(
+        p for p in env.get("PATH", "").split(os.pathsep) if p.rstrip("/") not in drop
+    )
+    return {**env, **(extra or {})}
 
 
 def capped() -> str:  # noqa: D103
@@ -80,16 +100,25 @@ def discover(wt: Path, done_check: str | None) -> list[tuple[str, str]]:
     return found
 
 
-def run_check(
-    name: str, command: str, cwd: Path, run_dir: Path, timeout: float = DEFAULT_TIMEOUT
+def run_check(  # noqa: PLR0913, PLR0917 - one knob (env) more than the lint allows
+    name: str,
+    command: str,
+    cwd: Path,
+    run_dir: Path,
+    timeout: float = DEFAULT_TIMEOUT,
+    env: Mapping[str, str] | None = None,
 ) -> CheckResult:
-    """Run one check in its own process group (a timeout kills the whole tree); log to evidence/."""
+    """Run one check in its own process group (a timeout kills the whole tree); log to evidence/.
+
+    `env` adds to the server's env minus its venv (e.g. a higher `CAP_MEM` for the capped.sh scope).
+    """
     log = run_dir / "evidence" / f"check-{name}-{time.time():.3f}.log"
     log.parent.mkdir(parents=True, exist_ok=True)
     with log.open("w", encoding="utf-8") as out:
         proc = subprocess.Popen(  # noqa: S603 - argv list; the command is the note's own done_check
             [capped(), "bash", "-c", command],
             cwd=cwd,
+            env=clean_env(env),
             stdin=subprocess.DEVNULL,
             stdout=out,
             stderr=subprocess.STDOUT,

@@ -42,3 +42,4 @@ One row per bug, ids global and never reused. The row's test is named `test_t<N>
 | T1813 | A follow-up note listed only the open criteria with no link back, so it read as if the earlier task did nothing | tests/runner/test_runner_live.py, web/src/components/sections.test.ts |
 | T1814 | A done_check written as a sentence ran as a bash command, so its run could never pass Checks | tests/runner/test_runner_checks.py |
 | T1817 | A server restart or deploy reaped the running claude turns and reran them: the turn was a child pipe of the server, so changing the server affected live sessions | tests/runner/test_runner_detach.py, tests/runner/test_runner_launch.py, tests/runner/test_runner_adopt.py, tests/deploy/test_deploy_script.py |
+| T1836 | Checks and git ran with the server's `VIRTUAL_ENV` and `.venv/bin` on `PATH`, so a target repo's pre-commit used the server's python and broke | tests/runner/test_runner_checks.py |

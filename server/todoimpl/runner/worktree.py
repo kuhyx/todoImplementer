@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-import os
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
 from todoimpl.board.repos import repo_path
 
+from .checks import clean_env
 from .files import NeedsYouError, worktree_path
 
 OWNER = "kuhyx"
@@ -43,7 +43,7 @@ def git(
             text=True,
             timeout=timeout,
             check=False,
-            env={**os.environ, "GIT_TERMINAL_PROMPT": "0"},
+            env=clean_env({"GIT_TERMINAL_PROMPT": "0"}),  # hooks run target repos' pre-commit (T1836)
         )
     except subprocess.TimeoutExpired as exc:
         msg = f"git {' '.join(args)} timed out after {timeout:g} s in {cwd}"
