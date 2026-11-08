@@ -70,3 +70,24 @@ def test_t1402_exact_directory_wins_and_cache_follows_a_moved_clone(tmp_path: Pa
     exact = make_clone(tmp_path, "todo-app", None)
     assert repo_path("kuhyx/todo-app", tmp_path) == exact
     assert repo_path("kuhyx/nothing", tmp_path / "absent") == tmp_path / "absent" / "nothing"
+
+
+def test_t1839_the_runner_finds_a_clone_in_a_differently_named_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    clone = make_clone(tmp_path, "todo", "https://github.com/kuhyx/todo-app.git")
+    monkeypatch.setenv("TODOIMPL_SRC", str(tmp_path))
+    assert repo_dir("kuhyx/todo-app") == clone
+    assert repo_dir("todo-app") == clone
+    assert repo_checker()("kuhyx/todo-app") is None
+
+
+def test_t1839_a_directory_with_another_origin_loses_to_the_matching_clone(tmp_path: Path) -> None:
+    wrong = make_clone(tmp_path, "todo-app", "https://github.com/kuhyx/other.git")
+    assert repo_path("kuhyx/todo-app", tmp_path) == wrong  # nothing better: the name still wins
+    real = make_clone(tmp_path, "todo", "git@github.com:kuhyx/todo-app.git")
+    assert repo_path("kuhyx/todo-app", tmp_path) == real
+    (wrong / ".git" / "config").write_text(
+        '[remote "origin"]\n\turl = https://github.com/kuhyx/todo-app.git\n', encoding="utf-8"
+    )
+    assert repo_path("kuhyx/todo-app", tmp_path) == wrong

@@ -69,7 +69,7 @@ def repo_dir(repo: str | None) -> Path:
     if owner not in ("", OWNER):
         msg = f"Repo {repo} is not a {OWNER}/ repo; only ~/src clones of those run here"
         raise NeedsYouError(msg, "run_failed")
-    path = repo_path(name)
+    path = repo_path(f"{OWNER}/{name}")  # the owner lets it find a clone in a differently named directory
     if not (path / ".git").exists():
         msg = f"Repo {repo} is not cloned at {path}: clone it there, then start again"
         raise NeedsYouError(msg, "handed_to_you")
