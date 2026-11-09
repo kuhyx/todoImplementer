@@ -105,7 +105,17 @@ def test_run_skips_stop_when_preview_inactive(box: tuple[Env, Stubber]) -> None:
     assert _opened(env).splitlines()[-1] == f"xdg-open {URL}"
 
 
-def test_run_installs_only_the_missing_tool(box: tuple[Env, Stubber], tmp_path: Path) -> None:
+def _system_bin_without(tmp_path: Path, *missing: str) -> Path:
+    """Mirror /usr/bin as symlinks minus `missing`, so the test, not the host, decides which tools exist."""
+    sysbin = tmp_path / "sysbin"
+    sysbin.mkdir()
+    for real in Path("/usr/bin").iterdir():
+        if real.name not in missing:
+            (sysbin / real.name).symlink_to(real)
+    return sysbin
+
+
+def test_t1858_run_installs_only_the_missing_tool(box: tuple[Env, Stubber], tmp_path: Path) -> None:
     env, stub = box
     _stubs(stub)
     (tmp_path / "bin" / "uv").unlink()
@@ -115,7 +125,8 @@ def test_run_installs_only_the_missing_tool(box: tuple[Env, Stubber], tmp_path: 
         "sudo",
         f"printf '{uv_stub}' > '{tmp_path}/bin/uv'; chmod +x '{tmp_path}/bin/uv'",
     )
-    done = env.run("bash", str(RUN), PATH=f"{tmp_path}/bin:/usr/bin:/bin", **FAST_WAIT)
+    sysbin = _system_bin_without(tmp_path, "uv")
+    done = env.run("bash", str(RUN), PATH=f"{tmp_path}/bin:{sysbin}", **FAST_WAIT)
     assert done.returncode == 0, done.stderr
     assert "sudo pacman -S --needed --noconfirm uv\n" in env.calls
     assert env.calls.count("pacman") == 1
