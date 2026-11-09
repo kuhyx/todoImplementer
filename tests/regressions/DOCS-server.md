@@ -22,3 +22,4 @@ One row per bug, ids global and never reused. The row's test is named `test_t<N>
 | T1811 | Least effort put a 9-question card after criteria-not-done cards; every question card must come first | tests/board/test_board_needs.py, web/src/lib/board-model.test.ts |
 | T1815 | A cancelled card sat in Backlog as a to-do and its note stayed open; Cancel now abandons the note where it can and the card shows Abandoned under Done | tests/board/test_board_status.py, tests/service/test_service_view.py, tests/runner/test_runner_abandon.py |
 | T1835 | A Needs-you card said "Claude needs you to do something: see the feed" (or another generic line) while the reply had an `N:` line, a question round or a last paragraph naming the ask | tests/board/test_board_needs_ask.py |
+| T1880 | A worktree holding a non-UTF-8 file made `/api/task/<id>` answer HTTP 500 (strict decode of `git diff`) | tests/board/test_board_diff.py |

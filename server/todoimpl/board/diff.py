@@ -20,6 +20,7 @@ def _git(worktree: Path, args: list[str], index: str) -> str:
             ["git", "-C", str(worktree), *args],  # noqa: S607
             capture_output=True,
             text=True,
+            errors="replace",  # a Latin-1 or binary-ish file must not turn the task view into a 500 (T1880)
             check=False,
             timeout=TIMEOUT,
             env=env,

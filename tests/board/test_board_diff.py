@@ -78,3 +78,11 @@ def test_git_timeout_gives_an_empty_diff(repo: Path, monkeypatch: pytest.MonkeyP
 
     monkeypatch.setattr(subprocess, "run", hang)
     assert worktree_diff(str(repo), "HEAD") == {"files": [], "patch": "", "truncated": False}
+
+
+def test_t1880_non_utf8_file_in_the_worktree_does_not_crash_the_diff(repo: Path) -> None:
+    (repo / "latin1.txt").write_bytes(b"zaj\xf3c\n")
+    got = worktree_diff(str(repo), None)
+    assert got is not None
+    assert [f["path"] for f in got["files"]] == ["latin1.txt"]
+    assert "zaj" in got["patch"]
