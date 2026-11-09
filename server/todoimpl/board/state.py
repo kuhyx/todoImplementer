@@ -33,6 +33,7 @@ STAGES = (
 ASSIGNEES = ("human", "claude")
 TAGS = ("Q", "A", "R", "D")
 FILE = "state.json"
+NOTE_BODY_MAX = 20_000
 
 
 @dataclass
@@ -75,6 +76,7 @@ class RunState:
     lesson: dict[str, Any] | None = None
     ship: dict[str, Any] | None = None
     stages: list[dict[str, Any]] = field(default_factory=list)
+    note_body: str | None = None
     extra: dict[str, Any] = field(default_factory=dict)
 
     def open_questions(self) -> list[SpecQuestion]:
@@ -107,6 +109,7 @@ class RunState:
             "live_check": self.live_check,
             "lesson": self.lesson,
             "ship": self.ship,
+            "note_body": self.note_body,
         }
         out.update({key: value for key, value in optional.items() if value is not None})
         listed = {
@@ -155,9 +158,15 @@ class RunState:
             "lesson": opt(data, "lesson", dict),
             "ship": opt(data, "ship", dict),
             "stages": listed(data, "stages"),
+            "note_body": clip_body(opt(data, "note_body", str)),
         }
         kwargs["extra"] = {k: v for k, v in data.items() if k not in known}
         return cls(**kwargs)
+
+
+def clip_body(body: str | None) -> str | None:
+    """Return the note text cut to NOTE_BODY_MAX, so an oversized note never fails a load."""
+    return None if body is None else body[:NOTE_BODY_MAX]
 
 
 def run_root() -> Path:

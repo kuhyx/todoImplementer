@@ -23,6 +23,7 @@
     "error": {"type": ["string", "null"], "description": "Non-null: the run stopped and says why (becomes needs.text)."},
     "updated": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"},
     "repo": {"type": ["string", "null"]},
+    "note_body": {"type": "string", "maxLength": 20000, "description": "The note text taken at Start (cut at 20 000 chars); the card body once the source note is rewritten or closed."},
     "base_sha": {"type": ["string", "null"]},
     "head_sha": {"type": ["string", "null"]},
     "started_at": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"},
