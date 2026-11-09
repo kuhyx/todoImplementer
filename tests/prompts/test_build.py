@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -40,11 +41,31 @@ def test_plan_names_plan_file_and_numbered_criteria(ctx: PromptContext) -> None:
 
 
 @pytest.mark.parametrize("stage", ["implement", "fix", "resume_after_kill", "fresh_after_idle"])
-def test_work_stages_forbid_commit_and_push(stage: str, ctx: PromptContext) -> None:
+def test_t1862_work_stages_grant_landing_instead_of_forbidding_it(stage: str, ctx: PromptContext) -> None:
     text = build(stage, ctx)
-    assert "Never commit, push or touch main" in text
+    assert "Never commit, push or touch main" not in text
+    assert "under 60 s" not in text
+    assert "standing permission" in text
+    assert "git push origin HEAD:main" in text
+    assert "push any tags" in text
+    assert "never edit or commit in kuhy's own checkout" in text
+    assert "git -C ~/src/<other> worktree add /run/ab12cd34/wt-<name> -b todo/<item id> origin/main" in text
+    assert "systemd-run --user --collect" in text
     assert "capped.sh" in text
-    assert "under 60 s" in text
+    assert "Ask kuhy only for" in text
+
+
+def test_t1862_the_base_branch_is_the_repos(ctx: PromptContext) -> None:
+    text = build("implement", replace(ctx, base="master"))
+    assert "git push origin HEAD:master" in text
+    assert "origin/master" in text
+
+
+def test_t1862_live_check_lets_the_session_land_before_it_checks(ctx: PromptContext) -> None:
+    text = build("live_check", ctx)
+    assert "standing permission" in text
+    assert "can only pass after the ship" not in text
+    assert "land the work yourself" in text
 
 
 @pytest.mark.parametrize("stage", ["implement", "fix", "resume_after_kill", "fresh_after_idle"])

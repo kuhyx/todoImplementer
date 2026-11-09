@@ -10,7 +10,7 @@ from todoimpl.todo_mcp.model import TodoError
 from . import gate
 from .checks import run_all
 from .files import NeedsYouError
-from .worktree import base_ref, git, output_tail, remove
+from .worktree import base_ref, git, has_conflicts, output_tail, remove
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -55,6 +55,7 @@ class ShipPlan:
     run_dir: Path
     timeout: float
     live_summary: str = ""
+    base_sha: str = ""  # where the run's branch began: the session's own commits are base_sha..HEAD
 
 
 def commit_message(title: str, id8: str) -> str:  # noqa: D103
@@ -72,6 +73,16 @@ def evidence(sha: str, branch: str, results: list[CheckResult], live: str = "") 
         tail = "\n".join(r.tail.splitlines()[-EVIDENCE_TAIL:])
         parts.append(f"{r.name} `{r.command}` exit {r.exit_code}:\n{tail}".rstrip())
     return "\n".join(parts if results else [*parts, "No checks were found."])
+
+
+def _landed(plan: ShipPlan, ref: str) -> list[str]:
+    """Short shas of the commits the session already pushed, when nothing is left for Ship to push (T1865)."""
+    wt = plan.worktree
+    if not plan.base_sha or git(wt, "status", "--porcelain").stdout.strip():
+        return []
+    if git(wt, "merge-base", "--is-ancestor", "HEAD", ref, check=False).returncode:
+        return []
+    return git(wt, "rev-list", "--reverse", "--abbrev-commit", f"{plan.base_sha}..HEAD").stdout.split()
 
 
 def _squash(plan: ShipPlan, ref: str, *, allow_empty: bool) -> bool:
@@ -149,6 +160,13 @@ def ship(
     wt = plan.worktree
     git(wt, "fetch", "--quiet", "origin")
     ref, branch = base_ref(plan.repo)
+    if has_conflicts(wt):  # `add --all` would commit the markers as if resolved
+        msg = f"Unresolved conflicts in {wt}: resolve them and finish the rebase, then ship again"
+        raise NeedsYouError(msg, "run_failed")
+    if landed := _landed(plan, ref):  # the session pushed its own work: close, no commit, no checks
+        said = [f"Pushed by the session: {', '.join(landed)}.", plan.live_summary]
+        head = git(wt, "rev-parse", "HEAD").stdout.strip()
+        return _close(plan, client, "\n".join(line for line in said if line), {"commit": head}, now)
     changed = _squash(plan, ref, allow_empty=allow_empty)
     if changed:
         _rebase(plan, ref)
@@ -156,14 +174,20 @@ def ship(
     info: dict[str, Any] = {"commit": ""}
     if changed:
         info.update(commit=_push_rebasing(plan, ref, branch, results), pushed_at=now())
+    text = evidence(str(info["commit"]), branch, results, plan.live_summary)
+    return _close(plan, client, text, info, now)
+
+
+def _close(
+    plan: ShipPlan, client: Closer, text: str, info: dict[str, Any], now: Callable[[], float]
+) -> dict[str, Any]:
+    """Close the note with `text` as evidence, remove the worktree, and return `info` plus the close time."""
     sha = str(info["commit"])
     try:
-        client.close_task(
-            f"{plan.item.note_id}-{plan.item.index}", evidence(sha, branch, results, plan.live_summary)
-        )
+        client.close_task(f"{plan.item.note_id}-{plan.item.index}", text)
     except TodoError as exc:
         done = f"Pushed {sha[:8]}" if sha else "Nothing to push"
         msg = f"{done} but closing the note failed: {exc}"
         raise NeedsYouError(msg, "run_failed") from exc
-    remove(plan.repo, wt, plan.branch)
+    remove(plan.repo, plan.worktree, plan.branch)
     return {**info, "closed_at": now()}

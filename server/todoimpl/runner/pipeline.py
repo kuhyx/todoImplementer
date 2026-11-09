@@ -13,6 +13,7 @@ from todoimpl.prompts import PromptContext, build
 
 from . import checks, phone, retry, turncheck, worktree
 from .files import NeedsYouError
+from .grant import auto_grant
 from .permit import gate, with_grant
 from .session import handoff_summary
 from .turn import TurnEnv, run_turn
@@ -110,11 +111,7 @@ class Driver:
             raise CancelledError
 
     def _worktree(self) -> None:
-        st = self.state
-        if st.worktree and (Path(st.worktree) / ".git").exists():
-            return
-        wt = worktree.add(worktree.repo_dir(self.item.repo), self.ctx.root, st.task_id)
-        st.worktree, st.branch, st.base_sha = str(wt.path), wt.branch, wt.base_sha
+        worktree.attach(self.state, self.item.repo, self.ctx.root)  # also rebases a reused worktree (T1864)
         self.save()
 
     def save(self) -> None:  # noqa: D102
@@ -150,7 +147,7 @@ class Driver:
         """Build the prompts package's view of this run: item, plan, answers and kuhy's notes."""
         st, item = self.state, self.item
         answers = tuple((q.title, q.answer) for q in st.spec_questions if q.answer is not None)
-        notes = tuple(str(n) for n in st.extra.get("notes", []))
+        notes = tuple(str(n) for n in st.extra.get("notes", [])) + worktree.conflict_notes(st)
         notes += ((NUDGE if nudge is True else str(nudge),) if nudge else ()) + ((CONTINUE,) if cont else ())
         return PromptContext(
             title=item.title, body=item.body, repo=item.repo or "", worktree=(wt := Path(str(st.worktree))),
@@ -158,6 +155,7 @@ class Driver:
             plan_md=self.plan_md(), spec_answers=answers,
             notes=notes, failure_tail=failure_tail, handoff=handoff,
             phone=st.extra.get("waiting_phone") if st.extra.get("phone_attached") else None,
+            base=str(st.extra.get("base_branch", "main")),
         )  # fmt: skip
 
     def turn(self, role: str, stage: str, *, failure_tail: str = "", prompt: str = "") -> TurnResult:
@@ -194,7 +192,7 @@ class Driver:
             phone.after_turn(st, ctx.run_dir, res)
         self.save()
         self._check_turn(res)
-        if gate(self, res, stage):
+        if gate(self, res, stage) or auto_grant(self, res, stage):
             return self.turn(role, stage, failure_tail=failure_tail, prompt=prompt)
         return self._finished(res, role, stage)
 

@@ -1,7 +1,7 @@
 # todoImplementer
 
 Board that plans, implements, reviews, verifies and (on kuhy's click) ships todo-app notes with headless Claude Code
-sessions. Spec and decisions: `DOCS-spec.md`. Lessons carried over from the predecessor: `DOCS-lessons.md`. Claude API key lifecycle: `DOCS-apikey.md`. Free API credits, routes, overage guard: `DOCS-credits.md`.
+sessions. Spec and decisions: `DOCS-spec.md`. Lessons carried over from the predecessor: `DOCS-lessons.md`. Claude API key lifecycle: `DOCS-apikey.md`. Free API credits, routes, overage guard: `DOCS-credits.md`. Sessions land their own work (grant, backstop, rebase, ship): `DOCS-landing.md`.
 
 ## Commands
 
@@ -42,9 +42,9 @@ sessions. Spec and decisions: `DOCS-spec.md`. Lessons carried over from the pred
   the server on 127.0.0.1 with Origin and CSRF checks on every POST.
 - Ask first: new dependencies, new endpoints or schema changes, anything that touches `~/src/todo`, the Caddy
   or systemd setup, or a real repo; creating the GitHub repo.
-- Never: force-push, push before the Ship click (except a run started with Auto-ship), write outside a task's
+- Never: force-push, edit or commit in kuhy's own checkout working tree (~/src/<repo>), write outside a task's
   worktree and run dir (defaults of a board session, see below), commit `*.zip`, secrets or company identifiers,
-  edit the todo app's code, add video recording, remote hosts, meetings or Windows/macOS.
+  edit the todo app's code (a board session may, in its own worktree), add video recording, remote hosts, meetings or Windows/macOS.
 - Session policy (kuhy's call, 2026-11-06): `~/.config/todoImplementer/session-policy.json` (`$TODOIMPL_POLICY`; keys
   `permission_mode`, `add_dirs`, `disable_hooks`, `deny`) can loosen the push and outside-worktree limits for board
   sessions (loose mode, more dirs, hooks off, no deny list) and lifts the auto-allow never-list. See `DOCS-spec.md`,

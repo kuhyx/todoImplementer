@@ -26,7 +26,7 @@ they mean. Lessons from the predecessor are in `DOCS-lessons.md`.
 - **Q5** Automatic: everything up to Gate. Only kuhy's click: Ship, Spec OK (also Start, Cancel,
   lesson approval). CHANGE 2026-11-08: a done_check note started with "Auto-ship when checks pass" ticked (off by
   default, kept by Retry and Hand back) skips the Gate and ships itself; a run with no diff then closes the note
-  without a push. Never force-push; never write outside the task worktree and its run dir.
+  without a push. CHANGE 2026-11-09: sessions land their own work (DOCS-landing.md). Never force-push; never edit kuhy's checkout.
 - **Q6** Headless `claude -p` with stream-json, resume by session id, live feed (SSE), a Send-to-Claude box, a "copy
   resume command" button (`cd <worktree> && claude --resume <id>`); never open a terminal on :0.
 - **Q7** No cap on concurrent runs (kuhy, 2026-11-05: the tool exists to run many at once): every Start drives at once. Opus implements, Sonnet specs, Haiku classifies. A plan limit pauses
@@ -183,7 +183,7 @@ item marks its section `## [x]` and adds a `closed:` line; the note closes with 
 Every work session (spec, plan, implement, live_check) runs with kuhy's full setup: his `~/.claude` rules, skills,
 hooks, agents, the target repo's project memory and ALL his user and project MCP servers. There is no
 `--strict-mcp-config`, no per-role MCP list and no `--setting-sources` narrowing; only the one-shot Haiku lesson
-drafter stays minimal. `git push` is denied to every session with `--disallowedTools`; only Ship (click or auto-ship) pushes. A resumed
+drafter stays minimal. without a session policy `git push` is denied with `--disallowedTools`; with one they land their own work (DOCS-landing.md). A resumed
 session's `total_cost_usd` is cumulative, so the runner stores the latest value rather than adding turns.
 
 A Ship failure (conflict, red recheck, push refused) sets stage `failed` with `error`; the Send click reopens the
