@@ -9,22 +9,11 @@
     "usd": {"type": "number", "minimum": 0},
     "assignee": {"enum": ["human", "claude"]},
     "stage": {
-      "enum": ["spec", "spec_wait", "plan", "implement", "live_check", "checks", "gate", "shipping", "shipped", "failed", "paused_limit", "paused_retry", "cancelled"],
+      "enum": ["spec", "spec_wait", "plan", "implement", "live_check", "checks", "gate", "shipping", "shipped", "closing", "closed", "failed", "paused_limit", "paused_retry", "cancelled"],
       "description": "Run stage as written by the runner. See DOCS-spec.md for transitions."
     },
     "status": {
-      "enum": [
-        "backlog",
-        "yours",
-        "cancelled",
-        "queued",
-        "working",
-        "paused_limit",
-        "shipping",
-        "needs_you",
-        "ready_to_ship",
-        "done"
-      ],
+      "enum": ["backlog", "yours", "cancelled", "queued", "working", "paused_limit", "shipping", "needs_you", "ready_to_ship", "ready_to_close", "done"],
       "description": "THE single status, computed on the server by board.status.compute. Never recomputed in the page."
     },
     "column": {"enum": ["backlog", "running", "needs_you", "ready", "done"]},
@@ -59,7 +48,7 @@
       "properties": {
         "id": {
           "enum": [
-            "start", "spec-answers", "spec-ok", "send", "ship", "cancel", "lesson-approve",
+            "start", "spec-answers", "spec-ok", "send", "ship", "close", "cancel", "lesson-approve",
             "copy-resume", "go", "copy-fix", "rerun"
           ]
         },
@@ -181,13 +170,21 @@
         "tier": {"$ref": "#/$defs/tier_badges"}, "umbrella": {"$ref": "https://todoimplementer.local/contracts/umbrella.schema.json#/$defs/counts"},
         "resumes_at": {"anyOf": [{"$ref": "#/$defs/epoch"}, {"type": "null"}]},
         "updated": {"anyOf": [{"$ref": "#/$defs/epoch"}, {"type": "null"}]},
-        "actions": {"$ref": "#/$defs/actions"}
+        "actions": {"$ref": "#/$defs/actions"},
+        "auto_start": {"anyOf": [{"$ref": "#/$defs/auto_start"}, {"type": "null"}], "description": "Set when a passing done_check started this run (a closing run); kept after Close."},
+        "auto": {"type": ["string", "null"], "description": "Backlog cards with a done_check while auto close is on: the latest poll's one-line reason."}
       },
       "required": [
         "id", "title", "repo", "priority", "assignee", "stage", "status", "column", "current", "needs",
-        "partial", "cost_usd", "route", "tier", "resumes_at", "updated", "actions"
+        "partial", "cost_usd", "route", "tier", "resumes_at", "updated", "actions", "auto_start", "auto"
       ],
       "additionalProperties": false
+    },
+    "auto_start": {
+      "type": "object",
+      "description": "Why a run started without a click: its trusted done_check passed at passed_at.",
+      "properties": {"reason": {"const": "done_check"}, "passed_at": {"$ref": "#/$defs/epoch"}},
+      "required": ["reason", "passed_at"], "additionalProperties": false
     },
     "item_id": {
       "type": "string",

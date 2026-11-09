@@ -13,6 +13,7 @@ export const STATUS_LABEL: Record<Status, string> = {
   needs_you: "Needs you",
   paused_limit: "Paused: plan limit",
   queued: "Queued",
+  ready_to_close: "Ready to close",
   ready_to_ship: "Ready to ship",
   shipping: "Shipping",
   working: "Working",
@@ -26,6 +27,7 @@ export const STATUS_TONE: Record<Status, "accent" | "muted" | "ok" | "warn"> = {
   needs_you: "warn",
   paused_limit: "warn",
   queued: "muted",
+  ready_to_close: "ok",
   ready_to_ship: "ok",
   shipping: "accent",
   working: "accent",
@@ -59,6 +61,11 @@ const CATEGORY_LABEL: Record<NeedsCategory, string> = {
   phone: "Phone",
   questions: "Questions",
 };
+
+/** "auto: done_check passed at 14:05" on a run a passing done_check started; the time is the server's. */
+export function autoBadge(card: TaskCard): null | string {
+  return card.auto_start === null ? null : `auto: done_check passed at ${formatClock(card.auto_start.passed_at)}`;
+}
 
 /** "partial: 3/5, follow-up abcd1234 · after ship: C7, C14"; every list comes from the server. */
 export function partialLine(partial: NonNullable<TaskCard["partial"]>): string {
@@ -101,6 +108,8 @@ export function renderCard(card: TaskCard, now: number, shouldShowRepo = false):
     card.needs !== null && card.needs.text !== card.current && h("span", { class: "card-needs", text: card.needs.text }),
     card.needs !== null && h("span", { attrs: { "data-category": card.needs.category }, class: "card-category", text: CATEGORY_LABEL[card.needs.category] }),
     card.partial !== null && h("span", { class: "card-partial", text: partialLine(card.partial) }),
+    card.auto !== null && h("span", { class: "card-auto", text: `auto: ${card.auto}` }),
+    card.auto_start !== null && h("span", { attrs: { "data-tone": "accent" }, class: "chip card-badge", text: autoBadge(card) ?? "" }),
     h("span", { class: "card-meta", text: meta.join(" · ") }),
   );
 }

@@ -17,6 +17,7 @@ ROLE_MODELS = {
     "spec": "sonnet",
     "plan": "sonnet",
     "manager": "opus",  # umbrella rounds: runs the free workers (kuhy, 2026-11-10: opus, not sonnet)
+    "closing": "sonnet",
     "implement": "opus",
     "verify": "opus",
     "classify": "haiku",
@@ -25,7 +26,7 @@ ROLE_EFFORT = {"manager": "medium"}  # `claude --effort` per role; absent = the 
 # Sessions load kuhy's real ~/.claude allow rules, which permit pushing; only the Ship click may push.
 DENY_ALWAYS = ("Bash(git push:*)", "Bash(git push *)")
 DENY_READONLY = ("Edit", "Write", "NotebookEdit")
-READONLY_ROLES = frozenset({"classify"})
+READONLY_ROLES = frozenset({"classify", "closing"})
 KEY_VAR = "ANTHROPIC_API_KEY"
 BG_WAIT_VAR = "CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS"  # 0: headless claude waits for background subagents
 

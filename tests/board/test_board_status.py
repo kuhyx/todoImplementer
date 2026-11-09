@@ -32,13 +32,15 @@ CLAUDE: dict[str, tuple[Status, ...]] = {
     "gate": (R,) * 4,
     "shipping": (S,) * 4,
     "shipped": (D,) * 4,
+    "closing": WORK,
+    "closed": (D,) * 4,
     "failed": (N,) * 4,
     "paused_limit": (P,) * 4,
     "paused_retry": (W, P, W, W),
     "cancelled": (C,) * 4,
 }
 HUMAN: dict[str, tuple[Status, ...]] = dict.fromkeys(STAGES, (Y,) * 4)
-HUMAN["shipped"] = (D,) * 4
+HUMAN["shipped"] = HUMAN["closed"] = (D,) * 4
 HUMAN["cancelled"] = (C,) * 4
 COMBOS = list(itertools.product((False, True), repeat=2))
 
@@ -131,6 +133,7 @@ def test_columns() -> None:
         Status.SHIPPING: "running",
         Status.NEEDS_YOU: "needs_you",
         Status.READY_TO_SHIP: "ready",
+        Status.READY_TO_CLOSE: "ready",
         Status.DONE: "done",
     }
 

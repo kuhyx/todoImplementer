@@ -20,6 +20,7 @@ export const board = z.strictObject({
       text: z.string().min(1),
     })
     .optional(),
+  auto_close: z.boolean(),
   build: z.string().min(1),
   columns: z
     .array(z.strictObject({ count: z.number().int().min(0), id: column, label: z.string().min(1) }))

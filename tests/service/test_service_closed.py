@@ -59,3 +59,8 @@ def test_missing_run_root_adds_nothing(rig: Rig) -> None:
     assert not rig.root.exists()
     rig.note()
     assert len(rig.backend.cache.snapshot().tasks) == 1
+
+
+def test_closed_card_of_an_auto_close_survives_its_note_being_closed(rig: Rig, fake: FakeTodoMcp) -> None:
+    card = _closed_shipped(rig, fake, stage="closed")
+    assert rig.card(card)["column"] == "done"

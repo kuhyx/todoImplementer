@@ -43,6 +43,13 @@ class FakeScheduler:
     def cancel(self, id8: str) -> None:
         self._rec("cancel", id8)
 
+    def close_item(self, id8: str) -> None:
+        self._rec("close_item", id8)
+
+    def auto_start(self, id8: str, passed_at: float) -> bool:
+        self._rec("auto_start", id8, passed_at)
+        return True
+
     def running(self) -> set[str]:
         return set(self.live)
 

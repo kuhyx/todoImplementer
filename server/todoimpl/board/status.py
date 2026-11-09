@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from .types import TaskLike
 
 CLOSED = ("done", "abandoned")
+DONE_STAGES = ("shipped", "closed")
 
 
 class Status(StrEnum):
@@ -32,6 +33,7 @@ class Status(StrEnum):
     SHIPPING = "shipping"
     NEEDS_YOU = "needs_you"
     READY_TO_SHIP = "ready_to_ship"
+    READY_TO_CLOSE = "ready_to_close"
     DONE = "done"
 
 
@@ -55,6 +57,7 @@ _COLUMNS = {
     Status.SHIPPING: Column.RUNNING,
     Status.NEEDS_YOU: Column.NEEDS_YOU,
     Status.READY_TO_SHIP: Column.READY,
+    Status.READY_TO_CLOSE: Column.READY,
     Status.DONE: Column.DONE,
 }
 
@@ -75,7 +78,7 @@ def compute(  # noqa: PLR0911 - one return per rule of the spec table
     `live` = a runner thread/process is active for the task; `limit_until` = end of the plan limit when it
     holds turns back (None while the free credits take over).
     """
-    if task.status == "done" or (run is not None and run.stage == "shipped"):
+    if task.status == "done" or (run is not None and run.stage in DONE_STAGES):
         return Status.DONE
     if task.status == "abandoned" or (run is not None and run.stage == "cancelled"):
         return Status.CANCELLED
@@ -86,7 +89,7 @@ def compute(  # noqa: PLR0911 - one return per rule of the spec table
     if run.assignee == "human" and not run.error:
         return Status.YOURS
     if run.stage == "gate":
-        return Status.READY_TO_SHIP
+        return Status.READY_TO_CLOSE if run.closing else Status.READY_TO_SHIP
     if _needs_you(run, live):
         return Status.NEEDS_YOU
     if run.stage == "shipping":

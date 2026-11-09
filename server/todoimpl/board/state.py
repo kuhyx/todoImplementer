@@ -25,6 +25,8 @@ STAGES = (
     "gate",
     "shipping",
     "shipped",
+    "closing",
+    "closed",
     "failed",
     "paused_limit",
     "paused_retry",
@@ -75,6 +77,7 @@ class RunState:
     skills_loaded: list[str] = field(default_factory=list)
     lesson: dict[str, Any] | None = None
     ship: dict[str, Any] | None = None
+    auto_start: dict[str, Any] | None = None
     stages: list[dict[str, Any]] = field(default_factory=list)
     note_body: str | None = None
     extra: dict[str, Any] = field(default_factory=dict)
@@ -82,6 +85,11 @@ class RunState:
     def open_questions(self) -> list[SpecQuestion]:
         """Return the questions still without an answer."""
         return [q for q in self.spec_questions if q.answer is None]
+
+    @property
+    def closing(self) -> bool:
+        """Return True for a closing run: started by a passing done_check, no worktree, ends in Close."""
+        return self.auto_start is not None
 
     def to_dict(self) -> dict[str, Any]:
         """Return the state.json object (required keys always, optional ones when set)."""
@@ -110,6 +118,7 @@ class RunState:
             "lesson": self.lesson,
             "ship": self.ship,
             "note_body": self.note_body,
+            "auto_start": self.auto_start,
         }
         out.update({key: value for key, value in optional.items() if value is not None})
         listed = {
@@ -157,6 +166,7 @@ class RunState:
             "skills_loaded": listed(data, "skills_loaded"),
             "lesson": opt(data, "lesson", dict),
             "ship": opt(data, "ship", dict),
+            "auto_start": opt(data, "auto_start", dict),
             "stages": listed(data, "stages"),
             "note_body": clip_body(opt(data, "note_body", str)),
         }

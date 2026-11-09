@@ -150,6 +150,17 @@ def fix(ctx: PromptContext) -> str:
     )
 
 
+def closing(ctx: PromptContext) -> str:
+    """Confirm a done_check that passed on its own; read-only, the server closes the item on kuhy's click."""
+    return _post(
+        "Closing stage. This item's trusted done_check started passing on its own: confirm the evidence.",
+        _item(ctx),
+        f"Work read-only in {ctx.worktree}, the repo's main checkout: never edit, commit or push anything.",
+        "Run the done_check once, read its output and say in one line what it proves for this item.",
+        "The server re-runs the check after your turn and decides. End with `D:`.",
+    )
+
+
 def resume_after_kill(ctx: PromptContext) -> str:
     """Re-orient an interrupted session from the tree and carry on."""
     return _post(
@@ -181,6 +192,7 @@ STAGES: dict[str, Callable[[PromptContext], str]] = {
     "live_check": live_check,
     "live_checklist": live_checklist,
     "fix": fix,
+    "closing": closing,
     "resume_after_kill": resume_after_kill,
     "fresh_after_idle": fresh_after_idle,
     "manager": manager,

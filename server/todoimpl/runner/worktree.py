@@ -87,6 +87,11 @@ def repo_dir(repo: str | None) -> Path:
     return path
 
 
+def turn_dir(st: RunState, repo: str | None) -> Path:
+    """Return a turn's cwd: the run's worktree, or the repo's main checkout for a closing run."""
+    return repo_dir(repo) if st.closing else Path(str(st.worktree))
+
+
 def base_ref(repo: Path) -> tuple[str, str]:  # noqa: D103
     for branch in ("main", "master"):
         if (

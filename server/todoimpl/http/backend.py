@@ -75,6 +75,10 @@ class Backend(Protocol):
         """Ship click."""
         ...
 
+    def close(self, id8: str) -> None:
+        """Close click: re-run the done_check and close the item."""
+        ...
+
     def cancel(self, id8: str) -> None:
         """Cancel the run."""
         ...

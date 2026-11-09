@@ -102,3 +102,11 @@ def test_close_item_fails_closed(fake: FakeTodoMcp, client: TodoClient) -> None:
     with pytest.raises(TodoError, match="moved"):
         client.close_item(gone, "e")
     assert fake.store.notes[note].text == "r todos\n\n## a\n## b"
+
+
+def test_multi_item_note_level_check_is_kept_only_as_the_ignored_one() -> None:
+    own, other = split_items(_task("## a\ndone_check: `make a`\n## b", check="note"))
+    assert (own.done_check, own.note_check) == ("make a", None)
+    assert (other.done_check, other.note_check) == (None, "note")
+    single = split_items(_task("## a\ntext", check="note"))[0]
+    assert (single.done_check, single.note_check) == ("note", None)

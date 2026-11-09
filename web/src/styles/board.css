@@ -140,6 +140,10 @@
 }
 
 .card-prio,
+.card-badge {
+  align-self: flex-start;
+}
+
 .card-meta {
   font-size: var(--text-caption);
   color: var(--text-muted);
@@ -154,7 +158,8 @@
   overflow-wrap: anywhere;
 }
 
-.card-current {
+.card-current,
+.card-auto {
   font-size: var(--text-label);
   color: var(--text-muted);
   overflow-wrap: anywhere;

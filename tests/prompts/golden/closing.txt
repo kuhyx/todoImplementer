@@ -1,0 +1,12 @@
+override
+Closing stage. This item's trusted done_check started passing on its own: confirm the evidence.
+Item: Add dark mode toggle (repo: todo)
+Header needs a toggle that persists.
+done_check: pnpm test
+Spec answers:
+- Persist where?: localStorage
+kuhy's notes:
+- also check mobile width
+Work read-only in /wt/todo, the repo's main checkout: never edit, commit or push anything.
+Run the done_check once, read its output and say in one line what it proves for this item.
+The server re-runs the check after your turn and decides. End with `D:`.

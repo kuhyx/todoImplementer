@@ -29,6 +29,7 @@ def test_every_post_action_calls_the_backend_and_returns_the_card(live: Live, ac
         "spec-ok": ("spec_ok",),
         "send": ("send", "hello"),
         "ship": ("ship",),
+        "close": ("close",),
         "cancel": ("cancel",),
         "lesson-approve": ("lesson_approve", "L1"),
         "go": ("go",),
@@ -186,3 +187,20 @@ def test_card_falls_back_when_the_task_vanishes_after_the_action(live: Live) -> 
     r = post(live, "ship")
     assert r.status == 200
     assert r.json()["task"]["id"] == live.backend.task_id
+
+
+def test_start_that_lost_the_race_to_an_auto_start_returns_the_card_without_error(live: Live) -> None:
+    card = live.backend.task_data["card"]
+    card["actions"] = [a for a in card["actions"] if a["id"] != "start"]
+    card["auto_start"] = {"reason": "done_check", "passed_at": 1.0}
+    r = post(live, "start", {})
+    assert r.status == 200, r.body
+    validate("response", r.json())
+    assert live.backend.calls == []
+
+
+def test_start_not_offered_without_an_auto_start_is_still_refused(live: Live) -> None:
+    card = live.backend.task_data["card"]
+    card["actions"] = [a for a in card["actions"] if a["id"] != "start"]
+    r = post(live, "start", {})
+    assert r.status == 409

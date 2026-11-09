@@ -41,6 +41,11 @@
       "additionalProperties": false,
       "description": "Ship click: rebase, recheck, commit, push, close note."
     },
+    "close": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Close click (closing runs at Ready to close): re-run the done_check, then close_task."
+    },
     "cancel": {"type": "object", "additionalProperties": false},
     "go": {
       "type": "object",

@@ -7,6 +7,7 @@ from pathlib import Path
 
 from todoimpl.board.state import run_root
 from todoimpl.http.main import REPO, git_build_id
+from todoimpl.runner.autocheck import AutoCloser
 from todoimpl.todo_mcp.client import TodoClient
 from todoimpl.umbrella import registry
 
@@ -66,4 +67,6 @@ def build_backend(
         cache.start()
         monitor.start()  # first check runs on its own thread: a slow network never delays startup
         probe.start()
+        # Auto close: polls trusted done_checks every 5 min (first tick now); off until settings.json says so.
+        AutoCloser(root, lambda: cache.snapshot().tasks, scheduler).start()
     return backend

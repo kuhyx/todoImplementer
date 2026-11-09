@@ -25,6 +25,7 @@
 
 .build,
 .slots,
+.auto-close,
 .today {
   font-size: var(--text-label);
   color: var(--text-muted);

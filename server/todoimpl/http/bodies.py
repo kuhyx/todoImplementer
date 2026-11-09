@@ -13,6 +13,7 @@ ACTIONS = (
     "spec-ok",
     "send",
     "ship",
+    "close",
     "cancel",
     "lesson-approve",
     "go",

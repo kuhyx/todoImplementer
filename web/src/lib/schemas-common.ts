@@ -11,19 +11,19 @@ export const epoch = z.number().min(0);
 export const usd = z.number().min(0);
 
 export const STAGES = [
-  "spec", "spec_wait", "plan", "implement", "live_check", "checks", "gate", "shipping", "shipped", "failed", "paused_limit", "paused_retry",
-  "cancelled",
+  "spec", "spec_wait", "plan", "implement", "live_check", "checks", "gate", "shipping", "shipped", "closing", "closed",
+  "failed", "paused_limit", "paused_retry", "cancelled",
 ] as const;
 export const STATUSES = [
   "backlog", "yours", "cancelled", "queued", "working", "paused_limit", "shipping", "needs_you", "ready_to_ship",
-  "done",
+  "ready_to_close", "done",
 ] as const;
 export const COLUMN_IDS = ["backlog", "running", "needs_you", "ready", "done"] as const;
 export const NEEDS_KINDS = [
   "spec_questions", "spec_ok", "claude_question", "claude_action", "phone", "checks_failed", "run_failed", "handed_to_you", "permission",
 ] as const;
 export const ACTION_IDS = [
-  "start", "spec-answers", "spec-ok", "send", "ship", "cancel", "lesson-approve", "copy-resume", "go", "copy-fix",
+  "start", "spec-answers", "spec-ok", "send", "ship", "close", "cancel", "lesson-approve", "copy-resume", "go", "copy-fix",
   "rerun",
 ] as const;
 
@@ -136,9 +136,14 @@ export const umbrellaCounts = z.strictObject({
   width: z.number().int().min(1),
 });
 
+/** Set when a passing done_check started the run (a closing run); kept after Close. */
+export const autoStart = z.strictObject({ passed_at: epoch, reason: z.literal("done_check") });
+
 export const taskCard = z.strictObject({
   actions,
   assignee: z.enum(["human", "claude"]),
+  auto: z.string().nullable(),
+  auto_start: autoStart.nullable(),
   column,
   cost_usd: usd,
   current: z.string(),

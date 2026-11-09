@@ -11,6 +11,7 @@ from todoimpl.umbrella.run import run as run_umbrella
 
 from . import phone, tiering
 from .checks import SENTENCE_NOTE, discover, record, run_all
+from .closing import closing_stage
 from .files import NeedsYouError, write_json
 from .live import rejudge, settle
 from .parsing import parse_criteria, parse_live, parse_questions, parse_self_check
@@ -184,4 +185,5 @@ HANDLERS: dict[str, Callable[[Driver], str | None]] = {
     "live_check": _live_check,
     "checks": _checks,
     "shipping": _shipping,
+    "closing": closing_stage,
 }
