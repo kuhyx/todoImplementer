@@ -7,7 +7,7 @@
 #
 # Env: TODOIMPL_APP_PORT (default 8786), TODOIMPL_BUILD_ID (stamps the web build only),
 #      RUN_WAIT_TRIES (default 60) x RUN_WAIT_INTERVAL (default 0.5 s) bound the wait for /version.
-# Needs: pacman + sudo (only when uv, pnpm or jq is missing), systemctl --user, curl, git.
+# Needs: pacman + sudo (only when uv, pnpm or jq is on neither PATH nor a per-user bin dir), systemctl --user, curl, git.
 # Success means /version reports `git rev-parse --short HEAD` of this checkout: the server computes that
 # itself at start (http/main.py), so TODOIMPL_BUILD_ID is not what /version says.
 set -euo pipefail
@@ -22,6 +22,18 @@ readonly WAIT_INTERVAL="${RUN_WAIT_INTERVAL:-0.5}"
 
 step() {
 	echo "deploy.sh: $*"
+}
+
+# add_user_bin_dirs: a systemd-run or cron environment lacks the per-user install dirs (uv lives in
+# ~/.local/bin), so a tool there looked missing and got pacman-installed. Appended, so system tools and test
+# stubs earlier on PATH still win.
+add_user_bin_dirs() {
+	local dir
+	for dir in "${HOME}/.local/bin" "${HOME}/.cargo/bin" "${HOME}/.local/share/pnpm"; do
+		[[ -d "$dir" && ":${PATH}:" != *":${dir}:"* ]] && PATH="${PATH}:${dir}"
+	done
+	export PATH
+	return 0
 }
 
 # ensure_tools <tool>...: pacman-install only the tools that are missing.
@@ -104,6 +116,7 @@ wait_for_build() {
 }
 
 main() {
+	add_user_bin_dirs
 	ensure_tools uv pnpm jq
 	local expected
 	expected="$(head_build)"

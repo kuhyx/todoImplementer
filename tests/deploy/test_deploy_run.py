@@ -133,6 +133,24 @@ def test_t1858_run_installs_only_the_missing_tool(box: tuple[Env, Stubber], tmp_
     assert _opened(env).splitlines()[-1] == f"xdg-open {URL}"
 
 
+def test_t1859_run_finds_uv_in_the_per_user_bin_dir(box: tuple[Env, Stubber], tmp_path: Path) -> None:
+    env, stub = box
+    _stubs(stub)
+    (tmp_path / "bin" / "uv").unlink()
+    user_bin = env.home / ".local" / "bin"
+    user_bin.mkdir(parents=True)
+    uv = user_bin / "uv"
+    uv.write_text('#!/bin/bash\necho "uv $*" >> "$STUB_LOG"\n')
+    uv.chmod(0o755)
+    stub("sudo")
+    sysbin = _system_bin_without(tmp_path, "uv")
+    # What systemd-run gives a script: no ~/.local/bin on PATH.
+    done = env.run("bash", str(RUN), PATH=f"{tmp_path}/bin:{sysbin}", **FAST_WAIT)
+    assert done.returncode == 0, done.stderr
+    assert "pacman" not in env.calls
+    assert "uv sync --frozen" in env.calls
+
+
 def test_run_build_failure_aborts_before_restart(box: tuple[Env, Stubber]) -> None:
     env, stub = box
     _stubs(stub, pnpm='case "$*" in *build*) exit 1;; esac')
