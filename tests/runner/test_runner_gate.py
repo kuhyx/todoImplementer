@@ -1,8 +1,10 @@
 """The gate runner and its host (T1837): reuse, waiting for a unit, the systemd argv, the host's record."""
 
+import fcntl
 import json
 import runpy
 import sys
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -101,7 +103,7 @@ def test_t1837_production_gate_is_its_own_systemd_unit(
     gate._start("abcd1234-0", tmp_path / "run", tmp_path / "wt")
     argv = seen[0]
     assert argv[:5] == ["systemd-run", "--user", "--collect", "--quiet", "--unit=todoimpl-gate-abcd1234-0"]
-    assert "RuntimeMaxSec=3600" in argv
+    assert "RuntimeMaxSec=14400" in argv
     assert argv[argv.index("--") + 1 :] == [
         sys.executable, "-m", "todoimpl.runner.gatehost", str(tmp_path / "run"), str(tmp_path / "wt"),
     ]  # fmt: skip
@@ -175,4 +177,20 @@ def test_t1837_the_host_runs_as_a_module(world: Env, monkeypatch: pytest.MonkeyP
     with pytest.raises(SystemExit) as done:
         runpy.run_module("todoimpl.runner.gatehost", run_name="__main__", alter_sys=False)
     assert done.value.code == 0
+    assert json.loads((run_dir / "gate" / "exit.json").read_text(encoding="utf-8"))["ok"] is True
+
+
+def test_t1840_gates_run_one_at_a_time(world: Env) -> None:
+    """Gates at once OOM-killed each other in capped.slice (tunedeck, teatr-pw): a gate waits for the lock."""
+    _, wt, _ = gated(world)
+    run_dir = world.root / "abcd1234-0"
+    with (world.root / gatehost.LOCK_NAME).open("a", encoding="utf-8") as other:
+        fcntl.flock(other, fcntl.LOCK_EX)
+        late = threading.Thread(target=gatehost.main, args=([str(run_dir), str(wt.path)],))
+        late.start()
+        late.join(0.5)
+        assert late.is_alive()
+        assert not (run_dir / "gate" / "exit.json").exists()
+        fcntl.flock(other, fcntl.LOCK_UN)
+    late.join(20)
     assert json.loads((run_dir / "gate" / "exit.json").read_text(encoding="utf-8"))["ok"] is True

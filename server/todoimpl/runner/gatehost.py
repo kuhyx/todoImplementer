@@ -7,6 +7,8 @@ server only waits for that file. Whatever goes wrong, the record is written.
 
 from __future__ import annotations
 
+import contextlib
+import fcntl
 import subprocess
 import sys
 import time
@@ -17,13 +19,14 @@ from .checks import CheckResult, clean_env, run_check
 from .files import write_json
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Iterator, Sequence
 
 STAMP_TOOL = "scripts/check_gate_stamp.sh"
 LIST_TIMEOUT = 50.0
 STEP_TIMEOUT = 1800.0
 STEP_ENV = {"CAP_MEM": "4G", "CAP_CPU_PCT": "25"}  # a gate step may need more than capped.sh's 2 GiB default
 TAIL = 600
+LOCK_NAME = "gate.lock"  # next to the run dirs: one gate at a time shares capped.slice's memory budget
 
 
 def _row(r: CheckResult) -> dict[str, Any]:
@@ -66,10 +69,20 @@ def run(run_dir: Path, wt: Path) -> dict[str, Any]:
     return {"tree": tree, "ok": all(row["exit"] == 0 for row in rows), "steps": rows, "ended": time.time()}
 
 
+@contextlib.contextmanager
+def _exclusive(lock: Path) -> Iterator[None]:
+    """Hold an flock on `lock` (waiting for it): gates in parallel OOM-killed each other in capped.slice."""
+    with lock.open("a", encoding="utf-8") as handle:
+        fcntl.flock(handle, fcntl.LOCK_EX)
+        yield
+
+
 def main(argv: Sequence[str] | None = None) -> int:
-    """Run the gate named by `<run_dir> <worktree>` and write its record."""
-    run_dir, wt = (sys.argv[1:3] if argv is None else argv)[:2]
-    write_json(Path(run_dir) / "gate" / "exit.json", run(Path(run_dir), Path(wt)))
+    """Run the gate named by `<run_dir> <worktree>` (after any gate already running) and write its record."""
+    run_dir, wt = (Path(a) for a in (sys.argv[1:3] if argv is None else argv)[:2])
+    with _exclusive(run_dir.parent / LOCK_NAME):
+        record = run(run_dir, wt)
+    write_json(run_dir / "gate" / "exit.json", record)
     return 0
 
 

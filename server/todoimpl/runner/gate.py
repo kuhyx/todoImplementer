@@ -27,7 +27,8 @@ if TYPE_CHECKING:
 
 GATE_DIR = "gate"
 EXIT_FILE = "exit.json"
-GATE_TIMEOUT = 3600.0  # the unit's RuntimeMaxSec; the server stops waiting then too
+# The unit's RuntimeMaxSec: it may queue behind other gates. The server stops waiting then too.
+GATE_TIMEOUT = 14400.0
 POLL = 1.0
 UNIT_ENV = ("PATH", "HOME", "TODOIMPL_CAPPED", "UTILS_ROOT", "GIT_CONFIG_GLOBAL", "GIT_CONFIG_NOSYSTEM")
 TAIL = 600
