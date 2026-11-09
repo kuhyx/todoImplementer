@@ -45,7 +45,7 @@ HINTS: dict[Kind, str] = {
     ),
     Kind.GODOT: (
         "godot-mcp-runtime: `run_project`, `simulate_input`, `take_screenshot`. Or the repo's "
-        "`scripts/autodrive*.sh` under `capped.sh timeout 55 xvfb-run -a` with `--audio-driver Dummy`."
+        "`scripts/autodrive*.sh` under `capped.sh timeout 300 xvfb-run -a` with `--audio-driver Dummy`."
     ),
     Kind.PYTHON: (
         "Run the real CLI, or start the server with `systemd-run --user --collect --unit <name> <cmd>` "

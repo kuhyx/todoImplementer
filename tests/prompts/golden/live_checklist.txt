@@ -4,5 +4,5 @@ Plan (/run/ab12cd34/plan.md):
 ## Acceptance criteria
 C1. I click the toggle, the page turns dark.
 Write /run/ab12cd34/live_check.md, one line per plan criterion, and reply with the same lines:
-- [x] C1: what I did -> what I saw   (`- [ ]` not seen working, `- [~] C7: after ship: <why>`)
+- [x] C1: what I did -> what I saw   (`- [ ]` not seen working, `- [~] C7: needs phone: <why>`)
 Then end with `D:`.

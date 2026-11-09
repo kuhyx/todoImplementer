@@ -145,8 +145,9 @@ def _shipping(d: Driver) -> str | None:
     live = live_summary(str((st.live_check or {}).get("report_md", "")))
     checks = discover(wt, d.item.done_check)
     plan = ShipPlan(
-        repo_dir(d.item.repo), wt, str(st.branch), d.item, checks, d.ctx.run_dir, d.ctx.check_timeout, live
-    )
+        repo_dir(d.item.repo), wt, str(st.branch), d.item, checks, d.ctx.run_dir, d.ctx.check_timeout, live,
+        str(st.base_sha or ""),
+    )  # fmt: skip
     try:
         st.ship = ship(plan, d.ctx.client, d.ctx.now, allow_empty=st.auto_ship)
     except CommitRefusedError as refused:
@@ -158,6 +159,9 @@ def _shipping(d: Driver) -> str | None:
     sha = st.ship["commit"]
     if sha:
         st.head_sha = sha
+    if sha and "pushed_at" not in st.ship:  # ship() closed it because the session pushed it already (T1865)
+        d.activity(f"closed: the session already pushed {sha[:12]}")
+        return "shipped"
     d.activity(
         f"shipped {sha[:12]} to origin/{base_ref(plan.repo)[1]}" if sha else "closed with no code change"
     )

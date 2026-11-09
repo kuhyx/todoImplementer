@@ -30,7 +30,7 @@ RESUMABLE = ("spec", "plan", "implement", "live_check", "checks")
 COUNTERS = (
     "failure_tail", "live_fixes", "check_fixes", "nudges", "nudge", "failed_stage", "resume_stage",
     "resettle", "retries", "crash_retries", "r_continues", "r_continue", "tagless_retry", "fresh",
-    "ship_fixes", "reship", "hands_nudged",
+    "ship_fixes", "reship", "hands_nudged", "ask_grants",
 )  # fmt: skip
 
 
@@ -153,6 +153,7 @@ class Scheduler(PhoneEngine):
         st.error, st.last_tag, st.assignee = None, None, "claude"
         for key in ("live_fixes", "check_fixes", "nudges", "ship_fixes", "reship", "hands_nudged"):
             st.extra.pop(key, None)
+        st.extra.pop("ask_grants", None)
 
     def send(self, card: str, text: str) -> None:  # noqa: D102
         if not text.strip():

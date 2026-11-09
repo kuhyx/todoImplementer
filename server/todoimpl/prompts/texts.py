@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from . import phone
+from . import phone, standing
 from .kind import HINTS, detect_kind
 
 if TYPE_CHECKING:
@@ -17,7 +17,7 @@ TAIL_CHARS = 3000
 CARD = "❓ **Q1** - **<title>**: <body>\n➡️ <your recommended answer>"
 RULES = (
     "Rules: work only in {wt}. Follow your ~/.claude rules: red check first, heavy commands via "
-    "~/.claude/scripts/capped.sh, every call under 60 s. Never commit, push or touch main: the server ships."
+    "~/.claude/scripts/capped.sh."
 )
 BLOCKS = (
     "Claude Code blocks some Bash and Edit calls in every permission mode: no `rm` on a bare variable or a "
@@ -53,7 +53,7 @@ def _plan(ctx: PromptContext) -> str:
 
 
 def _rules(ctx: PromptContext) -> str:
-    return f"{RULES.format(wt=ctx.worktree)}\n{BLOCKS}"
+    return f"{RULES.format(wt=ctx.worktree)}\n{standing.grant(ctx)}\n{BLOCKS}"
 
 
 def _post(*parts: str) -> str:
@@ -114,8 +114,9 @@ def live_check(ctx: PromptContext) -> str:
         phone.attached(ctx) if ctx.phone is not None else phone.staging(ctx),
         f"Write {ctx.run_dir}/live_check.md, one line per criterion:",
         "- [x] C1: what I did -> what I saw   (use `- [ ]` if it failed or could not be tried, and say why)",
-        "A criterion that can only pass after the ship (committed, merged, deployed, restarted from main) or "
-        "needs kuhy's phone: `- [~] C7: after ship: <why>` or `- [~] C7: needs phone: <why>`.",
+        "A criterion that only passes once the work is on main (merged, deployed, restarted from main): land "
+        "the work yourself, then check it. One that needs kuhy's phone: `- [~] C7: needs phone: <why>`.",
+        standing.grant(ctx),
         "Write the whole checklist yourself in this turn; no background agent, do not end with `R:`.",
         ctx.failure_tail[-TAIL_CHARS:],
         f"Save screenshots to {ctx.run_dir}/shots/. Stop what you started. End with `D:`.",
@@ -128,7 +129,7 @@ def live_checklist(ctx: PromptContext) -> str:
         ctx.failure_tail[-TAIL_CHARS:],
         _plan(ctx),
         f"Write {ctx.run_dir}/live_check.md, one line per plan criterion, and reply with the same lines:",
-        "- [x] C1: what I did -> what I saw   (`- [ ]` not seen working, `- [~] C7: after ship: <why>`)",
+        "- [x] C1: what I did -> what I saw   (`- [ ]` not seen working, `- [~] C7: needs phone: <why>`)",
         "Then end with `D:`.",
     )
 

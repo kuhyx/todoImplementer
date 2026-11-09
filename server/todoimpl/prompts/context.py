@@ -23,3 +23,4 @@ class PromptContext:
     failure_tail: str = ""  # tail of the failed live_check / checks output
     handoff: str = ""  # summary carried into a fresh session after idle
     phone: dict[str, Any] | None = None  # phone_ready.json of a run whose phone is attached now
+    base: str = "main"  # the repo's default branch on origin: where a session lands its work
