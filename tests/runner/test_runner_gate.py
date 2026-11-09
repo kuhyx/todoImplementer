@@ -194,3 +194,9 @@ def test_t1840_gates_run_one_at_a_time(world: Env) -> None:
         fcntl.flock(other, fcntl.LOCK_UN)
     late.join(20)
     assert json.loads((run_dir / "gate" / "exit.json").read_text(encoding="utf-8"))["ok"] is True
+
+
+def test_t1861_gate_steps_stay_within_the_capped_sh_ceiling() -> None:
+    """capped.sh refuses CAP_MEM above 4G and CAP_CPU_PCT above 20; 25 failed teatr-pw's ts-typecheck."""
+    assert gatehost.STEP_ENV["CAP_MEM"] == "4G"
+    assert int(gatehost.STEP_ENV["CAP_CPU_PCT"]) <= 20

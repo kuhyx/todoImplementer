@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 STAMP_TOOL = "scripts/check_gate_stamp.sh"
 LIST_TIMEOUT = 50.0
 STEP_TIMEOUT = 1800.0
-STEP_ENV = {"CAP_MEM": "4G", "CAP_CPU_PCT": "25"}  # a gate step may need more than capped.sh's 2 GiB default
+STEP_ENV = {"CAP_MEM": "4G", "CAP_CPU_PCT": "20"}  # a gate step may need more than capped.sh's 2 GiB default
 TAIL = 600
 LOCK_NAME = "gate.lock"  # next to the run dirs: one gate at a time shares capped.slice's memory budget
 

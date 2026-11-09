@@ -54,3 +54,4 @@ One row per bug, ids global and never reused. The row's test is named `test_t<N>
 | T1839 | A clone in a differently named directory (kuhyx/todo-app at ~/src/todo) was "not cloned": the runner looked up the bare name, so the origin scan never ran | tests/board/test_board_repo_path.py |
 | T1840 | Gates of several cards ran at once and OOM-killed each other in capped.slice (tunedeck, teatr-pw), failing their ships for no code reason | tests/runner/test_runner_gate.py |
 | T1860 | A new task worktree lacked the git-ignored, machine-local android/local.properties (chaquopy.buildPython), so tunedeck's gate and ship failed; the runner now copies a named list of ignored machine-local files | tests/runner/test_runner_worktree_local.py |
+| T1861 | The gate steps ran with CAP_CPU_PCT=25, above capped.sh's 20 % ceiling, so every step failed (teatr-pw ts-typecheck) | tests/runner/test_runner_gate.py |
