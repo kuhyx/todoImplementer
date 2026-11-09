@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -12,6 +13,9 @@ from .checks import clean_env
 from .files import NeedsYouError, worktree_path
 
 OWNER = "kuhyx"
+# Machine-local files a repo's gate needs but git ignores (tunedeck: chaquopy.buildPython lives in
+# android/local.properties). A named list, not a glob: nothing else leaves the main clone.
+MACHINE_LOCAL = ("local.properties", "android/local.properties")
 GIT_TIMEOUT = 50.0
 
 
@@ -89,6 +93,19 @@ def base_ref(repo: Path) -> tuple[str, str]:  # noqa: D103
     raise NeedsYouError(msg, "run_failed")
 
 
+def copy_machine_local(repo: Path, wt: Path) -> None:
+    """Copy the repo's ignored MACHINE_LOCAL files into the worktree where they are missing (T1860).
+
+    Only files git ignores are copied, so `git add -A` can never ship them.
+    """
+    for rel in MACHINE_LOCAL:
+        src, dest = repo / rel, wt / rel
+        if not src.is_file() or dest.exists() or git(repo, "check-ignore", "-q", rel, check=False).returncode:
+            continue
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dest)
+
+
 def add(repo: Path, root: Path, run_id: str) -> Worktree:
     """Create (or reuse) the run's worktree on branch `todo/<item id>` from origin's default branch."""
     git(repo, "fetch", "--quiet", "origin", check=False)
@@ -102,6 +119,7 @@ def add(repo: Path, root: Path, run_id: str) -> Worktree:
             git(repo, "rev-parse", "--verify", "--quiet", f"refs/heads/{branch}", check=False).returncode == 0
         )
         git(repo, "worktree", "add", *([str(path), branch] if exists else ["-b", branch, str(path), ref]))
+    copy_machine_local(repo, path)
     base = git(path, "merge-base", "HEAD", ref).stdout.strip()
     return Worktree(path, branch, base, ref, remote_branch)
 

@@ -53,3 +53,4 @@ One row per bug, ids global and never reused. The row's test is named `test_t<N>
 | T1838 | A push refused because origin moved failed the ship instead of rebasing onto origin and pushing again | tests/runner/test_runner_ship_gate.py |
 | T1839 | A clone in a differently named directory (kuhyx/todo-app at ~/src/todo) was "not cloned": the runner looked up the bare name, so the origin scan never ran | tests/board/test_board_repo_path.py |
 | T1840 | Gates of several cards ran at once and OOM-killed each other in capped.slice (tunedeck, teatr-pw), failing their ships for no code reason | tests/runner/test_runner_gate.py |
+| T1860 | A new task worktree lacked the git-ignored, machine-local android/local.properties (chaquopy.buildPython), so tunedeck's gate and ship failed; the runner now copies a named list of ignored machine-local files | tests/runner/test_runner_worktree_local.py |
