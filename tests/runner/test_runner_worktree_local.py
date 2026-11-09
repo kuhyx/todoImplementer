@@ -1,4 +1,4 @@
-"""Machine-local, git-ignored files (tunedeck's android/local.properties) follow the repo into task worktrees."""
+"""Machine-local, git-ignored files (tunedeck android/local.properties) follow the repo into worktrees."""
 
 from pathlib import Path
 
@@ -9,7 +9,7 @@ LOCAL = "chaquopy.buildPython=/usr/bin/python3\n"
 
 
 def _repo_with_local(world: Env, ignore: str = "/local.properties\n") -> Path:
-    """A clone whose android/ dir ignores local.properties and holds a machine-local copy."""
+    """Return a clone whose android/ dir ignores local.properties and holds a machine-local copy."""
     repo = make_repo(world, files={".gitignore": "x\n"})
     (repo / "android").mkdir()
     (repo / "android" / ".gitignore").write_text(ignore, encoding="utf-8")
