@@ -93,7 +93,7 @@ export class TiApp extends HTMLElement {
   #paintUsage(): void {
     const stale = this.#staleReason();
     this.#boardHost.toggleAttribute("data-stale", stale !== null);
-    this.#usageHost.replaceChildren(renderUsage(this.#usage, this.#board, stale ?? this.#usageError, pageBuild(), nowSeconds()));
+    this.#usageHost.replaceChildren(renderUsage(this.#usage, this.#board, stale ?? this.#usageError, pageBuild(), nowSeconds(), () => void this.#loadBoard()));
   }
 
   #paintBoard(isForced: boolean): void {

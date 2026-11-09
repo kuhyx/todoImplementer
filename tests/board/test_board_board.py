@@ -70,7 +70,7 @@ def test_no_cap_on_parallel_runs_every_start_stays_enabled() -> None:
 def test_board_under_a_limit_exposes_it() -> None:
     out = board.build_board([Note()], {}, ctx(limit=LIMITED), "b")
     validate("board", out)
-    assert out["limit"] == {"active": True, "until": NOW + 3600, "credits_available": True}
+    assert out["limit"] == {"active": True, "until": NOW + 3600, "credits": LIMITED.credits.to_dict()}
     assert out["tasks"][0]["actions"][0]["enabled"] is False
 
 

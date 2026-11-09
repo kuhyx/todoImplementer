@@ -73,7 +73,7 @@ def test_board_has_five_columns() -> None:
         ("send", {"text": "hi"}),
         ("ship", {}),
         ("cancel", {}),
-        ("credits", {}),
+        ("credits_fallback", {"enabled": False}),
         ("go", {}),
         ("rerun", {}),
         ("lesson_approve", {"lesson_id": "l1"}),

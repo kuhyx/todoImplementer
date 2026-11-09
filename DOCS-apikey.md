@@ -31,9 +31,8 @@ costs no tokens. A $0 credit balance (billing error, "credit balance" text) neve
 Started by `build_backend`: a check off the startup path, then hourly, and at once when a key file changes (so the
 board clears right after a rotation). It runs whether or not the key is used and whatever the credit balance is. While
 the state is not ok it adds ONE todo task `MANUAL WORK REQUIRED: rotate Claude API key` (repo `kuhyx/todoImplementer`,
-priority high; body: state, expiry, the command) and closes it when ok again. It sends ONE `notify-send` per state
-change (last state kept in `$TODOIMPL_HOME/apikey-notified.json`, so restarts stay quiet); a missing `notify-send`
-is logged. `GET /api/board` carries `api_key` (`state`, `level` ok/warn/error, `text`, `expires`; schema in
+priority high; body: state, expiry, the command) and closes it when ok again. It sends no desktop notification: every alert is visible only inside todoImplementer (the board banner and the todo task).
+`GET /api/board` carries `api_key` (`state`, `level` ok/warn/error, `text`, `expires`; schema in
 `contracts/board.schema.json`); the page shows a red banner (error) or an amber one (warn) with the server's text.
 
 ## Rotation (`scripts/rotate_api_key.py [--no-open] [--days 30]`)

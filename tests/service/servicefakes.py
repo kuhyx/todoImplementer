@@ -43,9 +43,6 @@ class FakeScheduler:
     def cancel(self, id8: str) -> None:
         self._rec("cancel", id8)
 
-    def credits(self, id8: str) -> None:
-        self._rec("credits", id8)
-
     def running(self) -> set[str]:
         return set(self.live)
 

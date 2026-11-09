@@ -39,7 +39,6 @@ def random_state(rng: random.Random) -> RunState:
         head_sha=maybe("def"),
         started_at=maybe(1.5),
         resume_at=maybe(2.5),
-        using_credits=rng.random() < 0.5,
         sessions=rng.choice([{}, {"plan": {"session_id": "s", "last_turn_end": 1.0}}]),
         self_check=rng.choice([[], [{"criterion": "c", "done": True}]]),
         checks=maybe(

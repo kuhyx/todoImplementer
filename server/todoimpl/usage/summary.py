@@ -6,6 +6,7 @@ import time
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
+from todoimpl.credits import route
 from todoimpl.usage.autonomy import autonomy_summary
 from todoimpl.usage.cost import session_costs
 from todoimpl.usage.events import iter_events, stream_files
@@ -93,7 +94,7 @@ def usage_summary(
         "limit": {
             "active": active,
             "until": limit.until if active else None,
-            "credits_available": limit.credits,
+            "credits": route.view(root, now),
         },
         "cost": {
             "today_usd": today_usd,

@@ -40,7 +40,7 @@ types:
 # One pytest call per test dir (each well under the 60 s per-command cap), each writing its own coverage
 # file; `coverage` merges them and still enforces fail_under = 100 over server/, scripts/, deploy/ and mcp/.
 # Run one chunk with `make test-board`; all of them, then the gate, with `make test`.
-CHUNKS := apikey board http service todo_mcp lessons usage prompts tokens tokens_audit tokens_api mcp_server deploy \
+CHUNKS := apikey credits board http service todo_mcp lessons usage prompts tokens tokens_audit tokens_api mcp_server deploy \
 	runner runner_flow root
 CHUNK_PATH_root := tests/test_*.py
 # Every turn now starts a host process, so the runner dir is two chunks (files q-z in the second) to stay under 60 s.

@@ -5,7 +5,7 @@ import itertools
 from typing import Any
 
 import pytest
-from board_helpers import LIMITED, NOW, STAGES, Note, run
+from board_helpers import EXHAUSTED, LIMITED, NOW, STAGES, TAKEOVER, Note, run
 from contract_lib import validate
 from todoimpl.board.actions import Action, actions
 from todoimpl.board.state import RunState, SpecQuestion
@@ -47,10 +47,19 @@ def test_start_disabled_when_repo_missing_and_when_note_has_no_repo() -> None:
     assert acts(S.BACKLOG, None, note=Note(repo=None))["start"].reason == "note has no repo"
 
 
-def test_cancelled_offers_restart_and_credits_run_ignores_the_limit() -> None:
+def test_cancelled_offers_restart() -> None:
     assert acts(S.CANCELLED, run(stage="cancelled"))["start"].label == "Restart"
-    resume = acts(S.NEEDS_YOU, run(error="x", using_credits=True), limit=LIMITED)["start"]
+
+
+def test_free_credits_take_over_so_start_is_not_blocked_by_the_limit() -> None:
+    assert acts(S.BACKLOG, None, limit=TAKEOVER)["start"].enabled
+    resume = acts(S.NEEDS_YOU, run(error="x"), limit=TAKEOVER)["start"]
     assert resume.enabled
+
+
+def test_exhausted_credits_block_start_and_say_why() -> None:
+    reason = acts(S.BACKLOG, None, limit=EXHAUSTED)["start"].reason
+    assert reason == f"usage limit until {fmt_when(EXHAUSTED.until or 0, NOW)}; credits exhausted"
 
 
 def test_yours_and_done_offer_nothing() -> None:
@@ -87,21 +96,12 @@ def test_shipping_cannot_be_cancelled() -> None:
     assert got["send"].reason == "shipping is in progress"
 
 
-def test_paused_limit_credits() -> None:
+def test_t1850_run_on_credits_action_is_gone() -> None:
     paused = run(stage="paused_limit", session_id="s")
-    assert acts(S.PAUSED_LIMIT, paused, limit=LIMITED)["credits"].enabled
-    assert acts(S.PAUSED_LIMIT, paused, limit=LIMITED)["credits"].confirm
-    assert acts(S.PAUSED_LIMIT, paused, limit=LIMITED)["send"].reason.startswith("usage limit until")  # type: ignore[union-attr]
-    assert (
-        acts(S.PAUSED_LIMIT, paused)["credits"].reason
-        == "no usage limit is active: the run resumes by itself"
-    )
-    no_credit = Limit(active=True, until=NOW + 5, credits_available=False)
-    assert acts(S.PAUSED_LIMIT, paused, limit=no_credit)["credits"].reason == (
-        "credits are not available (overage rejected)"
-    )
-    on = run(stage="paused_limit", using_credits=True)
-    assert acts(S.PAUSED_LIMIT, on, limit=LIMITED)["credits"].reason == "already running on credits"
+    got = acts(S.PAUSED_LIMIT, paused, limit=LIMITED)
+    assert "credits" not in got
+    assert got["cancel"].enabled
+    assert got["send"].reason.startswith("usage limit until")  # type: ignore[union-attr]
 
 
 def test_ship_enabled_only_with_worktree_and_green_checks() -> None:
@@ -181,7 +181,6 @@ STATE_VARIANTS: list[dict[str, Any]] = [
     {"session_id": "s", "worktree": "/w"},
     {"error": "x"},
     {"last_tag": "Q"},
-    {"using_credits": True},
     {"lesson": {"state": "drafted"}},
     {"checks": {"passed": False}},
     {"spec_questions": [SpecQuestion("Q1", "a")]},
@@ -191,9 +190,7 @@ STATE_VARIANTS: list[dict[str, Any]] = [
 @pytest.mark.parametrize("stage", [*STAGES, None])
 @pytest.mark.parametrize("assignee", ["claude", "human"])
 @pytest.mark.parametrize("live", [False, True])
-@pytest.mark.parametrize(
-    "limit", [NO_LIMIT, LIMITED, Limit(active=True, until=None, credits_available=False)]
-)
+@pytest.mark.parametrize("limit", [NO_LIMIT, LIMITED, TAKEOVER, Limit(active=True, until=None)])
 def test_every_combination_is_contract_valid_and_honest(
     stage: str | None, assignee: str, live: bool, limit: Limit
 ) -> None:
@@ -207,4 +204,4 @@ def test_every_combination_is_contract_valid_and_honest(
         for a in got:
             assert a.enabled == (a.reason is None)
             if a.id == "start" and a.enabled:
-                assert not limit.active or (state is not None and state.using_credits)
+                assert not limit.holds

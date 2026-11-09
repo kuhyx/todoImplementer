@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from . import orphans
-from .files import STREAM_SUFFIX, NeedsYouError, sibling
+from .files import ROUTE_SUFFIX, STREAM_SUFFIX, NeedsYouError, sibling
 from .turnhost import INVOKE_SUFFIX
 
 if TYPE_CHECKING:
@@ -107,6 +107,7 @@ def start(run_dir: Path, stem: str, role: str, inv: Invocation) -> orphans.Recor
     invoke = sibling(run_dir, stem, INVOKE_SUFFIX)
     _write_private(invoke, _invocation(inv))
     sibling(run_dir, stem, STREAM_SUFFIX).touch()
+    sibling(run_dir, stem, ROUTE_SUFFIX).write_text(inv.route + "\n", encoding="utf-8")
     if unit is None:
         host = subprocess.Popen(  # noqa: S603 - fixed argv, no shell
             host_argv(run_dir, stem), env={"PYTHONPATH": str(SERVER_DIR)}, start_new_session=True,

@@ -13,7 +13,11 @@
   "limit": {
     "active": false,
     "until": null,
-    "credits_available": false
+    "credits": {
+      "enabled": true,
+      "state": "ready",
+      "text": "Free API credits take over while the plan limit is active."
+    }
   },
   "cost": {
     "today_usd": 1.37,

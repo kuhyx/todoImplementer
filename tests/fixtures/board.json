@@ -7,7 +7,11 @@
   "limit": {
     "active": false,
     "until": null,
-    "credits_available": false
+    "credits": {
+      "enabled": true,
+      "state": "ready",
+      "text": "Free API credits take over while the plan limit is active."
+    }
   },
   "columns": [
     {
@@ -69,7 +73,8 @@
           "enabled": false,
           "reason": "already running"
         }
-      ]
+      ],
+      "route": null
     }
   ]
 }

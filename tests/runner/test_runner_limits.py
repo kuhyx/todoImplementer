@@ -59,11 +59,7 @@ def test_limit_files_round_trip_with_the_usage_reader(tmp_path: Path) -> None:
     limits.write_until(root, 500.0)
     assert limits.active_until(root, 100.0) == 500.0
     assert limits.active_until(root, 600.0) is None
-    assert not limits.credits_granted(root)
-    limits.grant_credits(root)
-    assert limits.credits_granted(root)
     assert limit_state(root).until == 500.0
     limits.clear(root)
     assert limit_state(root).until is None
-    assert not limits.credits_granted(root)
     limits.clear(root)

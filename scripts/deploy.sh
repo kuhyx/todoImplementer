@@ -56,6 +56,18 @@ build_toolchain() {
 	TODOIMPL_BUILD_ID="$build_id" pnpm --dir "${REPO_DIR}/web" build
 }
 
+# ensure_sdk_venv: the Claude Agent SDK lives in its own venv (credit turns only), exact-pinned in
+# deploy/requirements-sdk.txt; the server itself stays stdlib-only. Idempotent: the venv is created once and
+# `uv pip install` is a no-op while the pin is met.
+ensure_sdk_venv() {
+	local venv="${TODOIMPL_SDK_VENV:-${HOME}/.local/share/todoImplementer/sdk-venv}"
+	step "agent sdk venv ${venv}"
+	if [[ ! -x "${venv}/bin/python" ]]; then
+		uv venv --quiet --python "$(<"${REPO_DIR}/.python-version")" "$venv"
+	fi
+	uv pip install --quiet --python "${venv}/bin/python" -r "${DEPLOY_DIR}/requirements-sdk.txt"
+}
+
 restart_server() {
 	step "installing ${UNIT}"
 	install_unit "$UNIT"
@@ -96,6 +108,7 @@ main() {
 	local expected
 	expected="$(head_build)"
 	build_toolchain
+	ensure_sdk_venv
 	restart_server
 	wait_for_build "$expected"
 	step "serving build ${expected}"

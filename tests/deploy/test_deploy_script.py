@@ -42,3 +42,31 @@ def test_deploy_reports_a_server_that_never_answers(box: tuple[Env, Stubber]) ->
     done = env.run("bash", str(DEPLOY_SH), **FAST_WAIT)
     assert done.returncode == 1
     assert "never answered /version" in done.stderr
+
+
+def test_t1857_deploy_creates_the_sdk_venv_once_with_the_exact_pin(box: tuple[Env, Stubber]) -> None:
+    env, stub = box
+    _stubs(stub)
+    venv = env.home / "sdk-venv"
+    done = env.run("bash", str(DEPLOY_SH), TODOIMPL_SDK_VENV=str(venv), **FAST_WAIT)
+    assert done.returncode == 0, done.stderr
+    assert f"uv venv --quiet --python 3.15.2 {venv}" in env.calls
+    install = f"uv pip install --quiet --python {venv}/bin/python -r"
+    assert install in env.calls
+    assert "requirements-sdk.txt" in env.calls
+    pinned = (DEPLOY / "requirements-sdk.txt").read_text()
+    assert "claude-agent-sdk==" in pinned
+
+
+def test_t1857_an_existing_sdk_venv_is_kept_and_only_the_pin_is_applied(box: tuple[Env, Stubber]) -> None:
+    env, stub = box
+    _stubs(stub)
+    venv = env.home / "sdk-venv"
+    (venv / "bin").mkdir(parents=True)
+    python = venv / "bin" / "python"
+    python.write_text("#!/bin/sh\n")
+    python.chmod(0o755)
+    done = env.run("bash", str(DEPLOY_SH), TODOIMPL_SDK_VENV=str(venv), **FAST_WAIT)
+    assert done.returncode == 0, done.stderr
+    assert "uv venv" not in env.calls
+    assert "uv pip install" in env.calls

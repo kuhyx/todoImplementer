@@ -14,7 +14,8 @@ from todoimpl.board.board import build_board, build_task, repo_checker
 from todoimpl.board.card import Context, build_card
 from todoimpl.board.diff import worktree_diff
 from todoimpl.board.state import load, load_runs, run_dir
-from todoimpl.board.types import Limit
+from todoimpl.board.types import Credits, Limit
+from todoimpl.credits import marks, route, setting
 from todoimpl.http.backend import ERROR_CODES, BackendError
 from todoimpl.lessons import LessonError, approve, draft_lesson, latest_lesson, run_skills
 from todoimpl.runner.scheduler import RunnerError
@@ -79,7 +80,7 @@ class ServiceBackend:
         active = state.active(now)
         return Context(
             live=frozenset(self.scheduler.running()),
-            limit=Limit(active, state.until if active else None, state.credits),
+            limit=Limit(active, state.until if active else None, Credits(**route.view(self.root, now))),
             now=now,
             repo_missing=self._repo_missing,
         )
@@ -111,6 +112,8 @@ class ServiceBackend:
         board = build_board(tasks, extended, self._context(), self.build)  # type: ignore[arg-type]
         if snap.error:  # stale cards plus a banner, never an empty board that looks healthy
             board["error"] = {"code": UPSTREAM, "message": f"todo MCP: {snap.error}"}
+        if (alert := marks.active_alert(self.root, self._clock())) is not None:
+            board["alert"] = alert
         latest = self.key_monitor.latest() if self.key_monitor else None
         if latest is not None:  # before the first check there is nothing honest to say
             board["api_key"] = board_field(latest)
@@ -217,9 +220,10 @@ class ServiceBackend:
         """Cancel click."""
         self._click(id8, "cancel", lambda: self.scheduler.cancel(id8))
 
-    def credits(self, id8: str) -> None:
-        """Run on credits click."""
-        self._click(id8, "credits", lambda: self.scheduler.credits(id8))
+    def set_credits_fallback(self, *, enabled: bool) -> dict[str, Any]:
+        """POST /api/settings/credits-fallback: store the global setting, return the fresh credits object."""
+        setting.set_enabled(value=enabled)
+        return route.view(self.root, self._clock())
 
     def go(self, id8: str) -> None:
         """Go click: run the card's one-line command as kuhy, rerun the blocked stage on exit 0."""

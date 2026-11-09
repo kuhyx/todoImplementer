@@ -24,17 +24,36 @@ ROLE_MODELS = {
 DENY_ALWAYS = ("Bash(git push:*)", "Bash(git push *)")
 DENY_READONLY = ("Edit", "Write", "NotebookEdit")
 READONLY_ROLES = frozenset({"classify"})
+KEY_VAR = "ANTHROPIC_API_KEY"
 BG_WAIT_VAR = "CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS"  # 0: headless claude waits for background subagents
 
 
 @dataclass(frozen=True)
 class Invocation:
-    """argv, environment and cwd of one turn."""
+    """argv, environment and cwd of one turn; `route` is plan (the `claude` CLI) or credits (Agent SDK)."""
 
     argv: tuple[str, ...]
     env: dict[str, str]
     cwd: Path
     notes: tuple[str, ...] = ()
+    route: str = "plan"
+
+
+@dataclass(frozen=True)
+class Options:
+    """What a turn is told, whichever route runs it (the CLI argv and the SDK options both come from this)."""
+
+    prompt: str
+    model: str
+    permission_mode: str
+    add_dirs: tuple[str, ...]
+    resume: str | None
+    allow: tuple[str, ...]
+    deny: tuple[str, ...]
+    settings: str | None
+    env: dict[str, str]
+    cwd: Path
+    notes: tuple[str, ...]
 
 
 def claude_bin() -> str:
@@ -47,6 +66,44 @@ def model_for(role: str) -> str:  # noqa: D103
     return os.environ.get("TODOIMPL_MODEL") or ROLE_MODELS[role]
 
 
+def options(  # noqa: PLR0913, PLR0917 - one set of turn options, built in one place
+    role: str,
+    prompt: str,
+    worktree: Path,
+    resume: str | None = None,
+    extra_dirs: tuple[Path, ...] = (),
+    allow: tuple[str, ...] = (),
+    model: str | None = None,
+) -> Options:
+    """Return what a turn is given; `allow` = learned allow rules, kuhy's session policy loosens the rest."""
+    pol = policy.load()
+    deny = (DENY_ALWAYS if pol.deny is None else pol.deny) + (DENY_READONLY if role in READONLY_ROLES else ())
+    # Each turn is a new process: one owner per card keeps its phone test slot across turns. The plan route
+    # never carries the API key (it would take precedence over the plan's login); the credit route adds it.
+    env = {k: v for k, v in os.environ.items() if k != KEY_VAR}
+    env |= {
+        "CLAUDE_AUTO_CONTINUE": "0",
+        BG_WAIT_VAR: "0",
+        "PHONE_LEASE_OWNER": f"todoimpl:{worktree.parent.name}",
+    }
+    dirs = (str(worktree), *map(str, extra_dirs), *pol.add_dirs)
+    hooks = policy.HOOKS_OFF if pol.disable_hooks else None
+    notes = (pol.warning,) if pol.warning else ()
+    return Options(
+        prompt,
+        model or model_for(role),
+        pol.permission_mode,
+        dirs,
+        resume,
+        allow,
+        deny,
+        hooks,
+        env,
+        worktree,
+        notes,
+    )
+
+
 def build(  # noqa: PLR0913, PLR0917 - one argv, built in one place
     role: str,
     prompt: str,
@@ -55,43 +112,19 @@ def build(  # noqa: PLR0913, PLR0917 - one argv, built in one place
     extra_dirs: tuple[Path, ...] = (),
     allow: tuple[str, ...] = (),
 ) -> Invocation:
-    """Load kuhy's full setup (no strict MCP); the prompt goes right after -p, before the variadic flags.
-
-    `allow` = the learned allow rules; kuhy's session policy (runner/policy.py) can loosen the rest.
-    """
-    pol = policy.load()
-    argv = [
-        claude_bin(),
-        "-p",
-        prompt,
-        "--model",
-        model_for(role),
-        "--output-format",
-        "stream-json",
-        "--verbose",
-    ]
-    argv += [
-        "--permission-mode",
-        pol.permission_mode,
-        "--add-dir",
-        str(worktree),
-        *map(str, extra_dirs),
-        *pol.add_dirs,
-    ]
+    """Build the plan route: kuhy's full setup (no strict MCP); the prompt goes right after -p."""
+    opt = options(role, prompt, worktree, resume, extra_dirs, allow)
+    argv = [claude_bin(), "-p", prompt, "--model", opt.model, "--output-format", "stream-json", "--verbose"]
+    argv += ["--permission-mode", opt.permission_mode, "--add-dir", *opt.add_dirs]
     if resume:
         argv += ["--resume", resume]
     if allow:
         argv += ["--allowedTools", *allow]
-    deny = (DENY_ALWAYS if pol.deny is None else pol.deny) + (DENY_READONLY if role in READONLY_ROLES else ())
-    if deny:
-        argv += ["--disallowedTools", *deny]
-    if pol.disable_hooks:
-        argv += ["--settings", policy.HOOKS_OFF]
-    notes = (pol.warning,) if pol.warning else ()
-    # Each turn is a new claude process: one owner per card keeps its phone test slot across turns.
-    slot_owner = f"todoimpl:{worktree.parent.name}"
-    env = {**os.environ, "CLAUDE_AUTO_CONTINUE": "0", BG_WAIT_VAR: "0", "PHONE_LEASE_OWNER": slot_owner}
-    return Invocation(tuple(argv), env, worktree, notes)
+    if opt.deny:
+        argv += ["--disallowedTools", *opt.deny]
+    if opt.settings:
+        argv += ["--settings", opt.settings]
+    return Invocation(tuple(argv), opt.env, worktree, opt.notes)
 
 
 def _signal_group(pgid: int, sig: signal.Signals) -> None:

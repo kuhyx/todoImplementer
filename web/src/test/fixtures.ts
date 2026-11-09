@@ -78,6 +78,7 @@ export function makeCards(): TaskCard[] {
       priority,
       repo: repository,
       resumes_at: status === "paused_limit" ? NOW + 3 * 3600 : null,
+      route: null,
       title,
       updated: ago === null ? null : NOW - ago,
     };
@@ -100,7 +101,7 @@ export function makeBoard(cards: TaskCard[] = makeCards()): Board {
     build: "abc1234",
     columns: ids.map((id) => ({ count: cards.filter((card) => card.column === id).length, id, label: LABELS[id] })),
     generated_at: NOW,
-    limit: { active: false, credits_available: true, until: null },
+    limit: { active: false, credits: { enabled: true, state: "ready", text: "Free API credits take over while the plan limit is active." }, until: null },
     repos,
     slots: { used: cards.filter((card) => card.status === "working").length },
     tasks: cards,

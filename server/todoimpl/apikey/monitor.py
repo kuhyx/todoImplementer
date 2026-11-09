@@ -1,4 +1,4 @@
-"""Watches the key at server start and hourly: a todo task and one desktop notification per problem.
+"""Watches the key at server start and hourly: one todo task per problem; the board banner shows it too.
 
 Runs whether or not the key is used and whatever the credit balance is. The board reads `latest()`, so a
 request never waits on the network.
@@ -6,21 +6,18 @@ request never waits on the network.
 
 from __future__ import annotations
 
-import json
 import logging
 import threading
 import time
 from collections.abc import Callable
 from datetime import date
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from todoimpl.service.cards import card_tasks
 from todoimpl.todo_mcp.model import TodoError
 
-from . import store
+from . import cache, store
 from .keystatus import ROTATE_COMMAND, KeyStatus, status
-from .notify import notify_send
 
 if TYPE_CHECKING:
     from todoimpl.todo_mcp.client import TodoClient
@@ -31,7 +28,6 @@ TITLE = "MANUAL WORK REQUIRED: rotate Claude API key"
 COMMAND = ROTATE_COMMAND
 INTERVAL = 3600.0
 POLL = 30.0
-NOTIFIED = "apikey-notified.json"
 
 
 def _default_check(today: date) -> KeyStatus:
@@ -44,18 +40,16 @@ class KeyMonitor:
     def __init__(  # noqa: PLR0913 - the collaborators; all injectable for tests
         self,
         client: TodoClient,
-        root: Path,
         *,
         check: Callable[[date], KeyStatus] = _default_check,
-        notify: Callable[[str, str], bool] = notify_send,
         clock: Callable[[], date] = date.today,
         interval: float = INTERVAL,
         poll: float = POLL,
         after_write: Callable[[], None] = lambda: None,
     ) -> None:
-        """Nothing runs until tick() or start(); `root` keeps the last notified state across restarts."""
-        self._client, self._root = client, root
-        self._check, self._notify, self._clock = check, notify, clock
+        """Nothing runs until tick() or start()."""
+        self._client = client
+        self._check, self._clock = check, clock
         self._interval, self._poll, self._after_write = interval, poll, after_write
         self._latest: KeyStatus | None = None
         self._stop = threading.Event()
@@ -66,15 +60,15 @@ class KeyMonitor:
         return self._latest
 
     def tick(self) -> None:
-        """Check, sync the todo task, notify on a state change. Never raises."""
+        """Check and sync the todo task. Never raises."""
         try:
             current = self._check(self._clock())
         except Exception:
             log.exception("api key check crashed")
             return
         self._latest = current
+        cache.put(current)
         self._sync_task(current)
-        self._notify_change(current)
 
     def _sync_task(self, current: KeyStatus) -> None:
         """Create the manual-work task once while the status is not ok; close it once it is ok again."""
@@ -99,20 +93,6 @@ class KeyMonitor:
                 self._after_write()
         except TodoError as error:
             log.warning("todo task for the api key not synced: %s", error)
-
-    def _notify_change(self, current: KeyStatus) -> None:
-        """One notification per change into a not-ok state; the last state survives a restart."""
-        path = self._root / NOTIFIED
-        try:
-            before = json.loads(path.read_text(encoding="utf-8")).get("state")
-        except OSError, ValueError, AttributeError:
-            before = None
-        if before == current.state:
-            return
-        if current.state != "ok":
-            self._notify(f"Claude API key: {current.state}", f"{current.detail}. Run {COMMAND}")
-        self._root.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps({"state": current.state}), encoding="utf-8")
 
     def _stamp(self) -> tuple[int, int]:
         """Modification times of the key and its metadata (0 when absent): a change means rotate ran."""

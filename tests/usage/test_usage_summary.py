@@ -19,7 +19,7 @@ def test_empty_root_validates_against_the_contract(tmp_path: Path, usage_validat
     usage_validator.validate(out)
     assert out["five_hour"] is None
     assert out["overage"] == {"status": "unknown", "using": False}
-    assert out["limit"] == {"active": False, "until": None, "credits_available": False}
+    assert out["limit"] == {"active": False, "until": None, "credits": out["limit"]["credits"]}
     assert out["cost"] == {"today_usd": 0.0, "total_usd": 0.0, "per_task": []}
 
 
@@ -100,12 +100,13 @@ def test_garbage_rate_info_is_ignored(tmp_path: Path, write_stream: Callable[...
     assert out["overage"] == {"status": "unknown", "using": False}
 
 
-def test_active_limit_and_credits(tmp_path: Path, usage_validator: Any) -> None:
+def test_active_limit_carries_the_credits_view(tmp_path: Path, usage_validator: Any) -> None:
     (tmp_path / "limit-until").write_text(str(NOW + 600))
-    (tmp_path / "limit-credits").write_text("1")
     out = usage_summary(tmp_path, now=NOW)
     usage_validator.validate(out)
-    assert out["limit"] == {"active": True, "until": NOW + 600, "credits_available": True}
+    assert out["limit"]["active"] is True
+    assert out["limit"]["until"] == NOW + 600
+    assert out["limit"]["credits"]["state"] == "unavailable"
     (tmp_path / "limit-until").write_text(str(NOW - 1))
     assert usage_summary(tmp_path, now=NOW)["limit"]["until"] is None
 

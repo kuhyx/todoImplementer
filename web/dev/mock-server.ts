@@ -21,7 +21,9 @@ const TOKEN = randomUUID();
 const TYPES: Record<string, string> = { ".css": "text/css", ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".svg": "image/svg+xml" };
 const TIME_KEYS = new Set(["at", "ended", "generated_at", "resets_at", "resumes_at", "started", "until", "updated"]);
 const offset = Math.floor(Date.now() / 1000) - NOW;
-const cards = [...makeCards(), ...askCards()];
+const cards = [...makeCards(), ...askCards()].map((card) => (card.status === "working" && card.repo === "gatelock" ? { ...card, route: "credits" as const } : card));
+let isCreditsOn = true;
+const creditsNow = (): unknown => ({ enabled: isCreditsOn, state: isCreditsOn ? "ready" : "off", text: isCreditsOn ? "Free API credits take over while the plan limit is active." : "Runs wait for the plan limit to end." });
 const streams = new Map<string, Set<ServerResponse>>();
 
 function shift(value: unknown, key = ""): unknown {
@@ -49,7 +51,7 @@ function stageEvent(id: string): unknown {
   return { actions, column, current, needs, stage, status, type: "stage" };
 }
 
-const NEXT: Record<string, "backlog" | "cancelled" | "done" | "working"> = { cancel: "cancelled", credits: "working", ship: "done", "spec-answers": "working", "spec-ok": "working", start: "working" };
+const NEXT: Record<string, "backlog" | "cancelled" | "done" | "working"> = { cancel: "cancelled", ship: "done", "spec-answers": "working", "spec-ok": "working", start: "working" };
 
 function hasTask(id: string, action: string, body: { text?: string }): boolean {
   const card = cards.find((c) => c.id === id);
@@ -60,6 +62,19 @@ function hasTask(id: string, action: string, body: { text?: string }): boolean {
   const event = stageEvent(id);
   if (event !== null) emit(id, "stage", event);
   return true;
+}
+
+async function setCredits(request: IncomingMessage, res: ServerResponse): Promise<void> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of request) chunks.push(chunk as Buffer);
+  const origin = request.headers.origin;
+  if (request.headers["x-todoimpl-token"] !== TOKEN || (origin !== undefined && origin !== `http://${request.headers.host ?? ""}`)) {
+    json(res, { error: { code: "forbidden", message: "Bad token or origin." }, ok: false }, 403); return;
+  }
+  const body = JSON.parse(Buffer.concat(chunks).toString("utf8") || "{}") as { enabled?: unknown };
+  if (typeof body.enabled !== "boolean") { json(res, { error: { code: "bad_request", message: "enabled must be true or false." }, ok: false }, 400); return; }
+  isCreditsOn = body.enabled;
+  json(res, { credits: creditsNow(), ok: true });
 }
 
 async function post(request: IncomingMessage, res: ServerResponse, id: string, action: string): Promise<void> {
@@ -123,7 +138,8 @@ async function route(request: IncomingMessage, res: ServerResponse): Promise<voi
   const parameters = new URLSearchParams(query);
   const [, api, kind, id, action] = path.split("/", 5);
   if (path === "/version") { json(res, { build: BUILD, version: "0.1.0" }); return; }
-  if (path === "/api/board") { json(res, { ...makeBoard(cards), build: BUILD }); return; }
+  if (path === "/api/board") { const board = makeBoard(cards); json(res, { ...board, build: BUILD, limit: { ...board.limit, credits: creditsNow() } }); return; }
+  if (path === "/api/settings/credits-fallback" && request.method === "POST") { await setCredits(request, res); return; }
   if (path === "/api/usage") { json(res, makeUsage()); return; }
   if (path === "/api/live") { live(request, res, parameters.get("id") ?? ""); return; }
   if (api !== "api" || kind !== "task" || id === undefined) {

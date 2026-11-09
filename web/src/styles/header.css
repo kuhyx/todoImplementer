@@ -153,3 +153,19 @@
   text-decoration-color: var(--accent);
   text-underline-offset: var(--space-1);
 }
+
+.credits-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  font-size: var(--text-label);
+}
+
+.credits-text {
+  color: var(--text-muted);
+}
+
+.credits-error {
+  color: var(--danger);
+}

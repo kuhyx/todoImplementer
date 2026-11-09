@@ -3,7 +3,7 @@ import time
 
 import pytest
 from runnerfakes import Env, FakeClient, make_repo, task
-from schedfakes import CARD, IMPL, LIVE_OK, PLAN, boot, reply, state, wait, wait_stage
+from schedfakes import CARD, IMPL, LIVE_OK, PLAN, boot, lift_limit, reply, state, wait, wait_stage
 from todoimpl.board import state as store
 from todoimpl.board.state import RunState
 from todoimpl.runner import stages, worktree
@@ -31,7 +31,7 @@ def test_plan_limit_pauses_and_resumes_at_resets_at(world: Env) -> None:
         sched.close()
 
 
-def test_limit_pauses_every_run_and_credits_lift_one(world: Env) -> None:
+def test_limit_pauses_every_run_until_it_lifts(world: Env) -> None:
     sched, client = boot(world, PLAN, _limit(time.time() + 3600), IMPL, LIVE_OK, done_check="true")
     client.tasks["bbbb2222"] = task("bbbb2222", done_check="true")
     try:
@@ -42,12 +42,8 @@ def test_limit_pauses_every_run_and_credits_lift_one(world: Env) -> None:
         time.sleep(0.5)
         assert len(world.calls()) == calls
         assert "bbbb2222-0" not in sched.running()
-        sched.credits(CARD)
-        st = wait_stage(world, sched, "gate")
-        assert st.using_credits
-        with pytest.raises(RunnerError, match="only while the plan limit"):
-            sched.credits(CARD)
-        assert state(world, "bbbb2222-0").stage == "plan"
+        lift_limit(world, sched)
+        wait_stage(world, sched, "gate")
     finally:
         sched.close()
 
@@ -83,7 +79,7 @@ def test_unknown_runs_and_wrong_stages_are_refused(world: Env) -> None:
         with pytest.raises(RunnerError, match="unknown task") as unknown:
             sched.start("zzzz9999-0")
         assert unknown.value.code == "not_found"
-        for action in (sched.ship, sched.cancel, sched.spec_ok, sched.credits):
+        for action in (sched.ship, sched.cancel, sched.spec_ok):
             with pytest.raises(RunnerError, match="has no run yet"):
                 action(CARD)
         with pytest.raises(RunnerError, match="has no run yet"):

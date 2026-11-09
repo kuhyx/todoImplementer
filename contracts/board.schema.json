@@ -44,6 +44,17 @@
       "anyOf": [{"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/error"}, {"type": "null"}],
       "description": "Board-level banner (e.g. the todo MCP is unreachable): cards shown are the last known ones and stale. Omitted or null when healthy."
     },
+    "alert": {
+      "type": "object",
+      "description": "A red banner for as long as `until` is in the future: the overage guard killed a plan-route turn that was spending extra usage (money). Omitted when none.",
+      "properties": {
+        "kind": {"enum": ["overage"]},
+        "text": {"type": "string", "minLength": 1},
+        "until": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"}
+      },
+      "required": ["kind", "text", "until"],
+      "additionalProperties": false
+    },
     "api_key": {
       "type": "object",
       "description": "Status of the Claude Console API key, worded by the server (omitted until the first check ran). The page shows a banner with `text` when level is warn (amber) or error (red) and nothing when ok.",

@@ -111,7 +111,7 @@ export function makeUsage(): Usage {
     cost: { per_task: [{ cost_usd: 3.18, id: "17a1b2c3-0", title: "Escape hatch" }], today_usd: 12.37, total_usd: 80.5 },
     five_hour: { resets_at: NOW + 8100, status: "allowed", utilization: 0.42 },
     generated_at: NOW,
-    limit: { active: false, credits_available: true, until: null },
+    limit: { active: false, credits: { enabled: true, state: "ready", text: "Free API credits take over while the plan limit is active." }, until: null },
     overage: { status: "rejected", using: false },
     seven_day: { resets_at: NOW + 3 * 86_400, status: "allowed_warning", utilization: 0.77 },
   };

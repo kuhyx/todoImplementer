@@ -1,4 +1,4 @@
-"""Scheduler the service drives: start, spec answers, Spec OK, send, ship, cancel, credits, events."""
+"""Scheduler the service drives: start, spec answers, Spec OK, send, ship, cancel, events."""
 
 from __future__ import annotations
 
@@ -8,9 +8,10 @@ from typing import TYPE_CHECKING, Any
 
 from todoimpl.board import state as store
 from todoimpl.board.state import RunState
+from todoimpl.board.types import MANUAL_REASON, is_manual
 from todoimpl.todo_mcp.model import TodoError
 
-from . import adopt, limits, retry
+from . import adopt, retry
 from .engine import Client, default_clock
 from .files import read_json
 from .phone_sched import PhoneEngine
@@ -81,6 +82,8 @@ class Scheduler(PhoneEngine):
         except TodoError as exc:
             msg = str(exc)
             raise RunnerError(msg, "not_found") from exc
+        if is_manual(item.title):
+            raise RunnerError(MANUAL_REASON, "disabled")
         with self._cv:
             if card in self._active or card in self._queue:
                 msg = f"{card} is already running"
@@ -215,17 +218,6 @@ class Scheduler(PhoneEngine):
             self.client.abandon(card)
         except TodoError as exc:
             log.warning("cancel %s: the note stays open, the todo app refused: %s", card, exc)
-
-    def credits(self, card: str) -> None:  # noqa: D102
-        with self._cv:
-            st = self._idle(card)
-            if st.stage != "paused_limit":
-                msg = "Run on credits is offered only while the plan limit pauses the run"
-                raise RunnerError(msg, "disabled")
-            st.using_credits = True
-            limits.grant_credits(self.root)
-            self.save(card, st)
-            self.enqueue(card, first=True)
 
     def subscribe(self, card: str, after: int = 0) -> Iterator[dict[str, Any]]:  # noqa: D102
         return self.bus.subscribe(card, after)

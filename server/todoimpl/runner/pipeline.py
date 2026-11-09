@@ -8,9 +8,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from todoimpl.board import state as store
+from todoimpl.credits import route
 from todoimpl.prompts import PromptContext, build
 
-from . import checks, limits, phone, retry, worktree
+from . import checks, phone, retry, turncheck, worktree
 from .files import NeedsYouError
 from .permit import gate, with_grant
 from .session import handoff_summary
@@ -79,8 +80,6 @@ class Driver:
             st.stage = st.extra.pop("resume_stage", "implement")
             st.extra.pop("retry_reason", None)
             st.resume_at = None
-        if st.using_credits and limits.active_until(self.ctx.root, self.ctx.now()) is None:
-            st.using_credits = False
         try:
             self._worktree()
             while st.stage in WORK_STAGES:
@@ -164,9 +163,9 @@ class Driver:
     def turn(self, role: str, stage: str, *, failure_tail: str = "", prompt: str = "") -> TurnResult:
         """One claude turn (`prompt` picks the builder, else `stage`); raises on cancel, limit, failure."""
         st, ctx = self.state, self.ctx
-        until = limits.active_until(ctx.root, ctx.now())
-        if until is not None and not st.using_credits:
-            raise LimitHitError(until)
+        choice = route.choose(ctx.root, ctx.now())
+        if choice.route is None:  # the plan limit holds and the free credits cannot take over
+            raise LimitHitError(choice.until or ctx.now())
         nudge = st.extra.pop("nudge", False)
         cont = bool(st.extra.pop("r_continue", False))
         new_session = bool(st.extra.pop("fresh", False))
@@ -189,7 +188,7 @@ class Driver:
             return build(prompt or stage, self.context(failure_tail=failure_tail, nudge=nudge, cont=cont))
 
         env = TurnEnv(ctx.run_dir, Path(str(st.worktree)), ctx.publish, ctx.register, ctx.now)
-        res = run_turn(env, st, role, with_grant(st, prompt_for, role), (ctx.run_dir,))
+        res = run_turn(env, st, role, with_grant(st, prompt_for, role), (ctx.run_dir,), choice.route)
         st.extra["last_reply"] = res.text[-1500:]
         if res.finished and not res.is_error:
             phone.after_turn(st, ctx.run_dir, res)
@@ -202,9 +201,8 @@ class Driver:
     def _check_turn(self, res: TurnResult) -> None:
         if self.ctx.cancelled():
             raise CancelledError
-        pause = limits.pause_until(res.limit, res.text, is_error=res.is_error, now=self.ctx.now())
+        pause = turncheck.pause_after(self.state, self.ctx.root, res, self.ctx.now())
         if pause is not None:
-            limits.write_until(self.ctx.root, pause)
             raise LimitHitError(pause)
 
     def _finished(self, res: TurnResult, role: str, stage: str) -> TurnResult:

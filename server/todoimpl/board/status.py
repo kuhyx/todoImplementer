@@ -9,6 +9,8 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
+from .types import is_manual
+
 if TYPE_CHECKING:
     from .state import RunState
     from .types import TaskLike
@@ -68,15 +70,17 @@ def compute(  # noqa: PLR0911 - one return per rule of the spec table
 ) -> Status:
     """Return the single status; the first matching rule wins.
 
-    `live` = a runner thread/process is active for the task; `limit_until` = end of the active plan limit.
-    A run with `using_credits` ignores the limit.
+    `live` = a runner thread/process is active for the task; `limit_until` = end of the plan limit when it
+    holds turns back (None while the free credits take over).
     """
     if task.status == "done" or (run is not None and run.stage == "shipped"):
         return Status.DONE
     if task.status == "abandoned" or (run is not None and run.stage == "cancelled"):
         return Status.CANCELLED
+    if is_manual(task.title) or (run is None and task.repo is None):
+        return Status.YOURS
     if run is None:
-        return Status.YOURS if task.repo is None else Status.BACKLOG
+        return Status.BACKLOG
     if run.assignee == "human" and not run.error:
         return Status.YOURS
     if run.stage == "gate":
@@ -85,7 +89,7 @@ def compute(  # noqa: PLR0911 - one return per rule of the spec table
         return Status.NEEDS_YOU
     if run.stage == "shipping":
         return Status.SHIPPING
-    if run.stage == "paused_limit" or (limit_until is not None and not live and not run.using_credits):
+    if run.stage == "paused_limit" or (limit_until is not None and not live):
         return Status.PAUSED_LIMIT
     return Status.WORKING if live or run.stage == "paused_retry" else Status.QUEUED
 

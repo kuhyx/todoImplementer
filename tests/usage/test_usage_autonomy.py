@@ -54,8 +54,8 @@ def test_unassisted_counts_finished_cards_without_kuhy(tmp_path: Path) -> None:
     ]
 
 
-def test_every_retry_or_cancel_or_credits_click_is_an_intervention(tmp_path: Path) -> None:
-    for number, kind in enumerate(("retry", "cancel", "credits", "go", "spec_ok")):
+def test_every_retry_or_cancel_or_go_click_is_an_intervention(tmp_path: Path) -> None:
+    for number, kind in enumerate(("retry", "cancel", "go", "spec_ok")):
         run = make_run(tmp_path, f"{number:08d}-0", "gate", updated=WEEK45)
         add_interventions(run, [(WEEK45, kind)])
     assert autonomy_summary(tmp_path)["done_unassisted"]["count"] == 0
@@ -67,10 +67,9 @@ def test_legacy_traces_of_kuhy_are_backfilled(tmp_path: Path) -> None:
         '{"type": "activity", "kind": "user", "at": 1, "seq": 1}\ntorn\n{"kind": "text"}\n[1]\n'
     )
     make_run(tmp_path, "bbbbbbbb-0", "gate", updated=WEEK45, extra={"spec_ok": True})
-    make_run(tmp_path, "cccccccc-0", "gate", updated=WEEK45, using_credits=True)
     out = autonomy_summary(tmp_path)
     assert out["done_unassisted"]["count"] == 0
-    assert out["backfilled"] == 3
+    assert out["backfilled"] == 2
 
 
 def test_permission_asks_are_a_tagged_turns_that_ask_for_approval(tmp_path: Path) -> None:

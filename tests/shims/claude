@@ -113,7 +113,9 @@ def main() -> int:
     opts = parse(sys.argv[1:])
     cwd = Path.cwd()
     call = {"argv": sys.argv[1:], "cwd": str(cwd), **opts, "auto_continue": os.environ.get("CLAUDE_AUTO_CONTINUE"),
-            "bg_wait": os.environ.get("CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS")}
+            "bg_wait": os.environ.get("CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS"),
+            "api_key": "ANTHROPIC_API_KEY" in os.environ, "via_sdk": os.environ.get("FAKE_VIA_SDK") == "1",
+            "phone_owner": os.environ.get("PHONE_LEASE_OWNER")}
     with (base / "calls.jsonl").open("a", encoding="utf-8") as log:
         log.write(json.dumps(call) + "\n")
     key = (cwd.parent.name if cwd.name == "wt" else cwd.name)[:8]

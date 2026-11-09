@@ -13,7 +13,7 @@ from urllib.parse import parse_qs, urlsplit
 from todoimpl.tokens_api import router as tokens_api
 from todoimpl.version import __version__
 
-from . import bodies
+from . import bodies, settings
 from .auth import check_post
 from .backend import ERROR_CODES, BackendError
 from .reply import Reply, error_reply, json_reply
@@ -157,7 +157,11 @@ class Router:
         raw = read(size) if size else b""
         if (why := check_post(origin, token, expected=self.token, origins=self.origins)) is not None:
             return error_reply("forbidden", why)
-        reply = _guard(lambda: self._action(urlsplit(target).path, raw))
+        path = urlsplit(target).path
+        if path == settings.PATH:
+            reply = _guard(lambda: settings.handle(self.backend, raw))
+        else:
+            reply = _guard(lambda: self._action(path, raw))
         assert isinstance(reply, Reply)  # noqa: S101 - _action never returns a stream
         return reply
 
@@ -217,8 +221,6 @@ class Router:
                 backend.ship(id8)
             case "cancel":
                 backend.cancel(id8)
-            case "credits":
-                backend.credits(id8)
             case "go":
                 backend.go(id8)
             case "rerun":

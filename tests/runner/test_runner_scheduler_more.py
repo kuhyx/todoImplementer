@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 from runnerfakes import Env, FakeClient, make_repo, task
-from schedfakes import CARD, IMPL, LIVE_OK, PLAN, boot, reply, state, wait, wait_stage
+from schedfakes import CARD, IMPL, LIVE_OK, PLAN, boot, lift_limit, reply, state, wait, wait_stage
 from todoimpl.board import state as store
 from todoimpl.board.state import RunState, SpecQuestion
 from todoimpl.runner import files, launch, limits, orphans
@@ -58,7 +58,7 @@ def test_spec_answers_one_at_a_time(world: Env) -> None:
         sched.close()
 
 
-def test_limit_seen_mid_run_pauses_the_next_turn_and_credits_resume_it(world: Env) -> None:
+def test_limit_seen_mid_run_pauses_the_next_turn_and_its_lift_resumes_it(world: Env) -> None:
     slow = ({"_fake": "sleep", "sec": 1.0}, *IMPL)
     sched, client = boot(world, PLAN, slow, LIVE_OK, done_check="true")
     client.tasks["bbbb2222"] = task("bbbb2222", done_check="true")
@@ -71,26 +71,8 @@ def test_limit_seen_mid_run_pauses_the_next_turn_and_credits_resume_it(world: En
         sched.start("bbbb2222-0")
         sched.cancel("bbbb2222-0")
         assert state(world, "bbbb2222-0").stage == "cancelled"
-        sched.credits(CARD)
+        lift_limit(world, sched)
         wait_stage(world, sched, "gate")
-    finally:
-        sched.close()
-
-
-def test_credits_drop_once_the_limit_lifted(world: Env) -> None:
-    limit = ({"_fake": "limit", "resets_at": time.time() + 3600}, *reply("x", is_error=True))
-    sched, _ = boot(world, PLAN, limit, IMPL,
-                    LIVE_OK, done_check="true")  # fmt: skip
-    try:
-        sched.start(CARD)
-        st = wait_stage(world, sched, "paused_limit")
-        st.using_credits = True
-        store.save(world.root / CARD, st)
-        limits.clear(world.root)
-        with sched._cv:
-            sched._cv.notify_all()
-        st = wait_stage(world, sched, "gate")
-        assert not st.using_credits
     finally:
         sched.close()
 
@@ -129,7 +111,6 @@ def test_engine_internals_survive_odd_states(world: Env, monkeypatch: pytest.Mon
     try:
         (world.root / "hhhh8888-0").mkdir()
         (world.root / "hhhh8888-0" / "state.json").write_text("{", encoding="utf-8")
-        assert not sched._credited("hhhh8888-0")
         sched._drive("none0000-0")
         with sched._cv:
             sched.kill("none0000-0")

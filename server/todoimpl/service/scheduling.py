@@ -29,9 +29,6 @@ class SchedulerLike(Protocol):
     def cancel(self, id8: str) -> None:  # noqa: D102
         ...
 
-    def credits(self, id8: str) -> None:  # noqa: D102
-        ...
-
     def running(self) -> set[str]:  # noqa: D102
         ...
 

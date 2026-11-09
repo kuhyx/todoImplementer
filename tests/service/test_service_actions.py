@@ -24,7 +24,6 @@ def test_every_action_goes_to_the_scheduler_and_pokes_the_cache(rig: Rig) -> Non
     b.send("t1", "hi")
     b.ship("t1")
     b.cancel("t1")
-    b.credits("t1")
     assert rig.scheduler.calls == [
         ("start", "t1", None),
         ("start", "t1", True),
@@ -33,7 +32,6 @@ def test_every_action_goes_to_the_scheduler_and_pokes_the_cache(rig: Rig) -> Non
         ("send", "t1", "hi"),
         ("ship", "t1"),
         ("cancel", "t1"),
-        ("credits", "t1"),
     ]
 
 

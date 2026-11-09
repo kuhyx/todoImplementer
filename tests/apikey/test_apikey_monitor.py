@@ -23,19 +23,12 @@ class Rig:
         self.fake, self.root = fake, root
         self.client = TodoClient(fake.url, fake.token)
         self.current = OK
-        self.sent: list[tuple[str, str]] = []
         self.monitor = self.make()
-
-    def _notify(self, title: str, text: str) -> bool:
-        self.sent.append((title, text))
-        return True
 
     def make(self, **kw: object) -> KeyMonitor:
         return KeyMonitor(
             self.client,
-            self.root,
             check=lambda _today: self.current,
-            notify=self._notify,
             clock=lambda: date(2026, 11, 8),
             **kw,  # type: ignore[arg-type]
         )
@@ -63,10 +56,9 @@ def test_title_and_command_are_exact() -> None:
     assert COMMAND == "~/src/todoImplementer/scripts/rotate_api_key.py"
 
 
-def test_ok_creates_nothing_and_notifies_nobody(rig: Rig) -> None:
+def test_ok_creates_nothing(rig: Rig) -> None:
     rig.monitor.tick()
     assert rig.open_titles() == []
-    assert rig.sent == []
 
 
 def test_not_ok_creates_the_task_once_with_state_expiry_and_command(rig: Rig) -> None:
@@ -108,35 +100,7 @@ def test_other_open_sections_of_the_note_are_left_alone(rig: Rig) -> None:
     assert rig.open_titles() == ["something else"]
 
 
-def test_notifies_once_per_state_change(rig: Rig) -> None:
-    for status in (EXPIRED, EXPIRED, INVALID, INVALID, OK, EXPIRED):
-        rig.current = status
-        rig.monitor.tick()
-    assert [t for t, _ in rig.sent] == [
-        "Claude API key: expired",
-        "Claude API key: invalid",
-        "Claude API key: expired",
-    ]
-    assert COMMAND in rig.sent[0][1]
-
-
-def test_state_change_survives_a_restart(rig: Rig) -> None:
-    rig.current = EXPIRED
-    rig.monitor.tick()
-    again = rig.make()
-    again.tick()
-    assert len(rig.sent) == 1
-
-
-def test_unreadable_notified_file_means_notify_again(rig: Rig) -> None:
-    rig.current = EXPIRED
-    rig.monitor.tick()
-    (rig.root / "apikey-notified.json").write_text("{broken")
-    rig.make().tick()
-    assert len(rig.sent) == 2
-
-
-def test_todo_mcp_down_is_logged_and_the_notification_still_goes(
+def test_todo_mcp_down_is_logged_and_the_status_is_still_kept(
     rig: Rig, caplog: pytest.LogCaptureFixture
 ) -> None:
     rig.fake.stop()
@@ -144,7 +108,6 @@ def test_todo_mcp_down_is_logged_and_the_notification_still_goes(
     with caplog.at_level(logging.WARNING):
         rig.monitor.tick()
     assert "todo" in caplog.text
-    assert len(rig.sent) == 1
     assert rig.monitor.latest() == EXPIRED
 
 
@@ -158,7 +121,7 @@ def test_a_crashing_check_is_survived(rig: Rig, caplog: pytest.LogCaptureFixture
     def boom(_today: date) -> KeyStatus:
         raise RuntimeError("kaboom")
 
-    monitor = KeyMonitor(rig.client, rig.root, check=boom, notify=lambda *_: True)
+    monitor = KeyMonitor(rig.client, check=boom)
     with caplog.at_level(logging.ERROR):
         monitor.tick()
     assert "kaboom" in caplog.text
@@ -169,7 +132,7 @@ def test_default_check_reads_the_real_files_through_the_verifier(
     fake: FakeTodoMcp, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr("todoimpl.apikey.keystatus.verify", lambda _k: pytest.fail("no key: no call"))
-    monitor = KeyMonitor(TodoClient(fake.url, fake.token), tmp_path, notify=lambda *_: True)
+    monitor = KeyMonitor(TodoClient(fake.url, fake.token))
     monitor.tick()
     latest = monitor.latest()
     assert latest is not None
@@ -185,9 +148,7 @@ def test_loop_ticks_at_start_and_when_a_key_file_changes(rig: Rig) -> None:
         ticks.set()
         return OK
 
-    monitor = KeyMonitor(
-        rig.client, rig.root, check=check, notify=lambda *_: True, interval=3600.0, poll=0.01
-    )
+    monitor = KeyMonitor(rig.client, check=check, interval=3600.0, poll=0.01)
     monitor.start()
     monitor.start()  # idempotent
     assert ticks.wait(5)
@@ -207,7 +168,7 @@ def test_loop_ticks_again_after_the_interval(rig: Rig) -> None:
         count.release()
         return OK
 
-    monitor = KeyMonitor(rig.client, rig.root, check=check, notify=lambda *_: True, interval=0.05, poll=0.01)
+    monitor = KeyMonitor(rig.client, check=check, interval=0.05, poll=0.01)
     monitor.start()
     assert count.acquire(timeout=5)
     assert count.acquire(timeout=5)

@@ -28,7 +28,8 @@
         "enabled": false,
         "reason": "already running"
       }
-    ]
+    ],
+    "route": null
   },
   "body": "Do the demo.",
   "done_check": "python demo.py",

@@ -14,7 +14,6 @@ ACTIONS = (
     "send",
     "ship",
     "cancel",
-    "credits",
     "lesson-approve",
     "go",
     "rerun",

@@ -18,7 +18,6 @@ POST_ACTIONS = (
     "send",
     "ship",
     "cancel",
-    "credits",
     "lesson-approve",
     "go",
     "rerun",
@@ -102,8 +101,9 @@ class FakeBackend:
     def cancel(self, id8: str) -> None:
         self._record("cancel", id8)
 
-    def credits(self, id8: str) -> None:
-        self._record("credits", id8)
+    def set_credits_fallback(self, *, enabled: bool) -> dict[str, Any]:
+        self.calls.append(("set_credits_fallback", str(enabled)))
+        return {"enabled": enabled, "state": "ready" if enabled else "off", "text": "fake"}
 
     def go(self, id8: str) -> None:
         self._record("go", id8)

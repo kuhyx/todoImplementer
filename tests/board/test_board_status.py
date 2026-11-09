@@ -86,9 +86,17 @@ def test_human_with_a_stated_need_is_needs_you() -> None:
     assert compute(Note(), run(assignee="human", error="log in to X"), False, None) == Status.NEEDS_YOU
 
 
-def test_credits_run_ignores_the_limit() -> None:
-    assert compute(Note(), run(using_credits=True), False, 5.0) == Status.QUEUED
-    assert compute(Note(), run(stage="paused_limit", using_credits=True), False, 5.0) == Status.PAUSED_LIMIT
+def test_a_limit_that_holds_pauses_a_queued_run_and_none_leaves_it_queued() -> None:
+    assert compute(Note(), run(), False, 5.0) == Status.PAUSED_LIMIT
+    assert compute(Note(), run(), False, None) == Status.QUEUED
+    assert compute(Note(), run(stage="paused_limit"), False, None) == Status.PAUSED_LIMIT
+
+
+def test_manual_work_note_is_yours_with_or_without_a_repo_and_a_run() -> None:
+    manual = Note(title="MANUAL WORK REQUIRED: rotate key")
+    assert compute(manual, None, False, None) == Status.YOURS
+    assert compute(manual, run(), False, None) == Status.YOURS
+    assert compute(Note(title="manual work required: x"), None, False, None) == Status.BACKLOG
 
 
 def test_gate_wins_over_limit_because_shipping_needs_no_claude() -> None:

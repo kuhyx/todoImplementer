@@ -30,7 +30,7 @@
       "anyOf": [{"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"}, {"type": "null"}],
       "description": "paused_limit and paused_retry: when to resume."
     },
-    "using_credits": {"type": "boolean", "description": "Set by the Run on credits click for this task only."},
+    "route": {"enum": ["plan", "credits"], "description": "Route of the latest turn (set after a turn ran): plan = Max subscription, credits = free API credits."},
     "auto_ship": {"type": "boolean", "description": "Ticked at Start/Restart: a done_check note ships itself (checks -> shipping) once every check is green."},
     "sessions": {
       "type": "object",
@@ -39,7 +39,8 @@
         "type": "object",
         "properties": {
           "session_id": {"type": "string"},
-          "last_turn_end": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"}
+          "last_turn_end": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"},
+          "route": {"enum": ["plan", "credits"]}
         },
         "required": ["session_id", "last_turn_end"],
         "additionalProperties": false

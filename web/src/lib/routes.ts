@@ -3,6 +3,7 @@ import type { ActionId } from "@/lib/schemas-common";
 
 export const routes = {
   board: "/api/board",
+  creditsFallback: "/api/settings/credits-fallback",
   live: (id: string): string => `/api/live?id=${encodeURIComponent(id)}`,
   post: (id: string, action: string): string => `/api/task/${encodeURIComponent(id)}/${action}`,
   /** `path` is run-dir relative ("shots/live2/v1.png"); the server serves it from under <run>/shots. */

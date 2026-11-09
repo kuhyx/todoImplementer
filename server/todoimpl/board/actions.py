@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 from .needs import needs
 from .status import Status
-from .types import fmt_when
+from .types import MANUAL_REASON, fmt_when, is_manual
 
 if TYPE_CHECKING:
     from .state import RunState
@@ -73,11 +73,11 @@ def _gate(label: str, action_id: str, reason: str | None, *, confirm: bool = Fal
     return Action(action_id, label, reason is None, reason, confirm)
 
 
-def launch_block(run: RunState | None, limit: Limit, now: float) -> str | None:
+def launch_block(limit: Limit, now: float) -> str | None:
     """Return why a Claude session cannot be launched right now (the usage limit), else None; no run cap."""
-    if limit.active and not (run is not None and run.using_credits):
+    if limit.holds:
         when = f" until {fmt_when(limit.until, now)}" if limit.until is not None else ""
-        return f"usage limit{when}"
+        return f"usage limit{when}" + (f"; {limit.credits.text}" if limit.credits.enabled else "")
     return None
 
 
@@ -92,8 +92,8 @@ def actions(  # noqa: PLR0913 - the signature of the interface plus keyword-only
 ) -> list[Action]:
     """Return the buttons of a card in display order, each enabled only if it can succeed now."""
     clock = time.time() if now is None else now
-    block = launch_block(run, limit, clock)
-    out = _primary(task, run, status, block, limit, repo_missing)
+    block = launch_block(limit, clock)
+    out = _primary(task, run, status, block, repo_missing)
     if run is not None and status != Status.DONE:
         out += _session(run, status, block)
     if run is not None and run.lesson and run.lesson.get("state") == "drafted":
@@ -101,16 +101,17 @@ def actions(  # noqa: PLR0913 - the signature of the interface plus keyword-only
     return out
 
 
-def _primary(  # noqa: PLR0911, PLR0913, PLR0917 - one branch per status keeps the table readable
+def _primary(  # noqa: PLR0911 - one branch per status keeps the table readable
     task: TaskLike,
     run: RunState | None,
     status: Status,
     block: str | None,
-    limit: Limit,
     repo_missing: str | None,
 ) -> list[Action]:
-    """Return the status-specific buttons (start, spec, ship, credits, cancel)."""
+    """Return the status-specific buttons (start, spec, ship, cancel)."""
     cancel = Action("cancel", "Cancel", confirm=True)
+    if status == Status.YOURS and is_manual(task.title):
+        return [Action("start", "Start", enabled=False, reason=MANUAL_REASON)]
     if status in (Status.BACKLOG, Status.CANCELLED):
         label = "Restart" if status == Status.CANCELLED else "Start"
         reason = _start_block(task, block, repo_missing)
@@ -120,7 +121,7 @@ def _primary(  # noqa: PLR0911, PLR0913, PLR0917 - one branch per status keeps t
     if status == Status.SHIPPING:
         return [Action("cancel", "Cancel", enabled=False, reason="shipping cannot be cancelled")]
     if status == Status.PAUSED_LIMIT:
-        return [_credits(run, limit), cancel]
+        return [cancel]
     if status == Status.READY_TO_SHIP:
         return [_gate("Ship", "ship", _ship_block(run), confirm=True), cancel]
     if status == Status.NEEDS_YOU and run is not None:
@@ -170,17 +171,6 @@ def _permission(run: RunState, block: str | None, cancel: Action) -> list[Action
     tty = bool(perm.get("tty"))
     go = _gate("Go", "go", "needs a terminal: copy it" if tty else block)
     return [go, Action("copy-fix", "Copy", value=command), _gate("Done, rerun", "rerun", block), cancel]
-
-
-def _credits(run: RunState | None, limit: Limit) -> Action:
-    """Return Run on credits, enabled only while a limit is active and credits can pay."""
-    if run is not None and run.using_credits:
-        reason: str | None = "already running on credits"
-    elif not limit.active:
-        reason = "no usage limit is active: the run resumes by itself"
-    else:
-        reason = None if limit.credits_available else "credits are not available (overage rejected)"
-    return _gate("Run on credits", "credits", reason, confirm=True)
 
 
 def _ship_block(run: RunState | None) -> str | None:

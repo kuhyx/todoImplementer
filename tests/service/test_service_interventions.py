@@ -17,10 +17,9 @@ def test_accepted_clicks_are_recorded_and_ship_is_not(rig: Rig) -> None:
     b.spec_ok("t1")
     b.send("t1", "hi")
     b.cancel("t1")
-    b.credits("t1")
     b.ship("t1")
     kinds = [kind for _, kind in recorded(rig.root / "t1") or []]
-    assert kinds == ["start", "retry", "spec_answers", "spec_ok", "send", "cancel", "credits"]
+    assert kinds == ["start", "retry", "spec_answers", "spec_ok", "send", "cancel"]
     assert {at for at, _ in recorded(rig.root / "t1") or []} == {42.0}
 
 

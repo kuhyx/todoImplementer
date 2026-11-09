@@ -5,7 +5,7 @@ from typing import Any
 
 from todoimpl.board.card import Context
 from todoimpl.board.state import RunState
-from todoimpl.board.types import Limit
+from todoimpl.board.types import Credits, Limit
 
 NOW = 1_793_880_000.0
 STAGES = (
@@ -59,4 +59,12 @@ def ctx(
     )
 
 
-LIMITED = Limit(active=True, until=NOW + 3600, credits_available=True)
+LIMITED = Limit(
+    active=True, until=NOW + 3600, credits=Credits(enabled=False, state="off", text="fallback off")
+)
+TAKEOVER = Limit(
+    active=True, until=NOW + 3600, credits=Credits(enabled=True, state="ready", text="credits take over")
+)
+EXHAUSTED = Limit(
+    active=True, until=NOW + 3600, credits=Credits(enabled=True, state="exhausted", text="credits exhausted")
+)

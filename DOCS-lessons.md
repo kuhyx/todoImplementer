@@ -30,13 +30,14 @@ the plan and the previous findings as the handoff.
 names only the window limiting now, and both windows can be exhausted, so take the latest reset among windows that
 are rejected or at 100 %; never use the overage window's own reset; a turn that crossed the limit still finishes, so
 record the limit at once so no other run starts. The watch re-read the whole file every second, which scales badly.
--> `runner/limits.py` keeps a byte offset and parses only new lines; it writes `limit-until` (one epoch, root level)
-and `limit-credits`. While `limit-until` is in the future no `claude` starts; paused runs resume at that epoch with no
+-> `runner/limits.py` keeps a byte offset and parses only new lines; it writes `limit-until` (one epoch, root level).
+While `limit-until` is in the future no plan turn starts (free credits may take over); paused runs resume at that epoch with no
 tokens spent waiting. A limit message without a time (text detection by regex) retries after 30 minutes.
 
-**1.5 Overage is spent only by an explicit per-task click.** "Run on credits" sets a flag for that one task and works
-only while the limit is the plan's and credits remain. -> `credits` action; `using_credits` in state.json; the action
-is disabled with a reason otherwise.
+**1.5 Overage is never spent.** The predecessor offered a per-task "Run on credits" click that spent claude.ai
+extra usage. kuhy pays for the subscription only, so that action is gone. -> The overage guard kills a plan turn the
+moment its `rate_limit_event` says `isUsingOverage: true`, pauses runs and raises a banner. While the plan limit
+is active, turns run on the Max plan's free API credits through the Agent SDK instead (`DOCS-credits.md`).
 
 **1.6 Per-role model; MCP servers differ here by decision.** The predecessor loaded only the servers a role calls
 (strict config), because every connected server adds tool definitions to every turn. kuhy chose the opposite

@@ -28,17 +28,44 @@ class TaskLike(Protocol):
     def done_check(self) -> str | None: ...  # noqa: D102
 
 
+MANUAL_PREFIX = "MANUAL WORK REQUIRED:"
+MANUAL_REASON = "MANUAL WORK REQUIRED: this is for you, Claude does not start it"
+
+
+def is_manual(title: str) -> bool:
+    """Return True for a note whose title says a human must do it (exact caps, title start)."""
+    return title.startswith(MANUAL_PREFIX)
+
+
+@dataclass(frozen=True)
+class Credits:
+    """The free-credits fallback as the server words it (mirrors common.schema.json credits)."""
+
+    enabled: bool = False
+    state: str = "off"
+    text: str = "Free API credits fallback is off: runs wait for the plan limit."
+
+    def to_dict(self) -> dict[str, object]:
+        """Return the JSON object of the contract."""
+        return {"enabled": self.enabled, "state": self.state, "text": self.text}
+
+
 @dataclass(frozen=True)
 class Limit:
     """Claude plan limit: `until` is None when none is active (mirrors common.schema.json limit)."""
 
     active: bool = False
     until: float | None = None
-    credits_available: bool = False
+    credits: Credits = Credits()
+
+    @property
+    def holds(self) -> bool:
+        """True when the limit keeps turns from starting: active and the free credits cannot take over."""
+        return self.active and self.credits.state != "ready"
 
     def to_dict(self) -> dict[str, object]:
         """Return the JSON object of the contract."""
-        return {"active": self.active, "until": self.until, "credits_available": self.credits_available}
+        return {"active": self.active, "until": self.until, "credits": self.credits.to_dict()}
 
 
 def fmt_when(epoch: float, now: float) -> str:

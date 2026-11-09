@@ -1,9 +1,11 @@
 import type { Board, Usage } from "@/lib/schemas";
 
 /** 5 h / 7 d plan windows, today's dollars, running count and any active limit. All numbers come from /api/usage and /api/board. */
+import { renderCreditsToggle } from "@/components/credits-toggle";
 import { h } from "@/lib/dom";
 import { formatClock, formatIn, formatPercent, formatUsd } from "@/lib/format";
 
+const noop = (): void => undefined;
 type Window = Usage["five_hour"];
 
 function tone(utilization: number): string {
@@ -34,8 +36,7 @@ function meter(label: string, window: Window, now: number): HTMLElement {
 function limitNote(board: Board | null, now: number): HTMLElement | null {
   if (!board?.limit.active) return null;
   const until = board.limit.until === null ? "at an unknown time" : `${formatIn(board.limit.until, now)} (${formatClock(board.limit.until)})`;
-  const credits = board.limit.credits_available ? "Run on credits is available per task." : "Credits are not available.";
-  return h("p", { attrs: { role: "status" }, class: "limit-note", text: `Plan limit reached: runs resume ${until}. ${credits}` });
+  return h("p", { attrs: { role: "status" }, class: "limit-note", text: `Plan limit reached: runs resume ${until}. ${board.limit.credits.text}` });
 }
 
 /** The API key banner: the server words it (`api_key.text`); red alert for errors, amber status for a warning. */
@@ -49,7 +50,14 @@ function keyBanner(board: Board | null): HTMLElement | null {
   });
 }
 
-export function renderUsage(usage: null | Usage, board: Board | null, error: null | string, build: null | string, now: number): HTMLElement {
+/** Red banner while the overage guard's alert is on; the server words it (`alert.text`). */
+function overageAlert(board: Board | null): HTMLElement | null {
+  const alert = board?.alert;
+  return alert ? h("p", { attrs: { "data-kind": alert.kind, role: "alert" }, class: "banner alert-banner", text: alert.text }) : null;
+}
+
+/** `onCredits` runs after the credits toggle's POST settles (the app refreshes the board). */
+export function renderUsage(usage: null | Usage, board: Board | null, error: null | string, build: null | string, now: number, onCredits: () => void = noop): HTMLElement {
   return h(
     "div",
     { class: "usage" },
@@ -59,11 +67,13 @@ export function renderUsage(usage: null | Usage, board: Board | null, error: nul
       board !== null && h("span", { class: "slots", text: `Running ${String(board.slots.used)}` }),
       usage !== null && h("span", { class: "today", text: `Today ${formatUsd(usage.cost.today_usd)}` }),
       h("a", { attrs: { href: "/usage" }, class: "usage-link", text: "Usage details" }),
-      usage !== null && usage.overage.using && h("span", { attrs: { "data-tone": "warn" }, class: "chip", text: "Using credits" }),
+      usage !== null && usage.overage.using && h("span", { attrs: { "data-tone": "warn" }, class: "chip", text: "Overage in use" }),
     ),
     usage !== null && h("div", { class: "usage-row" }, meter("5 h", usage.five_hour, now), meter("7 d", usage.seven_day, now)),
     error !== null && h("p", { attrs: { role: "alert" }, class: "banner", text: error }),
     keyBanner(board),
+    overageAlert(board),
+    board !== null && renderCreditsToggle(board.limit.credits, onCredits),
     limitNote(board, now),
   );
 }

@@ -72,3 +72,10 @@ def wait_stage(
 
     wait(done)
     return state(world, card)
+
+
+def lift_limit(world: Env, sched: Scheduler) -> None:
+    """Lift the plan limit: drop the marker and wake the dispatcher (its idle poll is seconds)."""
+    (world.root / "limit-until").unlink(missing_ok=True)
+    with sched._cv:
+        sched._cv.notify_all()

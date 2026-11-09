@@ -1,4 +1,4 @@
-"""Plan-limit marker files the runner writes under the run root."""
+"""Plan-limit marker file the runner writes under the run root."""
 
 from __future__ import annotations
 
@@ -10,15 +10,13 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 UNTIL_FILE = "limit-until"
-CREDITS_FILE = "limit-credits"
 
 
 @dataclass(frozen=True)
 class LimitState:
-    """`until`: epoch the plan limit lifts (None = unknown); `credits`: "Run on credits" was granted."""
+    """`until`: epoch the plan limit lifts (None = unknown or no limit)."""
 
     until: float | None
-    credits: bool
 
     def active(self, now: float) -> bool:
         """Return True while the limit has not lifted yet."""
@@ -26,19 +24,11 @@ class LimitState:
 
 
 def limit_state(root: Path) -> LimitState:
-    """Read `<root>/limit-until` (epoch seconds) and `<root>/limit-credits`.
-
-    Unreadable or non-finite `limit-until` counts as no limit; the credits file
-    counts when it exists and does not say `0` (a bare `touch` grants them).
-    """
+    """Read `<root>/limit-until` (epoch seconds); unreadable or non-finite counts as no limit."""
     until: float | None = None
     try:
         value = float((root / UNTIL_FILE).read_text(encoding="utf-8").strip())
         until = value if math.isfinite(value) else None
     except OSError, ValueError:
         until = None
-    try:
-        granted = (root / CREDITS_FILE).read_text(encoding="utf-8").strip() != "0"
-    except OSError:
-        granted = False
-    return LimitState(until=until, credits=granted)
+    return LimitState(until=until)

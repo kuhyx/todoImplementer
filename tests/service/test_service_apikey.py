@@ -23,7 +23,6 @@ def test_board_carries_the_server_worded_status_and_stays_in_contract(rig: Rig) 
     rig.note()
     monitor = _monitor(rig)
     monitor._check = lambda _today: KeyStatus("expired", date(2026, 11, 1), "expired on 2026-11-01")
-    monitor._notify = lambda *_: True
     monitor.tick()
     board = rig.backend.board()
     validate("board", board)
@@ -44,7 +43,6 @@ def test_ok_status_is_level_ok(rig: Rig) -> None:
 def test_a_created_task_refreshes_the_cache_at_once(rig: Rig) -> None:
     monitor = _monitor(rig)
     monitor._check = lambda _today: KeyStatus("missing", None, "no key")
-    monitor._notify = lambda *_: True
     monitor.tick()
     rig.backend.cache.refresh()
     assert any(

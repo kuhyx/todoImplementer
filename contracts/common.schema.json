@@ -59,14 +59,14 @@
       "properties": {
         "id": {
           "enum": [
-            "start", "spec-answers", "spec-ok", "send", "ship", "cancel", "credits", "lesson-approve",
+            "start", "spec-answers", "spec-ok", "send", "ship", "cancel", "lesson-approve",
             "copy-resume", "go", "copy-fix", "rerun"
           ]
         },
         "label": {"type": "string", "minLength": 1},
         "enabled": {"type": "boolean"},
         "reason": {"type": ["string", "null"]},
-        "confirm": {"type": "boolean", "description": "Page asks 'sure?' first (ship, cancel, credits)."},
+        "confirm": {"type": "boolean", "description": "Page asks 'sure?' first (ship, cancel)."},
         "value": {"type": "string", "description": "copy-resume and copy-fix only: the text to copy."},
         "option": {
           "type": "object",
@@ -116,15 +116,26 @@
       "required": ["id", "skill", "mistake", "rule", "evidence", "state"],
       "additionalProperties": false
     },
+    "credits": {
+      "type": "object",
+      "description": "Free API credits fallback, worded by the server: when the plan limit is active, turns run on the Max plan's free monthly API credits (Agent SDK, model sonnet). enabled = the global setting; state off, ready (key and SDK usable), exhausted (the credits ran out for this limit window) or unavailable (key unusable or SDK venv missing); text says why.",
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "state": {"enum": ["off", "ready", "exhausted", "unavailable"]},
+        "text": {"type": "string", "minLength": 1}
+      },
+      "required": ["enabled", "state", "text"],
+      "additionalProperties": false
+    },
     "limit": {
       "type": "object",
-      "description": "Claude plan limit. until=null when none is active.",
+      "description": "Claude plan limit. until=null when none is active. credits: what the limit means for runs (they continue on free credits when credits.state is ready and the limit is active).",
       "properties": {
         "active": {"type": "boolean"},
         "until": {"anyOf": [{"$ref": "#/$defs/epoch"}, {"type": "null"}]},
-        "credits_available": {"type": "boolean", "description": "Run on credits can run now."}
+        "credits": {"$ref": "#/$defs/credits"}
       },
-      "required": ["active", "until", "credits_available"],
+      "required": ["active", "until", "credits"],
       "additionalProperties": false
     },
     "error": {
@@ -160,13 +171,14 @@
         "needs": {"$ref": "#/$defs/needs"},
         "partial": {"$ref": "#/$defs/partial"},
         "cost_usd": {"$ref": "#/$defs/usd"},
+        "route": {"enum": ["plan", "credits", null], "description": "Route of the run's latest turn: plan (Max subscription) or credits (free API credits, badge on the card); null before a turn."},
         "resumes_at": {"anyOf": [{"$ref": "#/$defs/epoch"}, {"type": "null"}]},
         "updated": {"anyOf": [{"$ref": "#/$defs/epoch"}, {"type": "null"}]},
         "actions": {"$ref": "#/$defs/actions"}
       },
       "required": [
         "id", "title", "repo", "priority", "assignee", "stage", "status", "column", "current", "needs",
-        "partial", "cost_usd", "resumes_at", "updated", "actions"
+        "partial", "cost_usd", "route", "resumes_at", "updated", "actions"
       ],
       "additionalProperties": false
     },

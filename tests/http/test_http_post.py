@@ -30,7 +30,6 @@ def test_every_post_action_calls_the_backend_and_returns_the_card(live: Live, ac
         "send": ("send", "hello"),
         "ship": ("ship",),
         "cancel": ("cancel",),
-        "credits": ("credits",),
         "lesson-approve": ("lesson_approve", "L1"),
         "go": ("go",),
         "rerun": ("rerun",),

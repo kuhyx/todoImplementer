@@ -34,6 +34,11 @@ export function statusChip(status: Status): HTMLElement {
   return h("span", { attrs: { "data-tone": STATUS_TONE[status] }, class: "chip", text: STATUS_LABEL[status] });
 }
 
+/** "free credits" badge: only when the server says the latest turn ran on free API credits. */
+export function routeChip(card: TaskCard): false | HTMLElement {
+  return card.route === "credits" && h("span", { attrs: { "data-tone": "accent" }, class: "chip route-chip", text: "free credits" });
+}
+
 const CATEGORY_LABEL: Record<NeedsCategory, string> = {
   action: "Action",
   auto: "Fixing itself",
@@ -73,6 +78,7 @@ export function renderCard(card: TaskCard, now: number, shouldShowRepo = false):
       "span",
       { class: "card-top" },
       statusChip(card.status),
+      routeChip(card),
       h("span", { class: "card-prio", text: card.priority }),
     ),
     h("span", { class: "card-title", text: card.title }),

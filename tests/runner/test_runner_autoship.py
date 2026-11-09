@@ -5,7 +5,7 @@ import time
 
 from contract_lib import validate
 from runnerfakes import Env, sh, task
-from schedfakes import CARD, IMPL, LIVE_OK, PLAN, boot, reply, state, wait, wait_stage
+from schedfakes import CARD, IMPL, LIVE_OK, PLAN, boot, lift_limit, reply, state, wait, wait_stage
 from todoimpl.runner import limits
 
 NO_CHANGE = reply("C1: done - nothing to change\n\nD: done")
@@ -133,7 +133,7 @@ def test_auto_ship_survives_a_limit_pause(world: Env) -> None:
         wait(lambda: len(world.calls()) == 2)
         limits.write_until(world.root, time.time() + 3600)
         assert wait_stage(world, sched, "paused_limit").auto_ship
-        sched.credits(CARD)
+        lift_limit(world, sched)
         wait_stage(world, sched, "shipped")
         assert len(client.closed) == 1
     finally:

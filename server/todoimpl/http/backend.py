@@ -75,8 +75,8 @@ class Backend(Protocol):
         """Cancel the run."""
         ...
 
-    def credits(self, id8: str) -> None:
-        """Run on credits click."""
+    def set_credits_fallback(self, *, enabled: bool) -> dict[str, Any]:
+        """Store the global free-credits fallback setting; return the contract's `credits` object."""
         ...
 
     def go(self, id8: str) -> None:

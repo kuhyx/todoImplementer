@@ -1,4 +1,4 @@
-"""Plan limits: rate_limit_event parsing, the shared `<root>/limit-until` file and the credits grant."""
+"""Plan limits: rate_limit_event parsing and the shared `<root>/limit-until` file."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from todoimpl.usage.limits import CREDITS_FILE, UNTIL_FILE, limit_state
+from todoimpl.usage.limits import UNTIL_FILE, limit_state
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -76,14 +76,5 @@ def active_until(root: Path, now: float) -> float | None:  # noqa: D103
     return state.until if state.active(now) else None
 
 
-def grant_credits(root: Path) -> None:  # noqa: D103
-    _write(root / CREDITS_FILE, "1\n")
-
-
-def credits_granted(root: Path) -> bool:  # noqa: D103
-    return limit_state(root).credits
-
-
 def clear(root: Path) -> None:  # noqa: D103
-    for name in (UNTIL_FILE, CREDITS_FILE):
-        (root / name).unlink(missing_ok=True)
+    (root / UNTIL_FILE).unlink(missing_ok=True)

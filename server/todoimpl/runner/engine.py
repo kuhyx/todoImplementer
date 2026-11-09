@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, Protocol
 
 from todoimpl.board import state as store
 from todoimpl.board.parse import StateError
+from todoimpl.credits import marks, route
 from todoimpl.todo_mcp.model import TodoError
 from todoimpl.usage.limits import UNTIL_FILE
 
@@ -147,13 +148,6 @@ class Engine:
         if handle is not None:
             threading.Thread(target=handle.stop, daemon=True).start()
 
-    def _credited(self, card: str) -> bool:
-        try:
-            st = store.load(self.root / card)
-        except StateError:
-            return False
-        return bool(st and st.using_credits)
-
     def _retry_wait(self, card: str, now: float) -> float:
         """Seconds a run in paused_retry still waits (its own timer, not the global limit file)."""
         st = store.load_runs(self.root, [card]).get(card)
@@ -168,11 +162,14 @@ class Engine:
                 until = limits.active_until(self.root, now)
                 if until is None and (self.root / UNTIL_FILE).exists():
                     limits.clear(self.root)
+                if until is None:
+                    marks.clear_exhausted(self.root)
+                free = until is None or route.choose(self.root, now).route == route.CREDITS
                 wake = IDLE_WAIT if until is None else min(until - now, IDLE_WAIT)
                 for card in [c for c in self._queue if c not in self._active]:
                     if (hold := self._retry_wait(card, now)) > 0:
                         wake = min(wake, hold)
-                    elif until is None or self._credited(card):
+                    elif free:
                         self._queue.remove(card)
                         self._active.add(card)
                         return card

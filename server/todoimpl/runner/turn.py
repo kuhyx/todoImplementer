@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any
 
 from todoimpl.board import state as store
 
-from . import adopt, allowlist, claude, files, launch, orphans, session
+from . import adopt, allowlist, claude, credit, files, guard, launch, orphans, session
 from .files import NeedsYouError
 from .stream import StreamParser, TurnResult, state_tag
 
@@ -52,24 +52,36 @@ def _prior(env: TurnEnv, state: RunState, role: str) -> session.Prior | None:
 
 
 def _turn_cost(state: RunState, res: TurnResult) -> float:
-    """total_cost_usd is cumulative over a resumed session: charge only what this turn added."""
+    """total_cost_usd is cumulative over a resumed session: charge only what this turn added.
+
+    A positive total below the last one cannot be cumulative: the counter restarted (another route's process,
+    or the CLI losing its per-session record), so that turn's whole total is its cost. Zero says nothing.
+    """
     seen: dict[str, float] = state.extra.setdefault("session_costs", {})
-    prev = seen.get(res.session_id, 0.0) if res.session_id else 0.0
-    if res.session_id:
-        seen[res.session_id] = max(prev, res.cost_usd)
-    return max(res.cost_usd - prev, 0.0)
+    if res.cost_usd <= 0:
+        return 0.0
+    if not res.session_id:
+        return res.cost_usd
+    prev = seen.get(res.session_id, 0.0)
+    seen[res.session_id] = res.cost_usd
+    return res.cost_usd if res.cost_usd < prev else res.cost_usd - prev
 
 
-def _launch(
+def _launch(  # noqa: PLR0913, PLR0917 - the turn environment plus its route
     env: TurnEnv,
     state: RunState,
     role: str,
     prompt_for: Callable[[session.Situation], str],
     extra_dirs: tuple[Path, ...],
+    route: str,
 ) -> orphans.Record:
     plan = session.plan_turn(_prior(env, state, role), now=env.now())
     allow = allowlist.rules_for(env.run_dir.parent, state.repo, state.task_id)
-    inv = claude.build(role, prompt_for(plan.situation), env.worktree, plan.resume, extra_dirs, allow)
+    build = credit.build if route == "credits" else claude.build
+    inv = build(role, prompt_for(plan.situation), env.worktree, plan.resume, extra_dirs, allow)
+    env.activity(
+        "system", "turn on free API credits (Agent SDK, sonnet)" if route == "credits" else "turn on the plan"
+    )
     for note in inv.notes:
         env.activity("error", note)
     stem = files.new_stream(env.run_dir, role, env.now()).name.removesuffix(files.STREAM_SUFFIX)
@@ -79,11 +91,13 @@ def _launch(
 def _apply(env: TurnEnv, state: RunState, rec: orphans.Record, res: TurnResult, code: int) -> None:
     """Write result.json, then cost and session into the state in one save that marks the turn consumed."""
     stem, role = str(rec.stem), str(rec.role)
+    route = files.route_of(env.run_dir, stem)
     spent = _turn_cost(state, res)
     record = {
         "session_id": res.session_id,
         "cost_usd": res.cost_usd,
         "turn_cost_usd": spent,
+        "route": route,
         "tag": res.tag,
         "is_error": res.is_error,
         "finished": res.finished,
@@ -93,8 +107,9 @@ def _apply(env: TurnEnv, state: RunState, rec: orphans.Record, res: TurnResult, 
     }
     files.write_json(files.sibling(env.run_dir, stem, files.RESULT_SUFFIX), record)
     if res.session_id:
-        state.sessions[role] = {"session_id": res.session_id, "last_turn_end": env.now()}
+        state.sessions[role] = {"session_id": res.session_id, "last_turn_end": env.now(), "route": route}
         state.session_id = res.session_id
+    state.extra["route"] = route
     state.cost_usd = round(state.cost_usd + spent, 6)
     state.extra["consumed_turn"] = stem
     store.save(env.run_dir, state)
@@ -106,7 +121,16 @@ def _consume(env: TurnEnv, state: RunState, rec: orphans.Record) -> TurnResult |
     stem, role = str(rec.stem), str(rec.role)
     handle = launch.handle_for(env.run_dir, rec)
     env.register(handle)
-    parser = StreamParser()
+    parser: StreamParser = StreamParser()
+    if files.route_of(env.run_dir, stem) == "plan":  # the free credits cannot spend overage; the plan can
+        parser = guard.OverageGuard(
+            env.run_dir.parent,
+            env.run_dir.name,
+            handle.stop,
+            lambda text: env.activity("error", text),
+            lambda until: state.extra.__setitem__("overage_hit", until),
+            env.now,
+        )
     try:
         code = adopt.follow(env.run_dir, rec, parser, env.activity, handle.detach)
     finally:
@@ -123,18 +147,19 @@ def _consume(env: TurnEnv, state: RunState, rec: orphans.Record) -> TurnResult |
     return res
 
 
-def run_turn(
+def run_turn(  # noqa: PLR0913, PLR0917 - the turn environment plus its route
     env: TurnEnv,
     state: RunState,
     role: str,
     prompt_for: Callable[[session.Situation], str],
     extra_dirs: tuple[Path, ...] = (),
+    route: str = "plan",
 ) -> TurnResult:
     """Run to exit; `prompt_for` gets the session situation (killed, idle or plain) and returns the prompt."""
     lost = 0
     adopt.reap_legacy(env.run_dir)
     while True:
-        rec = orphans.read(env.run_dir) or _launch(env, state, role, prompt_for, extra_dirs)
+        rec = orphans.read(env.run_dir) or _launch(env, state, role, prompt_for, extra_dirs, route)
         if (res := _consume(env, state, rec)) is None:
             lost += 1
             if lost >= MAX_LOST:

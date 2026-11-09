@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 STREAM_SUFFIX = ".stream.jsonl"
 RESULT_SUFFIX = ".result.json"
 EXIT_SUFFIX = ".exit.json"  # written by the turn host when claude exits: the turn is over
+ROUTE_SUFFIX = ".route"  # `plan` or `credits`: which route started the turn (read again after a restart)
 
 
 class NeedsYouError(Exception):
@@ -65,3 +66,12 @@ def killed_stream(run_dir: Path, role: str) -> Path | None:
     """Return the newest stream of a role without a result file: a crash or reboot killed that turn."""
     killed = [s for s in sorted(run_dir.glob(f"{role}-*{STREAM_SUFFIX}")) if not result_path(s).exists()]
     return killed[-1] if killed else None
+
+
+def route_of(run_dir: Path, stem: str) -> str:
+    """Return the route a turn was started on; a turn with no route file is a plan turn."""
+    try:
+        text = sibling(run_dir, stem, ROUTE_SUFFIX).read_text(encoding="utf-8").strip()
+    except OSError:
+        return "plan"
+    return text if text in ("plan", "credits") else "plan"

@@ -59,7 +59,7 @@ def recorded(run_dir: Path) -> list[tuple[float, str]] | None:
 
 
 def legacy(run_dir: Path, state: RunState) -> list[tuple[float, str]]:
-    """Interventions a pre-record card still shows: Send notes, answers, Spec OK, credits."""
+    """Interventions a pre-record card still shows: Send notes, answers, Spec OK."""
     seen = state.started_at or state.updated
     rows = [
         (float(row["at"]) if isinstance(row.get("at"), int | float) else seen, "send")
@@ -70,6 +70,4 @@ def legacy(run_dir: Path, state: RunState) -> list[tuple[float, str]]:
         rows.append((seen, "spec_answers"))
     if state.extra.get("spec_ok"):
         rows.append((seen, "spec_ok"))
-    if state.using_credits:
-        rows.append((seen, "credits"))
     return rows

@@ -66,7 +66,6 @@ class RunState:
     head_sha: str | None = None
     started_at: float | None = None
     resume_at: float | None = None
-    using_credits: bool = False
     auto_ship: bool = False
     sessions: dict[str, Any] = field(default_factory=dict)
     self_check: list[dict[str, Any]] = field(default_factory=list)
@@ -117,8 +116,6 @@ class RunState:
             "stages": self.stages,
         }
         out.update({key: value for key, value in listed.items() if value})
-        if self.using_credits:
-            out["using_credits"] = True
         if self.auto_ship:
             out["auto_ship"] = True
         return out
@@ -149,7 +146,6 @@ class RunState:
             "head_sha": opt(data, "head_sha", str),
             "started_at": opt(data, "started_at", (int, float)),
             "resume_at": opt(data, "resume_at", (int, float)),
-            "using_credits": typed(data, "using_credits", bool, False),  # noqa: FBT003
             "auto_ship": typed(data, "auto_ship", bool, False),  # noqa: FBT003
             "sessions": typed(data, "sessions", dict, {}),
             "self_check": listed(data, "self_check"),

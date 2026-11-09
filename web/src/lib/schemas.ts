@@ -3,13 +3,14 @@ import { z } from "zod";
 
 import { autonomy } from "@/lib/schemas-autonomy";
 import {
-  actions, apiError, checks, column, epoch, itemId, lesson, limit, liveCheck, needs, question, selfCheck, stage, status,
+  actions, apiError, checks, column, credits, epoch, itemId, lesson, limit, liveCheck, needs, question, selfCheck, stage, status,
   taskCard, usd,
 } from "@/lib/schemas-common";
 
 const keyState = z.enum(["ok", "expiring", "expired", "invalid", "missing", "check_failed"]);
 
 export const board = z.strictObject({
+  alert: z.strictObject({ kind: z.literal("overage"), text: z.string().min(1), until: epoch }).optional(),
   api_key: z
     .strictObject({
       expires: z.iso.date().nullable(),
@@ -80,6 +81,13 @@ export const version = z.strictObject({ build: z.string().min(1), version: z.str
 
 export const postResponse = z.union([
   z.strictObject({ ok: z.literal(true), task: taskCard }),
+  z.strictObject({ error: apiError, ok: z.literal(false) }),
+]);
+
+/** POST /api/settings/credits-fallback: request body and the 200 / error answers. */
+export const creditsFallbackRequest = z.strictObject({ enabled: z.boolean() });
+export const creditsFallbackResponse = z.union([
+  z.strictObject({ credits, ok: z.literal(true) }),
   z.strictObject({ error: apiError, ok: z.literal(false) }),
 ]);
 

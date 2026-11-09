@@ -48,7 +48,13 @@
       "description": "Go click on a permission block: runs the card's one-line command as kuhy, reruns the stage on exit 0."
     },
     "rerun": {"type": "object", "additionalProperties": false, "description": "Done, rerun: kuhy ran the command himself."},
-    "credits": {"type": "object", "additionalProperties": false, "description": "Run on credits click for this task only."},
+    "credits_fallback": {
+      "type": "object",
+      "description": "POST /api/settings/credits-fallback (not task-scoped): turn the free API credits fallback on or off for every run.",
+      "properties": {"enabled": {"type": "boolean"}},
+      "required": ["enabled"],
+      "additionalProperties": false
+    },
     "lesson_approve": {
       "type": "object",
       "properties": {"lesson_id": {"type": "string", "minLength": 1}},

@@ -23,14 +23,14 @@ they mean. Lessons from the predecessor are in `DOCS-lessons.md`.
   Live check verdict (kuhy, 2026-11-07): one done criterion is enough: the run goes on to Checks and the open ones
   become one follow-up note (retried on a timer, never Needs you, no turn spent). Every start judges failed live checks
   again from their stored report, so a rule change reaches old runs. Least effort lists question cards first.
-- **Q5** Automatic: everything up to Gate. Only kuhy's click: Ship, Spec OK, Run on credits (also Start, Cancel,
+- **Q5** Automatic: everything up to Gate. Only kuhy's click: Ship, Spec OK (also Start, Cancel,
   lesson approval). CHANGE 2026-11-08: a done_check note started with "Auto-ship when checks pass" ticked (off by
   default, kept by Retry and Hand back) skips the Gate and ships itself; a run with no diff then closes the note
   without a push. Never force-push; never write outside the task worktree and its run dir.
 - **Q6** Headless `claude -p` with stream-json, resume by session id, live feed (SSE), a Send-to-Claude box, a "copy
   resume command" button (`cd <worktree> && claude --resume <id>`); never open a terminal on :0.
 - **Q7** No cap on concurrent runs (kuhy, 2026-11-05: the tool exists to run many at once): every Start drives at once. Opus implements, Sonnet specs, Haiku classifies. A plan limit pauses
-  all runs and resumes at `resetsAt`; overage only on "Run on credits". Per-task dollar cost is shown.
+  all runs and resumes at `resetsAt`, or goes on the free API credits (`DOCS-credits.md`); never overage. Cost per task.
 - **Q8** Lessons go to `~/.claude/skills/*` via `skill_lesson.py add`, only after kuhy approves a lesson drafted on
   each gate rejection. The UI shows which skills a run loaded. No skills inside this repo.
 - **Q9** Board columns Backlog / Running / Needs you / Ready to ship / Done; a card per task, grouped or filtered by
@@ -77,7 +77,7 @@ resting stages; the rest are work stages. "auto" = no click; "click" = kuhy.
 | shipping | shipped | push + close_task done (auto-ship with no diff: close_task only) | auto |
 | shipping | failed | rebase conflict, red recheck, push refused | auto |
 | any work stage | paused_limit | plan limit seen; `resume_at` = resetsAt | auto |
-| paused_limit | stage before | `resume_at` passed, or credits click | auto / click |
+| paused_limit | stage before | `resume_at` passed | auto |
 | any non-final (final = shipped, cancelled) | cancelled | cancel (stops the session, keeps the run dir) | click |
 | failed, cancelled | plan/spec | start again | click |
 | live_check or checks with `error`, or failed | implement | send (kuhy's note; error cleared) | click |
@@ -111,13 +111,13 @@ what is happening ("live_check", "waiting to start"); `stage` is never turned in
 
 ## Actions
 
-Server-computed per card as `{id, label, enabled, reason}`; a disabled action always carries its reason; the page
-never decides. `start` enabled when status is backlog or cancelled, the note has a repo, and no usage limit is active
-(never disabled for the number of runs; board `slots` is just `{used}`, the running count); `spec-answers` when at least one question is open;
-`spec-ok` when every question is answered; `send` while a session exists and the stage is not final (`shipped`, `cancelled`), including `failed` and stalled runs; `ship` only at
-Ready to ship; `cancel` on any status whose stage is not final; `credits` only while paused_limit and credits are available;
-`lesson-approve` when a lesson is drafted; `copy-resume` (not a POST, carries `value`) when a session id exists;
-`go`, `copy-fix` (not a POST, carries `value`) and `rerun` on a permission block (below).
+Server-computed per card as `{id, label, enabled, reason}`; a disabled action always carries its reason; the page never
+decides. `start` enabled when status is backlog or cancelled, the note has a repo, and no usage limit holds (free
+credits taking over is no hold; a MANUAL WORK REQUIRED title is human work: disabled; board `slots` is just `{used}`);
+`spec-answers` when a question is open; `spec-ok` when every question is answered; `send` while a session exists and the
+stage is not final (`shipped`, `cancelled`), including `failed` and stalled runs; `ship` only at Ready to ship; `cancel`
+on any status whose stage is not final; `lesson-approve` when a lesson is drafted; `copy-resume` (carries `value`, no
+POST) when a session id exists; `go`, `copy-fix` (carries `value`, no POST) and `rerun` on a permission block (below).
 Start/Restart carry `option` `auto_ship` (a checkbox sent as `{auto_ship: bool}`), disabled without a done_check;
 Retry and Hand back send `{}` and keep the stored choice.
 
@@ -153,7 +153,7 @@ succeeded after it, and only terminal denials of a turn that did not end on `D:`
 ## Endpoints
 
 GET `/version`, `/api/board`, `/api/task/<item-id>`, `/api/usage`, `/api/live?id=<item-id>` (SSE); POST
-`/api/task/<item-id>/{start,spec-answers,spec-ok,send,ship,cancel,credits,lesson-approve,go,rerun}`. Shapes: `version`, `board`,
+`/api/task/<item-id>/{start,spec-answers,spec-ok,send,ship,cancel,lesson-approve,go,rerun}`, `/api/settings/credits-fallback`. Shapes: `version`, `board`,
 `task`, `usage`, `live`, `requests` (one def per POST), `response` (all POSTs). Cross-file refs use each schema's
 `$id` (`https://todoimplementer.local/contracts/<file>`); load every file into one registry
 (`scripts/contract_lib.py` in Python, `ajv.addSchema` in web). POSTs need `X-Todoimpl-Token` and a same-origin
@@ -175,7 +175,7 @@ item marks its section `## [x]` and adds a `closed:` line; the note closes with 
   `.exit.json` (code, written by the turn host), `.stderr.log`, `.fed` (feed offset), and `turn.pid` (see Turns)
 - `evidence/` check output logs and live-check screenshots (`live_check.shots` paths are relative to the run dir)
 - `logs/checks-<epoch>.log`, `live_check.md` (the report), `self_check.json`
-- `limit-until` (one epoch; shared in the root, not per task), `limit-credits`
+- `limit-until` (one epoch; shared in the root), `credits-exhausted`, `overage-alert.json`, `<stem>.route`
 - the worktree is `<root>/<item id>/wt` on branch `todo/<item id>`; Ship removes it
 
 ## Sessions
@@ -245,6 +245,6 @@ metrics, each with value, target, direction and a per-ISO-week series; Ship is n
 - `criteria_failed` (down, 0): open plus deferred criteria of a settled live check (`extra.partial`, else the report).
 
 Interventions are appended to `<run dir>/interventions.jsonl` by the service when an action is accepted (`start`,
-`retry`, `spec_answers`, `spec_ok`, `send`, `cancel`, `credits`; any new kuhy click, such as `go`, calls
-`usage.interventions.record`). Cards without that file are backfilled from answers, Spec OK, credits, Send notes
+`retry`, `spec_answers`, `spec_ok`, `send`, `cancel`; any new kuhy click, such as `go`, calls
+`usage.interventions.record`). Cards without that file are backfilled from answers, Spec OK, Send notes
 and Q:/A: turns; restarts, cancels and `go` clicks before the record cannot be recovered.

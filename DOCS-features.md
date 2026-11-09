@@ -24,7 +24,8 @@
 | Plan + live check | automatic after Start | `plan.md` and `live_check.md` in the run dir; checks tail in `/api/task/<id>` |
 | Gate | card in Ready to ship -> drawer | plan, diff, live-check report, checks tail; Ship and Send offered |
 | Ship | drawer -> Ship (POST `.../ship`) | one commit with `Todo: <id8>` trailer pushed to origin, section marked `## [x]`, note closed with its last item, worktree removed |
-| Cancel / Run on credits | drawer actions | run stops, run dir kept / paused run resumes on overage |
+| Cancel | drawer action | run stops, run dir kept |
+| Free credits fallback | board toggle (POST `/api/settings/credits-fallback`) | while the plan limit is active, turns run on free API credits; card badge "free credits" |
 | Lessons | gate rejection -> drafted lesson -> Approve | lesson written into the named skill via `skill_lesson.py` |
 | Usage | header (GET `/api/usage`) | per-task cost, plan limit state, reset time |
 | Build id | GET `/version` | `{build, version}`; the page reloads when `build` changes |

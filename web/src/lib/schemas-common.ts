@@ -23,7 +23,7 @@ export const NEEDS_KINDS = [
   "spec_questions", "spec_ok", "claude_question", "claude_action", "phone", "checks_failed", "run_failed", "handed_to_you", "permission",
 ] as const;
 export const ACTION_IDS = [
-  "start", "spec-answers", "spec-ok", "send", "ship", "cancel", "credits", "lesson-approve", "copy-resume", "go", "copy-fix",
+  "start", "spec-answers", "spec-ok", "send", "ship", "cancel", "lesson-approve", "copy-resume", "go", "copy-fix",
   "rerun",
 ] as const;
 
@@ -102,9 +102,16 @@ export const lesson = z.strictObject({
   state: z.enum(["drafted", "approved", "rejected"]),
 });
 
+/** The free API credits fallback, worded by the server (common.schema.json $defs/credits). */
+export const credits = z.strictObject({
+  enabled: z.boolean(),
+  state: z.enum(["off", "ready", "exhausted", "unavailable"]),
+  text: z.string().min(1),
+});
+
 export const limit = z.strictObject({
   active: z.boolean(),
-  credits_available: z.boolean(),
+  credits,
   until: epoch.nullable(),
 });
 
@@ -125,6 +132,7 @@ export const taskCard = z.strictObject({
   priority: z.string(),
   repo: z.string().nullable(),
   resumes_at: epoch.nullable(),
+  route: z.enum(["plan", "credits"]).nullable(),
   stage: stage.nullable(),
   status,
   title: z.string().min(1),
@@ -133,6 +141,7 @@ export const taskCard = z.strictObject({
 
 export type Action = z.infer<typeof action>;
 export type ActionOption = z.infer<typeof actionOption>;
+export type Credits = z.infer<typeof credits>;
 export type Question = z.infer<typeof question>;
 export type TaskCard = z.infer<typeof taskCard>;
 export type NeedsCategory = (typeof NEEDS_CATEGORIES)[number];

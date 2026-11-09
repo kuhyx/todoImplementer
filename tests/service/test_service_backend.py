@@ -67,7 +67,7 @@ def test_active_limit_shows_in_the_board(rig: Rig) -> None:
     limit = rig.backend.board()["limit"]
     assert limit["active"] is True
     assert limit["until"] > time.time()
-    assert limit["credits_available"] is False
+    assert limit["credits"]["state"] == "unavailable"
 
 
 def test_task_detail_validates_and_unknown_is_none(rig: Rig) -> None:

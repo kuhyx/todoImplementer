@@ -46,7 +46,6 @@ export function preset(status: TaskCard["status"], hasRepository: boolean): Pres
     case "paused_limit": {
       return {
         actions: [
-          { confirm: true, enabled: true, id: "credits", label: "Run on credits", reason: null },
           CANCEL,
         ],
         column: "running",

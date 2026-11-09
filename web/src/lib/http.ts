@@ -1,10 +1,10 @@
 /** Every request goes through here: status check, then Zod parse (R9 boundary). */
 import type { z } from "zod";
 
-import type { ActionId, TaskCard } from "@/lib/schemas-common";
+import type { ActionId, Credits, TaskCard } from "@/lib/schemas-common";
 
 import { bodyFor, type Payload, routes } from "@/lib/routes";
-import { postResponse } from "@/lib/schemas";
+import { creditsFallbackResponse, postResponse } from "@/lib/schemas";
 
 export class ApiError extends Error {
   readonly code: string;
@@ -61,4 +61,18 @@ export async function postAction(id: string, action: ActionId, payload: Payload,
   if (!parsed.success) throw new ApiError(shapeMessage(url, parsed.error), { code: "shape", status: response.status });
   if (!parsed.data.ok) throw new ApiError(parsed.data.error.message, { code: parsed.data.error.code, status: response.status });
   return parsed.data.task;
+}
+
+/** POST the global free-credits toggle (same CSRF header as the card actions). Resolves with the server's credits object. */
+export async function postCreditsFallback(isEnabled: boolean, csrf: string): Promise<Credits> {
+  const url = routes.creditsFallback;
+  const response = await send(url, {
+    body: JSON.stringify({ enabled: isEnabled }),
+    headers: { "Content-Type": "application/json", "X-Todoimpl-Token": csrf },
+    method: "POST",
+  });
+  const parsed = creditsFallbackResponse.safeParse(await readJson(url, response));
+  if (!parsed.success) throw new ApiError(shapeMessage(url, parsed.error), { code: "shape", status: response.status });
+  if (!parsed.data.ok) throw new ApiError(parsed.data.error.message, { code: parsed.data.error.code, status: response.status });
+  return parsed.data.credits;
 }
