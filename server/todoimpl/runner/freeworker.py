@@ -20,6 +20,7 @@ from pathlib import Path
 
 from todoimpl.umbrella import issues, workers
 
+from . import workerwait
 from .policy import HOOKS_OFF
 
 PREAMBLE = (
@@ -111,11 +112,11 @@ def run(worktree: Path, prompt_file: Path, log: Path, *, run_dir: Path | None = 
     if not changed and GRILL in text:
         _issue(run_dir, child, "start", GRILLING)
     elif not changed:
-        _issue(run_dir, child, "output", f"no edit, exit {code}: {_answer(text)}", _model(text))
+        _issue(run_dir, child, "output", f"no edit, exit {code}: {answer(text)}", _model(text))
     return 0 if changed else NO_WORK
 
 
-def _answer(text: str) -> str:
+def answer(text: str) -> str:
     """Return the tail of the worker's own words: the startup warnings would fill the 500 chars alone."""
     lines = [ln for ln in text.splitlines() if not ln.startswith(NOISE)]
     return "\n".join(lines).strip()[-TAIL:]
@@ -135,15 +136,27 @@ def _issue(run_dir: Path | None, child: str, phase: str, symptom: str, model: st
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Parse `<worktree> <prompt file> <log> [--issues FILE] [--child REPO]` and run the worker."""
+    """Parse `<worktree> <prompt file> <log> [--issues FILE] [--child REPO]` and run the worker.
+
+    `wait <log>... [--timeout S]` instead waits for workers (`workerwait`). A worker marks itself beside its
+    log (`<log>.pid` while it runs, `<log>.exit` when over) so that wait needs no model.
+    """
+    args_in = sys.argv[1:] if argv is None else argv
+    if args_in[:1] == ["wait"]:
+        return workerwait.main(args_in[1:])
     parser = argparse.ArgumentParser(prog="freeworker")
     parser.add_argument("worktree", type=Path)
     parser.add_argument("prompt_file", type=Path)
     parser.add_argument("log", type=Path)
     parser.add_argument("--issues", type=Path, help="run dir holding free-issues.jsonl")
     parser.add_argument("--child", default="")
-    args = parser.parse_args(argv)
-    code = run(args.worktree, args.prompt_file, args.log, run_dir=args.issues, child=args.child)
+    args = parser.parse_args(args_in)
+    workerwait.mark_started(args.log)
+    code = 1  # a crash of this wrapper itself
+    try:
+        code = run(args.worktree, args.prompt_file, args.log, run_dir=args.issues, child=args.child)
+    finally:
+        workerwait.mark_exit(args.log, code)
     print(f"worker exit={code}", flush=True)
     return code
 

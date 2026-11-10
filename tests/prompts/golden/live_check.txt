@@ -7,6 +7,8 @@ Spec answers:
 - Persist where?: localStorage
 kuhy's notes:
 - also check mobile width
+Handoff from the implementer (you are a fresh session):
+Stage implement; toggle component written, persistence missing.
 Plan (/run/ab12cd34/plan.md):
 ## Acceptance criteria
 C1. I click the toggle, the page turns dark.

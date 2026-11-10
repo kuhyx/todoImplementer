@@ -5,11 +5,14 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import subprocess
+from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from todoimpl.board.state import run_root
 from todoimpl.lessons.store import LOCK, Lesson, LessonError, load_lessons, save_lessons
+from todoimpl.runner import oneshot
+from todoimpl.runner.files import root_of
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -37,33 +40,16 @@ def build_skills() -> list[str]:
     return sorted(p.parent.name for p in root.glob("build-*/SKILL.md"))
 
 
-def claude_drafter(prompt: str) -> str:
-    """Default drafter: `claude -p --model haiku --output-format json`, prompt on stdin."""
-    argv = ["claude", "-p", "--model", "haiku", "--output-format", "json", "--strict-mcp-config"]
-    env = {**os.environ, "CLAUDE_AUTO_CONTINUE": "0"}  # never let handoff hooks spawn untracked sessions
-    try:
-        proc = subprocess.run(  # noqa: S603
-            argv, input=prompt, capture_output=True, text=True, env=env, timeout=CLAUDE_TIMEOUT_S, check=False
-        )
-    except subprocess.TimeoutExpired as exc:
-        msg = f"claude timed out after {CLAUDE_TIMEOUT_S:g}s"
-        raise LessonError(msg) from exc
-    except OSError as exc:
-        msg = f"cannot run claude: {exc}"
-        raise LessonError(msg) from exc
-    if proc.returncode != 0:
-        msg = f"claude exit {proc.returncode}: {proc.stderr.strip()[-200:] or proc.stdout.strip()[-200:]}"
-        raise LessonError(msg)
-    try:
-        envelope = json.loads(proc.stdout)
-    except ValueError as exc:
-        msg = f"claude printed non-JSON: {proc.stdout[:200]!r}"
-        raise LessonError(msg) from exc
-    text = envelope.get("result") if isinstance(envelope, dict) else None
-    if not isinstance(text, str) or envelope.get("is_error"):
-        msg = f"claude returned no text: {proc.stdout[:200]!r}"
-        raise LessonError(msg)
-    return text
+def claude_drafter(prompt: str, root: Path | None = None) -> str:
+    """Default drafter: the narrow Haiku one-shot (`runner/oneshot.py`); its usage goes to the root ledger."""
+    return oneshot.run(
+        prompt,
+        model="haiku",
+        kind="lesson",
+        root=root or run_root(),
+        timeout=CLAUDE_TIMEOUT_S,
+        error=LessonError,
+    )
 
 
 def parse_draft(text: str, allowed: list[str]) -> dict[str, str]:
@@ -97,7 +83,7 @@ def draft_lesson(
     prompt = PROMPT.format(
         note=rejection_note.strip(), loaded=", ".join(skills) or "none", allowed=", ".join(allowed)
     )
-    fields = parse_draft((drafter or claude_drafter)(prompt), allowed)
+    fields = parse_draft((drafter or partial(claude_drafter, root=root_of(run_dir)))(prompt), allowed)
     digest = hashlib.sha256("\0".join(fields.values()).encode()).hexdigest()[:10]
     with LOCK:
         lessons = load_lessons(run_dir)

@@ -19,10 +19,16 @@ ROLE_MODELS = {
     "manager": "opus",  # umbrella rounds: runs the free workers (kuhy, 2026-11-10: opus, not sonnet)
     "closing": "sonnet",
     "implement": "opus",
+    "live_check": "sonnet",  # verify-and-report work: its own fresh session, seeded from the handoff
     "verify": "opus",
     "classify": "haiku",
 }
-ROLE_EFFORT = {"manager": "medium"}  # `claude --effort` per role; absent = the CLI default
+# Default reasoning effort per role (the article's yardstick: medium by default); the classifier is plain
+# extraction. A fix turn and the cheap tier's retry raise it to high; `--effort` is in claude 2.1.322.
+ROLE_EFFORT = {
+    "spec": "medium", "plan": "medium", "manager": "medium", "closing": "medium", "implement": "medium",
+    "live_check": "medium", "verify": "medium", "classify": "low",
+}  # fmt: skip
 # Sessions load kuhy's real ~/.claude allow rules, which permit pushing; only the Ship click may push.
 DENY_ALWAYS = ("Bash(git push:*)", "Bash(git push *)")
 DENY_READONLY = ("Edit", "Write", "NotebookEdit")
@@ -57,7 +63,7 @@ class Options:
     env: dict[str, str]
     cwd: Path
     notes: tuple[str, ...]
-    effort: str | None = None
+    effort: str = "medium"
 
 
 def claude_bin() -> str:
@@ -68,6 +74,11 @@ def claude_bin() -> str:
 
 def model_for(role: str) -> str:  # noqa: D103
     return os.environ.get("TODOIMPL_MODEL") or ROLE_MODELS[role]
+
+
+def effort_for(role: str, effort: str | None = None) -> str:
+    """Return the effort of a turn: the one asked for, else the role's default."""
+    return effort or ROLE_EFFORT[role]
 
 
 def options(  # noqa: PLR0913, PLR0917 - one set of turn options, built in one place
@@ -106,7 +117,7 @@ def options(  # noqa: PLR0913, PLR0917 - one set of turn options, built in one p
         env,
         worktree,
         notes,
-        effort or ROLE_EFFORT.get(role),
+        effort_for(role, effort),
     )
 
 
@@ -124,8 +135,7 @@ def build(  # noqa: PLR0913, PLR0917 - one argv, built in one place
     opt = options(role, prompt, worktree, resume, extra_dirs, allow, model, effort)
     argv = [claude_bin(), "-p", prompt, "--model", opt.model, "--output-format", "stream-json", "--verbose"]
     argv += ["--permission-mode", opt.permission_mode, "--add-dir", *opt.add_dirs]
-    if opt.effort:
-        argv += ["--effort", opt.effort]
+    argv += ["--effort", opt.effort]
     if resume:
         argv += ["--resume", resume]
     if allow:

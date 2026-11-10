@@ -69,6 +69,10 @@
         "total_usd": {
           "$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/usd"
         },
+        "oneshot_usd": {
+          "$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/usd",
+          "description": "Dollars the Haiku one-shots (merge classifier, lesson drafts) spent; part of total_usd and, for today's calls, of today_usd. Absent when none ran."
+        },
         "per_task": {
           "type": "array",
           "items": {

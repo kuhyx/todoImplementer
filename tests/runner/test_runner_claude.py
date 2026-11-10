@@ -21,6 +21,8 @@ def test_build_has_the_agreed_argv_and_env(world: Env, tmp_path: Path) -> None:
         "acceptEdits",
         "--add-dir",
         str(tmp_path),
+        "--effort",
+        "medium",
         "--resume",
         "s1",
         "--disallowedTools",
@@ -79,11 +81,12 @@ def test_t1833_every_turn_of_a_card_holds_the_same_phone_slot_owner(world: Env, 
     assert first.env["PHONE_LEASE_OWNER"] == again.env["PHONE_LEASE_OWNER"] == "todoimpl:abcd1234-0"
 
 
-def test_effort_comes_from_the_caller_else_the_role_and_is_omitted_otherwise(tmp_path: Path) -> None:
+def test_effort_comes_from_the_caller_else_the_roles_default(tmp_path: Path) -> None:
     def effort(inv: claude.Invocation) -> str | None:
         return inv.argv[inv.argv.index("--effort") + 1] if "--effort" in inv.argv else None
 
     assert effort(claude.build("manager", "p", tmp_path)) == "medium"
     assert effort(claude.build("implement", "p", tmp_path, effort="high")) == "high"
     assert effort(claude.build("manager", "p", tmp_path, effort="low")) == "low"
-    assert effort(claude.build("implement", "p", tmp_path)) is None
+    assert effort(claude.build("implement", "p", tmp_path)) == "medium"
+    assert effort(claude.build("classify", "p", tmp_path)) == "low"

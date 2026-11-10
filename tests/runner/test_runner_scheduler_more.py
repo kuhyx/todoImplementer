@@ -167,7 +167,9 @@ def test_t301_resumed_turns_add_only_the_cost_delta(world: Env) -> None:
         wait_stage(world, sched, "implement")
         sched.send(CARD, "hello.txt")
         st = wait_stage(world, sched, "gate")
-        assert st.cost_usd == 0.055
+        assert (
+            st.cost_usd == 0.085
+        )  # plan 0.01 + implement 0.03 (its resumed turn adds only the delta) + live 0.045
     finally:
         sched.close()
 

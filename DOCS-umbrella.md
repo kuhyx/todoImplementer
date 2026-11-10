@@ -88,6 +88,14 @@ the log. Success is the **worktree diff**, never the turn's `subtype: success`: 
 edit, 4 = no `claude-free`, 5 = killed by a signal on all 3 attempts (`DOCS-resilience.md`; each attempt is a line of `<run dir>/free-workers.jsonl`). A turn with no diff and a `❓` round logs `spec-gate grilling instead of work` (phase
 `start`). The single-note cheap tier (`prompts/tier.py`) uses the same command.
 
+**Waiting is code.** A worker marks itself beside its log: `<log>.pid` while it runs, `<log>.exit` (its exit code)
+when it is over (`runner/workerwait.py`; starting on a log drops an old `.exit`). The manager does not poll with
+Bash calls (each was a full model round trip): it runs `<worker command> wait <log> <log> ...` with the Bash tool
+timeout at 600000. That blocks in code until every worker has exited or 540 s passed, and prints one line per worker
+(`<log>: exit=<code> <last words>`, `running`, `lost` for a worker that died with no exit record, `not started` after 30 s without a pid file), then
+`all N workers finished` (exit 0) or `K of N still running: call wait again` (exit 6). The model is called again
+only to read a result, diagnose and coach; a coached rerun uses a new log name.
+
 ## Coaching: the manager fixes the cause, not the work
 
 kuhy, 2026-11-10: in round 1 of 2d0704cd a free worker read the title "Focus Guard" as a proper noun, answered "no

@@ -96,7 +96,7 @@ def test_t1817_a_running_turn_survives_a_server_kill_and_is_adopted(world: Env) 
     assert "resume" not in world.calls()[1] or world.calls()[1]["resume"] is None
     assert _exit(world, rec)["code"] == 0  # same claude, never signalled
     assert _exit(world, rec)["pid"] == rec.pid
-    assert st.cost_usd == 0.02  # plan and implement 0.01 each; the live check resumes implement, adds 0
+    assert st.cost_usd == 0.03  # plan, implement and the live check (its own session now) 0.01 each
     texts = [e["text"] for e in _events(world) if e["kind"] == "text" and e["text"] == "working on it"]
     assert texts == ["working on it"]  # replayed without publishing the feed twice
     assert orphans.read(world.root / CARD) is None
@@ -112,7 +112,7 @@ def test_t1817_a_turn_that_ended_while_no_server_ran_is_picked_up_from_exit_json
     finally:
         sched.close()
     assert len(world.calls()) == 3
-    assert state(world).cost_usd == 0.02
+    assert state(world).cost_usd == 0.03
 
 
 def test_t1817_a_lost_turn_shows_an_error_and_resumes_the_killed_session(world: Env) -> None:

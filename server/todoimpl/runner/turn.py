@@ -81,13 +81,33 @@ def _launch(  # noqa: PLR0913, PLR0917 - the turn environment plus its route
     allow = allowlist.rules_for(files.root_of(env.run_dir), state.repo, state.task_id)
     build = credit.build if route == "credits" else claude.build
     inv = build(role, prompt_for(plan.situation), env.worktree, plan.resume, extra_dirs, allow, model, effort)
-    env.activity(
-        "system", "turn on free API credits (Agent SDK, sonnet)" if route == "credits" else "turn on the plan"
-    )
+    wanted = model or claude.model_for(role)
+    ran = credit.MODEL if route == "credits" else wanted
+    if ran != wanted:  # kuhy's rule: every role on credits is sonnet; the feed says when a role wanted more
+        env.activity("system", f"turn on free API credits: the {role} role wants {wanted}, runs on {ran}")
+    else:
+        env.activity(
+            "system", "turn on free API credits (Agent SDK)" if route == "credits" else "turn on the plan"
+        )
     for note in inv.notes:
         env.activity("error", note)
     stem = files.new_stream(env.run_dir, role, env.now()).name.removesuffix(files.STREAM_SUFFIX)
+    ask = {"wanted": wanted, "ran": ran, "effort": claude.effort_for(role, effort)}
+    files.write_json(files.sibling(env.run_dir, stem, files.MODEL_SUFFIX), ask)
     return launch.start(env.run_dir, stem, role, inv)
+
+
+def _models(env: TurnEnv, state: RunState, stem: str, role: str) -> dict[str, str]:
+    """Return {wanted, ran} of a turn and keep `extra.credit_downgrade[role]` while the role is held back."""
+    models: dict[str, str] = files.read_json(files.sibling(env.run_dir, stem, files.MODEL_SUFFIX)) or {}
+    held: dict[str, dict[str, str]] = state.extra.setdefault("credit_downgrade", {})
+    if models.get("wanted") != models.get("ran") and models:
+        held[role] = {"wanted": models["wanted"], "ran": models["ran"]}
+    else:
+        held.pop(role, None)
+    if not held:
+        state.extra.pop("credit_downgrade")
+    return models
 
 
 def _apply(env: TurnEnv, state: RunState, rec: orphans.Record, res: TurnResult, code: int) -> None:
@@ -95,7 +115,11 @@ def _apply(env: TurnEnv, state: RunState, rec: orphans.Record, res: TurnResult, 
     stem, role = str(rec.stem), str(rec.role)
     route = files.route_of(env.run_dir, stem)
     spent = _turn_cost(state, res)
+    models = _models(env, state, stem, role)
     record = {
+        "model": models.get("ran"),
+        "wanted_model": models.get("wanted"),
+        "effort": models.get("effort"),
         "session_id": res.session_id,
         "cost_usd": res.cost_usd,
         "turn_cost_usd": spent,
@@ -162,7 +186,7 @@ def run_turn(  # noqa: PLR0913, PLR0917 - the turn environment plus its route
 ) -> TurnResult:
     """Run to exit; `prompt_for` gets the session situation (killed, idle or plain) and returns the prompt.
 
-    `model` and `effort` override the role's defaults (the cheap tier); the credit route is always sonnet.
+    `model` and `effort` override the role's defaults (the cheap tier, a fix turn); credits are always sonnet.
     """
     lost = 0
     adopt.reap_legacy(env.run_dir)

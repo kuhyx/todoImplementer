@@ -29,6 +29,8 @@ if TYPE_CHECKING:
 
 LAUNCH_VAR = "TODOIMPL_TURN_LAUNCH"
 SERVER_DIR = Path(__file__).resolve().parents[2]  # what the host needs on PYTHONPATH: `todoimpl` lives here
+TIMEOUT_VAR = "TODOIMPL_TURN_TIMEOUT"  # seconds a turn may run before its host kills it
+DEFAULT_TIMEOUT = 4 * 3600.0  # above a manager round: a 1 h worker plus coaching reruns
 UNIT_STOP_SEC = 10
 START_WAIT = 2.0  # how long stop() waits for a just-launched host to record claude's pid
 POLL = 0.05
@@ -90,8 +92,19 @@ def handle_for(run_dir: Path, rec: orphans.Record) -> Handle:
     return Handle(run_dir, str(rec.stem), rec.unit)
 
 
+def turn_timeout() -> float:
+    """Return the wall-clock limit of one turn: `$TODOIMPL_TURN_TIMEOUT` seconds, default 4 h."""
+    try:
+        seconds = float(os.environ.get(TIMEOUT_VAR, ""))
+    except ValueError:
+        return DEFAULT_TIMEOUT
+    return seconds if seconds > 0 else DEFAULT_TIMEOUT
+
+
 def _invocation(inv: Invocation) -> str:
-    return json.dumps({"argv": list(inv.argv), "cwd": str(inv.cwd), "env": inv.env})
+    """Return the host's instructions; the limit travels in the file, so it holds across a server restart."""
+    body = {"argv": list(inv.argv), "cwd": str(inv.cwd), "env": inv.env, "timeout": turn_timeout()}
+    return json.dumps(body)
 
 
 def _write_private(path: Path, text: str) -> None:

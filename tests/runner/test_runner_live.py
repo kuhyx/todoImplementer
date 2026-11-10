@@ -25,7 +25,11 @@ ONE_OF_TWO = reply("- [x] C1: ran a -> saw x\n\nD: done")
 def stub(plan: str = "## Acceptance criteria\n- one\n- two\n", client: FakeClient | None = None) -> Any:
     """Return a Driver look-alike: state extras, item, client and the plan text."""
     fake = SimpleNamespace(
-        state=SimpleNamespace(extra={}, sessions={"implement": {"session_id": "s"}}, task_id=""),
+        state=SimpleNamespace(
+            extra={},
+            sessions={"implement": {"session_id": "s"}, "live_check": {"session_id": "l"}},
+            task_id="",
+        ),
         item=SimpleNamespace(title="Demo", repo="kuhyx/demo"),
         ctx=SimpleNamespace(client=client or FakeClient()),
         plan_md=lambda: plan,

@@ -60,20 +60,32 @@ class Stop:
                 os.killpg(self.proc.pid, signal.SIGKILL)
 
 
-def _finish(run_dir: Path, stem: str, code: int, pid: int | None, error: str | None = None) -> int:
+def _finish(  # noqa: PLR0913 - the exit record's fields
+    run_dir: Path, stem: str, code: int, pid: int | None, error: str | None = None, *, timed_out: bool = False
+) -> int:
     """Write the exit record; its appearance is what tells the server the turn is over."""
     record: dict[str, object] = {"code": code, "ended": time.time(), "pid": pid}
     if error is not None:
         record["error"] = error
+    if timed_out:
+        record["timeout"] = True
     write_json(sibling(run_dir, stem, EXIT_SUFFIX), record)
     return 0
 
 
-def _wait(proc: subprocess.Popen[bytes], stop: Stop) -> int:
+def _wait(proc: subprocess.Popen[bytes], stop: Stop, limit: float | None, err: Path) -> tuple[int, bool]:
+    """Wait for claude; past `limit` seconds stop it (reason to the stderr log). Return (code, timed out)."""
+    deadline = None if limit is None else time.monotonic() + limit
+    timed_out = False
     while True:
         try:
-            return proc.wait(timeout=TICK)
+            return proc.wait(timeout=TICK), timed_out
         except subprocess.TimeoutExpired:
+            if deadline is not None and not timed_out and time.monotonic() >= deadline:
+                timed_out = True
+                with err.open("ab") as log:
+                    log.write(f"turn exceeded its {limit:g} s limit: stopped by the host\n".encode())
+                stop(signal.SIGTERM, None)
             stop.escalate()
 
 
@@ -84,6 +96,7 @@ def run(run_dir: Path, stem: str, stop: Stop) -> int:
         inv = json.loads(path.read_text(encoding="utf-8"))
         path.unlink()
         argv, cwd, env = list(inv["argv"]), inv["cwd"], dict(inv["env"])
+        limit = float(inv["timeout"]) if inv.get("timeout") is not None else None  # absent: an older server
     except OSError, ValueError, KeyError, TypeError:
         return _finish(run_dir, stem, BAD_INVOCATION, None, "the invocation file is missing or unreadable")
     rec = orphans.read(run_dir)
@@ -112,7 +125,8 @@ def run(run_dir: Path, stem: str, stop: Stop) -> int:
     orphans.write(
         run_dir, pid=proc.pid, start=orphans.start_of(proc.pid), host_pid=me, host_start=orphans.start_of(me)
     )
-    return _finish(run_dir, stem, _wait(proc, stop), proc.pid)
+    code, timed_out = _wait(proc, stop, limit, sibling(run_dir, stem, ERR_SUFFIX))
+    return _finish(run_dir, stem, code, proc.pid, timed_out=timed_out)
 
 
 def main(argv: Sequence[str] | None = None) -> int:

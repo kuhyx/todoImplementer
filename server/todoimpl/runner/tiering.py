@@ -46,10 +46,8 @@ def plan_turn(d: Driver, role: str) -> Turn:
     if not _cheap(d):
         return Turn()
     if st.extra.get("escalated"):
-        note = texts.escalated(str(st.extra.get("escalate_reason", ""))) if st.stage == IMPLEMENT else ""
+        note = texts.escalated(str(st.extra.get("escalate_reason", "")))
         return Turn(None, note, tier.ESCALATED_EFFORT)
-    if st.stage != IMPLEMENT:
-        return Turn(tier.MANAGER_MODEL, effort=tier.MANAGER_EFFORT)
     verdict = freegate.check(Path(str(st.worktree)))
     st.extra["free_models"] = verdict.allowed
     if verdict.allowed:

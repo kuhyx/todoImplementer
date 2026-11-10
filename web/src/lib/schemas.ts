@@ -70,6 +70,7 @@ const usageWindow = z
 export const usage = z.strictObject({
   autonomy,
   cost: z.strictObject({
+    oneshot_usd: usd.optional(),
     per_task: z.array(z.strictObject({ cost_usd: usd, id: itemId, title: z.string() })),
     today_usd: usd,
     total_usd: usd,

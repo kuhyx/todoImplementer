@@ -9,13 +9,13 @@ from typing import TYPE_CHECKING, Any
 
 from todoimpl.board import state as store
 from todoimpl.credits import route
-from todoimpl.prompts import PromptContext, build
+from todoimpl.prompts import PromptContext
 
 from . import checks, phone, retry, tags, tiering, turncheck, worktree
 from .files import KilledError, NeedsYouError
 from .grant import auto_grant
 from .permit import gate, with_grant
-from .session import handoff_summary
+from .prompting import Ask, prompt_for
 from .turn import TurnEnv, run_turn
 
 if TYPE_CHECKING:
@@ -25,7 +25,6 @@ if TYPE_CHECKING:
     from todoimpl.todo_mcp.items import Item
 
     from .launch import Handle
-    from .session import Situation
     from .ship import Closer
     from .stream import TurnResult
 
@@ -142,7 +141,7 @@ class Driver:
         plan = self.ctx.run_dir / "plan.md"
         return plan.read_text(encoding="utf-8") if plan.exists() else ""
 
-    def context(
+    def context(  # noqa: PLR0913 - the prompt context's fields
         self,
         *,
         failure_tail: str = "",
@@ -150,6 +149,7 @@ class Driver:
         nudge: bool | str = False,
         cont: bool = False,
         tier: str = "",
+        resumed: bool = False,
     ) -> PromptContext:
         """Build the prompts package's view of this run: item, plan, answers and kuhy's notes."""
         st, item = self.state, self.item
@@ -163,7 +163,7 @@ class Driver:
             plan_md=self.plan_md(), spec_answers=answers,
             notes=notes, failure_tail=failure_tail, handoff=handoff,
             phone=st.extra.get("waiting_phone") if st.extra.get("phone_attached") else None,
-            base=str(st.extra.get("base_branch", "main")), tier=tier,
+            base=str(st.extra.get("base_branch", "main")), tier=tier, resumed=resumed,
         )  # fmt: skip
 
     def turn(self, role: str, stage: str, *, failure_tail: str = "", prompt: str = "") -> TurnResult:
@@ -181,26 +181,13 @@ class Driver:
             st.extra.setdefault("notes", []).extend(fresh)
         plan = tiering.plan_turn(self, role)
 
-        def prompt_for(situation: Situation) -> str:
-            if situation == "killed":
-                return build("resume_after_kill", self.context(nudge=nudge, tier=plan.note))
-            if (situation == "idle" or new_session) and stage != "spec":
-                handoff = handoff_summary(
-                    ctx.run_dir,
-                    str(st.extra.get("last_reply", "")),
-                    st.self_check,
-                    str((st.live_check or {}).get("report_md", "")),
-                )
-                return build("fresh_after_idle", self.context(handoff=handoff, nudge=nudge, tier=plan.note))
-            return build(
-                prompt or stage,
-                self.context(failure_tail=failure_tail, nudge=nudge, cont=cont, tier=plan.note),
-            )
+        ask = Ask(stage, prompt, failure_tail, nudge, cont, new_session, plan.note)
+        build_for = prompt_for(self, ask)
 
         env = TurnEnv(ctx.run_dir, worktree.turn_dir(st, self.item.repo), ctx.publish, ctx.register, ctx.now)
         try:
-            who = (env, st, role, with_grant(st, prompt_for, role), (ctx.run_dir,))
-            res = run_turn(*who, choice.route, plan.model, plan.effort)
+            who = (env, st, role, with_grant(st, build_for, role), (ctx.run_dir,))
+            res = run_turn(*who, choice.route, plan.model, "high" if stage == "fix" else plan.effort)
         except KilledError as exc:  # the host died again and again: wait and retry before Needs you
             self.save()
             failure = retry.failure(st, now=ctx.now(), stage=stage, reason=exc.text, tail="", killed=True)

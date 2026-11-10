@@ -98,7 +98,11 @@ def test_default_drafter_runs_haiku_one_shot_without_auto_continue(env: Any, cla
     claude_says(json.dumps(GOOD))
     lesson = draft_lesson(env.run_dir, "You restarted prod.", ["grilling"])
     (call,) = env.calls()
-    assert call["argv"] == ["-p", "--model", "haiku", "--output-format", "json", "--strict-mcp-config"]
+    argv = call["argv"]
+    assert argv[:6] == ["-p", "--model", "haiku", "--output-format", "json", "--strict-mcp-config"]
+    assert "--disable-slash-commands" in argv  # T1894: the one-shot loads none of kuhy's setup
+    assert argv[argv.index("--setting-sources") + 1] == ""
+    assert argv[argv.index("--tools") + 1] == ""
     assert call["auto"] == "0"
     assert call["stdin"].startswith("override\n")
     assert "You restarted prod." in call["stdin"]

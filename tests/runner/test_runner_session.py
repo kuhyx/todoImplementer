@@ -6,7 +6,7 @@ from todoimpl.runner.session import Prior, TurnPlan
 
 
 def test_plan_turn_resumes_a_recent_session() -> None:
-    assert session.plan_turn(Prior("s1", 1000.0, None), now=1000.0 + 3599) == TurnPlan("s1", "")
+    assert session.plan_turn(Prior("s1", 1000.0, None), now=1000.0 + 3599) == TurnPlan("s1", "resume")
 
 
 def test_plan_turn_starts_fresh_after_an_idle_hour() -> None:

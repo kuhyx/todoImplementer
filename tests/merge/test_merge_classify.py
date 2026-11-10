@@ -86,17 +86,14 @@ def test_claude_call_is_haiku_read_only_one_shot(shim: Path, monkeypatch: pytest
     assert classify.claude_classifier("the prompt") == "hello"
     call = json.loads(shim.read_text().splitlines()[0])
     argv = call["argv"]
-    assert argv[:7] == [
-        "-p",
-        "--model",
-        "haiku",
-        "--output-format",
-        "json",
-        "--strict-mcp-config",
-        "--disallowedTools",
-    ]
-    assert "Edit" in argv[7]
-    assert "Bash(git push:*)" in argv[7]
+    assert argv[:6] == ["-p", "--model", "haiku", "--output-format", "json", "--strict-mcp-config"]
+    assert "--disable-slash-commands" in argv
+    assert argv[argv.index("--setting-sources") + 1] == ""  # T1894: none of kuhy's hooks, plugins or rules
+    assert argv[argv.index("--tools") + 1] == ""
+    assert argv[argv.index("--effort") + 1] == "low"
+    assert argv[-2] == "--disallowedTools"
+    assert "Edit" in argv[-1]
+    assert "Bash(git push:*)" in argv[-1]
     assert call["stdin"] == "the prompt"
     assert call["auto"] == "0"
 

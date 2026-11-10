@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from todoimpl.credits import route
+from todoimpl.runner.oneshot import spend as oneshot_spend
 from todoimpl.usage import oauth
 from todoimpl.usage.autonomy import autonomy_summary
 from todoimpl.usage.cost import session_costs
@@ -117,6 +118,9 @@ def usage_summary(
             }
         )
     per_task.sort(key=lambda t: (-t["cost_usd"], t["id"]))
+    midnight = datetime.combine(today, datetime.min.time()).astimezone().timestamp()
+    oneshot = oneshot_spend(root, 0.0)  # Haiku one-shots (merge classifier, lesson drafts) belong to no task
+    today_usd += oneshot_spend(root, midnight)
     folded, overage = _fold_rate_limits(all_streams)
     windows = _live_windows(root, folded, now)
     limit = limit_state(root)
@@ -133,7 +137,8 @@ def usage_summary(
         },
         "cost": {
             "today_usd": today_usd,
-            "total_usd": sum(t["cost_usd"] for t in per_task),
+            "total_usd": sum(t["cost_usd"] for t in per_task) + oneshot,
             "per_task": per_task,
+            **({"oneshot_usd": oneshot} if oneshot else {}),
         },
     }

@@ -137,7 +137,7 @@ def _no_checklist(d: Driver) -> str:
         extra["live_redo"] = NO_CHECKLIST
     else:
         extra.pop("live_redo", None)
-        d.state.sessions.pop("implement", None)
+        d.state.sessions.pop("live_check", None)
     return "live_check"
 
 

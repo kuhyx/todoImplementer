@@ -34,19 +34,19 @@ def build(  # noqa: PLR0913, PLR0917 - same signature as claude.build
     extra_dirs: tuple[Path, ...] = (),
     allow: tuple[str, ...] = (),
     model: str | None = None,  # noqa: ARG001 - credit turns are always MODEL; the parameter keeps one signature
-    effort: str | None = None,  # noqa: ARG001 - the SDK turn takes no effort; same signature as claude.build
+    effort: str | None = None,
 ) -> claude.Invocation:
     """Build a credit turn; NeedsYouError when the SDK venv or the key vanished since routing."""
     python, key = sdk.python(), read_key()
     if python is None or key is None:
         msg = f"free API credits cannot run: {sdk.MISSING if python is None else 'no usable API key'}"
         raise NeedsYouError(msg)
-    opt = claude.options(role, prompt, worktree, resume, extra_dirs, allow, MODEL)
+    opt = claude.options(role, prompt, worktree, resume, extra_dirs, allow, MODEL, effort)
     spec = {
         "prompt": opt.prompt, "model": opt.model, "cwd": str(opt.cwd), "add_dirs": list(opt.add_dirs),
         "permission_mode": opt.permission_mode, "resume": opt.resume, "settings": opt.settings,
         "allowed_tools": list(opt.allow), "disallowed_tools": list(opt.deny),
-        "setting_sources": list(SETTING_SOURCES),
+        "setting_sources": list(SETTING_SOURCES), "effort": opt.effort,
     }  # fmt: skip
     path = os.pathsep.join(p for p in (str(SERVER_DIR), os.environ.get("PYTHONPATH", "")) if p)
     env = {**opt.env, claude.KEY_VAR: key, "PYTHONPATH": path}

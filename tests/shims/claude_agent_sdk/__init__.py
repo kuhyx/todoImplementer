@@ -21,6 +21,7 @@ class ClaudeAgentOptions:
     disallowed_tools: list[str] = field(default_factory=list)
     setting_sources: list[str] | None = None
     system_prompt: Any = None
+    effort: str | None = None
 
 
 async def query(*, prompt: str, options: ClaudeAgentOptions, transport: Any) -> AsyncIterator[dict[str, Any]]:

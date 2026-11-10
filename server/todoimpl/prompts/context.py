@@ -25,4 +25,5 @@ class PromptContext:
     phone: dict[str, Any] | None = None  # phone_ready.json of a run whose phone is attached now
     brief: str = ""  # umbrella manager: this round's children, rendered by the runner
     base: str = "main"  # the repo's default branch on origin: where a session lands its work
+    resumed: bool = False  # the session is resumed: it already holds plan.md, so prompts name its path only
     tier: str = ""  # cheap-tier addendum for implement-role prompts (prompts/tier.py); "" = normal tier

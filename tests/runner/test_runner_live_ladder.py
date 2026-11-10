@@ -18,7 +18,8 @@ def test_t1808_the_second_empty_report_starts_a_fresh_session_before_asking() ->
     assert d.state.extra["live_redo"] == NO_CHECKLIST
     assert settle(d, "summary again") == "live_check"
     assert "live_redo" not in d.state.extra
-    assert "implement" not in d.state.sessions
+    assert "live_check" not in d.state.sessions  # the live check starts again in a new session
+    assert "implement" in d.state.sessions
     with pytest.raises(NeedsYouError, match="fresh session"):
         settle(d, "")
 

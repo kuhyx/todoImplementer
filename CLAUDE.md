@@ -1,7 +1,7 @@
 # todoImplementer
 
 Board that plans, implements, reviews, verifies and (on kuhy's click) ships todo-app notes with headless Claude Code
-sessions. Spec and decisions: `DOCS-spec.md`. Lessons carried over from the predecessor: `DOCS-lessons.md`. Claude API key lifecycle: `DOCS-apikey.md`. Free API credits, routes, overage guard: `DOCS-credits.md`. Sessions land their own work (grant, backstop, rebase, ship): `DOCS-landing.md`. Umbrella notes (many per-repo tasks, one card, the exponential ramp, free-worker command, issue log): `DOCS-umbrella.md`.
+sessions. Spec and decisions: `DOCS-spec.md`. Lessons carried over from the predecessor: `DOCS-lessons.md`. Claude API key lifecycle: `DOCS-apikey.md`. Free API credits, routes, overage guard: `DOCS-credits.md`. Sessions land their own work (grant, backstop, rebase, ship): `DOCS-landing.md`. Model, effort, live-check role, turn limit, retries: `DOCS-turns.md`. Umbrella notes (many per-repo tasks, one card, the exponential ramp, free-worker command, issue log): `DOCS-umbrella.md`.
 Cheap tier (Sonnet manager, free models, Opus escalation) and human-made-first order: `DOCS-tiers.md`.
 Multi-day survival (kills, reboot, power cut, no internet, gateway down, durable writes, backoff ladder): `DOCS-resilience.md`.
 Umbrella tracking view and the free-token strip (gateway quotas, cooldowns, ETA): `DOCS-tracking.md`.

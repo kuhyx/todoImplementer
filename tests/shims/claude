@@ -27,14 +27,14 @@ DEFAULT = [
 
 def parse(argv: list[str]) -> dict[str, str | None]:
     """Pick the prompt (after -p), --resume and --model out of argv."""
-    opts: dict[str, str | None] = {"prompt": None, "resume": None, "model": None}
+    opts: dict[str, str | None] = {"prompt": None, "resume": None, "model": None, "effort": None}
     i = 0
     while i < len(argv):
         arg = argv[i]
         if arg == "-p" and i + 1 < len(argv):
             opts["prompt"] = argv[i + 1]
             i += 2
-        elif arg in ("--resume", "--model") and i + 1 < len(argv):
+        elif arg in ("--resume", "--model", "--effort") and i + 1 < len(argv):
             opts[arg[2:]] = argv[i + 1]
             i += 2
         else:

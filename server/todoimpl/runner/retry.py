@@ -18,6 +18,9 @@ DEFAULT_LONG_WAIT = 1800.0
 BACKOFF = DEFAULT_BACKOFF
 LONG_WAIT = DEFAULT_LONG_WAIT
 MAX_CRASH_RETRIES = 3
+# A server-side API error (5xx, overloaded) is retried on the ladder, but not for ever: about 4 h. A lost
+# connection (DNS, refused, reset) is an outage and is waited out without end (DOCS-resilience.md).
+MAX_API_RETRIES = 12
 MAX_KILL_RETRIES = (
     5  # a turn killed by a signal (OOM, SIGKILL, reboot) is not a bug of the task: more patience
 )
@@ -32,13 +35,19 @@ TRANSIENT = re.compile(
     r"|offline"
     r"|socket hang up"
     r"|fetch failed"
-    r"|timed out"
+    r"|(?:request|connection|socket|network)\s+timed out"
     r"|overloaded"
-    r"|API Error"
+    r"|API Error:?\s+(?:5\d\d\b|connection|unable to connect|request timed out|overloaded)"
     r"|unable to connect"
     r"|connection (?:error|reset|refused|closed|lost)"
     r"|cannot reach MCP"
     r"|(?:status|http|error|code)\D{0,12}\b5\d\d\b",
+    re.IGNORECASE,
+)
+
+
+API_SIDE = re.compile(
+    r"overloaded|API Error:?\s+5\d\d\b|(?:status|http)\D{0,12}\b5\d\d\b",
     re.IGNORECASE,
 )
 
@@ -90,7 +99,11 @@ def failure(  # noqa: PLR0913 - the failed turn's facts
             return (KilledError if killed else NeedsYouError)(msg, "run_failed")
         st.extra[key] = int(st.extra.get(key, 0)) + 1
     lines = tail.strip().splitlines()
-    return later(st, now, lines[-1] if reason == NO_RESULT and lines else reason, kind)
+    why = lines[-1] if reason == NO_RESULT and lines else reason
+    tried = int(st.extra.get("retries", 0))
+    if tried >= MAX_API_RETRIES and API_SIDE.search(f"{tail}\n{reason}"):
+        return NeedsYouError(f"Gave up after {tried} automatic retries: {why[:SHOWN]}", "run_failed")
+    return later(st, now, why, kind)
 
 
 def later(st: RunState, now: float, reason: str, kind: str = "turn") -> RetryLaterError:

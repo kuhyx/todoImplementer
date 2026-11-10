@@ -66,13 +66,13 @@ def test_a_child_turn_lost_to_a_reboot_resumes_its_session_once(world: Env, free
     cdir = child_dir(world.root / CARD, cid)
     child = store.load(cdir)
     assert child is not None
-    child.sessions["implement"] = {"session_id": "kid-sess", "last_turn_end": 0.0, "route": "plan"}
+    child.sessions["live_check"] = {"session_id": "kid-sess", "last_turn_end": 0.0, "route": "plan"}
     child.worktree = None  # re-attached by the drive
     store.save(cdir, child)
-    stem = "implement-1.000"
+    stem = "live_check-1.000"
     init = {"type": "system", "subtype": "init", "session_id": "kid-sess"}
     (cdir / f"{stem}.stream.jsonl").write_text(json.dumps(init) + "\n", encoding="utf-8")
-    orphans.begin(cdir, stem, "implement", None)
+    orphans.begin(cdir, stem, "live_check", None)
     orphans.write(cdir, launched=1.0, host_pid=2_000_000_000, host_start="1")
     world.script(cid, *LIVE)
     again = Scheduler(client, world.root, check_timeout=20)

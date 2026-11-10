@@ -46,11 +46,9 @@ def _item(ctx: PromptContext) -> str:
 
 
 def _plan(ctx: PromptContext) -> str:
-    return (
-        f"Plan ({ctx.run_dir}/plan.md):\n{ctx.plan_md}"
-        if ctx.plan_md
-        else f"Plan: read {ctx.run_dir}/plan.md."
-    )
+    if ctx.plan_md and not ctx.resumed:  # a resumed session already holds the text
+        return f"Plan ({ctx.run_dir}/plan.md):\n{ctx.plan_md}"
+    return f"Plan: read {ctx.run_dir}/plan.md."
 
 
 def _rules(ctx: PromptContext) -> str:
@@ -108,6 +106,7 @@ def live_check(ctx: PromptContext) -> str:
     return _post(
         f"Live check stage ({kind}). Do not change code; only verify.",
         _item(ctx),
+        *([f"Handoff from the implementer (you are a fresh session):\n{ctx.handoff}"] if ctx.handoff else []),
         _plan(ctx),
         f"Start the changed thing from {ctx.worktree}; exercise every criterion for real, as a user would.",
         f"Driver: {HINTS[kind]}",

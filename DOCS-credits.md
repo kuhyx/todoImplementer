@@ -24,7 +24,7 @@ never a network call in a request or the queue) and the credits are not exhauste
 
 `<sdk venv python> -m todoimpl.runner.sdkturn <spec>` runs under the same turn host, unit and adoption machinery
 as a plan turn. The spec comes from the same `claude.options` as the plan argv (cwd, add_dirs, permission mode,
-allow/deny tools, resume, hooks-off settings, env), plus model `sonnet` for every role, setting sources
+allow/deny tools, resume, hooks-off settings, env), plus model `sonnet` for every role (the feed and `state.extra.credit_downgrade` say when a role wanted more), `effort`, setting sources
 user/project/local and the Claude Code system prompt. A transport subclass prints the CLI's raw stream-json events,
 so `*.stream.jsonl` has the shape every parser expects. The plan env never has `ANTHROPIC_API_KEY` (it would beat
 the plan login); the credit env carries it from the 0600 invoke file the host deletes at once. The SDK is pinned

@@ -18,9 +18,10 @@ A card is tier `cheap` when its section text (the item body) has a line `Tier: c
 title contains `text-free (textgate-rework)`. The tier is decided once, at the run's first implement-role turn, and
 stored in `state.extra.tier` (`cheap` | `normal`); before a run the card derives it from the note.
 
-For a cheap run the **implement role** (the implement and fix stages and the live check, one session) runs on
+For a cheap run the **implement role** (the implement and fix stages, one session; the live check is its own
+Sonnet role since T1896) runs on
 `opus` at `--effort medium` (kuhy, 2026-11-10: the manager is Opus, not Sonnet; `runner/tier.py` `MANAGER_*`). The
-credit route (`credit.py`) is sonnet for every role and takes no effort.
+credit route (`credit.py`) is sonnet for every role and passes the effort to the SDK.
 
 1. **Free models, only when allowed.** Before each implement or fix turn the server asks `freegate.check`: the
    `claude-free` and `free-llm-check-dir` tools exist, `free-llm-check-dir <worktree>` approves (public repo only:

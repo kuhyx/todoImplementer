@@ -17,11 +17,12 @@ def test_done_check_note_runs_plan_implement_live_checks_to_gate_then_ships(worl
         assert st.checks["results"][0]["command"] == "test -f hello.txt"
         assert st.self_check == [{"criterion": "C1", "done": True, "note": "cat shows hi"}]
         assert st.live_check == {"report_md": LIVE_OK[0]["text"], "shots": []}
-        assert st.cost_usd == 0.02
+        assert st.cost_usd == 0.03
         calls = world.calls()
-        assert [c["model"] for c in calls] == ["sonnet", "opus", "opus"]
+        assert [c["model"] for c in calls] == ["sonnet", "opus", "sonnet"]
         assert all(c["prompt"].startswith("override\n") for c in calls)
-        assert calls[2]["resume"] == st.sessions["implement"]["session_id"]
+        assert calls[2]["resume"] is None  # the live check is a fresh session (T1896)
+        assert st.sessions["live_check"]["session_id"] != st.sessions["implement"]["session_id"]
         assert str(world.root / CARD) in calls[0]["argv"]
         assert (world.root / CARD / "plan.md").read_text(encoding="utf-8") == PLAN[0]["text"]
         kinds = {e["kind"] for e in sched.bus.history(CARD, 0)}

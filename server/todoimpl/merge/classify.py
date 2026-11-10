@@ -1,16 +1,18 @@
-"""The Haiku classifier: groups open notes of one kind of work. One-shot `claude -p`, role `classify`."""
+"""The Haiku classifier: groups open notes of one kind of work (a narrow one-shot, `runner/oneshot.py`)."""
 
 from __future__ import annotations
 
 import json
-import os
-import subprocess
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
-from todoimpl.runner.claude import DENY_ALWAYS, DENY_READONLY, claude_bin, model_for
+from todoimpl.board.state import run_root
+from todoimpl.runner import oneshot
+from todoimpl.runner.claude import DENY_ALWAYS, DENY_READONLY, model_for
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from todoimpl.service.cards import CardTask
 
 TIMEOUT_S = 50.0  # under the 60 s per-action cap
@@ -29,6 +31,25 @@ No group is fine: {{"groups": []}}.
 """
 
 
+INCREMENTAL = """override
+You group todo notes that are the same kind of work: many notes that ask for the same change in different
+repos or apps, or duplicate notes for one thing. Do not group notes that merely share a topic.
+Earlier you grouped some of the open notes. Already grouped, one group per line as `title: ids`:
+{groups}
+Already seen, not in a group, one per line as `id | repo | title`:
+{seen}
+New or edited notes, one per line as `id | repo | title | first characters of the text`:
+{notes}
+
+Reply with ONLY a JSON object {{"groups": [{{"ids": [...], "title": "...", "reason": "..."}}]}}.
+Return only groups that contain at least one NEW note. A new note may join a group above (then list all of
+that group's ids again with it), pair with a note that is not in a group, or pair with another new note.
+Each group has at least 2 ids taken from the lists, a note appears in at most one group, "title" is the
+title of the one combined note, "reason" is one line on why they belong together.
+No group is fine: {{"groups": []}}.
+"""
+
+
 class ClassifyError(Exception):
     """The classifier call or its answer was unusable."""
 
@@ -42,52 +63,34 @@ class Group:
     reason: str
 
 
+def row(card: CardTask) -> str:
+    """Return the line the classifier sees for a note: id, repo, title, first 300 characters of the body."""
+    return f"{card.id} | {card.repo} | {card.title} | {' '.join(card.body.split())[:BODY_CHARS]}"
+
+
 def build_prompt(cards: list[CardTask]) -> str:
-    """Return the prompt: id, repo, title and the first 300 characters of each body (one line each)."""
-    rows = [
-        f"{card.id} | {card.repo} | {card.title} | {' '.join(card.body.split())[:BODY_CHARS]}"
-        for card in cards
-    ]
-    return PROMPT.format(notes="\n".join(rows))
+    """Return the prompt listing every given note, one line each."""
+    return PROMPT.format(notes="\n".join(row(card) for card in cards))
 
 
-def claude_classifier(prompt: str) -> str:
-    """Run `claude -p --model haiku --output-format json --strict-mcp-config` (read-only); return its text."""
-    argv = [
-        claude_bin(),
-        "-p",
-        "--model",
-        model_for("classify"),
-        "--output-format",
-        "json",
-        "--strict-mcp-config",
-        "--disallowedTools",
-        ",".join(DENY_ALWAYS + DENY_READONLY),
-    ]
-    env = {**os.environ, "CLAUDE_AUTO_CONTINUE": "0"}  # handoff hooks must not spawn untracked sessions
-    try:
-        proc = subprocess.run(  # noqa: S603
-            argv, input=prompt, capture_output=True, text=True, env=env, timeout=TIMEOUT_S, check=False
-        )
-    except subprocess.TimeoutExpired as exc:
-        msg = f"claude timed out after {TIMEOUT_S:g}s"
-        raise ClassifyError(msg) from exc
-    except OSError as exc:
-        msg = f"cannot run claude: {exc}"
-        raise ClassifyError(msg) from exc
-    if proc.returncode != 0:
-        msg = f"claude exit {proc.returncode}: {(proc.stderr or proc.stdout).strip()[-200:]}"
-        raise ClassifyError(msg)
-    try:
-        envelope = json.loads(proc.stdout)
-    except ValueError as exc:
-        msg = f"claude printed non-JSON: {proc.stdout[:200]!r}"
-        raise ClassifyError(msg) from exc
-    answer = envelope.get("result") if isinstance(envelope, dict) else None
-    if not isinstance(answer, str) or envelope.get("is_error"):
-        msg = f"claude returned no text: {proc.stdout[:200]!r}"
-        raise ClassifyError(msg)
-    return answer
+def build_incremental(new: list[CardTask], groups: list[str], seen: list[CardTask]) -> str:
+    """Return the prompt for new or edited notes: stored groups and the older ungrouped notes are context.
+
+    Context lines are indented and carry no body, so only the new notes cost their full text.
+    """
+    return INCREMENTAL.format(
+        groups="\n".join(f"  {line}" for line in groups) or "  (none)",
+        seen="\n".join(f"  {c.id} | {c.repo} | {c.title}" for c in seen) or "  (none)",
+        notes="\n".join(row(card) for card in new),
+    )
+
+
+def claude_classifier(prompt: str, root: Path | None = None) -> str:
+    """Run the narrow, read-only Haiku one-shot (`runner/oneshot.py`); return its text."""
+    return oneshot.run(
+        prompt, model=model_for("classify"), kind="classify", root=root or run_root(), timeout=TIMEOUT_S,
+        error=ClassifyError, deny=DENY_ALWAYS + DENY_READONLY,
+    )  # fmt: skip
 
 
 def _group(raw: Any, valid: set[str], used: set[str]) -> Group | None:  # noqa: ANN401 - parsed JSON

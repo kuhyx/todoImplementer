@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
 # The prompt cache expires after an hour; past that a resume re-reads the whole transcript at full price.
 IDLE_FRESH_SEC = 3600.0
-Situation = Literal["", "killed", "idle"]
+Situation = Literal["", "killed", "idle", "resume"]
 
 
 @dataclass(frozen=True)
@@ -27,7 +27,7 @@ class Prior:
 
 @dataclass(frozen=True)
 class TurnPlan:
-    """`resume` None: a new session. `situation` picks the resume_after_kill or fresh_after_idle prompt."""
+    """`resume` None: a new session. `situation` picks the prompt: killed, idle or "resume" (live)."""
 
     resume: str | None
     situation: Situation
@@ -38,7 +38,7 @@ def plan_turn(prior: Prior | None, *, now: float) -> TurnPlan:  # noqa: D103
         return TurnPlan(None, "killed" if prior is not None and prior.lost else "")
     if now - prior.last_turn_end > IDLE_FRESH_SEC:
         return TurnPlan(None, "idle")
-    return TurnPlan(prior.session_id, "killed" if prior.lost else "")
+    return TurnPlan(prior.session_id, "killed" if prior.lost else "resume")
 
 
 def prior_from(entry: Mapping[str, Any] | None) -> Prior | None:  # noqa: D103
@@ -63,12 +63,17 @@ def lost_prior(stream: Path, entry: Mapping[str, Any] | None) -> Prior:
 
 
 def handoff_summary(
-    run_dir: Path, last_reply: str, self_check: Sequence[Mapping[str, Any]] = (), live_report: str = ""
+    run_dir: Path,
+    last_reply: str,
+    self_check: Sequence[Mapping[str, Any]] = (),
+    live_report: str = "",
+    *,
+    with_plan: bool = True,
 ) -> str:
     """Built from files, never by a model: plan.md, the self-check, the live-check tail and the last reply."""
     plan = run_dir / "plan.md"
     parts = []
-    if plan.exists():
+    if with_plan and plan.exists():
         parts.append("Plan (plan.md):\n" + plan.read_text(encoding="utf-8")[:3000])
     if self_check:
         rows = (f"{r['criterion']}: {'done' if r['done'] else 'not done'} - {r['note']}" for r in self_check)

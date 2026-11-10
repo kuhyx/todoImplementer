@@ -180,11 +180,11 @@ item marks its section `## [x]` and adds a `closed:` line; the note closes with 
 
 ## Sessions
 
-Every work session (spec, plan, implement, live_check) runs with kuhy's full setup: his `~/.claude` rules, skills,
-hooks, agents, the target repo's project memory and ALL his user and project MCP servers. There is no
-`--strict-mcp-config`, no per-role MCP list and no `--setting-sources` narrowing; only the one-shot Haiku lesson
-drafter stays minimal. without a session policy `git push` is denied with `--disallowedTools`; with one they land their own work (DOCS-landing.md). A resumed
-session's `total_cost_usd` is cumulative, so the runner stores the latest value rather than adding turns.
+Every work session (spec, plan, implement, live_check, manager) runs with kuhy's full setup: his `~/.claude` rules,
+skills, hooks, agents, the target repo's project memory and ALL his user and project MCP servers. There is no
+`--strict-mcp-config`, no per-role MCP list and no `--setting-sources` narrowing. Only the Haiku one-shots (merge
+classifier, lesson drafter) are minimal (`DOCS-turns.md`). without a session policy `git push` is denied with `--disallowedTools`; with one they land their own work (DOCS-landing.md). A resumed
+session's `total_cost_usd` is cumulative, so the runner stores the latest value rather than adding turns. Turn model, effort, live-check role, time limit, retry cap: `DOCS-turns.md`.
 
 A Ship failure (conflict, red recheck, push refused) sets stage `failed` with `error`; the Send click reopens the
 task at `implement`, keeping the session. Sessions get `CLAUDE_AUTO_CONTINUE=0`.

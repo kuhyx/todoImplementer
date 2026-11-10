@@ -6,13 +6,15 @@ import logging
 import threading
 import time
 from dataclasses import dataclass
+from functools import partial
 from typing import TYPE_CHECKING, Any
 
 from todoimpl.http.backend import BackendError
 from todoimpl.todo_mcp.model import TodoError
 
+from . import incremental
 from .apply import OPEN, UPSTREAM, MergeError, apply_merge
-from .classify import build_prompt, claude_classifier, parse_groups
+from .classify import claude_classifier, parse_groups
 from .live import live_reason
 from .store import MergeState, MergeStore
 from .text import fingerprint
@@ -56,7 +58,7 @@ class MergeService:
         cache: TaskCache,
         root: Path,
         *,
-        classifier: Callable[[str], str] = claude_classifier,
+        classifier: Callable[[str], str] | None = None,
         clock: Callable[[], float] = time.time,
         spawn: Callable[[Callable[[], None]], None] = _spawn,
         umbrella: Callable[[str], str] = create_umbrella,
@@ -66,7 +68,7 @@ class MergeService:
         self.cache = cache
         self.root = root
         self.store = MergeStore(root)
-        self._classifier = classifier
+        self._classifier = classifier or partial(claude_classifier, root=root)
         self._clock = clock
         self._spawn = spawn
         self._umbrella = umbrella
@@ -83,33 +85,38 @@ class MergeService:
         ]
 
     def refresh_if_due(self) -> bool:
-        """Start a background classification when the open ids changed and 10 minutes passed; never blocks."""
+        """Start a background run when notes are new or edited and 10 minutes passed; never blocks.
+
+        Only the new or edited notes are sent (`incremental`); a removal alone just updates the stored ids.
+        """
         cards = self.eligible()
         ids = sorted(card.id for card in cards)
         state = self.store.load()
-        if len(ids) < MIN_MEMBERS or ids == state.ids or self._clock() - state.at < INTERVAL:
+        if len(ids) < MIN_MEMBERS:
             return False
-        if not self._classifying.acquire(blocking=False):
+        delta = incremental.diff(state, cards)
+        if not delta.changed:
+            if ids != state.ids:  # notes were closed: no model call, keep the ids and hashes current
+                self.store.update(lambda s: self._remember(s, ids, delta.hashes))
             return False
-        self._spawn(lambda: self._classify(cards, ids))
+        if self._clock() - state.at < INTERVAL or not self._classifying.acquire(blocking=False):
+            return False
+        self._spawn(lambda: self._classify(cards, ids, delta))
         return True
 
-    def _classify(self, cards: list[CardTask], ids: list[str]) -> None:
+    @staticmethod
+    def _remember(state: MergeState, ids: list[str], hashes: dict[str, str]) -> None:
+        state.ids, state.hashes = ids, hashes
+
+    def _classify(self, cards: list[CardTask], ids: list[str], delta: incremental.Delta) -> None:
         try:
-            groups = parse_groups(self._classifier(build_prompt(cards)), set(ids))
-            titles = {card.id: card.title for card in cards}
-            rows = [
-                {
-                    "ids": list(g.ids),
-                    "titles": [titles[i] for i in g.ids],
-                    "title": g.title,
-                    "reason": g.reason,
-                }
-                for g in groups
-            ]
+            state = self.store.load()
+            reply = self._classifier(incremental.prompt(state, delta, cards))
+            rows = incremental.fold(state, delta, parse_groups(reply, set(ids)), cards)
 
             def record(state: MergeState) -> None:
-                state.ids, state.at, state.groups = ids, self._clock(), rows
+                self._remember(state, ids, delta.hashes)
+                state.at, state.groups = self._clock(), rows
 
             self.store.update(record)
         except Exception:

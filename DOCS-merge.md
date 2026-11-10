@@ -12,7 +12,8 @@ without sections is one item. Candidates: open (`todo` / `in progress`), with a 
 
 ## Suggestions
 
-- A one-shot Haiku call (`merge/classify.py`): `claude -p --model haiku --output-format json --strict-mcp-config`,
+- A one-shot Haiku call (`merge/classify.py` over `runner/oneshot.py`: `--strict-mcp-config`, no settings sources,
+  skills or tools, `--effort low`, a scratch cwd, cost to `oneshot-usage.jsonl`): `claude -p --model haiku --output-format json`,
   role `classify` (read-only: `--disallowedTools` Edit/Write/NotebookEdit and git push), prompt starts with `override`,
   `CLAUDE_AUTO_CONTINUE=0`. Input: one line per candidate `id | repo | title | first 300 chars of the body`.
   Output: `{"groups": [{"ids": [...], "title": "...", "reason": "..."}]}`.
@@ -20,8 +21,11 @@ without sections is one item. Candidates: open (`todo` / `in progress`), with a 
   group (a later group that reuses an id is dropped whole), title and reason are non-empty text, reason cut to its
   first line. Anything else is dropped; text that is not that JSON is a failed run.
 - When: `MergeService.refresh_if_due()` runs from every `GET /api/merges` and once at server start (`http/main.py`).
-  It starts a background thread when the candidate ids differ from the ids of the last run AND 10 minutes passed since
-  it. A request never waits on Haiku. A failed run keeps the old groups and retries after 10 minutes.
+  It starts a background thread when notes are new or edited since the last run (`merge/incremental.py`; `merge.json`
+  keeps `hashes`, a hash of the line the model saw per note) AND 10 minutes passed since it. Only those notes are sent,
+  with the stored groups (title and ids) and the older ungrouped notes (id, repo, title) as context; the reply replaces
+  the stored groups it overlaps and adds the rest. A removal alone asks nothing (ids and hashes are updated), an old
+  `merge.json` without hashes gets one full run. A request never waits on Haiku. A failed run keeps the old groups and retries after 10 minutes.
 - Cached in `$TODOIMPL_HOME/merge.json`: `ids`, `at`, `groups`, `dismissed` (group fingerprints), `created`
   (fingerprint to merged note id). A restart with the same ids asks nothing.
 - A group id is `sha256(sorted member ids)[:12]`. The view cuts a stored group to the members that are still

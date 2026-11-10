@@ -26,6 +26,7 @@ class MergeState:
     groups: list[dict[str, Any]] = field(default_factory=list)
     dismissed: list[str] = field(default_factory=list)
     created: dict[str, dict[str, Any]] = field(default_factory=dict)  # fingerprint -> {id, titles}
+    hashes: dict[str, str] = field(default_factory=dict)  # card id -> hash of what the classifier saw of it
 
 
 def _typed(data: dict[str, Any], key: str, kind: type | tuple[type, ...], default: Any) -> Any:  # noqa: ANN401 - json values
@@ -55,6 +56,7 @@ class MergeStore:
             _typed(data, "groups", list, []),
             _typed(data, "dismissed", list, []),
             _typed(data, "created", dict, {}),
+            _typed(data, "hashes", dict, {}),
         )
 
     def update(self, change: Callable[[MergeState], object]) -> None:

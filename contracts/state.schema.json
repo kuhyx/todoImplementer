@@ -38,10 +38,20 @@
     "free_models": {"type": "boolean", "description": "The server's verdict before the latest cheap implement turn: public repo and a live gateway."},
     "escalated": {"type": "boolean", "description": "A cheap run handed over to Opus (ESCALATE line or a failed turn); at most once per run."},
     "escalate_reason": {"type": "string", "description": "Why it escalated, at most 300 characters."},
+    "credit_downgrade": {
+      "type": "object",
+      "description": "Roles whose latest turn ran on a smaller model than they want because the credits route runs every role on sonnet (kuhy, 2026-11-08): role -> wanted and ran. Absent when none.",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {"wanted": {"type": "string"}, "ran": {"type": "string"}},
+        "required": ["wanted", "ran"],
+        "additionalProperties": false
+      }
+    },
     "auto_ship": {"type": "boolean", "description": "Ticked at Start/Restart: a done_check note ships itself (checks -> shipping) once every check is green."},
     "sessions": {
       "type": "object",
-      "description": "Per role (spec, plan, implement, review, verify): session id and when its last turn ended (fresh session after 1 h idle).",
+      "description": "Per role (spec, plan, implement, live_check, manager): session id and when its last turn ended (fresh session after 1 h idle).",
       "additionalProperties": {
         "type": "object",
         "properties": {

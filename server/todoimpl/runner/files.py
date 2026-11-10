@@ -13,6 +13,7 @@ if TYPE_CHECKING:
 STREAM_SUFFIX = ".stream.jsonl"
 RESULT_SUFFIX = ".result.json"
 EXIT_SUFFIX = ".exit.json"  # written by the turn host when claude exits: the turn is over
+MODEL_SUFFIX = ".model.json"  # {wanted, ran}: the model the role asked for and the one its route gave it
 ROUTE_SUFFIX = ".route"  # `plan` or `credits`: which route started the turn (read again after a restart)
 
 

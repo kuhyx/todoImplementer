@@ -77,6 +77,8 @@ def _implement(d: Driver) -> str | None:
     nxt = d.after_tag(res, "shipping" if d.state.extra.get("reship") else "live_check")
     if nxt == "shipping":
         d.state.extra.pop("reship")
+    elif nxt == "live_check":  # new work to check: a new live-check session, seeded from the handoff
+        d.state.sessions.pop("live_check", None)
     return nxt
 
 
@@ -99,7 +101,7 @@ def _live_check(d: Driver) -> str | None:
     shots.mkdir(parents=True, exist_ok=True)
     redo = str(st.extra.pop("live_redo", ""))  # set: ask for the checklist only, verify nothing again
     attached, info = bool(st.extra.get("phone_attached")), st.extra.get("waiting_phone")
-    res = d.turn("implement", "live_check", failure_tail=redo, prompt="live_checklist" if redo else "")
+    res = d.turn("live_check", "live_check", failure_tail=redo, prompt="live_checklist" if redo else "")
     if phone.hands_nudge(st, res, attached=attached, info=info):
         return "live_check"
     if res.tag in ("Q", "A"):

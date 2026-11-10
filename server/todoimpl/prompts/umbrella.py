@@ -39,10 +39,13 @@ WORKER_NOTE = (
     "what it says."
 )
 WAIT = (
-    "Wait for the workers inside this turn, in plain Bash calls that each end within 50 s (`kill -0 <pid>` "
-    "of the worker, or the `worker exit=` line it prints; never `pgrep -f <path>`, it matches its own "
-    "command line and never ends). Never use Monitor or any background wait, and never end your turn before "
-    "every worker has exited and every CHILD line is written: a turn that ends early escalates the round."
+    "Wait for the workers with ONE command, not with polling: `<worker command> wait <log> <log> ...` (every "
+    "worker log of the round), with the Bash tool timeout set to 600000. It blocks in code until every "
+    "worker has exited or 540 s passed and prints one line per worker. If it ends with `still running`, "
+    "call it again; read diffs and logs only once it says all workers finished. A rerun (coaching) gets a "
+    "new log name, e.g. `worker-<n>-b.log`, and you wait for that log. Never poll with a sleep loop, "
+    "`kill -0` or `pgrep`, never use Monitor or any background wait, and never end your turn before every "
+    "worker has exited and every CHILD line is written: a turn that ends early escalates the round."
 )
 LOOK_AFTER = (
     "Watch the workers. Fix permission blocks yourself; for any other problem coach the worker (below). "

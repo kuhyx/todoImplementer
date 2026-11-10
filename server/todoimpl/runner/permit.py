@@ -32,7 +32,7 @@ LEGIT_STOPS = ("D", "Q")
 
 def with_grant(st: RunState, prompt_for: Callable[[Situation], str], role: str) -> Callable[[Situation], str]:
     """Append the one-shot 'permission granted' note, and under kuhy's policy the sensitive-file advice."""
-    standing = SENSITIVE if role == "implement" and policy.load().present else None
+    standing = SENSITIVE if role in ("implement", "live_check") and policy.load().present else None
 
     def prompt(situation: Situation) -> str:
         notes = [n for n in (st.extra.pop("granted_note", None), standing) if n]
