@@ -54,7 +54,9 @@ LOOK_AFTER = (
     "the changes uncommitted or committed, either is fine. The server runs the same checks in the worktree "
     "right after you finish, and a fresh worktree has no .venv or node_modules: build them first (`python3 "
     "-m venv .venv`, the repo's dev install, `pnpm install`) and leave them in the worktree, else those "
-    "checks are red for that reason alone."
+    "checks are red for that reason alone. A check that was red before the task is still red: fix it in the "
+    "child (bump each pin the dependency-freshness gate names to the version it names and reinstall, run the "
+    "formatter), never leave it red as out of scope."
 )
 
 
