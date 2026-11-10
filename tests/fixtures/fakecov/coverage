@@ -1,0 +1,20 @@
+#!/bin/bash
+# Fake coverage: `combine FILES` merges the chunk files into $COVERAGE_FILE (default .coverage) and deletes
+# them, like the real one; `report` fails unless the merged data holds $FAKECOV_CHUNKS chunks.
+set -euo pipefail
+data="${COVERAGE_FILE:-.coverage}"
+case "$1" in
+combine)
+	shift
+	files=()
+	for f in "$@"; do [[ -f "$f" ]] && files+=("$f"); done
+	((${#files[@]})) || { echo "No data to combine" >&2; exit 1; }
+	cat "${files[@]}" >"$data"
+	rm -f "${files[@]}"
+	;;
+report)
+	got=$(grep -c '^chunk ' "$data" 2>/dev/null || true)
+	echo "chunks ${got:-0} of ${FAKECOV_CHUNKS:?}"
+	[[ "${got:-0}" == "$FAKECOV_CHUNKS" ]]
+	;;
+esac
