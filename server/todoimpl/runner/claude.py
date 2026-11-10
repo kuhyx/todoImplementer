@@ -16,11 +16,12 @@ from . import policy
 ROLE_MODELS = {
     "spec": "sonnet",
     "plan": "sonnet",
-    "manager": "sonnet",  # umbrella rounds: runs the free workers
+    "manager": "opus",  # umbrella rounds: runs the free workers (kuhy, 2026-11-10: opus, not sonnet)
     "implement": "opus",
     "verify": "opus",
     "classify": "haiku",
 }
+ROLE_EFFORT = {"manager": "medium"}  # `claude --effort` per role; absent = the CLI default
 # Sessions load kuhy's real ~/.claude allow rules, which permit pushing; only the Ship click may push.
 DENY_ALWAYS = ("Bash(git push:*)", "Bash(git push *)")
 DENY_READONLY = ("Edit", "Write", "NotebookEdit")
@@ -55,6 +56,7 @@ class Options:
     env: dict[str, str]
     cwd: Path
     notes: tuple[str, ...]
+    effort: str | None = None
 
 
 def claude_bin() -> str:
@@ -75,6 +77,7 @@ def options(  # noqa: PLR0913, PLR0917 - one set of turn options, built in one p
     extra_dirs: tuple[Path, ...] = (),
     allow: tuple[str, ...] = (),
     model: str | None = None,
+    effort: str | None = None,
 ) -> Options:
     """Return what a turn is given; `allow` = learned allow rules, kuhy's session policy loosens the rest."""
     pol = policy.load()
@@ -102,6 +105,7 @@ def options(  # noqa: PLR0913, PLR0917 - one set of turn options, built in one p
         env,
         worktree,
         notes,
+        effort or ROLE_EFFORT.get(role),
     )
 
 
@@ -113,11 +117,14 @@ def build(  # noqa: PLR0913, PLR0917 - one argv, built in one place
     extra_dirs: tuple[Path, ...] = (),
     allow: tuple[str, ...] = (),
     model: str | None = None,
+    effort: str | None = None,
 ) -> Invocation:
     """Build the plan route: kuhy's full setup (no strict MCP); the prompt goes right after -p."""
-    opt = options(role, prompt, worktree, resume, extra_dirs, allow, model)
+    opt = options(role, prompt, worktree, resume, extra_dirs, allow, model, effort)
     argv = [claude_bin(), "-p", prompt, "--model", opt.model, "--output-format", "stream-json", "--verbose"]
     argv += ["--permission-mode", opt.permission_mode, "--add-dir", *opt.add_dirs]
+    if opt.effort:
+        argv += ["--effort", opt.effort]
     if resume:
         argv += ["--resume", resume]
     if allow:

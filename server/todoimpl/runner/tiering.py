@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from todoimpl.prompts import coach
 from todoimpl.prompts import tier as texts
 from todoimpl.umbrella import issues
 
@@ -24,10 +25,11 @@ IMPLEMENT = "implement"  # the role (and the stage) a cheap note changes
 
 @dataclass(frozen=True)
 class Turn:
-    """What a turn changes for its tier: `model` None = the role's default; `note` is a prompt addendum."""
+    """What a turn changes for its tier; None = the default; `note` is an addendum."""
 
     model: str | None = None
     note: str = ""
+    effort: str | None = None
 
 
 def _cheap(d: Driver) -> bool:
@@ -45,27 +47,29 @@ def plan_turn(d: Driver, role: str) -> Turn:
         return Turn()
     if st.extra.get("escalated"):
         note = texts.escalated(str(st.extra.get("escalate_reason", ""))) if st.stage == IMPLEMENT else ""
-        return Turn(None, note)
+        return Turn(None, note, tier.ESCALATED_EFFORT)
     if st.stage != IMPLEMENT:
-        return Turn(tier.MANAGER_MODEL)
+        return Turn(tier.MANAGER_MODEL, effort=tier.MANAGER_EFFORT)
     verdict = freegate.check(Path(str(st.worktree)))
     st.extra["free_models"] = verdict.allowed
     if verdict.allowed:
-        d.activity("tier cheap: sonnet manages free models")
+        d.activity("tier cheap: opus manages free models")
         wt, repo = Path(str(st.worktree)), d.item.repo or ""
-        return Turn(tier.MANAGER_MODEL, texts.manager(wt, d.ctx.run_dir, freeworker.command(), repo))
-    d.activity(f"tier cheap: sonnet alone, {verdict.why}")
+        rules = coach.TEXTGATE_RULES if coach.is_textgate(d.item.title, d.item.body) else ""
+        note = texts.manager(wt, d.ctx.run_dir, freeworker.command(), repo, rules)
+        return Turn(tier.MANAGER_MODEL, note, tier.MANAGER_EFFORT)
+    d.activity(f"tier cheap: opus alone, {verdict.why}")
     if verdict.detail:  # a gateway failure the server saw itself goes to the same issue log
         issues.append(
-            d.ctx.run_dir, d.ctx.now(), d.item.repo or "", "start", verdict.detail, "sonnet works alone"
+            d.ctx.run_dir, d.ctx.now(), d.item.repo or "", "start", verdict.detail, "opus works alone"
         )
-    return Turn(tier.MANAGER_MODEL, texts.alone(verdict.why))
+    return Turn(tier.MANAGER_MODEL, texts.alone(verdict.why), tier.MANAGER_EFFORT)
 
 
 def escalate(d: Driver, reason: str) -> None:
-    """Record the one escalation of the run; the next implement-role turn runs on Opus."""
+    """Record the one escalation of the run; the next implement-role turn runs at a higher effort."""
     d.state.extra.update(escalated=True, escalate_reason=reason)
-    d.activity(f"tier escalated to opus: {reason}")
+    d.activity(f"tier escalated to higher effort: {reason}")
 
 
 def gave_up(d: Driver, res: TurnResult) -> bool:

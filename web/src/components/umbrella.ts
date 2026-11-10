@@ -28,7 +28,7 @@ const STATUS_ICON: Record<Status, IconName> = {
   yours: "failed",
 };
 type Verdict = NonNullable<UmbrellaRow["verdict"]>;
-const VERDICT_ICON: Record<Verdict, IconName> = { clean: "check", escalate: "escalated", fixed: "fixed" };
+const VERDICT_ICON: Record<Verdict, IconName> = { clean: "check", coached: "coached", escalate: "escalated", fixed: "fixed" };
 
 /** One icon with an optional number; the name is the accessible label and the tooltip. */
 function badge(name: IconName, label: string, value?: number, attributes: Record<string, string> = {}): HTMLElement {

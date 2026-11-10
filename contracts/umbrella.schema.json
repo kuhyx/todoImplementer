@@ -19,14 +19,14 @@
     },
     "row": {
       "type": "object",
-      "description": "One child of an umbrella. status is the child's own server-computed status; verdict is the manager's line for its round (clean, fixed, escalate); free: a free worker was allowed (public repo, gateway up); issues: free-model problems logged for it.",
+      "description": "One child of an umbrella. status is the child's own server-computed status; verdict is the manager's line for its round (clean, coached, fixed, escalate); free: a free worker was allowed (public repo, gateway up); issues: free-model problems logged for it.",
       "properties": {
         "id": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/item_id"},
         "repo": {"type": "string"}, "title": {"type": "string"},
         "status": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/status"},
         "stage": {"anyOf": [{"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/stage"}, {"type": "null"}]},
         "round": {"type": ["integer", "null"]},
-        "verdict": {"enum": ["clean", "fixed", "escalate", null]},
+        "verdict": {"enum": ["clean", "coached", "fixed", "escalate", null]},
         "free": {"type": ["boolean", "null"]},
         "error": {"type": ["string", "null"]},
         "cost_usd": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/usd"},
@@ -53,7 +53,7 @@
                 "items": {
                   "type": "object",
                   "properties": {
-                    "id": {"type": "string"}, "verdict": {"enum": ["clean", "fixed", "escalate"]},
+                    "id": {"type": "string"}, "verdict": {"enum": ["clean", "coached", "fixed", "escalate"]},
                     "detail": {"type": "string"}, "free": {"type": "boolean"},
                     "checks": {"type": ["boolean", "null"]}, "ok": {"type": "boolean"}
                   },

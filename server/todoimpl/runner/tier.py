@@ -9,7 +9,9 @@ CHEAP_TITLE = re.compile(r"text-free\s*\(textgate-rework\)", re.IGNORECASE)
 ESCALATE_LINE = re.compile(r"^[ \t]*ESCALATE:[ \t]*(.*?)[ \t]*$", re.IGNORECASE | re.MULTILINE)
 REASON_MAX = 300
 NO_REASON = "no reason given"
-MANAGER_MODEL = "sonnet"
+MANAGER_MODEL = "opus"  # kuhy, 2026-11-10: the free-worker manager is Opus, not Sonnet
+MANAGER_EFFORT = "medium"
+ESCALATED_EFFORT = "high"  # escalation = more thought on the same model
 
 
 def is_cheap(title: str, body: str) -> bool:

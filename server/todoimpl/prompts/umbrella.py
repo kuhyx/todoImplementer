@@ -4,13 +4,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from .coach import COACHING
+
 if TYPE_CHECKING:
     from .context import PromptContext
 
 ISSUE_FILE = "free-issues.jsonl"
 ISSUE_FORMAT = (
     '{"ts": <epoch seconds>, "child": "kuhyx/<repo>", "phase": "start|edit|tool-call|permission|checks|'
-    'output", "model": "<model that answered, from the worker stderr, else null>", "symptom": "<exact '
+    'output|prompt", "model": "<model that answered, from the worker stderr, else null>", "symptom": "<exact '
     'error text, cut at 500 chars>", "action": "<what you did to fix it>", "fixed": true|false}'
 )
 INTRO = (
@@ -42,8 +44,8 @@ WAIT = (
     "every worker has exited and every CHILD line is written: a turn that ends early escalates the round."
 )
 LOOK_AFTER = (
-    "Watch the workers. Fix every problem they hit (permission blocks, broken edits, failing checks), "
-    "finish or redo their work, then run each child's checks (its done_check, `make test`, `pre-commit "
+    "Watch the workers. Fix permission blocks yourself; for any other problem coach the worker (below). "
+    "Run each child's checks (its done_check, `make test`, `pre-commit "
     "run --all-files` where the repo has them). Edit only inside the child worktrees. Never push; leave "
     "the changes uncommitted or committed, either is fine. The server runs the same checks in the worktree "
     "right after you finish, and a fresh worktree has no .venv or node_modules: build them first (`python3 "
@@ -65,13 +67,15 @@ def manager(ctx: PromptContext) -> str:
         WAIT,
         "Children marked free: no are not allowed to leave this machine: do them yourself, no claude-free.",
         LOOK_AFTER,
+        COACHING,
         f"{ISSUE_LOG} {issues}:",
         f"  {ISSUE_FORMAT}",
         CHECKED,
         *(f"kuhy's notes: {n}" for n in ctx.notes),
         "End with one line per child, exactly:",
         "  CHILD kuhyx/<repo>: clean            (the worker finished with no intervention)",
-        "  CHILD kuhyx/<repo>: fixed <what>     (done, but you had to step in)",
+        "  CHILD kuhyx/<repo>: coached <n>      (the free worker finished after n coached retries)",
+        "  CHILD kuhyx/<repo>: fixed <what>     (done by you after 3 failed coached attempts)",
         "  CHILD kuhyx/<repo>: escalate <reason> (you could not finish it)",
         "Then end with `D:`.",
     ]

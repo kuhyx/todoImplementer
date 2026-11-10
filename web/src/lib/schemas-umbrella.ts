@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { itemId, stage, status, usd } from "@/lib/schemas-common";
 
-export const VERDICTS = ["clean", "fixed", "escalate"] as const;
+export const VERDICTS = ["clean", "coached", "fixed", "escalate"] as const;
 
 export const umbrellaRow = z.strictObject({
   cost_usd: usd,

@@ -25,7 +25,8 @@ def test_clean_rounds_double_the_width_and_every_child_reaches_its_gate(world: E
     assert rec["width"] == 4
     assert [k["id"] for k in rec["kids"]] == ["umbr0001-1", "umbr0001-2", "umbr0001-3"]
     managers = [c for c in world.calls() if "Umbrella manager" in str(c["prompt"])]
-    assert [c["model"] for c in managers] == ["sonnet", "sonnet"]
+    assert [c["model"] for c in managers] == ["opus", "opus"]
+    assert all(c["argv"][c["argv"].index("--effort") + 1] == "medium" for c in managers)
     assert "todoimpl.runner.freeworker" in str(managers[0]["prompt"])
     assert "kuhyx/alpha" in str(managers[0]["prompt"])
     assert "kuhyx/beta" not in str(managers[0]["prompt"])

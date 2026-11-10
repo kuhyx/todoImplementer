@@ -6,26 +6,40 @@ import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from todoimpl.prompts import coach
+
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from .note import Child
 
+MAX_COACHED = coach.MAX_COACHED
 NO_LINE = "the manager gave no verdict line"
 _LINE = re.compile(
     r"^[ \t>*_#-]*CHILD[ \t]+(?P<repo>kuhyx/[\w.-]+)(?:[ \t]*\((?P<key>[A-Za-z0-9]{8})\))?[ \t]*:[ \t]*"
-    r"(?P<kind>clean|fixed|escalate)\b[ \t*_]*(?P<detail>.*?)[ \t*_]*$",
+    r"(?P<kind>clean|coached|fixed|escalate)\b[ \t*_]*(?P<detail>.*?)[ \t*_]*$",
     re.MULTILINE,
 )
-_WORST = {"clean": 0, "fixed": 1, "escalate": 2}
+_WORST = {"clean": 0, "coached": 1, "fixed": 2, "escalate": 3}
+_COUNT = re.compile(r"\d+")
 
 
 @dataclass(frozen=True)
 class Verdict:
-    """One child's line: `clean` (worker needed no help), `fixed <what>` or `escalate <reason>`."""
+    """One child's line.
+
+    `clean` (first-try free success), `coached <n> ...` (free success after n coached retries), `fixed <what>`
+    (the manager did the edits) or `escalate <reason>`.
+    """
 
     kind: str
     detail: str
+
+    @property
+    def retries(self) -> int:
+        """Return n of a `coached <n>` line; a missing number counts as the cap (it proves nothing)."""
+        found = _COUNT.match(self.detail)
+        return int(found.group()) if found else MAX_COACHED
 
 
 def parse_verdicts(text: str, kids: Sequence[Child]) -> dict[str, Verdict]:
@@ -50,8 +64,12 @@ def all_escalate(kids: Sequence[Child], reason: str) -> dict[str, Verdict]:
 
 
 def ok(verdict: Verdict, *, free: bool, checks: bool | None) -> bool:
-    """Return True when a child counts toward doubling: clean, done by a free worker, checks green."""
-    return verdict.kind == "clean" and free and checks is True
+    """Return True when a child counts toward doubling: a free worker finished it, checks green.
+
+    First try (`clean`) or coached fewer than the cap times (the coached prompt works); `fixed` never counts.
+    """
+    done = verdict.kind == "clean" or (verdict.kind == "coached" and verdict.retries < MAX_COACHED)
+    return done and free and checks is True
 
 
 def next_width(width: int, oks: Sequence[bool]) -> int:

@@ -74,3 +74,12 @@ def unlogged(run_dir: Path, repos: Iterable[str], since: float) -> list[str]:
     """Return the repos among `repos` with no issue line at or after `since` (a `fixed` child needs one)."""
     seen = {str(row.get("child", "")) for row in read(run_dir) if float(row.get("ts") or 0) >= since}
     return [repo for repo in repos if repo not in seen]
+
+
+def coaching(run_dir: Path, repo: str, since: float) -> int:
+    """Return the coaching lines (phase `prompt`) logged for `repo` at or after `since`."""
+    return sum(
+        1
+        for row in read(run_dir)
+        if row.get("child") == repo and row.get("phase") == "prompt" and float(row.get("ts") or 0) >= since
+    )

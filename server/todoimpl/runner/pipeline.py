@@ -195,7 +195,14 @@ class Driver:
 
         env = TurnEnv(ctx.run_dir, Path(str(st.worktree)), ctx.publish, ctx.register, ctx.now)
         res = run_turn(
-            env, st, role, with_grant(st, prompt_for, role), (ctx.run_dir,), choice.route, plan.model
+            env,
+            st,
+            role,
+            with_grant(st, prompt_for, role),
+            (ctx.run_dir,),
+            choice.route,
+            plan.model,
+            plan.effort,
         )
         st.extra["last_reply"] = res.text[-1500:]
         if res.finished and not res.is_error:

@@ -1,7 +1,7 @@
 # Umbrella notes: many per-repo tasks, one card, an exponential ramp
 
 kuhy's design (2026-11-10). About 56 "Make <app> text-free (textgate-rework)" sections sit in per-repo notes. One
-umbrella note collects them; one Sonnet manager runs free workers for them in rounds that widen 1, 2, 4, 8 while the
+umbrella note collects them; one Opus manager runs free workers for them in rounds that widen 1, 2, 4, 8 while the
 free tier proves itself. Code: `server/todoimpl/umbrella/`, `runner/freeworker.py`, `prompts/umbrella.py`,
 `board/umbrella.py`. The free tier of single notes is `DOCS-tiers.md`.
 
@@ -54,19 +54,20 @@ Round width `w` starts at 1. Each round:
 2. The server asks `freegate.check` per child: public repo, gateway answering, tools present. Anything else = **not
    free**: the manager does that child itself and it never counts as clean. A dead gateway also writes its exact
    error to the issue log.
-3. ONE manager turn (role `manager`, model sonnet, a fresh session per round, cwd the umbrella run dir) gets
+3. ONE manager turn (role `manager`, model opus, `--effort medium` (`claude.ROLE_EFFORT`), a fresh session per round, cwd the umbrella run dir) gets
    `prompts/umbrella.py`: the children with worktree, task file, worker log and `free: yes|no`. It starts the free
    workers in parallel, watches them, fixes what they hit (permission blocks, broken edits, failing checks), finishes
    or redoes their work, runs each child's checks, and ends with one line per child:
-   `CHILD kuhyx/<repo>: clean` | `fixed <what>` | `escalate <reason>` (`ramp.parse_verdicts`; a missing line is an
+   `CHILD kuhyx/<repo>: clean` | `coached <n>` | `fixed <what>` | `escalate <reason>` (`ramp.parse_verdicts`; a missing line is an
    escalation; a failed manager turn escalates every child of the round).
 4. The server runs each non-escalated child's checks itself (`checks.discover` + `run_all`: its `done_check`, `make
    test`, pre-commit), in parallel, right after the manager. These are the round's checks; the child's own Checks
    stage runs again after its live check.
-5. **The server adjudicates** (`ramp.ok`, `ramp.next_width`): a child counts when its line is `clean`, it was free, and
-   its checks are green. If every child of the round counts, `w` doubles for the next round; otherwise it stays.
+5. **The server adjudicates** (`ramp.ok`, `ramp.next_width`): a child counts when its line is `clean` (first-try free
+   success) or `coached <n>` with n below the cap of 3 (free success after coaching: it proves the coached prompt
+   works), it was free, and its checks are green. `fixed` (the manager did the edits) never counts. If every child of the round counts, `w` doubles for the next round; otherwise it stays.
 6. Each child then goes through its own pipeline in its own thread, while the next round starts: `escalate` -> one
-   Opus implement attempt (with `prompts/tier.escalated`); red checks -> a fix turn (the usual `check_fixes` path);
+   higher-effort Opus implement attempt (with `prompts/tier.escalated`); red checks -> a fix turn (the usual `check_fixes` path);
    otherwise Live check -> Checks -> Gate (kuhy) or Ship (auto-ship when the umbrella was started with it and the
    child has a `done_check`). Children are normal runs of their repo: `Todo: <source id8>` trailer, rebase, gate,
    push, `DOCS-landing.md` rules. They run on the normal tier (`extra.tier = normal`), never the cheap one.
@@ -86,10 +87,29 @@ the log. Success is the **worktree diff**, never the turn's `subtype: success`: 
 edit, 4 = no `claude-free`. A turn with no diff and a `❓` round logs `spec-gate grilling instead of work` (phase
 `start`). The single-note cheap tier (`prompts/tier.py`) uses the same command.
 
+## Coaching: the manager fixes the cause, not the work
+
+kuhy, 2026-11-10: in round 1 of 2d0704cd a free worker read the title "Focus Guard" as a proper noun, answered "no
+changes needed" (exit 3), and the manager simply did the rework itself. That teaches the tier nothing. Both
+managers (`prompts/umbrella.py`, `prompts/tier.py`; text in `prompts/coach.py`) are told: when a worker fails,
+declines, misreads or leaves a bad diff, **DIAGNOSE** why (worker log, `git diff`), fix the cause and run the
+freeworker command again: rewrite or clarify the worker prompt, add the missing context (rules of the
+`textgate-rework` and `textgate` skills, scan output, exact files and lines, a worked example) or split the task
+smaller. Up to 3 coached attempts per child; each is one issue line with phase `prompt` (symptom = what the worker got
+wrong, action = what changed in the prompt or context). Only then may the manager finish itself (`fixed`) or
+`escalate`. Never the edits first.
+
+- `coached <n>`: the free worker finished after n coached retries. The server warns in the feed when a free child
+  is reported `fixed` with fewer than 3 `prompt` lines since the round began (`issues.coaching`).
+- **Textgate children carry the rules.** The worker has no skill context, so `task.md` of a child whose text or
+  title mentions textgate or text-free starts with `coach.TEXTGATE_RULES` (condensed from the two skills: a name
+  shown in the UI is chrome, "proper noun" is no excuse, a scan item the gate still lists must change; only OS-level
+  labels keep the app name). The single-note cheap tier gets the same rules in the manager addendum.
+
 ## Issue log: everything that goes wrong with the free models
 
 `<run dir>/free-issues.jsonl`, one JSON line per problem:
-`{ts, child, phase (start|edit|tool-call|permission|checks|output), model, symptom (<=500 chars), action, fixed}`.
+`{ts, child, phase (start|edit|tool-call|permission|checks|output|prompt), model, symptom (<=500 chars), action, fixed}`.
 
 - The manager is told to append a line for every problem and for every child it reports `fixed` (the worker log
   names the answering model). The server checks after the manager turn: a `fixed` child with no line since the round

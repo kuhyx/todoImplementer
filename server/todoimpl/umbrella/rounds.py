@@ -2,7 +2,7 @@
 
 Steps persist in `rec["current"]` (free flags, the manager's verdicts, check results) so a restart resumes the
 round at the step it reached instead of redoing the manager turn. The server adjudicates: the width doubles
-only when every child was `clean`, done by a free worker, and green on the checks (ramp.ok).
+only when every child was `clean` or `coached` (below the cap), done by a free worker, and green (ramp.ok).
 """
 
 from __future__ import annotations
@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from todoimpl.board import state as store
+from todoimpl.prompts import coach
 from todoimpl.prompts.tier import escalated
 from todoimpl.runner import checks, freegate, freeworker, worktree
 from todoimpl.runner.files import NeedsYouError
@@ -36,7 +37,6 @@ def run_round(u: Umbrella, batch: list[str] | None) -> None:
     """Run the round in progress, or start one over `batch` (child ids)."""
     d, rec = u.d, u.rec
     if rec.get("current") is None:
-        d.state.sessions.pop("manager", None)  # a fresh manager session per round: no context pile-up
         rec["current"] = {
             "n": len(rec["rounds"]) + 1, "width": rec["width"], "ids": list(batch or []),
             "started": d.ctx.now(), "free": {}, "failed": {}, "verdicts": None, "checks": None,
@@ -70,6 +70,22 @@ def _plan(kid: Child) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _write_task(cdir: Path, kid: Child) -> None:
+    """Write the worker's task file: the textgate rules first when the child is a textgate rework."""
+    text = coach.task_text(kid.text, textgate=coach.is_textgate(kid.text, kid.title))
+    (cdir / "task.md").write_text(
+        f"{text}\n\nWork only in this checkout. Do not run git push.\n", encoding="utf-8"
+    )
+
+
+def _ensure_rules(cdir: Path, kid: Child) -> None:
+    """Put the textgate rules on top of a task file written before they existed; a coached file stays."""
+    path = cdir / "task.md"
+    text = path.read_text(encoding="utf-8")
+    if coach.is_textgate(kid.text, kid.title) and coach.TEXTGATE_RULES not in text:
+        path.write_text(f"{coach.TEXTGATE_RULES}\n\n{text}", encoding="utf-8")
+
+
 def _prepare(u: Umbrella, cur: dict[str, Any], kids: list[Child]) -> None:
     """Give every new child a worktree, its files and the server's verdict on free models."""
     d = u.d
@@ -88,9 +104,7 @@ def _prepare(u: Umbrella, cur: dict[str, Any], kids: list[Child]) -> None:
             cur["failed"][kid.cid] = exc.text
             continue
         (cdir / "plan.md").write_text(_plan(kid), encoding="utf-8")
-        (cdir / "task.md").write_text(
-            f"{kid.text}\n\nWork only in this checkout. Do not run git push.\n", encoding="utf-8"
-        )
+        _write_task(cdir, kid)
         verdict = freegate.check(Path(str(st.worktree)))
         if verdict.detail:  # a gateway failure the server saw itself goes to the issue log
             issues.append(
@@ -118,18 +132,26 @@ def _brief(u: Umbrella, cur: dict[str, Any], kids: list[Child]) -> str:
 
 
 def _manage(u: Umbrella, cur: dict[str, Any], live: list[Child]) -> None:
-    """Run the Sonnet manager over the live children; a failed turn escalates all of them."""
+    """Run the Opus manager over the live children; a failed turn escalates all of them."""
     d = u.d
+    for kid in live:  # a round begun before the rules existed gets them now; a coached file keeps its edits
+        _ensure_rules(child_dir(u.run_dir, kid.cid), kid)
     d.brief = _brief(u, cur, live)
+    d.state.sessions.pop("manager", None)  # a fresh session per manager turn, never a dead one's (an adopted
+    # turn does not read it: run_turn follows the recorded turn before it builds a prompt)
     try:
         verdicts = ramp.parse_verdicts(d.turn("manager", "implement", prompt="manager").text, live)
     except NeedsYouError as exc:
         verdicts = ramp.all_escalate(live, exc.text)
     d.state.last_tag = None  # the manager's own tag is not a question for kuhy
     cur["verdicts"] = {cid: {"kind": v.kind, "detail": v.detail} for cid, v in verdicts.items()}
-    fixed = [k.repo for k in live if verdicts[k.cid].kind == "fixed"]
-    for repo in issues.unlogged(u.run_dir, fixed, cur["started"]):
+    fixed = [k for k in live if verdicts[k.cid].kind == "fixed"]
+    for repo in issues.unlogged(u.run_dir, [k.repo for k in fixed], cur["started"]):
         d.activity(f"{repo}: reported fixed with no line in free-issues.jsonl")
+    for kid in fixed:  # a free child the manager finished itself must have been coached first
+        done = issues.coaching(u.run_dir, kid.repo, cur["started"])
+        if cur["free"][kid.cid] and done < coach.MAX_COACHED:
+            d.activity(f"{kid.repo}: reported fixed after {done} of {coach.MAX_COACHED} coaching attempts")
     d.save()
 
 

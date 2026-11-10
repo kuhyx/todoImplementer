@@ -1,4 +1,4 @@
-"""The cheap tier end to end: Sonnet manages free models, escalates once to Opus, others are untouched."""
+"""The cheap tier end to end: Opus (medium effort) manages free models, escalation = high effort."""
 
 from __future__ import annotations
 
@@ -18,6 +18,12 @@ def implement_calls(world: Env) -> list[dict[str, Any]]:
     return [c for c in world.calls() if "Implement stage" in str(c["prompt"])]
 
 
+def effort(call: dict[str, Any]) -> str | None:
+    """Return the `--effort` value of a recorded claude call, None when it has none."""
+    argv = list(call["argv"])
+    return str(argv[argv.index("--effort") + 1]) if "--effort" in argv else None
+
+
 def feed(world: Env) -> str:
     return (world.root / CARD / "events.jsonl").read_text(encoding="utf-8")
 
@@ -31,10 +37,11 @@ def run_to_gate(world: Env, *turns: tuple[dict[str, Any], ...], **fields: Any) -
         sched.close()
 
 
-def test_cheap_note_runs_on_sonnet_with_the_manager_addendum(world: Env, free: Free) -> None:
+def test_cheap_note_runs_on_opus_at_medium_effort_with_the_manager_addendum(world: Env, free: Free) -> None:
     st = run_to_gate(world, PLAN, IMPL, LIVE_OK, **CHEAP)
     impl = implement_calls(world)
-    assert [c["model"] for c in impl] == ["sonnet"]
+    assert [c["model"] for c in impl] == ["opus"]
+    assert [effort(c) for c in impl] == ["medium"]
     assert "todoimpl.runner.freeworker" in str(impl[0]["prompt"])
     assert free.checked() == [st.worktree]
     assert (st.extra["tier"], st.extra["free_models"]) == ("cheap", True)
@@ -42,20 +49,20 @@ def test_cheap_note_runs_on_sonnet_with_the_manager_addendum(world: Env, free: F
     assert "tier cheap" in feed(world)
 
 
-def test_live_check_of_a_cheap_run_stays_on_sonnet_without_the_addendum(world: Env, free: Free) -> None:
+def test_live_check_of_a_cheap_run_stays_on_opus_medium_without_the_addendum(world: Env, free: Free) -> None:
     run_to_gate(world, PLAN, IMPL, LIVE_OK, **CHEAP)
     live = world.calls()[2]
-    assert live["model"] == "sonnet"
+    assert (live["model"], effort(live)) == ("opus", "medium")
     assert "claude-free" not in str(live["prompt"])
 
 
 def test_tier_line_in_the_note_body_makes_it_cheap(world: Env, free: Free) -> None:
     st = run_to_gate(world, PLAN, IMPL, LIVE_OK, body="Do it.\nTier: cheap", done_check="true")
     assert st.extra["tier"] == "cheap"
-    assert implement_calls(world)[0]["model"] == "sonnet"
+    assert implement_calls(world)[0]["model"] == "opus"
 
 
-def test_private_repo_means_sonnet_alone(world: Env, free: Free) -> None:
+def test_private_repo_means_opus_alone(world: Env, free: Free) -> None:
     free.public = False
     st = run_to_gate(world, PLAN, IMPL, LIVE_OK, **CHEAP)
     prompt = str(implement_calls(world)[0]["prompt"])
@@ -65,7 +72,7 @@ def test_private_repo_means_sonnet_alone(world: Env, free: Free) -> None:
     assert "not public" in feed(world)
 
 
-def test_gateway_down_means_sonnet_alone(world: Env, free: Free) -> None:
+def test_gateway_down_means_opus_alone(world: Env, free: Free) -> None:
     free.up = False
     st = run_to_gate(world, PLAN, IMPL, LIVE_OK, **CHEAP)
     assert "claude-free -p" not in str(implement_calls(world)[0]["prompt"])
@@ -75,38 +82,40 @@ def test_gateway_down_means_sonnet_alone(world: Env, free: Free) -> None:
 def test_escalate_line_reruns_the_attempt_on_opus_with_the_reason(world: Env, free: Free) -> None:
     st = run_to_gate(world, PLAN, GIVE_UP, IMPL, LIVE_OK, **CHEAP)
     first, second = implement_calls(world)
-    assert (first["model"], second["model"]) == ("sonnet", "opus")
+    assert (first["model"], second["model"]) == ("opus", "opus")
+    assert (effort(first), effort(second)) == ("medium", "high")
     assert "needs a refactor across modules" in str(second["prompt"])
     assert "claude-free -p" not in str(second["prompt"])
     assert st.extra["escalated"] is True
     assert st.extra["escalate_reason"] == "needs a refactor across modules"
-    assert world.calls()[-1]["model"] == "opus"  # the live check goes on with the escalated model
+    assert (world.calls()[-1]["model"], effort(world.calls()[-1])) == ("opus", "high")  # live check goes on
     assert "escalated" in feed(world)
 
 
 def test_only_one_escalation_per_run(world: Env, free: Free) -> None:
     again = reply("Still stuck.\n\nESCALATE: nope\n\nD: partial")
     st = run_to_gate(world, PLAN, GIVE_UP, again, LIVE_OK, **CHEAP)
-    assert [c["model"] for c in implement_calls(world)] == ["sonnet", "opus"]
+    assert [c["model"] for c in implement_calls(world)] == ["opus", "opus"]
     assert st.extra["escalate_reason"] == "needs a refactor across modules"
 
 
 def test_a_failed_cheap_turn_escalates_the_retry(world: Env, free: Free) -> None:
     st = run_to_gate(world, PLAN, CRASH, IMPL, LIVE_OK, **CHEAP)
-    assert [c["model"] for c in implement_calls(world)] == ["sonnet", "opus"]
+    assert [c["model"] for c in implement_calls(world)] == ["opus", "opus"]
     assert st.extra["escalated"] is True
     assert "failed" in st.extra["escalate_reason"]
 
 
 def test_an_escalated_run_does_not_escalate_again_on_failure(world: Env, free: Free) -> None:
     st = run_to_gate(world, PLAN, GIVE_UP, CRASH, IMPL, LIVE_OK, **CHEAP)
-    assert [c["model"] for c in implement_calls(world)] == ["sonnet", "opus", "opus"]
+    assert [c["model"] for c in implement_calls(world)] == ["opus", "opus", "opus"]
     assert st.extra["escalate_reason"] == "needs a refactor across modules"
 
 
 def test_ordinary_note_is_untouched(world: Env, free: Free) -> None:
     st = run_to_gate(world, PLAN, IMPL, LIVE_OK, done_check="true")
     assert [c["model"] for c in implement_calls(world)] == ["opus"]
+    assert effort(implement_calls(world)[0]) is None
     assert "claude-free" not in str(implement_calls(world)[0]["prompt"])
     assert st.extra["tier"] == "normal"
     assert not {"free_models", "escalated"} & set(st.extra)

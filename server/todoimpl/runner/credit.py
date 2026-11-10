@@ -34,6 +34,7 @@ def build(  # noqa: PLR0913, PLR0917 - same signature as claude.build
     extra_dirs: tuple[Path, ...] = (),
     allow: tuple[str, ...] = (),
     model: str | None = None,  # noqa: ARG001 - credit turns are always MODEL; the parameter keeps one signature
+    effort: str | None = None,  # noqa: ARG001 - the SDK turn takes no effort; same signature as claude.build
 ) -> claude.Invocation:
     """Build a credit turn; NeedsYouError when the SDK venv or the key vanished since routing."""
     python, key = sdk.python(), read_key()

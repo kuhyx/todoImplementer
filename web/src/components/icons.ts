@@ -8,6 +8,7 @@ const PATHS = {
   cheap: "M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18zM8.5 12h7",
   check: "M5 12.5l4.5 4.5L19 7.5",
   close: "M6 6l12 12M18 6L6 18",
+  coached: "M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10c1 1 1 2 1 3h6c0-1 0-2 1-3a6 6 0 0 0-4-10z",
   escalated: "M12 20V5M6 11l6-6 6 6",
   failed: "M12 3l10 18H2zM12 10v5M12 18h.01",
   fixed: "M14 6a4 4 0 0 0-5 5l-6 6 3 3 6-6a4 4 0 0 0 5-5l-3 3-2-2z",
