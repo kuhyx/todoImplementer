@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from todoimpl.usage.events import iter_events, stream_files
+from todoimpl.usage.events import iter_events, per_file, stream_files
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -23,15 +23,22 @@ def session_costs(streams: list[Path]) -> list[tuple[float, float]]:
     best: dict[str | tuple[str, int], tuple[float, float]] = {}
     for stream in streams:
         mtime = stream.stat().st_mtime
-        for number, event in enumerate(iter_events(stream)):
-            cost = event.get("total_cost_usd")
-            if event.get("type") != "result" or not isinstance(cost, int | float):
-                continue
-            sid = event.get("session_id")
-            key = sid if isinstance(sid, str) and sid else (str(stream), number)
+        for sid, number, cost in per_file("costs", stream, _results):
+            key = sid or (str(stream), number)
             seen_cost, seen_mtime = best.get(key, (0.0, 0.0))
-            best[key] = (max(float(cost), seen_cost), max(mtime, seen_mtime))
+            best[key] = (max(cost, seen_cost), max(mtime, seen_mtime))
     return list(best.values())
+
+
+def _results(stream: Path) -> tuple[tuple[str, int, float], ...]:
+    """(session id or "", event number, cost) of every result event with a numeric cost in one stream."""
+    found = []
+    for number, event in enumerate(iter_events(stream)):
+        cost = event.get("total_cost_usd")
+        if event.get("type") == "result" and isinstance(cost, int | float):
+            sid = event.get("session_id")
+            found.append((sid if isinstance(sid, str) else "", number, float(cost)))
+    return tuple(found)
 
 
 def task_cost(run_dir: Path) -> float:

@@ -9,4 +9,3 @@ Ids are global and never reused; the row's test is named `test_t<N>_...`.
 | T203 | static.py 404ed `/usage` and `/usage/` (Astro emits usage/index.html) and only stamped the root index.html, so sub-pages had no csrf token or build id | tests/http/test_http_static_pages.py |
 | T1400 | Nested live-check shots ("shots/live2/v1.png") 404ed: the route and backend.shot only served `<run>/shots/<basename>` | tests/service/test_service_backend.py |
 | T1855 | The free-credits toggle is not task-scoped: POST /api/settings/credits-fallback must pass the same Origin and CSRF checks and a strict body | tests/http/test_http_settings.py |
-| T1909 | GET /api/umbrella/2d0704cd (an umbrella's own note id8) answered 400 because only `<id8>-<n>` card ids passed the id check | tests/http/test_http_umbrella_route.py |

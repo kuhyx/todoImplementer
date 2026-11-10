@@ -14,7 +14,6 @@ if TYPE_CHECKING:
 
 PATH = re.compile(r"/api/umbrella/([^/]+)(?:/log/([^/]+))?")
 CARD_ID = re.compile(r"[A-Za-z0-9]{8}-[0-9]+")
-NOTE_ID = re.compile(r"[A-Za-z0-9]{8}(?:-[0-9]+)?")  # an umbrella is a whole note: its id8 or a card id
 
 
 def route(path: str, backend: Backend) -> Callable[[], Reply] | None:
@@ -27,8 +26,8 @@ def route(path: str, backend: Backend) -> Callable[[], Reply] | None:
 
 def reply(backend: Backend, id8: str, child: str | None) -> Reply:
     """Answer the track object, or (with a child id) the tail of its newest worker log."""
-    if not NOTE_ID.fullmatch(id8) or (child is not None and not CARD_ID.fullmatch(child)):
-        return error_reply("bad_request", "ids must look like abcd1234 or abcd1234-0")
+    if not CARD_ID.fullmatch(id8) or (child is not None and not CARD_ID.fullmatch(child)):
+        return error_reply("bad_request", "ids must look like abcd1234-0")
     if child is None:
         found = backend.umbrella(id8)
         return json_reply(found) if found is not None else error_reply("not_found", "no umbrella run")

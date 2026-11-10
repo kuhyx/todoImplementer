@@ -10,7 +10,7 @@ from todoimpl.credits import route
 from todoimpl.usage import oauth
 from todoimpl.usage.autonomy import autonomy_summary
 from todoimpl.usage.cost import session_costs
-from todoimpl.usage.events import iter_events, stream_files
+from todoimpl.usage.events import iter_events, per_file, stream_files
 from todoimpl.usage.limits import limit_state
 
 if TYPE_CHECKING:
@@ -39,21 +39,36 @@ def _fold_rate_limits(streams: list[Path]) -> tuple[dict[str, Any], dict[str, An
     windows: dict[str, Any] = dict.fromkeys(WINDOWS)
     overage: dict[str, Any] = {"status": "unknown", "using": False}
     for stream in sorted(streams, key=lambda p: (p.stat().st_mtime, p.name)):
-        for event in iter_events(stream):
-            info = event.get("rate_limit_info")
-            if event.get("type") != "rate_limit_event" or not isinstance(info, dict):
-                continue
-            unified = info.get("unifiedWindows")
-            for key in WINDOWS:
-                raw = unified.get(key) if isinstance(unified, dict) else None
-                if raw is None and info.get("rateLimitType") == key:
-                    raw = info
-                windows[key] = _window(raw) or windows[key]
-            if isinstance(info.get("overageStatus"), str):
-                overage["status"] = info["overageStatus"]
-            if isinstance(info.get("isUsingOverage"), bool):
-                overage["using"] = info["isUsingOverage"]
+        file_windows, status, using = per_file("rate", stream, _file_rate_limits)
+        for key in WINDOWS:
+            windows[key] = file_windows[key] or windows[key]
+        if status is not None:
+            overage["status"] = status
+        if using is not None:
+            overage["using"] = using
     return windows, overage
+
+
+def _file_rate_limits(stream: Path) -> tuple[dict[str, Any], str | None, bool | None]:
+    """Return what one stream last said: latest valid value per window, overage status and overage use."""
+    windows: dict[str, Any] = dict.fromkeys(WINDOWS)
+    status: str | None = None
+    using: bool | None = None
+    for event in iter_events(stream):
+        info = event.get("rate_limit_info")
+        if event.get("type") != "rate_limit_event" or not isinstance(info, dict):
+            continue
+        unified = info.get("unifiedWindows")
+        for key in WINDOWS:
+            raw = unified.get(key) if isinstance(unified, dict) else None
+            if raw is None and info.get("rateLimitType") == key:
+                raw = info
+            windows[key] = _window(raw) or windows[key]
+        if isinstance(info.get("overageStatus"), str):
+            status = info["overageStatus"]
+        if isinstance(info.get("isUsingOverage"), bool):
+            using = info["isUsingOverage"]
+    return windows, status, using
 
 
 def _live_windows(root: Path, folded: dict[str, Any], now: float) -> dict[str, Any]:
