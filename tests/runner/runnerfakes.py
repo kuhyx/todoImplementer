@@ -53,6 +53,10 @@ def executable(path: Path, text: str) -> None:
     path.chmod(0o755)
 
 
+# `gh api repos/<r> --jq .archived`: true for a repo listed in $FAKE_GH_ARCHIVED; no network ever.
+GH_SHIM = '#!/bin/sh\ncase " $FAKE_GH_ARCHIVED " in *" ${2#repos/} "*) echo true ;; *) echo false ;; esac\n'
+
+
 def make_env(tmp: Path) -> tuple[Env, dict[str, str]]:
     """Build the world; return it and the env vars a test must set."""
     world = Env(tmp, tmp / "home", tmp / "bin", tmp / "fake", tmp / "root", tmp / "home" / "src")
@@ -61,6 +65,7 @@ def make_env(tmp: Path) -> tuple[Env, dict[str, str]]:
     executable(world.bin / "claude", f'#!/bin/sh\nexec "{sys.executable}" "{SHIMS / "claude"}" "$@"\n')
     executable(world.bin / "git", f'#!/bin/sh\nexec "{SHIMS / "git_push_refuse"}" "$@"\n')
     executable(world.bin / "capped.sh", '#!/bin/sh\nexec "$@"\n')
+    executable(world.bin / "gh", GH_SHIM)
     env = {
         "HOME": str(world.home),
         "PATH": f"{world.bin}:{os.environ['PATH']}",
@@ -166,13 +171,13 @@ class FakeClient:
         self.abandoned.append(card)
         return True
 
-    def tick_child(self, card: str, cid: str) -> None:
+    def tick_child(self, card: str, cid: str, mark: str = "x") -> None:
         """Tick an umbrella child's checkbox in the stored note (or fail when asked)."""
         if self.fail_tick:
             msg = "tick refused"
             raise TodoError(msg)
         note = card.partition("-")[0]
-        self.tasks[note] = replace(self.tasks[note], body=tick(self.tasks[note].body, cid))
+        self.tasks[note] = replace(self.tasks[note], body=tick(self.tasks[note].body, cid, mark))
         self.ticked.append(cid)
 
     def item(self, id8: str, index: int = 0) -> Item:

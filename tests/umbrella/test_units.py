@@ -61,7 +61,7 @@ class Parent:
     ticks: list[tuple[str, str]]
     added: list[tuple[str, str, str]]
 
-    def tick_child(self, card: str, cid: str) -> None:
+    def tick_child(self, card: str, cid: str, mark: str = "x") -> None:
         self.ticks.append((card, cid))
 
     def add_task(self, repo: str, title: str, body: str = "") -> Task:

@@ -3,7 +3,7 @@
     # <title>
     Umbrella: per-repo
     Tier: cheap
-    - [ ] kuhyx/<repo> (<orig id8>)
+    - [ ] kuhyx/<repo> (<orig id8>)      `[x]` done, `[-]` dropped (never runs, e.g. archived repo)
     ## kuhyx/<repo> (<orig id8>)
     <the original note's full text>
 
@@ -18,7 +18,7 @@ from dataclasses import dataclass
 _MARKER = re.compile(r"^Umbrella:\s*per-repo\s*$", re.IGNORECASE)
 _TIER = re.compile(r"^Tier:\s*(\S+)\s*$", re.IGNORECASE)
 _HEAD = re.compile(r"^## (?:\[x\] )?(?P<repo>kuhyx/[\w.-]+) \((?P<key>[A-Za-z0-9]{8}(?:-\d+)?)\)\s*$")
-_BOX = re.compile(r"^- \[(?P<mark>[ xX])\] (?P<repo>kuhyx/[\w.-]+) \((?P<key>[A-Za-z0-9]{8}(?:-\d+)?)\)\s*$")
+_BOX = re.compile(r"^- \[(?P<mark>[ xX-])\] (?P<repo>kuhyx/[\w.-]+) \((?P<key>[A-Za-z0-9]{8}(?:-\d+)?)\)\s*$")
 _SCAN = re.compile(r"Scan[^:\n]*:\s*(\d+)\s+items?", re.IGNORECASE)
 _CHECK = re.compile(r"^(?:member )?done_check:\s*`?(.*?)`?\s*$", re.IGNORECASE)
 _FENCE = "```"
@@ -48,6 +48,7 @@ class Child:
     done_check: str | None
     done: bool
     cid: str = ""
+    dropped: bool = False  # `- [-]`: off the umbrella (T1924); `done` is True too
 
     @property
     def label(self) -> str:
@@ -106,13 +107,13 @@ def _title(text: str, repo: str) -> str:
     return repo
 
 
-def _boxes(lines: list[str], open_: list[bool], end: int) -> list[tuple[int, str, bool]]:
-    """Return (line, key, ticked) of every header checkbox, in order."""
+def _boxes(lines: list[str], open_: list[bool], end: int) -> list[tuple[int, str, str]]:
+    """Return (line, key, mark) of every header checkbox, in order."""
     out = []
     for i, line in enumerate(lines[:end]):
         found = _BOX.match(line.strip()) if open_[i] else None
         if found:
-            out.append((i, found.group("key"), found.group("mark") in "xX"))
+            out.append((i, found.group("key"), found.group("mark")))
     return out
 
 
@@ -130,8 +131,8 @@ def children(body: str, umbrella: str = "") -> list[Child]:
         check = next((m.group(1) for line in text.split("\n") if (m := _CHECK.match(line.strip()))), None)
         key, repo = head.group("key"), head.group("repo")
         occ = seen[key] = seen.get(key, -1) + 1
-        same = [ticked for _, k, ticked in boxes if k == key]
-        done = occ < len(same) and same[occ]
+        same = [mark for _, k, mark in boxes if k == key]
+        mark = same[occ] if occ < len(same) else " "
         found.append(
             Child(
                 key,
@@ -142,8 +143,9 @@ def children(body: str, umbrella: str = "") -> list[Child]:
                 _title(text, repo),
                 scan_size(text),
                 check or None,
-                done,
+                mark != " ",
                 f"{umbrella}-{n + 1}",
+                mark == "-",
             )
         )
     return found
@@ -156,13 +158,13 @@ def ordered(kids: list[Child]) -> list[Child]:
     )
 
 
-def tick(body: str, cid: str) -> str:
-    """Return the body with child `cid`'s header checkbox ticked; unchanged when absent or already ticked."""
+def tick(body: str, cid: str, mark: str = "x") -> str:
+    """Return the body with child `cid`'s open header checkbox set to `mark` (`x` done, `-` dropped)."""
     lines = body.split("\n")
     open_ = _outside_fences(lines)
     seen: dict[str, int] = {}
     for i, key, _ in _boxes(lines, open_, _header_end(lines, open_)):
         seen[key] = seen.get(key, -1) + 1
         if _cid(key, seen[key]) == cid:
-            lines[i] = lines[i].replace("[ ]", "[x]", 1)
+            lines[i] = lines[i].replace("[ ]", f"[{mark}]", 1)
     return "\n".join(lines)

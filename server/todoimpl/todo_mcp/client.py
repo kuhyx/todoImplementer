@@ -110,9 +110,9 @@ class TodoClient:
         if all(entry.status == "done" for entry in current) or not sections(task.body):
             self.close_task(item.note_id, evidence)
 
-    def tick_child(self, id8: str, key: str) -> None:
-        """Tick child `key`'s checkbox in an umbrella note; no write when it is already ticked."""
+    def tick_child(self, id8: str, key: str, mark: str = "x") -> None:
+        """Set child `key`'s open checkbox in an umbrella note to `mark`; no write when it is not open."""
         task = self.get_task(id8)
-        body = tick(task.body, key)
+        body = tick(task.body, key, mark)
         if body != task.body:
             self.update_task(id8, body=body)

@@ -107,10 +107,10 @@ class ItemView:
             item = Item(part.note_id, part.index, part.title, part.body, task.repo, "todo", part.done_check)
             self._client.close_item(item, evidence)
 
-    def tick_child(self, card: str, cid: str) -> None:
-        """Tick child `cid`'s checkbox in the umbrella note behind `card`."""
+    def tick_child(self, card: str, cid: str, mark: str = "x") -> None:
+        """Tick child `cid`'s checkbox in the umbrella note behind `card` (`mark` `-` drops it)."""
         with self._tick:
-            self._client.tick_child(self._note_of(card), cid)
+            self._client.tick_child(self._note_of(card), cid, mark)
         self._cache.poke()
 
     def abandon(self, card: str) -> bool:

@@ -100,3 +100,10 @@ def test_sections_of_one_source_note_get_distinct_ids() -> None:
     assert [c.done for c in note.children(second)] == [False, True]
     assert note.tick(body, "aaaa1111-2") == body
     assert note.tick(body, "garbage") == body
+
+
+def test_t1924_a_dropped_box_counts_as_done_and_is_never_ticked() -> None:
+    body = sample().replace("- [ ] kuhyx/beta (bbbb2222)", "- [-] kuhyx/beta (bbbb2222)")
+    kids = note.children(body)
+    assert [(c.done, c.dropped) for c in kids] == [(False, False), (True, True), (False, False)]
+    assert note.tick(body, "bbbb2222-0") == body

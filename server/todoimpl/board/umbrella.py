@@ -57,6 +57,7 @@ def _rows(task: TaskLike, run: RunState | None) -> list[dict[str, Any]]:
             "issues": 0,
         }
         for c in children(task.body, task.id.partition("-")[0])
+        if not c.dropped
     ]
 
 

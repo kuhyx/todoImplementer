@@ -30,6 +30,10 @@ Tier: cheap
   the new body, `TodoClient.tick_child`, one at a time under a lock in `ItemView`) when the child ships. When every
   child is done the note is closed with `close_task` and evidence (`client.close_item` closes an umbrella directly:
   it never marks a `## [x]` section).
+- Dropped child = `- [-]` box (T1924): counts as done for closing, is never ticked, never runs, and leaves the
+  record, its round and the card's counts; a drive stops its turn and frees its repo. Its section stays, so the
+  positional ids of the rest hold. A child whose repo `gh api repos/<r>` reports archived (every push refused) is
+  dropped when a round would claim it, once per drive; a gh failure reads as not archived.
 - `Tier:` is read (`note.tier`) and shown in the record; every umbrella uses the ramp.
 - **Written by "Merge similar tasks"** (`DOCS-merge.md`, `merge/text.py`): the heading label is the source note id8,
   or the card id `<id8>-<n>` when two children are sections of one note (that label is then the child id as it

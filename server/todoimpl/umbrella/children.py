@@ -30,7 +30,7 @@ log = logging.getLogger("todoimpl.runner")
 class Ticker(Protocol):
     """The parent client as a child needs it: tick a checkbox, add a follow-up note."""
 
-    def tick_child(self, card: str, cid: str) -> None: ...  # noqa: D102
+    def tick_child(self, card: str, cid: str, mark: str = "x") -> None: ...  # noqa: D102
     def add_task(self, repo: str, title: str, body: str = "") -> Task: ...  # noqa: D102
 
 

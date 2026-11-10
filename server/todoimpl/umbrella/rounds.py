@@ -44,7 +44,7 @@ def run_round(u: Umbrella, batch: list[str] | None) -> None:
         }  # fmt: skip
         d.save()
     cur = rec["current"]
-    kids = [u.kids[cid] for cid in cur["ids"]]
+    kids = [u.kids[cid] for cid in cur["ids"] if cid in u.kids]  # a dropped child leaves its round (T1924)
     if cur["verdicts"] is None:  # the manager still has to run: it and the workers need the network
         outage.check_network(d)
     _prepare(u, cur, kids)

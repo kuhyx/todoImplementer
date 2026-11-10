@@ -7,6 +7,7 @@ Children ship themselves when green (T1923). Rests at `gate` (a child whose Ship
 
 from __future__ import annotations
 
+import logging
 import threading
 from typing import TYPE_CHECKING, cast
 
@@ -16,7 +17,7 @@ from todoimpl.runner.files import NeedsYouError
 from todoimpl.runner.pipeline import WORK_STAGES, CancelledError, LimitHitError
 from todoimpl.todo_mcp.model import TodoError
 
-from . import note
+from . import archived, note
 from . import store as ustore
 from .children import Pool, Ticker
 from .rounds import run_round
@@ -25,6 +26,7 @@ from .view import child_state, rows
 if TYPE_CHECKING:
     from .driver import UmbrellaDriver
 
+log = logging.getLogger("todoimpl.runner")
 RESTING = ("paused_limit", "paused_retry")
 INTERRUPTED = "Ship was interrupted by a restart: check origin and the note before shipping again"
 REPO_POLL = 2.0
@@ -38,7 +40,10 @@ class Umbrella:
         self.d = d
         self.run_dir = d.ctx.run_dir
         self.rec = ustore.record(d.state)
-        self.kids = {k.cid: k for k in note.children(d.item.body, d.state.task_id.partition("-")[0])}
+        found = note.children(d.item.body, d.state.task_id.partition("-")[0])
+        self.kids = {k.cid: k for k in found if not k.dropped}
+        self.dropped = [k.cid for k in found if k.dropped]  # T1924: off the umbrella, never run
+        self.asked: set[str] = set()  # children whose repo was checked for archived in this drive
         self.pool = Pool(
             d.ctx, d.fan, cast("Ticker", d.ctx.client), d.state.task_id, self.kids, self._announce
         )
@@ -93,6 +98,12 @@ class Umbrella:
                 store.save(ustore.child_dir(self.run_dir, cid), st)
                 self.pool.start(cid, st)
 
+    def _drop(self) -> None:
+        """Stop a dropped child's turn and free its repo; the record and the rounds no longer hold it."""
+        for cid in self.dropped:
+            adopt.abandon(ustore.child_dir(self.run_dir, cid))
+            self.d.ctx.locks.release(cid)
+
     def _let_go(self) -> None:
         """Free the repo locks (and wait marks) of children that never started or have ended."""
         for cid in self.kids:
@@ -108,9 +119,31 @@ class Umbrella:
         locks = self.d.ctx.locks
         batch: list[str] = []
         for cid in self.pending():
-            if len(batch) < width and locks.acquire(self.kids[cid].repo, cid) is None:
+            if (
+                len(batch) < width
+                and not self._archived(cid)
+                and locks.acquire(self.kids[cid].repo, cid) is None
+            ):
                 batch.append(cid)
         return batch
+
+    def _archived(self, cid: str) -> bool:
+        """Drop a child whose repo is archived (asked once a drive): box `[-]`, out of the record."""
+        if cid in self.asked:
+            return False
+        self.asked.add(cid)
+        kid = self.kids[cid]
+        if not archived.archived(kid.repo):
+            return False
+        try:
+            cast("Ticker", self.d.ctx.client).tick_child(self.d.state.task_id, kid.label, mark="-")
+        except TodoError as exc:  # dropped for this drive anyway; the next drive asks again
+            log.warning("dropping %s: %s", kid.repo, exc)
+        self.d.activity(f"{kid.repo}: archived, dropped")
+        del self.kids[cid]
+        self.rec["kids"] = [k for k in self.rec["kids"] if k["id"] != cid]
+        self.d.save()
+        return True
 
     def go(self) -> str | None:
         """Run the whole umbrella drive; return the next stage."""
@@ -118,6 +151,7 @@ class Umbrella:
         shipping = d.state.stage == "shipping"
         retry_failed = bool(d.state.extra.pop("retry_children", False))
         self.sync()
+        self._drop()
         try:
             self.resume(shipping=shipping, retry_failed=retry_failed)
             if self.rec.get("current"):
