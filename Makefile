@@ -41,12 +41,13 @@ types:
 # file; `coverage` merges them and still enforces fail_under = 100 over server/, scripts/, deploy/ and mcp/.
 # Run one chunk with `make test-board`; all of them, then the gate, with `make test`.
 CHUNKS := resilience gateway apikey credits board http service todo_mcp lessons usage prompts tokens tokens_audit tokens_api mcp_server deploy merge \
-	runner runner_mid runner_flow runner_tail umbrella root
+	runner runner_mid runner_flow runner_ship runner_tail umbrella root
 CHUNK_PATH_root := tests/test_*.py
-# Every turn now starts a host process, so the runner dir is four chunks (a-f, g-p, q-s, t-z) to stay under 60 s.
+# Every turn now starts a host process, so the runner dir is five chunks to stay under 60 s.
 CHUNK_PATH_runner := tests/runner --ignore-glob='tests/runner/test_runner_[g-z]*'
 CHUNK_PATH_runner_mid := tests/runner/test_runner_[g-p]*.py
-CHUNK_PATH_runner_flow := tests/runner/test_runner_[q-s]*.py
+CHUNK_PATH_runner_flow := tests/runner/test_runner_[qr]*.py tests/runner/test_runner_sc*.py
+CHUNK_PATH_runner_ship := tests/runner/test_runner_s[e-z]*.py
 CHUNK_PATH_runner_tail := tests/runner/test_runner_[t-z]*.py
 
 test: cov-clean
