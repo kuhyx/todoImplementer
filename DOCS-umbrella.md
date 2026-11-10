@@ -84,7 +84,7 @@ Raw `claude-free -p <task>` loads kuhy's whole `~/.claude`; its spec gate answer
 `policy.HOOKS_OFF`, `--permission-mode bypassPermissions`, `--disallowedTools` for `git push`, and the fixed
 preamble "You are a non-interactive worker...never ask questions, never run a spec gate". stdout and stderr go to
 the log. Success is the **worktree diff**, never the turn's `subtype: success`: exit 0 = the worktree changed, 3 = no
-edit, 4 = no `claude-free`. A turn with no diff and a `❓` round logs `spec-gate grilling instead of work` (phase
+edit, 4 = no `claude-free`, 5 = killed by a signal on all 3 attempts (`DOCS-resilience.md`; each attempt is a line of `<run dir>/free-workers.jsonl`). A turn with no diff and a `❓` round logs `spec-gate grilling instead of work` (phase
 `start`). The single-note cheap tier (`prompts/tier.py`) uses the same command.
 
 ## Coaching: the manager fixes the cause, not the work
@@ -109,7 +109,7 @@ wrong, action = what changed in the prompt or context). Only then may the manage
 ## Issue log: everything that goes wrong with the free models
 
 `<run dir>/free-issues.jsonl`, one JSON line per problem:
-`{ts, child, phase (start|edit|tool-call|permission|checks|output|prompt), model, symptom (<=500 chars), action, fixed}`.
+`{ts, child, phase (start|edit|tool-call|permission|checks|output|prompt|killed), model, symptom (<=500 chars), action, fixed}`.
 
 - The manager is told to append a line for every problem and for every child it reports `fixed` (the worker log
   names the answering model). The server checks after the manager turn: a `fixed` child with no line since the round

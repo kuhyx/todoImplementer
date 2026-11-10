@@ -7,6 +7,8 @@ import threading
 from dataclasses import asdict, dataclass
 from typing import TYPE_CHECKING, Literal
 
+from todoimpl import atomic
+
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -56,6 +58,4 @@ def latest_lesson(run_dir: Path) -> Lesson | None:
 def save_lessons(run_dir: Path, lessons: list[Lesson]) -> None:
     """Atomic rewrite (tmp + replace) so readers never see a torn file."""
     path = run_dir / LESSONS_FILE
-    tmp = path.with_suffix(".json.tmp")
-    tmp.write_text(json.dumps({"lessons": [x.to_dict() for x in lessons]}, indent=2) + "\n", encoding="utf-8")
-    tmp.replace(path)
+    atomic.write_text(path, json.dumps({"lessons": [x.to_dict() for x in lessons]}, indent=2) + "\n")

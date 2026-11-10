@@ -5,7 +5,7 @@ with a grilling round (the `\u2753` question card) and no edit (smoke test 2026-
 with the board's hooks-off settings and a fixed no-questions preamble, writes stdout and stderr to the log,
 and judges success by the worktree diff, never by the turn's `subtype: success`. A turn that ends with no
 diff and a grilling round is written to the issue log (`--issues <run dir>`, umbrella/issues.py).
-Exit 0 = the worktree changed; 3 = no work; 4 = no `claude-free`.
+Exit 0 = the worktree changed; 3 = no work; 4 = no `claude-free`; 5 = killed by a signal on every attempt.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ import sys
 import time
 from pathlib import Path
 
-from todoimpl.umbrella import issues
+from todoimpl.umbrella import issues, workers
 
 from .policy import HOOKS_OFF
 
@@ -33,7 +33,11 @@ TIMEOUT = 3600.0
 TAIL = 500
 NOISE = ("⚠", "Warning:", "[claude-code:", "Claude Code doesn't recognize")  # startup lines, not the answer
 MODEL = re.compile(r'"model":"([^"]+)"')
-NO_WORK, NO_TOOL = 3, 4
+NO_WORK, NO_TOOL, KILLED = 3, 4, 5
+TIMED_OUT = 124  # the coreutils `timeout` convention
+SIGNAL_EXIT = 128
+MAX_ATTEMPTS = 3
+PAUSE = 5.0  # seconds before the next attempt after a kill, times the attempt number
 
 
 def command() -> str:
@@ -54,8 +58,29 @@ def _state(worktree: Path) -> tuple[str, str]:
     return _git(worktree, "rev-parse", "HEAD"), _git(worktree, "status", "--porcelain")
 
 
+def _killed(code: int) -> bool:
+    """Say whether a signal ended the worker: Python reports -N, a shell wrapper 128 + N."""
+    return code < 0 or code >= SIGNAL_EXIT
+
+
+def _attempt(argv: list[str], worktree: Path, log: Path) -> int:
+    with log.open("a", encoding="utf-8") as out:
+        try:
+            return subprocess.run(  # noqa: S603 - argv list, no shell
+                argv, cwd=worktree, stdout=out, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+                timeout=TIMEOUT, check=False,
+            ).returncode  # fmt: skip
+        except subprocess.TimeoutExpired:
+            out.write(f"\n[timed out after {TIMEOUT:g} s]\n")
+            return TIMED_OUT
+
+
 def run(worktree: Path, prompt_file: Path, log: Path, *, run_dir: Path | None = None, child: str = "") -> int:
-    """Run one worker; `run_dir` holds free-issues.jsonl, `child` names the repo. Return the exit code."""
+    """Run one worker; `run_dir` holds free-issues.jsonl, `child` names the repo. Return the exit code.
+
+    A worker killed by a signal (OOM, SIGKILL) is logged as phase `killed` and started again, up to
+    MAX_ATTEMPTS times; one that is killed every time exits KILLED whatever it left in the tree.
+    """
     tool = shutil.which("claude-free")
     if tool is None:
         _issue(run_dir, child, "start", "claude-free is not installed")
@@ -64,15 +89,23 @@ def run(worktree: Path, prompt_file: Path, log: Path, *, run_dir: Path | None = 
     argv = [tool, "-p", f"{PREAMBLE}\n\n{prompt_file.read_text(encoding='utf-8')}", "--permission-mode"]
     argv += ["bypassPermissions", "--disallowedTools", *DENY, "--settings", HOOKS_OFF]
     log.parent.mkdir(parents=True, exist_ok=True)
-    with log.open("a", encoding="utf-8") as out:
-        try:
-            code = subprocess.run(  # noqa: S603 - argv list, no shell
-                argv, cwd=worktree, stdout=out, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
-                timeout=TIMEOUT, check=False,
-            ).returncode  # fmt: skip
-        except subprocess.TimeoutExpired:
-            code = -1
-            out.write(f"\n[timed out after {TIMEOUT:g} s]\n")
+    attempt = 0
+    while True:
+        attempt += 1
+        began = time.time()
+        code = _attempt(argv, worktree, log)
+        killed = _killed(code)
+        if run_dir is not None:
+            workers.record(run_dir, {
+                "child": child, "attempt": attempt, "start": began, "end": time.time(), "exit": code,
+                "killed": killed, "log": str(log),
+            })  # fmt: skip
+        if not killed:
+            break
+        _issue(run_dir, child, "killed", f"worker killed by a signal (exit {code}), attempt {attempt}")
+        if attempt == MAX_ATTEMPTS:
+            return KILLED
+        time.sleep(PAUSE * attempt)
     text = log.read_text(encoding="utf-8", errors="replace")
     changed = _state(worktree) != before
     if not changed and GRILL in text:

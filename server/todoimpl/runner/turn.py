@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Any
 from todoimpl.board import state as store
 
 from . import adopt, allowlist, claude, credit, files, guard, launch, orphans, session
-from .files import NeedsYouError
+from .files import KilledError
 from .stream import StreamParser, TurnResult, state_tag
 
 if TYPE_CHECKING:
@@ -114,6 +114,7 @@ def _apply(env: TurnEnv, state: RunState, rec: orphans.Record, res: TurnResult, 
     state.extra["route"] = route
     state.cost_usd = round(state.cost_usd + spent, 6)
     state.extra["consumed_turn"] = stem
+    state.extra["last_exit"] = code
     store.save(env.run_dir, state)
     env.publish({"type": "cost", "cost_usd": state.cost_usd})
 
@@ -173,6 +174,6 @@ def run_turn(  # noqa: PLR0913, PLR0917 - the turn environment plus its route
             lost += 1
             if lost >= MAX_LOST:
                 msg = f"The {role} turn was lost {lost} times: its host keeps dying; read the journal"
-                raise NeedsYouError(msg)
+                raise KilledError(msg)
         elif rec.role == role:
             return res

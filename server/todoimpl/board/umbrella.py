@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from .state import RunState
     from .types import TaskLike
 
+ROUND_KEYS = ("n", "width", "next", "children")
 VIEW = "umbrella_view"
 RECORD = "umbrella"
 _BUCKETS = {
@@ -82,7 +83,9 @@ def detail(task: TaskLike, run: RunState | None) -> dict[str, Any] | None:
     if not is_umbrella(task.body):
         return None
     record = _record(run)
-    rounds = list(record.get("rounds", []))
+    rounds = [
+        {k: r[k] for k in ROUND_KEYS} for r in record.get("rounds", [])
+    ]  # timestamps are for the tracking view
     return {
         "width": int(record.get("width", 1)),
         "round": len(rounds),

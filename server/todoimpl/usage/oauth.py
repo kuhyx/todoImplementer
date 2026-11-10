@@ -15,6 +15,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from todoimpl import atomic
+
 URL = "https://api.anthropic.com/api/oauth/usage"
 TIMEOUT = 15.0
 FILE = "usage-probe.json"
@@ -109,9 +111,7 @@ def save(root: Path, probe: Probe) -> None:
         "five_hour": _dump(probe.five_hour),
         "seven_day": _dump(probe.seven_day),
     }
-    tmp = root / f".{FILE}.tmp"
-    tmp.write_text(json.dumps(data) + "\n", encoding="utf-8")
-    tmp.replace(root / FILE)
+    atomic.write_text(root / FILE, json.dumps(data) + "\n")
 
 
 def _stored(raw: object) -> Window | None:

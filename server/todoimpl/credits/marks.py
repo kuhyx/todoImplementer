@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any
 
+from todoimpl import atomic
+
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -13,10 +15,7 @@ ALERT_FILE = "overage-alert.json"
 
 
 def _write(path: Path, data: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(f".{path.name}.tmp")
-    tmp.write_text(json.dumps(data) + "\n", encoding="utf-8")
-    tmp.replace(path)
+    atomic.write_text(path, json.dumps(data) + "\n")
 
 
 def _read(path: Path) -> dict[str, Any]:

@@ -31,6 +31,8 @@
       "anyOf": [{"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"}, {"type": "null"}],
       "description": "paused_limit and paused_retry: when to resume."
     },
+    "retry_kind": {"enum": ["network", "gateway", "killed", "crash", "todo", "turn"], "description": "Why a paused_retry run rests (DOCS-resilience.md): no internet, gateway unreachable, a signal killed the turn, a crash, the todo app unreachable, or another transient turn failure."},
+    "retry_reason": {"type": "string", "description": "The text behind retry_kind (at most 120 characters)."},
     "route": {"enum": ["plan", "credits"], "description": "Route of the latest turn (set after a turn ran): plan = Max subscription, credits = free API credits."},
     "tier": {"enum": ["normal", "cheap"], "description": "Decided at the first implement-role turn: cheap = the note has a `Tier: cheap` line or the text-free (textgate-rework) title, so Sonnet manages free models (DOCS-tiers.md)."},
     "free_models": {"type": "boolean", "description": "The server's verdict before the latest cheap implement turn: public repo and a live gateway."},

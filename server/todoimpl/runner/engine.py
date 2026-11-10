@@ -219,8 +219,8 @@ class Engine:
             item = self.client.get_task(card).item
         except TodoError as exc:
             if retry.is_transient(str(exc)):
-                wait = retry.later(st, self.clock(), f"todo app unreachable: {exc}")
-                retry.pause(st, *wait.args)
+                wait = retry.later(st, self.clock(), f"todo app unreachable: {exc}", "todo")
+                retry.pause(st, wait.until, wait.why, wait.kind)
             else:
                 st.extra["failed_stage"] = st.stage
                 st.error = f"The todo app could not be read: {exc}"

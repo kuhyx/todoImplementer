@@ -65,10 +65,10 @@ def test_t1203_a_silent_kill_is_a_crash_that_recovers(world: Env) -> None:
         sched.close()
 
 
-def test_t1204_backoff_is_1m_5m_30m_then_hourly(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_t1204_backoff_is_1_2_5_10_then_every_30_minutes(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(retry, "BACKOFF", retry.DEFAULT_BACKOFF)
     monkeypatch.setattr(retry, "LONG_WAIT", retry.DEFAULT_LONG_WAIT)
-    assert [retry.delay(n) for n in range(6)] == [60, 300, 1800, 3600, 3600, 3600]
+    assert [retry.delay(n) for n in range(7)] == [60, 120, 300, 600, 1800, 1800, 1800]
 
 
 @pytest.mark.parametrize(

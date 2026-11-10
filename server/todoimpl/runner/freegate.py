@@ -30,6 +30,7 @@ class Verdict:
     allowed: bool
     why: str = ""
     detail: str = ""  # the exact probe error behind a dead gateway, for the free-issue log
+    unreachable: bool = False  # nothing answered at all (refused, timed out): the gateway may come back
 
 
 def _public(checker: str, worktree: Path) -> bool:
@@ -42,8 +43,8 @@ def _public(checker: str, worktree: Path) -> bool:
     return done.returncode == 0
 
 
-def _gateway_error(key: str) -> str | None:
-    """Probe the gateway; None when it answers, else the exact error text."""
+def _gateway_error(key: str) -> tuple[str, bool] | None:
+    """Probe the gateway; None when it answers, else (the exact error text, whether nothing answered)."""
     base = os.environ.get("TODOIMPL_FREE_GATEWAY") or GATEWAY
     request = urllib.request.Request(  # noqa: S310 - loopback gateway URL
         f"{base}/v1/models", headers={"Authorization": f"Bearer {key}"}
@@ -52,9 +53,9 @@ def _gateway_error(key: str) -> str | None:
         with urllib.request.urlopen(request, timeout=PROBE_TIMEOUT):  # noqa: S310
             return None
     except urllib.error.HTTPError as exc:
-        return f"gateway probe: HTTP {exc.code} from {base}/v1/models"
+        return f"gateway probe: HTTP {exc.code} from {base}/v1/models", False
     except OSError as exc:  # URLError, timeouts and refused connections are all OSErrors
-        return f"gateway probe: {type(exc).__name__}: {exc}"[:500]
+        return f"gateway probe: {type(exc).__name__}: {exc}"[:500], True
 
 
 def check(worktree: Path) -> Verdict:
@@ -71,5 +72,7 @@ def check(worktree: Path) -> Verdict:
     if not key:
         return Verdict(allowed=False, why="no gateway key")
     if (error := _gateway_error(key)) is not None:
-        return Verdict(allowed=False, why="the free-model gateway is down", detail=error)
+        return Verdict(
+            allowed=False, why="the free-model gateway is down", detail=error[0], unreachable=error[1]
+        )
     return Verdict(allowed=True)

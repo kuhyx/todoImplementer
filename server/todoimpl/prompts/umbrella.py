@@ -34,7 +34,8 @@ WORKERS = (
 WORKER_LINE = "  <worker command> <worktree> <task file> <log> --issues <run dir> --child kuhyx/<repo>"
 WORKER_NOTE = (
     "It runs the model with hooks off and a no-questions preamble, writes everything to <log>, and exits 0 "
-    "only when the worktree changed (3: no edit). Judge a worker by `git diff` and the checks, never by "
+    "only when the worktree changed (3: no edit; 5: killed by a signal on every retry, so finish the child "
+    "yourself and report `fixed`, not `escalate`). Judge a worker by `git diff` and the checks, never by "
     "what it says."
 )
 WAIT = (

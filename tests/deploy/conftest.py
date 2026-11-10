@@ -8,12 +8,22 @@ from pathlib import Path
 import pytest
 from deploy_testkit import Env, Stubber
 
+LOGINCTL = """#!/bin/bash
+echo "loginctl $*" >> "$STUB_LOG"
+case "$*" in
+  *enable-linger*) touch "$STUB_LOG.linger" ;;
+  *show-user*) if [[ -e "$STUB_LOG.linger" ]]; then echo yes; else echo "${LINGER:-yes}"; fi ;;
+esac
+"""
+
 
 @pytest.fixture
 def stub_bin(tmp_path: Path) -> tuple[Path, Stubber]:
     """Return a bin dir for PATH plus a function that writes a logging stub into it."""
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
+    (bin_dir / "loginctl").write_text(LOGINCTL)  # lingering on, unless a test flips LINGER
+    (bin_dir / "loginctl").chmod(0o755)
 
     def stub(name: str, body: str = "") -> None:
         path = bin_dir / name

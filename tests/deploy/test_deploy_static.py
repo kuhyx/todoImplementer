@@ -48,7 +48,8 @@ def test_unit_file_contract() -> None:
     for line in (
         "Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin\n",
         "Environment=TODOIMPL_CLAUDE=%h/.local/bin/claude",
-        "Restart=on-failure",
+        "Restart=always",
+        "StartLimitIntervalSec=0",
         "KillMode=process",
         "WantedBy=default.target",
     ):

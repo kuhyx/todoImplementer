@@ -50,3 +50,9 @@ def _no_real_umbrella_registry(
 ) -> None:
     """Point the umbrella registry at a missing temp file: kuhy's real list is never read."""
     monkeypatch.setenv("TODOIMPL_UMBRELLAS", str(tmp_path_factory.mktemp("umbrellas") / "umbrellas.txt"))
+
+
+@pytest.fixture(autouse=True)
+def _network_is_up(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No test opens a socket to the internet: the connectivity probe says yes unless a test flips it."""
+    monkeypatch.setattr("todoimpl.runner.netwait.probe", lambda: True)

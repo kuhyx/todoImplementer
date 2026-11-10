@@ -1,6 +1,7 @@
 [Unit]
 Description=todoImplementer board (127.0.0.1:8786)
 After=network.target
+StartLimitIntervalSec=0
 
 [Service]
 Type=simple
@@ -11,7 +12,8 @@ Environment=TODOIMPL_CLAUDE=%h/.local/bin/claude
 # Spawned claude sessions must never start untracked follow-up sessions.
 Environment=CLAUDE_AUTO_CONTINUE=0
 ExecStart=%h/.local/bin/uv run --python 3.15 --project %h/src/todoImplementer python -m todoimpl.http.main
-Restart=on-failure
+# A multi-day run must outlive crashes and a stray SIGTERM: always restart, never give up on a crash loop.
+Restart=always
 RestartSec=3
 # Claude turns are transient units of their own (runner/launch.py); process mode also lets a git push finish.
 KillMode=process

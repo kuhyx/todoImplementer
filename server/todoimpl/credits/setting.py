@@ -6,6 +6,8 @@ import json
 import os
 from pathlib import Path
 
+from todoimpl import atomic
+
 KEY = "credits_fallback"
 
 
@@ -32,7 +34,4 @@ def enabled() -> bool:
 def set_enabled(*, value: bool) -> None:
     """Store the setting atomically, keeping any other key of the file."""
     path = settings_path()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(f".{path.name}.tmp")
-    tmp.write_text(json.dumps({**_read(), KEY: value}, indent=2) + "\n", encoding="utf-8")
-    tmp.replace(path)
+    atomic.write_text(path, json.dumps({**_read(), KEY: value}, indent=2) + "\n")

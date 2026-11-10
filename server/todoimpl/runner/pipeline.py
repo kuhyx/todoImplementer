@@ -12,7 +12,7 @@ from todoimpl.credits import route
 from todoimpl.prompts import PromptContext, build
 
 from . import checks, phone, retry, tags, tiering, turncheck, worktree
-from .files import NeedsYouError
+from .files import KilledError, NeedsYouError
 from .grant import auto_grant
 from .permit import gate, with_grant
 from .session import handoff_summary
@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from .stream import TurnResult
 
 log = logging.getLogger("todoimpl.runner")
+SIGNAL_EXIT = 128  # a shell reports death by signal N as 128 + N
 WORK_STAGES = ("spec", "plan", "implement", "live_check", "checks", "shipping")
 NUDGE = "(runner) Your last reply had no status tag line: finish the work and end with `D:`, `Q:` or `A:`."
 CONTINUE = "(runner) Continue. Report with a `D:`, `Q:` or `A:` tag line when your background work is done."
@@ -95,7 +96,7 @@ class Driver:
             self.set_stage("paused_limit")
         except retry.RetryLaterError as later:
             until, why = later.args
-            retry.pause(st, until, why)
+            retry.pause(st, until, why, later.kind)
             self.set_stage(retry.PAUSED)
         except NeedsYouError as exc:
             self.fail(exc)
@@ -194,16 +195,22 @@ class Driver:
             )
 
         env = TurnEnv(ctx.run_dir, Path(str(st.worktree)), ctx.publish, ctx.register, ctx.now)
-        res = run_turn(
-            env,
-            st,
-            role,
-            with_grant(st, prompt_for, role),
-            (ctx.run_dir,),
-            choice.route,
-            plan.model,
-            plan.effort,
-        )
+        try:
+            res = run_turn(
+                env,
+                st,
+                role,
+                with_grant(st, prompt_for, role),
+                (ctx.run_dir,),
+                choice.route,
+                plan.model,
+                plan.effort,
+            )
+        except KilledError as exc:  # the host died again and again: wait and retry before Needs you
+            self.save()
+            raise retry.failure(
+                st, now=ctx.now(), stage=stage, reason=exc.text, tail="", killed=True
+            ) from exc
         st.extra["last_reply"] = res.text[-1500:]
         if res.finished and not res.is_error:
             phone.after_turn(st, ctx.run_dir, res)
@@ -225,8 +232,12 @@ class Driver:
             reason = res.text.strip()[:300] or retry.NO_RESULT
             tail = retry.stderr_tail(self.ctx.run_dir, role)
             tiering.failed(self, role, reason)
-            raise retry.failure(self.state, now=self.ctx.now(), stage=stage, reason=reason, tail=tail)
-        for key in ("retries", "crash_retries"):
+            code = int(self.state.extra.get("last_exit", 0))
+            killed = not res.finished and (code < 0 or code >= SIGNAL_EXIT)
+            raise retry.failure(
+                self.state, now=self.ctx.now(), stage=stage, reason=reason, tail=tail, killed=killed
+            )
+        for key in ("retries", "crash_retries", "kill_retries"):
             self.state.extra.pop(key, None)
         return res
 

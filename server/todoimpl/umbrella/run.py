@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from .driver import UmbrellaDriver
 
 RESTING = ("paused_limit", "paused_retry")
+INTERRUPTED = "Ship was interrupted by a restart: check origin and the note before shipping again"
 COUNTERS = ("live_fixes", "check_fixes", "nudges", "nudge", "retries", "crash_retries", "ask_grants")
 
 
@@ -75,8 +76,13 @@ class Umbrella:
             st = child_state(self.run_dir, cid)
             if st is None or kid.done or st.stage == "shipped" or cid in held:
                 continue
+            if st.stage == "shipping":  # a restart cut its Ship short: check origin before shipping again
+                st.extra["failed_stage"], st.stage, st.error = "gate", "failed", INTERRUPTED
+                store.save(ustore.child_dir(self.run_dir, cid), st)
+                continue
             if retry_failed and (st.stage in ("failed", "cancelled") or st.last_tag in ("Q", "A")):
                 self._reset(st)
+                store.save(ustore.child_dir(self.run_dir, cid), st)  # a gate child is not restarted below
             if shipping and st.stage == "gate":
                 st.stage = "shipping"
             if st.stage in (*WORK_STAGES, "shipping", *RESTING):
@@ -130,9 +136,13 @@ class Umbrella:
         limit = [s.resume_at or 0.0 for s in states.values() if s is not None and s.stage == "paused_limit"]
         if limit:
             raise LimitHitError(min(limit))
-        later = [s.resume_at or 0.0 for s in states.values() if s is not None and s.stage == retry.PAUSED]
+        later = [s for s in states.values() if s is not None and s.stage == retry.PAUSED]
         if later:
-            raise retry.RetryLaterError(min(later), "a child retries a failed turn")
+            first = min(later, key=lambda s: s.resume_at or 0.0)
+            why = str(first.extra.get("retry_reason") or "a child retries a failed turn")
+            raise retry.RetryLaterError(
+                first.resume_at or 0.0, why, str(first.extra.get("retry_kind", "turn"))
+            )
 
     def _close(self, states: dict[str, store.RunState | None]) -> str:
         d = self.d

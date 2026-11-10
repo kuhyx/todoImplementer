@@ -7,6 +7,8 @@ import threading
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from todoimpl import atomic
+
 if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
@@ -60,7 +62,4 @@ class MergeStore:
         with LOCK:
             state = self.load()
             change(state)
-            self._path.parent.mkdir(parents=True, exist_ok=True)
-            tmp = self._path.with_suffix(".tmp")
-            tmp.write_text(json.dumps(vars(state), indent=1), encoding="utf-8")
-            tmp.replace(self._path)
+            atomic.write_text(self._path, json.dumps(vars(state), indent=1))

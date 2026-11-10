@@ -9,6 +9,8 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any
 
+from todoimpl import atomic
+
 if TYPE_CHECKING:
     from collections.abc import Iterable
     from pathlib import Path
@@ -31,9 +33,7 @@ def append(  # noqa: PLR0913, PLR0917 - the fields of one log line
         "ts": ts, "child": child, "phase": phase, "model": model,
         "symptom": symptom[:SYMPTOM_MAX], "action": action, "fixed": fixed,
     }  # fmt: skip
-    run_dir.mkdir(parents=True, exist_ok=True)
-    with path(run_dir).open("a", encoding="utf-8") as out:
-        out.write(json.dumps(line) + "\n")
+    atomic.append_line(path(run_dir), json.dumps(line))
 
 
 def read(run_dir: Path) -> list[dict[str, Any]]:

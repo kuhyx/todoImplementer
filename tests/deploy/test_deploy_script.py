@@ -70,3 +70,31 @@ def test_t1857_an_existing_sdk_venv_is_kept_and_only_the_pin_is_applied(box: tup
     assert done.returncode == 0, done.stderr
     assert "uv venv" not in env.calls
     assert "uv pip install" in env.calls
+
+
+def test_t1906_deploy_turns_lingering_on_so_the_board_survives_a_reboot_without_a_login(
+    box: tuple[Env, Stubber],
+) -> None:
+    env, stub = box
+    _stubs(stub)
+    done = env.run("bash", str(DEPLOY_SH), LINGER="no", **FAST_WAIT)
+    assert done.returncode == 0, done.stderr
+    assert "loginctl enable-linger" in env.calls
+    assert "lingering on" in done.stdout
+
+
+def test_deploy_leaves_lingering_alone_when_it_is_already_on(box: tuple[Env, Stubber]) -> None:
+    env, stub = box
+    _stubs(stub)
+    done = env.run("bash", str(DEPLOY_SH), **FAST_WAIT)
+    assert done.returncode == 0, done.stderr
+    assert "enable-linger" not in env.calls
+
+
+def test_deploy_fails_when_lingering_cannot_be_turned_on(box: tuple[Env, Stubber]) -> None:
+    env, stub = box
+    _stubs(stub)
+    stub("loginctl", 'case "$*" in *show-user*) echo no;; esac')  # enable-linger does nothing
+    done = env.run("bash", str(DEPLOY_SH), **FAST_WAIT)
+    assert done.returncode == 1
+    assert "lingering" in done.stderr

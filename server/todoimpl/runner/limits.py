@@ -6,6 +6,7 @@ import re
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+from todoimpl import atomic
 from todoimpl.usage.limits import UNTIL_FILE, limit_state
 
 if TYPE_CHECKING:
@@ -61,10 +62,7 @@ def pause_until(info: LimitInfo | None, text: str, *, is_error: bool, now: float
 
 
 def _write(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(f".{path.name}.tmp")
-    tmp.write_text(text, encoding="utf-8")
-    tmp.replace(path)
+    atomic.write_text(path, text)
 
 
 def write_until(root: Path, until: float) -> None:  # noqa: D103

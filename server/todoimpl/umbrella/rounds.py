@@ -11,13 +11,14 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from todoimpl import atomic
 from todoimpl.board import state as store
 from todoimpl.prompts import coach
 from todoimpl.prompts.tier import escalated
 from todoimpl.runner import checks, freegate, freeworker, worktree
-from todoimpl.runner.files import NeedsYouError
+from todoimpl.runner.files import KilledError, NeedsYouError
 
-from . import issues, ramp
+from . import issues, outage, ramp
 from .children import fresh_state
 from .store import child_dir, children_root
 from .view import child_state
@@ -44,6 +45,8 @@ def run_round(u: Umbrella, batch: list[str] | None) -> None:
         d.save()
     cur = rec["current"]
     kids = [u.kids[cid] for cid in cur["ids"]]
+    if cur["verdicts"] is None:  # the manager still has to run: it and the workers need the network
+        outage.check_network(d)
     _prepare(u, cur, kids)
     live = [k for k in kids if k.cid not in cur["failed"]]
     if cur["verdicts"] is None and live:
@@ -73,9 +76,7 @@ def _plan(kid: Child) -> str:
 def _write_task(cdir: Path, kid: Child) -> None:
     """Write the worker's task file: the textgate rules first when the child is a textgate rework."""
     text = coach.task_text(kid.text, textgate=coach.is_textgate(kid.text, kid.title))
-    (cdir / "task.md").write_text(
-        f"{text}\n\nWork only in this checkout. Do not run git push.\n", encoding="utf-8"
-    )
+    atomic.write_text(cdir / "task.md", f"{text}\n\nWork only in this checkout. Do not run git push.\n")
 
 
 def _ensure_rules(cdir: Path, kid: Child) -> None:
@@ -83,7 +84,7 @@ def _ensure_rules(cdir: Path, kid: Child) -> None:
     path = cdir / "task.md"
     text = path.read_text(encoding="utf-8")
     if coach.is_textgate(kid.text, kid.title) and coach.TEXTGATE_RULES not in text:
-        path.write_text(f"{coach.TEXTGATE_RULES}\n\n{text}", encoding="utf-8")
+        atomic.write_text(path, f"{coach.TEXTGATE_RULES}\n\n{text}")
 
 
 def _prepare(u: Umbrella, cur: dict[str, Any], kids: list[Child]) -> None:
@@ -103,13 +104,17 @@ def _prepare(u: Umbrella, cur: dict[str, Any], kids: list[Child]) -> None:
             store.save(cdir, st)
             cur["failed"][kid.cid] = exc.text
             continue
-        (cdir / "plan.md").write_text(_plan(kid), encoding="utf-8")
+        atomic.write_text(cdir / "plan.md", _plan(kid))
         _write_task(cdir, kid)
         verdict = freegate.check(Path(str(st.worktree)))
         if verdict.detail:  # a gateway failure the server saw itself goes to the issue log
             issues.append(
-                u.run_dir, d.ctx.now(), kid.repo, "start", verdict.detail, "the manager does this child"
-            )
+                u.run_dir, d.ctx.now(), kid.repo, "start", verdict.detail,
+                "the round waits for the gateway" if verdict.unreachable else "the manager does this child",
+            )  # fmt: skip
+        if verdict.unreachable:  # nothing answered: wait and retry, do not burn Sonnet on free work
+            raise outage.gateway_unreachable(d, verdict.detail)
+        outage.gateway_ok(d)
         cur["free"][kid.cid] = verdict.allowed
         st.extra.update(free=verdict.allowed, umbrella_round=cur["n"])
         store.save(cdir, st)
@@ -141,6 +146,8 @@ def _manage(u: Umbrella, cur: dict[str, Any], live: list[Child]) -> None:
     # turn does not read it: run_turn follows the recorded turn before it builds a prompt)
     try:
         verdicts = ramp.parse_verdicts(d.turn("manager", "implement", prompt="manager").text, live)
+    except KilledError:  # a killed manager is retried (and then asks kuhy), never a reason to spend Opus
+        raise
     except NeedsYouError as exc:
         verdicts = ramp.all_escalate(live, exc.text)
     d.state.last_tag = None  # the manager's own tag is not a question for kuhy
@@ -209,7 +216,10 @@ def _finish(u: Umbrella, cur: dict[str, Any], kids: list[Child]) -> None:
         u.pool.start(cid, st)
     width = rec["width"]
     nxt = ramp.next_width(width, oks)
-    rec["rounds"].append({"n": cur["n"], "width": width, "next": nxt, "children": rows})
+    rec["rounds"].append({
+        "n": cur["n"], "width": width, "next": nxt, "children": rows,
+        "started": cur["started"], "ended": d.ctx.now(),
+    })  # fmt: skip
     rec["width"], rec["current"] = nxt, None
     d.save()
 

@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import json
-import os
-import threading
 from typing import TYPE_CHECKING, Any
+
+from todoimpl import atomic
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -25,11 +25,12 @@ class NeedsYouError(Exception):
         self.text = text
 
 
+class KilledError(NeedsYouError):
+    """A turn was killed again and again (signal, OOM, reboot): a manager never escalates children for it."""
+
+
 def write_json(path: Path, data: object) -> None:  # noqa: D103
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(f".{path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
-    tmp.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    tmp.replace(path)
+    atomic.write_text(path, json.dumps(data, indent=2, sort_keys=True) + "\n")
 
 
 def read_json(path: Path) -> Any:  # noqa: ANN401, D103

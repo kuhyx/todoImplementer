@@ -115,6 +115,16 @@ wait_for_build() {
 	die "${UNIT} serves build ${served}, expected ${expected}: the new code is not what is running"
 }
 
+# ensure_linger: without lingering the user manager (and so the board and its turn units) only exists while kuhy
+# is logged in; with it, everything is back after a reboot even before a login (DOCS-resilience.md).
+ensure_linger() {
+	[[ "$(loginctl show-user "$(id -un)" -p Linger --value 2>/dev/null)" == yes ]] && return 0
+	step "turning lingering on for $(id -un)"
+	loginctl enable-linger "$(id -un)" || true
+	[[ "$(loginctl show-user "$(id -un)" -p Linger --value 2>/dev/null)" == yes ]] || die "lingering is still off for $(id -un): the board will not start at boot"
+	step "lingering on"
+}
+
 main() {
 	add_user_bin_dirs
 	ensure_tools uv pnpm jq
@@ -122,6 +132,7 @@ main() {
 	expected="$(head_build)"
 	build_toolchain
 	ensure_sdk_venv
+	ensure_linger
 	restart_server
 	wait_for_build "$expected"
 	step "serving build ${expected}"
