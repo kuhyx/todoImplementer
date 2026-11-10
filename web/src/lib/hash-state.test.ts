@@ -4,7 +4,7 @@ import { DEFAULT_STATE, formatHash, parseHash } from "@/lib/hash-state";
 
 describe("hash state", () => {
   it("round-trips a full state", () => {
-    const state = { col: "ready", q: "fix it", repo: "utils", sort: "cost", task: "17a1b2c3-0" } as const;
+    const state = { col: "ready", q: "fix it", repo: "utils", sort: "cost", task: "17a1b2c3-0", umbrella: "2d0704cd-0" } as const;
     expect(parseHash(formatHash(state))).toEqual(state);
   });
 
@@ -15,6 +15,12 @@ describe("hash state", () => {
 
   it("falls back on garbage", () => {
     expect(parseHash("#sort=nope&col=x&task=short")).toEqual(DEFAULT_STATE);
+  });
+
+  it("reads and writes the umbrella tracking view, and drops a malformed id", () => {
+    expect(parseHash("#umbrella=2d0704cd-0").umbrella).toBe("2d0704cd-0");
+    expect(formatHash({ ...DEFAULT_STATE, umbrella: "2d0704cd-0" })).toBe("#umbrella=2d0704cd-0");
+    expect(parseHash("#umbrella=nope").umbrella).toBeNull();
   });
 
   it("keeps the yours marker", () => {

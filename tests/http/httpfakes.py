@@ -49,6 +49,8 @@ class FakeBackend:
         self.hang = False
         self.shots: dict[str, bytes] = {}
         self.issues_text = ""
+        self.track_data = load("track")
+        self.log_text = ""
 
     @property
     def task_id(self) -> str:
@@ -80,6 +82,16 @@ class FakeBackend:
     def usage(self) -> dict[str, Any]:
         self._maybe_fail()
         return self.usage_data
+
+    def umbrella(self, id8: str) -> dict[str, Any] | None:
+        self._maybe_fail()
+        self.calls.append(("umbrella", id8))
+        return self.track_data if id8 == self.task_id else None
+
+    def worker_log(self, id8: str, child: str) -> str | None:
+        self._maybe_fail()
+        self.calls.append(("worker_log", id8, child))
+        return self.log_text if id8 == self.task_id and child == self.task_id else None
 
     def subscribe(self, id8: str) -> Iterator[dict[str, Any]]:
         self.calls.append(("subscribe", id8))

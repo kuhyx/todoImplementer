@@ -20,12 +20,11 @@ from todoimpl.http.backend import ERROR_CODES, BackendError
 from todoimpl.lessons import LessonError, approve, draft_lesson, latest_lesson, run_skills
 from todoimpl.runner.scheduler import RunnerError
 from todoimpl.todo_mcp.model import TodoError
-from todoimpl.umbrella import issues
 from todoimpl.umbrella.view import overlay_for
-from todoimpl.usage import limit_state, usage_summary
+from todoimpl.usage import limit_state
 from todoimpl.usage.interventions import record
 
-from . import permission
+from . import permission, tracking
 from .shots import read_shot
 
 if TYPE_CHECKING:
@@ -33,6 +32,7 @@ if TYPE_CHECKING:
 
     from todoimpl.apikey.monitor import KeyMonitor
     from todoimpl.board.state import RunState
+    from todoimpl.gateway.monitor import GatewayMonitor
     from todoimpl.merge.service import MergeService
     from todoimpl.runner.limitprobe import LimitProbe
 
@@ -66,6 +66,7 @@ class ServiceBackend:
         fix_runner: Callable[[str], tuple[int, str]] = permission.run_command,
         key_monitor: KeyMonitor | None = None,
         limit_probe: LimitProbe | None = None,
+        gateway: GatewayMonitor | None = None,
     ) -> None:
         """Wire the pieces; nothing is read until a request arrives."""
         self.cache = cache
@@ -79,6 +80,7 @@ class ServiceBackend:
         self.fix_runner = fix_runner  # runs a permission block's one-liner; tests inject a fake
         self.key_monitor = key_monitor  # the API key's newest status rides on the board
         self.limit_probe = limit_probe  # re-checks a stored plan limit against the plan's real usage
+        self.gateway = gateway  # the free-model gateway's newest reading rides on /api/usage
         self.merge_service: MergeService | None = None  # set by build_backend; the http layer looks for it
 
     # ---- reads ----
@@ -143,16 +145,11 @@ class ServiceBackend:
         """Bytes of the png at `name` (a/b.png) under `<run dir>/shots`; None when it resolves outside it."""
         return read_shot(run_dir(self.root, id8), name)
 
-    def issues(self, id8: str) -> str | None:
-        """GET /api/task/<id8>/issues: the raw free-model issue log of a known task."""
-        if not any(t.id == id8 for t in self.cache.snapshot().tasks):
-            return None
-        return issues.raw(run_dir(self.root, id8))
-
-    def usage(self) -> dict[str, Any]:
-        """GET /api/usage."""
-        titles = {t.id: t.title for t in self.cache.snapshot().tasks}
-        return usage_summary(self.root, self._clock(), titles)
+    # Read-side endpoints that need only the cache, run dirs and the gateway reading (service/tracking.py).
+    issues = tracking.issues  # GET /api/task/<id8>/issues
+    usage = tracking.usage  # GET /api/usage
+    umbrella = tracking.umbrella  # GET /api/umbrella/<id8>
+    worker_log = tracking.worker_log  # the tail of a child's newest worker log
 
     def subscribe(self, id8: str) -> Iterator[dict[str, Any]]:
         """Live events of one task; stage/done carry the freshly computed card fields (live.schema.json)."""

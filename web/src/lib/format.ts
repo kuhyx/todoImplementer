@@ -37,3 +37,9 @@ export function humanize(id: string): string {
   const spaced = id.replaceAll(/[_\-]/gv, " ");
   return spaced.slice(0, 1).toUpperCase() + spaced.slice(1);
 }
+
+/** 4_123_700 -> "4.1M", 812_345 -> "812k", 950 -> "950": token counts for a narrow strip. */
+export function formatCompact(value: number): string {
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+  return value >= 1000 ? `${String(Math.round(value / 1000))}k` : String(Math.round(value));
+}

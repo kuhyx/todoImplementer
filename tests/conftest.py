@@ -53,6 +53,14 @@ def _no_real_umbrella_registry(
 
 
 @pytest.fixture(autouse=True)
+def _no_real_gateway_secrets(
+    tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Point the gateway key and dashboard password at an empty temp dir: kuhy's real ones are never read."""
+    monkeypatch.setenv("TODOIMPL_OMNIROUTE_DIR", str(tmp_path_factory.mktemp("omniroute-secrets")))
+
+
+@pytest.fixture(autouse=True)
 def _network_is_up(monkeypatch: pytest.MonkeyPatch) -> None:
     """No test opens a socket to the internet: the connectivity probe says yes unless a test flips it."""
     monkeypatch.setattr("todoimpl.runner.netwait.probe", lambda: True)

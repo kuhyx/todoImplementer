@@ -5,6 +5,7 @@ import type { UmbrellaDetail, UmbrellaRow } from "@/lib/schemas-umbrella";
 import { icon, type IconName } from "@/components/icons";
 import { h } from "@/lib/dom";
 import { routes } from "@/lib/routes";
+import { trackLink } from "@/track/track-link";
 
 type Bucket = "done" | "failed" | "queued" | "ready" | "running";
 const BUCKETS: readonly [Bucket, IconName, string][] = [
@@ -15,7 +16,7 @@ const BUCKETS: readonly [Bucket, IconName, string][] = [
   ["failed", "failed", "Failed"],
 ];
 /** The glyph of a child's own server-computed status (display only: the status is the server's). */
-const STATUS_ICON: Record<Status, IconName> = {
+export const STATUS_ICON: Record<Status, IconName> = {
   backlog: "queued",
   cancelled: "failed",
   done: "check",
@@ -28,10 +29,10 @@ const STATUS_ICON: Record<Status, IconName> = {
   yours: "failed",
 };
 type Verdict = NonNullable<UmbrellaRow["verdict"]>;
-const VERDICT_ICON: Record<Verdict, IconName> = { clean: "check", coached: "coached", escalate: "escalated", fixed: "fixed" };
+export const VERDICT_ICON: Record<Verdict, IconName> = { clean: "check", coached: "coached", escalate: "escalated", fixed: "fixed" };
 
 /** One icon with an optional number; the name is the accessible label and the tooltip. */
-function badge(name: IconName, label: string, value?: number, attributes: Record<string, string> = {}): HTMLElement {
+export function badge(name: IconName, label: string, value?: number, attributes: Record<string, string> = {}): HTMLElement {
   const text = value === undefined ? label : `${label} ${String(value)}`;
   return h(
     "span",
@@ -79,6 +80,7 @@ export function renderUmbrella(detail: UmbrellaDetail, id: string): HTMLElement 
       ...detail.rounds.map((round) =>
         h("span", { attrs: { "data-doubled": String(round.next > round.width), title: `Round ${String(round.n)}` }, class: "u-round", text: String(round.width) }),
       ),
+      trackLink(`#umbrella=${id}`),
       total > 0 && h("a", { attrs: { "aria-label": "Free-model issue log", href: routes.issues(id), rel: "noopener", target: "_blank", title: "Free-model issue log" }, class: "u-issues" }, icon("issue"), String(total)),
     ),
     h("ul", { class: "u-rows" }, ...detail.rows.map((row) => renderRow(row))),

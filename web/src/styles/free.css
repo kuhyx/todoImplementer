@@ -1,0 +1,111 @@
+/* Free-model gateway strip: icons and numbers only ----------------------- */
+
+.free-strip {
+  display: flex;
+  flex: 1 1 12rem;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  min-width: 0;
+}
+
+.f-group,
+.f-chain {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.f-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: var(--text-label);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.f-chip svg {
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.f-chip[data-tone="ok"],
+.f-chip[data-kind="ok"] {
+  color: var(--success);
+}
+
+.f-chip[data-tone="warn"],
+.f-chip[data-kind="cooling"],
+.f-chip[data-kind="models"] {
+  color: var(--warning);
+}
+
+.f-chip[data-tone="danger"],
+.f-chip[data-kind="failing"] {
+  color: var(--danger);
+}
+
+.f-chip[data-tone="unknown"] {
+  opacity: 0.45;
+}
+
+/* A reading that is old or from before the gateway went away is shown dimmed. */
+.free-strip[data-state="down"] .f-group,
+.free-strip[data-state="down"] .f-chain,
+.free-strip[data-state="stale"] .f-group,
+.free-strip[data-state="stale"] .f-chain {
+  opacity: 0.6;
+}
+
+.f-meter {
+  display: block;
+  width: clamp(2.5rem, 6vw, 5rem);
+  height: var(--space-2);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--space-1);
+  overflow: hidden;
+  --tone: var(--success);
+}
+
+.f-meter[data-tone="warn"] {
+  --tone: var(--warning);
+}
+
+.f-meter[data-tone="danger"] {
+  --tone: var(--danger);
+}
+
+.f-meter-fill {
+  display: block;
+  width: var(--fill, 0);
+  height: 100%;
+  background: var(--tone);
+}
+
+.f-dot {
+  display: inline-block;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 50%;
+  background: var(--success);
+}
+
+.f-dot[data-state="cooling"] {
+  background: var(--warning);
+}
+
+.f-dot[data-state="failing"] {
+  background: var(--danger);
+}
+
+.f-chain {
+  gap: var(--space-1);
+}

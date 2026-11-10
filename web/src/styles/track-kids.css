@@ -1,0 +1,109 @@
+/* Children ---------------------------------------------------------------- */
+
+.t-kids,
+.t-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(26rem, 100%), 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.t-kid,
+.t-group {
+  min-width: 0;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.t-kid-row {
+  display: flex;
+  align-items: stretch;
+}
+
+.t-kid-main,
+.t-group-main {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: var(--space-2) var(--space-3);
+  color: inherit;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.t-group-main {
+  width: 100%;
+}
+
+.t-kid-main:disabled {
+  cursor: default;
+}
+
+.t-kid-main .u-badge,
+.t-kid-main .t-stat {
+  flex: none;
+}
+
+.t-repo {
+  flex: 1 1 8rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.t-kid[data-status="done"] .t-kid-main > .u-badge:first-child,
+.t-kid[data-status="ready_to_ship"] .t-kid-main > .u-badge:first-child {
+  color: var(--success);
+}
+
+.t-kid[data-status="working"] .t-kid-main > .u-badge:first-child {
+  color: var(--accent);
+}
+
+.t-kid[data-status="needs_you"] .t-kid-main > .u-badge:first-child {
+  color: var(--danger);
+}
+
+.t-links {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1);
+  padding-right: var(--space-2);
+}
+
+.t-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.t-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 0 var(--space-3) var(--space-3);
+}
+
+.t-issue,
+.t-phase,
+.t-model {
+  overflow-wrap: anywhere;
+}
+
+.t-error {
+  color: var(--warning);
+  overflow-wrap: anywhere;
+}

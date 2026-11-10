@@ -3,7 +3,8 @@
 kuhy's design (2026-11-10). About 56 "Make <app> text-free (textgate-rework)" sections sit in per-repo notes. One
 umbrella note collects them; one Opus manager runs free workers for them in rounds that widen 1, 2, 4, 8 while the
 free tier proves itself. Code: `server/todoimpl/umbrella/`, `runner/freeworker.py`, `prompts/umbrella.py`,
-`board/umbrella.py`. The free tier of single notes is `DOCS-tiers.md`.
+`board/umbrella.py`. The free tier of single notes is `DOCS-tiers.md`; the tracking view of a run is `DOCS-tracking.md`;
+kills, reboots and outages are `DOCS-resilience.md`.
 
 ## The note (frozen format)
 

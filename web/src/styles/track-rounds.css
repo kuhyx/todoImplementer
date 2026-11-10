@@ -1,0 +1,77 @@
+/* Round history ----------------------------------------------------------- */
+
+.t-strip {
+  display: flex;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0 0 var(--space-2);
+  overflow-x: auto;
+  list-style: none;
+}
+
+.t-round {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 6rem;
+  max-width: 14rem;
+  padding: var(--space-2);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.t-round[data-doubled="true"] {
+  border-color: var(--success);
+}
+
+.t-round-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+
+.t-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.t-chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.t-chip[data-verdict="clean"] {
+  color: var(--success);
+}
+
+.t-chip[data-verdict="escalate"] {
+  color: var(--warning);
+}
+
+.t-chip[data-ok="false"] {
+  border-color: var(--danger);
+}
+
+.t-nofree {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 0.4rem;
+  height: 0.4rem;
+  background: var(--text-muted);
+  border-radius: 50%;
+}

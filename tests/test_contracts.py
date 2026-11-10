@@ -24,7 +24,7 @@ def test_schema_is_valid_2020_12(path: Path) -> None:
     assert len(path.read_text(encoding="utf-8").splitlines()) <= 250
 
 
-@pytest.mark.parametrize("name", ["state", "board", "task", "usage", "version"])
+@pytest.mark.parametrize("name", ["state", "board", "task", "usage", "version", "track"])
 def test_fixture_validates(name: str) -> None:
     validate(name, fixture(name))
 

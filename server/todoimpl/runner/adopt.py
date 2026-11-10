@@ -98,7 +98,7 @@ class _Feed:
             self._emit(line, show=self.base > self.fed)
         if lines and self.base > self.fed:
             self.fed = self.base
-            write_json(self.path, self.fed)
+            write_json(self.path, self.fed, durable=False)  # a lost offset only replays the feed
 
     def last(self, partial: bytes) -> None:
         """Take the unterminated last line of a finished stream."""

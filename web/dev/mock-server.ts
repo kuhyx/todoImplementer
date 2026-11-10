@@ -14,14 +14,17 @@ import { makeDetail, makeUsage } from "#fixtures/fixture-detail";
 import { preset } from "#fixtures/fixture-presets";
 import { makeBoard, makeCards, NOW } from "#fixtures/fixtures";
 
+import { TRACK_ID, trackBody, umbrellaCard, workerLog } from "./mock-track.ts";
+
 const PORT = Number(process.env.PORT ?? 4399);
 const BUILD = process.env.MOCK_BUILD ?? "mock0001";
 const DIST = process.env.MOCK_DIST ?? join(import.meta.dirname, "..", "dist");
 const TOKEN = randomUUID();
 const TYPES: Record<string, string> = { ".css": "text/css", ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".svg": "image/svg+xml" };
-const TIME_KEYS = new Set(["at", "ended", "generated_at", "resets_at", "resumes_at", "started", "until", "updated"]);
+const TIME_KEYS = new Set(["at", "ended", "generated_at", "last", "reset_at", "resets_at", "resumes_at", "started", "ts", "until", "updated"]);
 const offset = Math.floor(Date.now() / 1000) - NOW;
 const cards = [...makeCards(), ...askCards()].map((card) => (card.status === "working" && card.repo === "gatelock" ? { ...card, route: "credits" as const } : card));
+cards.push(umbrellaCard());
 let isCreditsOn = true;
 const creditsNow = (): unknown => ({ enabled: isCreditsOn, state: isCreditsOn ? "ready" : "off", text: isCreditsOn ? "Free API credits take over while the plan limit is active." : "Runs wait for the plan limit to end." });
 const streams = new Map<string, Set<ServerResponse>>();
@@ -132,6 +135,19 @@ function detailFor(card: (typeof cards)[number]): unknown {
   return { ...(card.id === FREE_ID ? freeDetail() : askDetail(card.id)), card };
 }
 
+/** GET /api/umbrella/<id> (the tracking view) and .../log/<child> (a worker log); false for any other path. */
+function hasServedUmbrella(res: ServerResponse, path: string): boolean {
+  const [kind, id, action, child = ""] = path.split("/", 6).slice(2);
+  if (kind !== "umbrella" || id !== TRACK_ID) return false;
+  if (action === "log") {
+    res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
+    res.end(workerLog(child));
+  } else {
+    json(res, trackBody());
+  }
+  return true;
+}
+
 async function route(request: IncomingMessage, res: ServerResponse): Promise<void> {
   const target = request.url ?? "/";
   const [path = "/", query = ""] = target.split("?", 2);
@@ -142,6 +158,7 @@ async function route(request: IncomingMessage, res: ServerResponse): Promise<voi
   if (path === "/api/settings/credits-fallback" && request.method === "POST") { await setCredits(request, res); return; }
   if (path === "/api/usage") { json(res, makeUsage()); return; }
   if (path === "/api/live") { live(request, res, parameters.get("id") ?? ""); return; }
+  if (hasServedUmbrella(res, path)) return;
   if (api !== "api" || kind !== "task" || id === undefined) {
     await serveStatic(res, path);
     return;

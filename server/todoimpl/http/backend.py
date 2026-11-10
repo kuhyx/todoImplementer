@@ -51,6 +51,14 @@ class Backend(Protocol):
         """GET /api/usage body."""
         ...
 
+    def umbrella(self, id8: str) -> dict[str, Any] | None:
+        """GET /api/umbrella/<id8> body (the tracking view), None when the card has no umbrella run."""
+        ...
+
+    def worker_log(self, id8: str, child: str) -> str | None:
+        """Tail of the child's newest worker log under umbrella `id8`, None when there is none."""
+        ...
+
     def subscribe(self, id8: str) -> Iterator[dict[str, Any]]:
         """Live events (activity|stage|cost|done) for one task; blocks between events."""
         ...

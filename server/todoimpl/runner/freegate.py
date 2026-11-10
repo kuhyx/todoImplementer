@@ -43,9 +43,14 @@ def _public(checker: str, worktree: Path) -> bool:
     return done.returncode == 0
 
 
+def base_url() -> str:
+    """Return the gateway's base URL: `$TODOIMPL_FREE_GATEWAY` or the local OmniRoute."""
+    return os.environ.get("TODOIMPL_FREE_GATEWAY") or GATEWAY
+
+
 def _gateway_error(key: str) -> tuple[str, bool] | None:
     """Probe the gateway; None when it answers, else (the exact error text, whether nothing answered)."""
-    base = os.environ.get("TODOIMPL_FREE_GATEWAY") or GATEWAY
+    base = base_url()
     request = urllib.request.Request(  # noqa: S310 - loopback gateway URL
         f"{base}/v1/models", headers={"Authorization": f"Bearer {key}"}
     )

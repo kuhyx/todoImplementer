@@ -25,21 +25,27 @@ def _fsync_dir(directory: Path) -> None:
         os.close(fd)
 
 
-def write_text(path: Path, text: str) -> None:
-    """Replace `path` with `text` atomically and durably; the old file stays whole if anything fails."""
+def write_text(path: Path, text: str, *, durable: bool = True) -> None:
+    """Replace `path` with `text` atomically and, unless `durable` is off, durably.
+
+    The old file stays whole if anything fails. `durable=False` skips the two fsyncs for a file that is
+    rewritten many times a second and can be rebuilt (the live-feed offset): a rename is still atomic.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(f".{path.name}.{os.getpid()}.{threading.get_ident()}.tmp")
     try:
         with tmp.open("w", encoding="utf-8") as handle:
             handle.write(text)
             handle.flush()
-            os.fsync(handle.fileno())
+            if durable:
+                os.fsync(handle.fileno())
         tmp.replace(path)
     except BaseException:
         with contextlib.suppress(OSError):
             tmp.unlink()
         raise
-    _fsync_dir(path.parent)
+    if durable:
+        _fsync_dir(path.parent)
 
 
 def append_line(path: Path, line: str) -> None:

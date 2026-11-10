@@ -2,6 +2,7 @@
 import type { LiveEvent, TaskDetail, Usage } from "@/lib/schemas";
 import type { TaskCard } from "@/lib/schemas-common";
 
+import { makeFree } from "./fixture-free.ts";
 import { NOW } from "./fixtures.ts";
 
 const PLAN = [
@@ -110,6 +111,7 @@ export function makeUsage(): Usage {
     autonomy: makeAutonomy(),
     cost: { per_task: [{ cost_usd: 3.18, id: "17a1b2c3-0", title: "Escape hatch" }], today_usd: 12.37, total_usd: 80.5 },
     five_hour: { resets_at: NOW + 8100, status: "allowed", utilization: 0.42 },
+    free: makeFree(),
     generated_at: NOW,
     limit: { active: false, credits: { enabled: true, state: "ready", text: "Free API credits take over while the plan limit is active." }, until: null },
     overage: { status: "rejected", using: false },

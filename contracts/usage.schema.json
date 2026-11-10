@@ -102,6 +102,9 @@
     },
     "autonomy": {
       "$ref": "https://todoimplementer.local/contracts/autonomy.schema.json"
+    },
+    "free": {
+      "$ref": "https://todoimplementer.local/contracts/free.schema.json"
     }
   },
   "required": [

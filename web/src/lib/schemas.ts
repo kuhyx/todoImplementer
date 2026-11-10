@@ -6,6 +6,7 @@ import {
   actions, apiError, checks, column, credits, epoch, itemId, lesson, limit, liveCheck, needs, question, selfCheck, stage, status,
   taskCard, usd,
 } from "@/lib/schemas-common";
+import { free } from "@/lib/schemas-free";
 import { umbrellaDetail } from "@/lib/schemas-umbrella";
 
 const keyState = z.enum(["ok", "expiring", "expired", "invalid", "missing", "check_failed"]);
@@ -73,6 +74,7 @@ export const usage = z.strictObject({
     total_usd: usd,
   }),
   five_hour: usageWindow,
+  free: free.optional(),
   generated_at: epoch,
   limit,
   overage: z.strictObject({ status: z.string(), using: z.boolean() }),

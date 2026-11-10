@@ -36,8 +36,8 @@ def append(  # noqa: PLR0913, PLR0917 - the fields of one log line
     atomic.append_line(path(run_dir), json.dumps(line))
 
 
-def read(run_dir: Path) -> list[dict[str, Any]]:
-    """Return the logged issues; a line that is not a JSON object is skipped (the manager writes by hand)."""
+def read_lines(run_dir: Path) -> list[tuple[str, dict[str, Any]]]:
+    """Return (raw line, parsed row) pairs; a line that is not a JSON object is skipped (hand-written)."""
     try:
         text = path(run_dir).read_text(encoding="utf-8")
     except OSError:
@@ -49,8 +49,13 @@ def read(run_dir: Path) -> list[dict[str, Any]]:
         except ValueError:
             continue
         if isinstance(found, dict):
-            rows.append(found)
+            rows.append((line, found))
     return rows
+
+
+def read(run_dir: Path) -> list[dict[str, Any]]:
+    """Return the logged issues; a line that is not a JSON object is skipped (the manager writes by hand)."""
+    return [row for _, row in read_lines(run_dir)]
 
 
 def raw(run_dir: Path) -> str:

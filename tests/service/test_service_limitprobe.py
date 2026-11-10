@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import threading
+import time
 from typing import TYPE_CHECKING
 
 from servicefakes import FakeScheduler, Rig
@@ -24,7 +25,12 @@ def test_t1882_a_board_request_lifts_a_limit_the_plan_no_longer_backs(rig: Rig) 
     rig.note()
     probe = rig.backend.limit_probe
     assert probe is not None
-    probe._fetch = lambda now: oauth.Probe(now, None, oauth.Window(0.03, SOON))
+
+    def slow_fetch(now: float) -> oauth.Probe:
+        time.sleep(0.2)  # the response being built must read the stored limit before the probe lifts it
+        return oauth.Probe(now, None, oauth.Window(0.03, SOON))
+
+    probe._fetch = slow_fetch
     probe._min_gap = 0.0
     limits.write_until(rig.root, SOON)
     assert rig.backend.board()["limit"]["active"] is True  # this response still shows the stored limit

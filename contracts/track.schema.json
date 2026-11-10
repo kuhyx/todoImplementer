@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://todoimplementer.local/contracts/track.schema.json",
+  "title": "GET /api/umbrella/<id>",
+  "description": "The tracking view of an umbrella run (DOCS-tracking.md): progress, the resting reason, the round in progress and the round history, one row per child, the free-model issue log grouped by phase and model, and an ETA. Everything is computed by the server; the page only shows it.",
+  "$defs": {
+    "epoch_or_null": {"anyOf": [{"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"}, {"type": "null"}]},
+    "resting": {
+      "type": ["object", "null"],
+      "description": "Why a run waits by itself: limit (plan usage), network (no internet), gateway (free-model gateway unreachable), killed (a signal killed a turn), crash, todo (todo app unreachable), turn (another transient failure). until: when it tries again.",
+      "properties": {
+        "kind": {"enum": ["limit", "network", "gateway", "killed", "crash", "todo", "turn"]},
+        "until": {"$ref": "#/$defs/epoch_or_null"}
+      },
+      "required": ["kind", "until"],
+      "additionalProperties": false
+    },
+    "issue": {
+      "type": "object",
+      "description": "The newest free-model issue of a child.",
+      "properties": {
+        "phase": {"type": "string"},
+        "model": {"type": ["string", "null"]},
+        "symptom": {"type": "string"},
+        "ts": {"$ref": "#/$defs/epoch_or_null"}
+      },
+      "required": ["phase", "model", "symptom", "ts"],
+      "additionalProperties": false
+    },
+    "kid": {
+      "type": "object",
+      "properties": {
+        "id": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/item_id"},
+        "repo": {"type": "string"},
+        "title": {"type": "string"},
+        "status": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/status"},
+        "stage": {"anyOf": [{"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/stage"}, {"type": "null"}]},
+        "round": {"type": ["integer", "null"]},
+        "verdict": {"enum": ["clean", "coached", "fixed", "escalate", null]},
+        "free": {"type": ["boolean", "null"]},
+        "elapsed": {"type": ["number", "null"], "minimum": 0, "description": "Seconds since the child started; frozen at its last save once it rests at the gate or is done."},
+        "issues": {"type": "integer", "minimum": 0},
+        "last_issue": {"anyOf": [{"$ref": "#/$defs/issue"}, {"type": "null"}]},
+        "resting": {"$ref": "#/$defs/resting"},
+        "log": {"type": "boolean", "description": "A worker log exists: GET /api/umbrella/<id>/log/<child id>."},
+        "attempts": {"type": "integer", "minimum": 0, "description": "Free-worker runs so far (retries after a kill included)."},
+        "killed": {"type": "integer", "minimum": 0, "description": "Of those, killed by a signal."},
+        "error": {"type": ["string", "null"]}
+      },
+      "required": ["id", "repo", "title", "status", "stage", "round", "verdict", "free", "elapsed", "issues", "last_issue", "resting", "log", "attempts", "killed", "error"],
+      "additionalProperties": false
+    },
+    "round": {
+      "type": "object",
+      "properties": {
+        "n": {"type": "integer", "minimum": 1},
+        "width": {"type": "integer", "minimum": 1},
+        "next": {"type": "integer", "minimum": 1},
+        "started": {"$ref": "#/$defs/epoch_or_null"},
+        "ended": {"$ref": "#/$defs/epoch_or_null"},
+        "children": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {"type": "string"},
+              "repo": {"type": "string"},
+              "verdict": {"enum": ["clean", "coached", "fixed", "escalate"]},
+              "detail": {"type": "string"},
+              "free": {"type": "boolean"},
+              "checks": {"type": ["boolean", "null"]},
+              "ok": {"type": "boolean"}
+            },
+            "required": ["id", "repo", "verdict", "detail", "free", "checks", "ok"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["n", "width", "next", "started", "ended", "children"],
+      "additionalProperties": false
+    },
+    "group": {
+      "type": "object",
+      "description": "Free-model issues of one phase and model; lines are the raw jsonl lines, newest last, at most 20.",
+      "properties": {
+        "phase": {"type": "string"},
+        "model": {"type": ["string", "null"]},
+        "count": {"type": "integer", "minimum": 1},
+        "fixed": {"type": "integer", "minimum": 0},
+        "lines": {"type": "array", "items": {"type": "string"}}
+      },
+      "required": ["phase", "model", "count", "fixed", "lines"],
+      "additionalProperties": false
+    }
+  },
+  "type": "object",
+  "properties": {
+    "id": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/item_id"},
+    "title": {"type": "string"},
+    "at": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"},
+    "status": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/status"},
+    "stage": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/stage"},
+    "resting": {"$ref": "#/$defs/resting"},
+    "counts": {"$ref": "https://todoimplementer.local/contracts/umbrella.schema.json#/$defs/counts"},
+    "needs": {"type": "integer", "minimum": 0, "description": "Children that need kuhy."},
+    "round": {
+      "type": ["object", "null"],
+      "description": "The round in progress. step: manager (worktrees and the Sonnet manager with its free workers), checks (the server's own checks), verdict (judging).",
+      "properties": {
+        "n": {"type": "integer", "minimum": 1},
+        "width": {"type": "integer", "minimum": 1},
+        "started": {"$ref": "#/$defs/epoch_or_null"},
+        "step": {"enum": ["manager", "checks", "verdict"]},
+        "ids": {"type": "array", "items": {"type": "string"}}
+      },
+      "required": ["n", "width", "started", "step", "ids"],
+      "additionalProperties": false
+    },
+    "rounds": {"type": "array", "items": {"$ref": "#/$defs/round"}},
+    "kids": {"type": "array", "items": {"$ref": "#/$defs/kid"}},
+    "issues": {
+      "type": "object",
+      "properties": {
+        "total": {"type": "integer", "minimum": 0},
+        "groups": {"type": "array", "items": {"$ref": "#/$defs/group"}}
+      },
+      "required": ["total", "groups"],
+      "additionalProperties": false
+    },
+    "eta": {
+      "type": "object",
+      "description": "seconds: ceil(left / width) times the median time the finished children took (start to gate); null until one child finished. Width is the next round's width (or the running children when more). Rough by design.",
+      "properties": {
+        "seconds": {"type": ["number", "null"], "minimum": 0},
+        "done": {"type": "integer", "minimum": 0},
+        "left": {"type": "integer", "minimum": 0},
+        "median": {"type": ["number", "null"], "minimum": 0},
+        "width": {"type": "integer", "minimum": 1}
+      },
+      "required": ["seconds", "done", "left", "median", "width"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["id", "title", "at", "status", "stage", "resting", "counts", "needs", "round", "rounds", "kids", "issues", "eta"],
+  "additionalProperties": false
+}

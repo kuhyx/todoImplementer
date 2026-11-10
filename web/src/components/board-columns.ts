@@ -6,6 +6,7 @@ import type { ColumnId } from "@/lib/schemas-common";
 import { renderCard } from "@/components/card";
 import { activeColumn } from "@/lib/board-model";
 import { h } from "@/lib/dom";
+import { trackHref, trackLink } from "@/track/track-link";
 
 export interface ColumnHandlers {
   onColumn: (id: ColumnId) => void;
@@ -21,7 +22,7 @@ function emptyText(column: ColumnView): string {
 }
 
 /** A group with an empty label is the flat Least-effort list: no heading, the repo goes on each card. */
-function renderGroup(group: ColumnView["groups"][number], now: number, handlers: ColumnHandlers): HTMLElement {
+function renderGroup(group: ColumnView["groups"][number], now: number, state: ViewState, handlers: ColumnHandlers): HTMLElement {
   const isFlat = group.label === "";
   return h(
     "section",
@@ -32,12 +33,13 @@ function renderGroup(group: ColumnView["groups"][number], now: number, handlers:
       button.addEventListener("click", () => {
         handlers.onOpen(card.id);
       });
-      return button;
+      // An anchor cannot sit inside the card's button: an umbrella card gets a sibling link, outside the click that opens the drawer.
+      return card.umbrella === undefined ? button : h("div", { class: "card-wrap" }, button, trackLink(trackHref(state, card.id), "card-track"));
     }),
   );
 }
 
-function renderColumn(column: ColumnView, active: ColumnId, now: number, handlers: ColumnHandlers): HTMLElement {
+function renderColumn(column: ColumnView, active: ColumnId, now: number, state: ViewState, handlers: ColumnHandlers): HTMLElement {
   return h(
     "section",
     { attrs: { "aria-label": column.label, "data-active": column.id === active, "data-col": column.id }, class: "col" },
@@ -45,7 +47,7 @@ function renderColumn(column: ColumnView, active: ColumnId, now: number, handler
     h(
       "div",
       { class: "col-body" },
-      ...column.groups.map((group) => renderGroup(group, now, handlers)),
+      ...column.groups.map((group) => renderGroup(group, now, state, handlers)),
       column.groups.length === 0 && h("p", { class: "empty", text: emptyText(column) }),
     ),
   );
@@ -81,6 +83,6 @@ export function renderBoard(view: ColumnView[], state: ViewState, now: number, h
     "div",
     { class: "board" },
     renderTabs(view, active, handlers),
-    h("div", { class: "cols" }, ...view.map((column) => renderColumn(column, active, now, handlers))),
+    h("div", { class: "cols" }, ...view.map((column) => renderColumn(column, active, now, state, handlers))),
   );
 }

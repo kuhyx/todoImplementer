@@ -64,13 +64,16 @@ def card_view(task: TaskLike, run: RunState | None) -> dict[str, Any] | None:
     """Return the card's `umbrella` object (child counts, round width), None for a plain note."""
     if not is_umbrella(task.body):
         return None
-    rows = _rows(task, run)
-    counts = dict.fromkeys(("done", "running", "ready", "queued", "failed"), 0)
+    return counts(_rows(task, run), _record(run))
+
+
+def counts(rows: list[dict[str, Any]], record: dict[str, Any]) -> dict[str, Any]:
+    """Return the `umbrella_counts` object: children per bucket, the next width, rounds done, issues."""
+    found = dict.fromkeys(("done", "running", "ready", "queued", "failed"), 0)
     for row in rows:
-        counts[bucket(str(row["status"]))] += 1
-    record = _record(run)
+        found[bucket(str(row["status"]))] += 1
     return {
-        **counts,
+        **found,
         "total": len(rows),
         "width": int(record.get("width", 1)),
         "round": len(record.get("rounds", [])),

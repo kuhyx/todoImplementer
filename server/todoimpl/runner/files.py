@@ -29,8 +29,8 @@ class KilledError(NeedsYouError):
     """A turn was killed again and again (signal, OOM, reboot): a manager never escalates children for it."""
 
 
-def write_json(path: Path, data: object) -> None:  # noqa: D103
-    atomic.write_text(path, json.dumps(data, indent=2, sort_keys=True) + "\n")
+def write_json(path: Path, data: object, *, durable: bool = True) -> None:  # noqa: D103
+    atomic.write_text(path, json.dumps(data, indent=2, sort_keys=True) + "\n", durable=durable)
 
 
 def read_json(path: Path) -> Any:  # noqa: ANN401, D103

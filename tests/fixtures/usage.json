@@ -76,5 +76,106 @@
     },
     "cards": 2,
     "backfilled": 1
+  },
+  "free": {
+    "at": 1794325000.0,
+    "state": "ok",
+    "error": null,
+    "tokens": {
+      "in": 4000000,
+      "out": 20000,
+      "requests": 163,
+      "ours": 812345
+    },
+    "providers": [
+      {
+        "id": "nvidia",
+        "state": "ok",
+        "until": null,
+        "failures": 0,
+        "quota": false
+      },
+      {
+        "id": "groq",
+        "state": "cooling",
+        "until": 1794325090.0,
+        "failures": 1,
+        "quota": false
+      },
+      {
+        "id": "openrouter",
+        "state": "ok",
+        "until": null,
+        "failures": 0,
+        "quota": true
+      },
+      {
+        "id": "xkiro",
+        "state": "failing",
+        "until": null,
+        "failures": 2,
+        "quota": false
+      },
+      {
+        "id": "agnes",
+        "state": "off",
+        "until": null,
+        "failures": 0,
+        "quota": false
+      }
+    ],
+    "quotas": [
+      {
+        "provider": "openrouter",
+        "label": "free_daily",
+        "used": 46,
+        "total": 50,
+        "left_pct": 8.0,
+        "reset_at": 1794355200.0
+      }
+    ],
+    "combo": {
+      "name": "free-best",
+      "requests": 114,
+      "ok_pct": 99,
+      "fallback_pct": 36,
+      "steps": [
+        {
+          "provider": "nvidia",
+          "model": "nvidia/nemotron",
+          "state": "ok",
+          "requests": 48,
+          "ok_pct": 100,
+          "last": 1794324940.0
+        },
+        {
+          "provider": "groq",
+          "model": "groq/compound",
+          "state": "cooling",
+          "requests": 0,
+          "ok_pct": null,
+          "last": null
+        },
+        {
+          "provider": "openrouter",
+          "model": "openrouter/x:free",
+          "state": "failing",
+          "requests": 3,
+          "ok_pct": 0,
+          "last": 1794324970.0
+        }
+      ]
+    },
+    "models": {
+      "total": 364,
+      "cooling": 1
+    },
+    "counts": {
+      "providers": 5,
+      "ok": 2,
+      "cooling": 1,
+      "failing": 2,
+      "quota_known": 1
+    }
   }
 }

@@ -13,9 +13,13 @@ export interface ViewState {
   repo: string;
   sort: Sort;
   task: null | string;
+  /** The umbrella whose tracking view replaces the board (`#umbrella=<card id>`). */
+  umbrella: null | string;
 }
 
-export const DEFAULT_STATE: ViewState = { col: null, q: "", repo: "", sort: "effort", task: null };
+export const DEFAULT_STATE: ViewState = { col: null, q: "", repo: "", sort: "effort", task: null, umbrella: null };
+
+const isCardId = (value: null | string): value is string => value !== null && /^[A-Za-z0-9]{8}-\d+$/v.test(value);
 
 function oneOf<T extends string>(allowed: readonly T[], value: null | string, fallback: T): T {
   return allowed.find((candidate) => candidate === value) ?? fallback;
@@ -24,12 +28,14 @@ function oneOf<T extends string>(allowed: readonly T[], value: null | string, fa
 export function parseHash(hash: string): ViewState {
   const parameters = new URLSearchParams(hash.replace(/^#/v, ""));
   const task = parameters.get("task");
+  const umbrella = parameters.get("umbrella");
   return {
     col: COLUMN_IDS.find((candidate) => candidate === parameters.get("col")) ?? null,
     q: parameters.get("q") ?? "",
     repo: parameters.get("repo") ?? "",
     sort: oneOf(SORTS, parameters.get("sort"), DEFAULT_STATE.sort),
-    task: task !== null && /^[A-Za-z0-9]{8}-\d+$/v.test(task) ? task : null,
+    task: isCardId(task) ? task : null,
+    umbrella: isCardId(umbrella) ? umbrella : null,
   };
 }
 
@@ -40,6 +46,7 @@ export function formatHash(state: ViewState): string {
   if (state.sort !== DEFAULT_STATE.sort) parameters.set("sort", state.sort);
   if (state.col !== null) parameters.set("col", state.col);
   if (state.task !== null) parameters.set("task", state.task);
+  if (state.umbrella !== null) parameters.set("umbrella", state.umbrella);
   const text = parameters.toString();
   return text === "" ? "" : `#${text}`;
 }

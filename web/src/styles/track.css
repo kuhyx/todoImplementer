@@ -1,0 +1,167 @@
+/* Umbrella tracking view: icons and numbers, one column on a phone, a grid of children on a wide screen. */
+
+/* The view replaces the toolbar and the board; the usage strip stays on top. */
+ti-app[data-view="umbrella"] > .toolbar,
+ti-app[data-view="umbrella"] > .board-host,
+ti-app[data-view="umbrella"] > ti-merges {
+  display: none;
+}
+
+ti-track {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  min-height: 0;
+  padding: var(--space-3);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+@media (max-width: 719.98px) {
+  ti-track {
+    padding: var(--space-2);
+  }
+}
+
+.t-top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.t-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--text-subtitle);
+  letter-spacing: var(--tracking-title);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.t-stale {
+  display: inline-flex;
+  color: var(--warning);
+}
+
+.t-stale svg,
+.t-stat svg,
+.t-chip svg,
+.track-link svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+ti-track[data-stale] > :not(.t-top) {
+  opacity: 0.7;
+}
+
+/* Header ------------------------------------------------------------------ */
+
+.t-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.t-bar {
+  display: flex;
+  gap: 2px;
+  height: 0.75rem;
+}
+
+.t-bar > i {
+  flex: 1 1 0;
+  min-width: 3px;
+  background: var(--border);
+  border-radius: 2px;
+}
+
+.t-bar > i[data-bucket="done"] {
+  background: var(--success);
+}
+
+.t-bar > i[data-bucket="ready"] {
+  background: var(--success);
+  opacity: 0.55;
+}
+
+.t-bar > i[data-bucket="running"] {
+  background: var(--accent);
+}
+
+.t-bar > i[data-bucket="failed"] {
+  background: var(--danger);
+}
+
+.t-stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.t-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--text-muted);
+}
+
+.t-num {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.t-stat[data-bucket="done"],
+.t-stat[data-bucket="ready"] {
+  color: var(--success);
+}
+
+.t-stat[data-bucket="running"] {
+  color: var(--accent);
+}
+
+.t-stat[data-bucket="failed"],
+.t-stat[data-needs] {
+  color: var(--danger);
+}
+
+.t-stat[data-resting] {
+  color: var(--warning);
+}
+
+.t-steps {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.t-steps > i {
+  width: 0.6rem;
+  height: 0.6rem;
+  border: 1px solid var(--text-muted);
+  border-radius: 50%;
+}
+
+.t-steps > i[data-lit] {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.t-steps > i[data-now] {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.t-top .icon-btn {
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+}

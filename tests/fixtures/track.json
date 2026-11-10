@@ -1,0 +1,72 @@
+{
+  "id": "2d0704cd-0",
+  "title": "Make the repos text-free (textgate-rework)",
+  "at": 1794325000.0,
+  "status": "working",
+  "stage": "implement",
+  "resting": null,
+  "counts": {"done": 2, "running": 3, "ready": 1, "queued": 4, "failed": 1, "total": 11, "width": 4, "round": 3, "issues": 5},
+  "needs": 1,
+  "round": {"n": 4, "width": 4, "started": 1794324000.0, "step": "manager", "ids": ["2d0704cd-8", "2d0704cd-9", "2d0704cd-10", "2d0704cd-11"]},
+  "rounds": [
+    {
+      "n": 1, "width": 1, "next": 2, "started": 1794320000.0, "ended": 1794320600.0,
+      "children": [{"id": "2d0704cd-1", "repo": "kuhyx/alpha", "verdict": "clean", "detail": "", "free": true, "checks": true, "ok": true}]
+    },
+    {
+      "n": 2, "width": 2, "next": 2, "started": 1794321000.0, "ended": 1794322000.0,
+      "children": [
+        {"id": "2d0704cd-2", "repo": "kuhyx/beta", "verdict": "fixed", "detail": "permission block", "free": true, "checks": true, "ok": false},
+        {"id": "2d0704cd-3", "repo": "kuhyx/gamma", "verdict": "escalate", "detail": "the manager gave no verdict line", "free": false, "checks": null, "ok": false}
+      ]
+    }
+  ],
+  "kids": [
+    {
+      "id": "2d0704cd-1", "repo": "kuhyx/alpha", "title": "Make alpha text-free", "status": "done", "stage": "shipped",
+      "round": 1, "verdict": "clean", "free": true, "elapsed": 1800.0, "issues": 0, "last_issue": null, "resting": null,
+      "log": true, "attempts": 1, "killed": 0, "error": null
+    },
+    {
+      "id": "2d0704cd-2", "repo": "kuhyx/beta", "title": "Make beta text-free", "status": "ready_to_ship", "stage": "gate",
+      "round": 2, "verdict": "fixed", "free": true, "elapsed": 2400.0, "issues": 3,
+      "last_issue": {"phase": "permission", "model": "free-best", "symptom": "Bash(git status) was denied", "ts": 1794321500.0},
+      "resting": null, "log": true, "attempts": 3, "killed": 1, "error": null
+    },
+    {
+      "id": "2d0704cd-3", "repo": "kuhyx/gamma", "title": "Make gamma text-free", "status": "needs_you", "stage": "failed",
+      "round": 2, "verdict": "escalate", "free": false, "elapsed": 3000.0, "issues": 2,
+      "last_issue": {"phase": "start", "model": null, "symptom": "gateway probe: HTTP 503 from http://127.0.0.1:20128/v1/models", "ts": 1794321100.0},
+      "resting": null, "log": false, "attempts": 0, "killed": 0, "error": "The implement turn failed: claude exited without a result"
+    },
+    {
+      "id": "2d0704cd-8", "repo": "kuhyx/delta", "title": "Make delta text-free", "status": "working", "stage": "implement",
+      "round": 4, "verdict": null, "free": true, "elapsed": 1000.0, "issues": 0, "last_issue": null, "resting": null,
+      "log": true, "attempts": 1, "killed": 0, "error": null
+    },
+    {
+      "id": "2d0704cd-9", "repo": "kuhyx/epsilon", "title": "Make epsilon text-free", "status": "queued", "stage": "paused_retry",
+      "round": 4, "verdict": null, "free": true, "elapsed": 1000.0, "issues": 0, "last_issue": null,
+      "resting": {"kind": "network", "until": 1794325300.0}, "log": false, "attempts": 0, "killed": 0, "error": null
+    },
+    {
+      "id": "2d0704cd-12", "repo": "kuhyx/zeta", "title": "Make zeta text-free", "status": "backlog", "stage": null,
+      "round": null, "verdict": null, "free": null, "elapsed": null, "issues": 0, "last_issue": null, "resting": null,
+      "log": false, "attempts": 0, "killed": 0, "error": null
+    }
+  ],
+  "issues": {
+    "total": 5,
+    "groups": [
+      {
+        "phase": "permission", "model": "free-best", "count": 3, "fixed": 2,
+        "lines": ["{\"ts\": 1794321500.0, \"child\": \"kuhyx/beta\", \"phase\": \"permission\", \"model\": \"free-best\", \"symptom\": \"Bash(git status) was denied\", \"action\": \"allowed it\", \"fixed\": true}"]
+      },
+      {
+        "phase": "start", "model": null, "count": 2, "fixed": 0,
+        "lines": ["{\"ts\": 1794321100.0, \"child\": \"kuhyx/gamma\", \"phase\": \"start\", \"model\": null, \"symptom\": \"gateway probe: HTTP 503\", \"action\": \"the manager does this child\", \"fixed\": false}"]
+      }
+    ]
+  },
+  "eta": {"seconds": 5400.0, "done": 2, "left": 9, "median": 1800.0, "width": 4}
+}

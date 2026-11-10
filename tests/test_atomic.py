@@ -81,3 +81,12 @@ def test_t1901_no_module_renames_a_temp_file_by_hand() -> None:
         if p.name not in ALLOWED and HAND_ROLLED.search(p.read_text(encoding="utf-8"))
     ]
     assert offenders == [], "use todoimpl.atomic.write_text"
+
+
+def test_a_non_durable_write_is_still_atomic_but_skips_the_syncs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(os, "fsync", lambda _fd: pytest.fail("fsync called"))
+    target = tmp_path / "x.fed"
+    files.write_json(target, 5, durable=False)
+    assert files.read_json(target) == 5

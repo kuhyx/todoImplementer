@@ -13,6 +13,7 @@ import { errorText, getJson } from "@/lib/http";
 import { poll } from "@/lib/poller";
 import { routes } from "@/lib/routes";
 import { type Board, board as boardSchema, type Usage, usage as usageSchema } from "@/lib/schemas";
+import { defineTrack, TiTrack } from "@/track/track";
 
 export const BOARD_POLL_MS = 3000;
 export const USAGE_POLL_MS = 10_000;
@@ -23,6 +24,7 @@ export class TiApp extends HTMLElement {
   #boardError: null | string = null;
   #boardHost = h("main", { attrs: { "aria-live": "off" }, class: "board-host" }, loader(`Loading the board from ${routes.board}…`));
   readonly #drawer = new TiDrawer();
+  readonly #track = new TiTrack();
   #signature = "";
   #state: ViewState = DEFAULT_STATE;
   #stops: (() => void)[] = [];
@@ -39,6 +41,7 @@ export class TiApp extends HTMLElement {
     this.#state = parseHash(location.hash);
     this.#paintBoard(true);
     this.#syncDrawer(null);
+    this.#syncView();
   };
 
   #setState(next: ViewState, mode: "push" | "replace", opener: HTMLElement | null = null): void {
@@ -49,6 +52,15 @@ export class TiApp extends HTMLElement {
     else history.replaceState(null, "", url);
     this.#paintBoard(true);
     this.#syncDrawer(opener);
+    this.#syncView();
+  }
+
+  /** The tracking view of an umbrella replaces the toolbar and the board (CSS keys off `data-view`); the usage strip stays. */
+  #syncView(): void {
+    const { umbrella } = this.#state;
+    this.dataset.view = umbrella === null ? "board" : "umbrella";
+    this.#track.hidden = umbrella === null;
+    this.#track.show(umbrella);
   }
 
   #syncDrawer(opener: HTMLElement | null): void {
@@ -129,7 +141,11 @@ export class TiApp extends HTMLElement {
       this.#setState({ ...this.#state, task: null }, "replace");
     });
     this.#drawer.addEventListener("task-changed", () => void this.#loadBoard());
-    this.append(this.#usageHost, this.#toolbar.el, document.createElement("ti-merges"), this.#boardHost, this.#drawer);
+    this.#track.addEventListener("track-close", () => {
+      this.#setState({ ...this.#state, umbrella: null }, "push");
+    });
+    this.append(this.#usageHost, this.#toolbar.el, document.createElement("ti-merges"), this.#boardHost, this.#track, this.#drawer);
+    this.#syncView();
     this.#paintUsage();
     this.#toolbar.el.hidden = true;
     addEventListener("hashchange", this.#onHash);
@@ -146,5 +162,6 @@ export class TiApp extends HTMLElement {
 export function defineApp(): void {
   defineDrawer();
   defineMerges();
+  defineTrack();
   if (!customElements.get("ti-app")) customElements.define("ti-app", TiApp);
 }

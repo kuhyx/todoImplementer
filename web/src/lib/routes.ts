@@ -13,8 +13,10 @@ export const routes = {
   shot: (id: string, path: string): string =>
     `/api/task/${encodeURIComponent(id)}/shot/${path.replace(/^shots\//, "").split("/").map((part) => encodeURIComponent(part)).join("/")}`,
   task: (id: string): string => `/api/task/${encodeURIComponent(id)}`,
+  umbrella: (id: string): string => `/api/umbrella/${encodeURIComponent(id)}`,
   usage: "/api/usage",
   version: "/version",
+  workerLog: (id: string, child: string): string => `/api/umbrella/${encodeURIComponent(id)}/log/${encodeURIComponent(child)}`,
 } as const;
 
 export interface Payload {

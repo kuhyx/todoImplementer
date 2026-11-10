@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://todoimplementer.local/contracts/free.schema.json",
+  "title": "Free-model gateway reading",
+  "description": "What the OmniRoute gateway reports, read by a background monitor (never on a request): provider state and cooldowns, remaining quota only where a provider reports one, today's tokens (gateway-wide, plus the share made while our workers ran), the combo chain. DOCS-tracking.md says what it cannot show.",
+  "$defs": {
+    "epoch_or_null": {"anyOf": [{"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"}, {"type": "null"}]},
+    "percent": {"anyOf": [{"type": "number", "minimum": 0, "maximum": 100}, {"type": "null"}]},
+    "state": {"enum": ["ok", "cooling", "failing", "off"]},
+    "provider": {
+      "type": "object",
+      "properties": {
+        "id": {"type": "string"},
+        "state": {"$ref": "#/$defs/state"},
+        "until": {"$ref": "#/$defs/epoch_or_null"},
+        "failures": {"type": "integer", "minimum": 0},
+        "quota": {"type": "boolean"}
+      },
+      "required": ["id", "state", "until", "failures", "quota"],
+      "additionalProperties": false
+    },
+    "quota": {
+      "type": "object",
+      "description": "A real limit the provider reports: used of total, the share left, when it resets.",
+      "properties": {
+        "provider": {"type": "string"},
+        "label": {"type": "string"},
+        "used": {"type": "number", "minimum": 0},
+        "total": {"type": "number", "exclusiveMinimum": 0},
+        "left_pct": {"type": "number", "minimum": 0, "maximum": 100},
+        "reset_at": {"$ref": "#/$defs/epoch_or_null"}
+      },
+      "required": ["provider", "label", "used", "total", "left_pct", "reset_at"],
+      "additionalProperties": false
+    },
+    "step": {
+      "type": "object",
+      "properties": {
+        "provider": {"type": "string"},
+        "model": {"type": "string"},
+        "state": {"enum": ["ok", "cooling", "failing"]},
+        "requests": {"type": "integer", "minimum": 0},
+        "ok_pct": {"$ref": "#/$defs/percent"},
+        "last": {"$ref": "#/$defs/epoch_or_null"}
+      },
+      "required": ["provider", "model", "state", "requests", "ok_pct", "last"],
+      "additionalProperties": false
+    }
+  },
+  "type": "object",
+  "properties": {
+    "at": {"$ref": "#/$defs/epoch_or_null", "description": "When the shown figures were read; null before the first read."},
+    "state": {"enum": ["ok", "stale", "down", "unknown"], "description": "ok: read recently; stale: the last read is old; down: the newest read got nothing (figures are the last good ones); unknown: not read yet."},
+    "error": {"type": ["string", "null"], "description": "The newest failure of a section, e.g. `combos: HTTP 401`; never a secret."},
+    "tokens": {
+      "type": ["object", "null"],
+      "description": "Today (UTC date of the gateway): prompt and completion tokens and requests of every client of the gateway; ours: the part made while our free workers ran, null when none ran today.",
+      "properties": {
+        "in": {"type": "integer", "minimum": 0},
+        "out": {"type": "integer", "minimum": 0},
+        "requests": {"type": "integer", "minimum": 0},
+        "ours": {"type": ["integer", "null"], "minimum": 0}
+      },
+      "required": ["in", "out", "requests", "ours"],
+      "additionalProperties": false
+    },
+    "providers": {"type": "array", "items": {"$ref": "#/$defs/provider"}},
+    "quotas": {"type": "array", "items": {"$ref": "#/$defs/quota"}},
+    "combo": {
+      "type": ["object", "null"],
+      "properties": {
+        "name": {"type": "string"},
+        "requests": {"type": "integer", "minimum": 0},
+        "ok_pct": {"$ref": "#/$defs/percent"},
+        "fallback_pct": {"$ref": "#/$defs/percent"},
+        "steps": {"type": "array", "items": {"$ref": "#/$defs/step"}}
+      },
+      "required": ["name", "requests", "ok_pct", "fallback_pct", "steps"],
+      "additionalProperties": false
+    },
+    "models": {
+      "type": "object",
+      "properties": {"total": {"type": "integer", "minimum": 0}, "cooling": {"type": "integer", "minimum": 0}},
+      "required": ["total", "cooling"],
+      "additionalProperties": false
+    },
+    "counts": {
+      "type": "object",
+      "description": "Providers by state; quota_known: providers that report a remaining quota (the rest show usage and cooldown only).",
+      "properties": {
+        "providers": {"type": "integer", "minimum": 0},
+        "ok": {"type": "integer", "minimum": 0},
+        "cooling": {"type": "integer", "minimum": 0},
+        "failing": {"type": "integer", "minimum": 0},
+        "quota_known": {"type": "integer", "minimum": 0}
+      },
+      "required": ["providers", "ok", "cooling", "failing", "quota_known"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["at", "state", "error", "tokens", "providers", "quotas", "combo", "models", "counts"],
+  "additionalProperties": false
+}

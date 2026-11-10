@@ -2,6 +2,7 @@ import type { Board, Usage } from "@/lib/schemas";
 
 /** 5 h / 7 d plan windows, today's dollars, running count and any active limit. All numbers come from /api/usage and /api/board. */
 import { renderCreditsToggle } from "@/components/credits-toggle";
+import { renderFree } from "@/components/free-strip";
 import { h } from "@/lib/dom";
 import { formatClock, formatIn, formatPercent, formatUsd } from "@/lib/format";
 
@@ -69,7 +70,7 @@ export function renderUsage(usage: null | Usage, board: Board | null, error: nul
       h("a", { attrs: { href: "/usage" }, class: "usage-link", text: "Usage details" }),
       usage !== null && usage.overage.using && h("span", { attrs: { "data-tone": "warn" }, class: "chip", text: "Overage in use" }),
     ),
-    usage !== null && h("div", { class: "usage-row" }, meter("5 h", usage.five_hour, now), meter("7 d", usage.seven_day, now)),
+    usage !== null && h("div", { class: "usage-row" }, meter("5 h", usage.five_hour, now), meter("7 d", usage.seven_day, now), renderFree(usage.free, now)),
     error !== null && h("p", { attrs: { role: "alert" }, class: "banner", text: error }),
     keyBanner(board),
     overageAlert(board),

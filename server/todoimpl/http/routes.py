@@ -15,6 +15,7 @@ from todoimpl.version import __version__
 
 from . import bodies, issues, settings
 from . import merge as merge_http
+from . import umbrella as umbrella_http
 from .auth import check_post
 from .backend import ERROR_CODES, BackendError
 from .reply import Reply, error_reply, json_reply
@@ -100,7 +101,8 @@ class Router:
         path = parts.path
         if path == "/api/live":
             return _guard(lambda: self._live(parse_qs(parts.query), _last_seq(last_event_id)))
-        if (handler := self._simple.get(path) or self._merge_get(path)) is not None:
+        handler = self._simple.get(path) or self._merge_get(path) or umbrella_http.route(path, self.backend)
+        if handler is not None:
             return _guard(handler)
         if path == tokens_api.PREFIX or path.startswith(tokens_api.PREFIX + "/"):
             return _guard(lambda: self._tokens(path, parts.query))
