@@ -4,6 +4,7 @@ import json
 from typing import TYPE_CHECKING, Any
 
 from todoimpl.lessons import run_skills, skills_loaded, streams
+from todoimpl.usage import events
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -76,7 +77,7 @@ def test_run_skills_merges_all_streams_of_a_run(tmp_path: Path) -> None:
 def test_t1908_an_unchanged_stream_is_parsed_once(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Every /api/board re-parsed every stream of every run (137k events, 4 s); now cached."""
     parsed: list[Path] = []
-    real = streams.iter_events
+    real = events.iter_events  # what streams imported; patched on streams below
 
     def counting(path: Path) -> Any:
         parsed.append(path)

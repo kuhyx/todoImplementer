@@ -52,19 +52,24 @@ CHUNK_PATH_runner_flow := tests/runner/test_runner_[qr]*.py tests/runner/test_ru
 CHUNK_PATH_runner_ship := tests/runner/test_runner_s[e-z]*.py
 CHUNK_PATH_runner_tail := tests/runner/test_runner_[t-z]*.py
 
-test: cov-clean
-	@for c in $(CHUNKS); do $(MAKE) --no-print-directory test-$$c; done
-	@$(MAKE) --no-print-directory coverage
+# Each `make test` keeps its coverage data in its own temp dir (COV_DIR): two runs in one worktree (a board
+# restart re-runs the checks while the old run goes on) used to delete each other's files (T1920).
+COV_DIR ?= .
+
+test:
+	@d=$$(mktemp -d "$${TMPDIR:-/tmp}/todoimpl-cov.XXXXXX"); trap 'rm -rf "$$d"' EXIT; \
+	for c in $(CHUNKS); do $(MAKE) --no-print-directory test-$$c COV_DIR="$$d"; done; \
+	$(MAKE) --no-print-directory coverage COV_DIR="$$d"
 
 cov-clean:
 	@rm -f .coverage .coverage.*
 
 test-%:
-	@$(UV) env COVERAGE_FILE=.coverage.$* pytest $(or $(CHUNK_PATH_$*),tests/$*) --cov --cov-fail-under=0 --cov-report= -q
+	@$(UV) env COVERAGE_FILE=$(COV_DIR)/.coverage.$* pytest $(or $(CHUNK_PATH_$*),tests/$*) --cov --cov-fail-under=0 --cov-report= -q
 
 coverage:
-	@$(UV) coverage combine .coverage.* > /dev/null
-	@$(UV) coverage report
+	@$(UV) env COVERAGE_FILE=$(COV_DIR)/.coverage coverage combine $(COV_DIR)/.coverage.* > /dev/null
+	@$(UV) env COVERAGE_FILE=$(COV_DIR)/.coverage coverage report
 
 # Web gates run once the Astro app exists (pnpm only).
 web:
