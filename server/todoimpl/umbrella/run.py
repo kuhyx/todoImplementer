@@ -1,7 +1,8 @@
 """The umbrella stage handler: rounds of free work, every child through its own pipeline, then settle.
 
 Runs for the stages `implement` (the rounds) and `shipping` (kuhy's Ship click ships every child at its gate).
-Rests at `gate` (children wait for Ship), `failed` (children need kuhy) or ends `shipped` (note closed).
+Children ship themselves when green (T1923). Rests at `gate` (a child with no done_check waits for Ship),
+`failed` (children need kuhy) or ends `shipped` (note closed).
 """
 
 from __future__ import annotations
@@ -82,10 +83,13 @@ class Umbrella:
                 st.extra["failed_stage"], st.stage, st.error = "gate", "failed", INTERRUPTED
                 store.save(ustore.child_dir(self.run_dir, cid), st)
                 continue
+            cut = st.error == INTERRUPTED  # T1905: kuhy checks origin before a cut Ship goes again
             if retry_failed and (st.stage in ("failed", "cancelled") or st.last_tag in ("Q", "A")):
                 self._reset(st)
                 store.save(ustore.child_dir(self.run_dir, cid), st)  # a gate child is not restarted below
-            if shipping and st.stage == "gate":
+            if st.stage == "gate" and (
+                shipping or (kid.done_check and not cut)
+            ):  # they ship themselves (T1923)
                 st.stage = "shipping"
             if st.stage in (*WORK_STAGES, "shipping", *RESTING):
                 store.save(ustore.child_dir(self.run_dir, cid), st)

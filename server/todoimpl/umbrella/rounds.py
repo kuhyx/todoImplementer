@@ -95,7 +95,7 @@ def _prepare(u: Umbrella, cur: dict[str, Any], kids: list[Child]) -> None:
             continue
         cdir = child_dir(u.run_dir, kid.cid)
         st = child_state(u.run_dir, kid.cid) or fresh_state(
-            kid, cur["n"], d.ctx.now(), auto_ship=d.state.auto_ship
+            kid, cur["n"], d.ctx.now(), auto_ship=True
         )
         try:
             worktree.attach(st, kid.repo, children_root(u.run_dir))

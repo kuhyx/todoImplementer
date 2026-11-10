@@ -58,7 +58,7 @@ def test_red_checks_after_the_manager_send_the_child_to_a_fix_turn(world: Env, f
         "umbr0001-1",
         {"_fake": "result", "text": "- [x] C1: ran it -> ok\n- [x] C2: ran the check -> ok\n\nD: done"},
     )
-    st = _run(world, sched, "gate")
+    st = _run(world, sched, "shipped")  # T1923: a green child ships itself
     row = st.extra["umbrella"]["rounds"][0]["children"][0]
     assert (row["verdict"], row["checks"], row["ok"]) == ("clean", False, False)
     assert st.extra["umbrella"]["width"] == 1
