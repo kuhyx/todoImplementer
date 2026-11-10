@@ -1,6 +1,7 @@
 [project]
 name = "todoimplementer"
 version = "0.1.0"
+license = "MIT"
 description = "Board that plans, implements, reviews and ships todo-app notes with Claude Code sessions."
 requires-python = ">=3.15"
 dependencies = []

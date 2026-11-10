@@ -1,6 +1,7 @@
 [project]
 name = "todoimpl-mcp"
 version = "0.1.0"
+license = "MIT"
 description = "Read-only stdio MCP server over todoImplementer's /api/tokens usage API"
 requires-python = ">=3.15"
 dependencies = [
