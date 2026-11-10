@@ -178,7 +178,7 @@
         "partial": {"$ref": "#/$defs/partial"},
         "cost_usd": {"$ref": "#/$defs/usd"},
         "route": {"enum": ["plan", "credits", null], "description": "Route of the run's latest turn: plan (Max subscription) or credits (free API credits, badge on the card); null before a turn."},
-        "tier": {"$ref": "#/$defs/tier_badges"},
+        "tier": {"$ref": "#/$defs/tier_badges"}, "umbrella": {"$ref": "https://todoimplementer.local/contracts/umbrella.schema.json#/$defs/counts"},
         "resumes_at": {"anyOf": [{"$ref": "#/$defs/epoch"}, {"type": "null"}]},
         "updated": {"anyOf": [{"$ref": "#/$defs/epoch"}, {"type": "null"}]},
         "actions": {"$ref": "#/$defs/actions"}

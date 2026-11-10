@@ -11,8 +11,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from todoimpl.prompts import tier as texts
+from todoimpl.umbrella import issues
 
-from . import freegate, tier
+from . import freegate, freeworker, tier
 
 if TYPE_CHECKING:
     from .pipeline import Driver
@@ -51,8 +52,13 @@ def plan_turn(d: Driver, role: str) -> Turn:
     st.extra["free_models"] = verdict.allowed
     if verdict.allowed:
         d.activity("tier cheap: sonnet manages free models")
-        return Turn(tier.MANAGER_MODEL, texts.manager(Path(str(st.worktree))))
+        wt, repo = Path(str(st.worktree)), d.item.repo or ""
+        return Turn(tier.MANAGER_MODEL, texts.manager(wt, d.ctx.run_dir, freeworker.command(), repo))
     d.activity(f"tier cheap: sonnet alone, {verdict.why}")
+    if verdict.detail:  # a gateway failure the server saw itself goes to the same issue log
+        issues.append(
+            d.ctx.run_dir, d.ctx.now(), d.item.repo or "", "start", verdict.detail, "sonnet works alone"
+        )
     return Turn(tier.MANAGER_MODEL, texts.alone(verdict.why))
 
 

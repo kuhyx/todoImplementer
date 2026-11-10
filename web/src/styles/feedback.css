@@ -109,3 +109,60 @@
 .tier-badge[data-tier="free"] {
   color: var(--success);
 }
+
+/* Umbrella notes: child progress on the card and the drawer rows; icons and numbers only. */
+.u-progress,
+.u-rounds,
+.u-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.u-badge,
+.u-issues {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  color: var(--text-muted);
+}
+
+.u-badge svg,
+.u-issues svg {
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.u-badge[data-bucket="done"],
+.u-badge[data-bucket="ready"],
+.u-round[data-doubled="true"],
+.u-row[data-status="done"] > .u-badge:first-child {
+  color: var(--success);
+}
+
+.u-badge[data-bucket="failed"],
+.u-badge[data-verdict="escalate"],
+.u-error,
+.u-row[data-status="needs_you"] > .u-badge:first-child {
+  color: var(--warning);
+}
+
+.u-rows {
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.u-row {
+  padding: 0.25rem 0;
+}
+
+.u-error {
+  flex-basis: 100%;
+}

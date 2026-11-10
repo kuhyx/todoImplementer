@@ -9,6 +9,8 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
+from todoimpl.umbrella.note import is_umbrella
+
 from .types import is_manual
 
 if TYPE_CHECKING:
@@ -77,7 +79,7 @@ def compute(  # noqa: PLR0911 - one return per rule of the spec table
         return Status.DONE
     if task.status == "abandoned" or (run is not None and run.stage == "cancelled"):
         return Status.CANCELLED
-    if is_manual(task.title) or (run is None and task.repo is None):
+    if is_manual(task.title) or (run is None and task.repo is None and not is_umbrella(task.body)):
         return Status.YOURS
     if run is None:
         return Status.BACKLOG

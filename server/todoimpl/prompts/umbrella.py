@@ -1,0 +1,68 @@
+"""The umbrella manager's prompt: runs the round's free workers, fixes what breaks, logs free-model issues."""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .context import PromptContext
+
+ISSUE_FILE = "free-issues.jsonl"
+ISSUE_FORMAT = (
+    '{"ts": <epoch seconds>, "child": "kuhyx/<repo>", "phase": "start|edit|tool-call|permission|checks|'
+    'output", "model": "<model that answered, from the worker stderr, else null>", "symptom": "<exact '
+    'error text, cut at 500 chars>", "action": "<what you did to fix it>", "fixed": true|false}'
+)
+INTRO = (
+    "Umbrella manager. You run this round's free workers and look after them; the server judges the result."
+)
+ISSUE_LOG = (
+    "Issue log: for EVERY problem with a free model (it did not start, a bad edit, a failed tool call, a "
+    "permission block, red checks, garbage output) append one JSON line to"
+)
+CHECKED = (
+    "The worker log names the model that answered. Every child you report as `fixed` needs at least one "
+    "such line; the server checks."
+)
+WORKERS = (
+    "For each child marked free: yes, start one worker, all of them in parallel as background jobs, then "
+    "wait for all of them. Launch workers only with the worker command named above, never raw "
+    "`claude-free` (it answers a task with a grilling round):"
+)
+WORKER_LINE = "  <worker command> <worktree> <task file> <log> --issues <run dir> --child kuhyx/<repo>"
+WORKER_NOTE = (
+    "It runs the model with hooks off and a no-questions preamble, writes everything to <log>, and exits 0 "
+    "only when the worktree changed (3: no edit). Judge a worker by `git diff` and the checks, never by "
+    "what it says."
+)
+LOOK_AFTER = (
+    "Watch the workers. Fix every problem they hit (permission blocks, broken edits, failing checks), "
+    "finish or redo their work, then run each child's checks (its done_check, `make test`, `pre-commit "
+    "run --all-files` where the repo has them). Edit only inside the child worktrees. Never push; leave "
+    "the changes uncommitted or committed, either is fine."
+)
+
+
+def manager(ctx: PromptContext) -> str:
+    """Return the manager prompt; `ctx.brief` lists the round's children (worktree, task file, log, free)."""
+    issues = ctx.run_dir / ISSUE_FILE
+    lines = [
+        "override",
+        INTRO,
+        ctx.brief,
+        WORKERS,
+        WORKER_LINE,
+        WORKER_NOTE,
+        "Children marked free: no are not allowed to leave this machine: do them yourself, no claude-free.",
+        LOOK_AFTER,
+        f"{ISSUE_LOG} {issues}:",
+        f"  {ISSUE_FORMAT}",
+        CHECKED,
+        *(f"kuhy's notes: {n}" for n in ctx.notes),
+        "End with one line per child, exactly:",
+        "  CHILD kuhyx/<repo>: clean            (the worker finished with no intervention)",
+        "  CHILD kuhyx/<repo>: fixed <what>     (done, but you had to step in)",
+        "  CHILD kuhyx/<repo>: escalate <reason> (you could not finish it)",
+        "Then end with `D:`.",
+    ]
+    return "\n".join(lines)

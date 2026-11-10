@@ -43,6 +43,10 @@ class Backend(Protocol):
         """PNG bytes of `<run dir>/shots/<name>` (name already validated), None when absent."""
         ...
 
+    def issues(self, id8: str) -> str | None:
+        """Return the task's free-issues.jsonl as written (empty when none), None for an unknown task."""
+        ...
+
     def usage(self) -> dict[str, Any]:
         """GET /api/usage body."""
         ...

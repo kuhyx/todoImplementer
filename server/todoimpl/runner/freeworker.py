@@ -1,0 +1,102 @@
+"""The one way a free worker is launched: `python -m todoimpl.runner.freeworker <worktree> <prompt> <log>`.
+
+Raw `claude-free -p <task>` loads kuhy's whole ~/.claude, whose spec gate answers a fully specified task
+with a grilling round (the `\u2753` question card) and no edit (smoke test 2026-11-10). This wrapper runs it
+with the board's hooks-off settings and a fixed no-questions preamble, writes stdout and stderr to the log,
+and judges success by the worktree diff, never by the turn's `subtype: success`. A turn that ends with no
+diff and a grilling round is written to the issue log (`--issues <run dir>`, umbrella/issues.py).
+Exit 0 = the worktree changed; 3 = no work; 4 = no `claude-free`.
+"""
+
+from __future__ import annotations
+
+import argparse
+import shutil
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+from todoimpl.umbrella import issues
+
+from .policy import HOOKS_OFF
+
+PREAMBLE = (
+    "You are a non-interactive worker. The task is fully specified and approved by kuhy: never ask "
+    "questions, never run a spec gate or grilling round; make the edits now."
+)
+DENY = ("Bash(git push:*)", "Bash(git push *)")  # only Ship pushes
+GRILL = "❓"
+GRILLING = "spec-gate grilling instead of work"
+TIMEOUT = 3600.0
+TAIL = 500
+NO_WORK, NO_TOOL = 3, 4
+
+
+def command() -> str:
+    """Return the shell prefix prompts hand to a manager: python with this package on its path."""
+    return f"PYTHONPATH={Path(__file__).resolve().parents[2]} {sys.executable} -m todoimpl.runner.freeworker"
+
+
+def _git(worktree: Path, *args: str) -> str:
+    done = subprocess.run(  # noqa: S603 - fixed argv, no shell
+        ["git", *args],  # noqa: S607
+        cwd=worktree, capture_output=True, text=True, check=False,
+    )  # fmt: skip
+    return done.stdout.strip()
+
+
+def _state(worktree: Path) -> tuple[str, str]:
+    """Return (HEAD, porcelain status): a change in either is work."""
+    return _git(worktree, "rev-parse", "HEAD"), _git(worktree, "status", "--porcelain")
+
+
+def run(worktree: Path, prompt_file: Path, log: Path, *, run_dir: Path | None = None, child: str = "") -> int:
+    """Run one worker; `run_dir` holds free-issues.jsonl, `child` names the repo. Return the exit code."""
+    tool = shutil.which("claude-free")
+    if tool is None:
+        _issue(run_dir, child, "start", "claude-free is not installed")
+        return NO_TOOL
+    before = _state(worktree)
+    argv = [tool, "-p", f"{PREAMBLE}\n\n{prompt_file.read_text(encoding='utf-8')}", "--permission-mode"]
+    argv += ["bypassPermissions", "--disallowedTools", *DENY, "--settings", HOOKS_OFF]
+    log.parent.mkdir(parents=True, exist_ok=True)
+    with log.open("a", encoding="utf-8") as out:
+        try:
+            code = subprocess.run(  # noqa: S603 - argv list, no shell
+                argv, cwd=worktree, stdout=out, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+                timeout=TIMEOUT, check=False,
+            ).returncode  # fmt: skip
+        except subprocess.TimeoutExpired:
+            code = -1
+            out.write(f"\n[timed out after {TIMEOUT:g} s]\n")
+    text = log.read_text(encoding="utf-8", errors="replace")
+    changed = _state(worktree) != before
+    if not changed and GRILL in text:
+        _issue(run_dir, child, "start", GRILLING)
+    elif not changed:
+        _issue(run_dir, child, "output", f"no edit, exit {code}: {text[-TAIL:].strip()}")
+    return 0 if changed else NO_WORK
+
+
+def _issue(run_dir: Path | None, child: str, phase: str, symptom: str) -> None:
+    if run_dir is not None:
+        issues.append(run_dir, time.time(), child, phase, symptom, "the manager takes this child over")
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Parse `<worktree> <prompt file> <log> [--issues FILE] [--child REPO]` and run the worker."""
+    parser = argparse.ArgumentParser(prog="freeworker")
+    parser.add_argument("worktree", type=Path)
+    parser.add_argument("prompt_file", type=Path)
+    parser.add_argument("log", type=Path)
+    parser.add_argument("--issues", type=Path, help="run dir holding free-issues.jsonl")
+    parser.add_argument("--child", default="")
+    args = parser.parse_args(argv)
+    code = run(args.worktree, args.prompt_file, args.log, run_dir=args.issues, child=args.child)
+    print(f"worker exit={code}", flush=True)
+    return code
+
+
+if __name__ == "__main__":
+    sys.exit(main())

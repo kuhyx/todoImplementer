@@ -7,13 +7,14 @@ import os
 import shutil
 import subprocess
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
 from todoimpl.service.cards import CardTask
 from todoimpl.todo_mcp.items import Item, split_items
 from todoimpl.todo_mcp.model import Task, TodoError
+from todoimpl.umbrella.note import tick
 
 SHIMS = Path(__file__).resolve().parents[1] / "shims"
 REAL_GIT = shutil.which("git") or "/usr/bin/git"
@@ -125,6 +126,8 @@ class FakeClient:
     added: list[tuple[str, str, str]] = field(default_factory=list)
     abandoned: list[str] = field(default_factory=list)
     fail_abandon: bool = False
+    fail_tick: bool = False
+    ticked: list[str] = field(default_factory=list)
 
     def get_task(self, card: str) -> CardTask:
         """Return the note section behind a card, or TodoError like the real view."""
@@ -162,6 +165,15 @@ class FakeClient:
             raise TodoError(msg)
         self.abandoned.append(card)
         return True
+
+    def tick_child(self, card: str, cid: str) -> None:
+        """Tick an umbrella child's checkbox in the stored note (or fail when asked)."""
+        if self.fail_tick:
+            msg = "tick refused"
+            raise TodoError(msg)
+        note = card.partition("-")[0]
+        self.tasks[note] = replace(self.tasks[note], body=tick(self.tasks[note].body, cid))
+        self.ticked.append(cid)
 
     def item(self, id8: str, index: int = 0) -> Item:
         """Return the note's item at index."""

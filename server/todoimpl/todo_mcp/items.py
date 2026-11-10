@@ -6,6 +6,7 @@ import re
 from dataclasses import dataclass
 
 from todoimpl.todo_mcp.model import Task
+from todoimpl.umbrella.note import is_umbrella
 
 _HEADING = re.compile(r"^## (?!#)(\[x\] )?(.*)$")
 _CHECK = re.compile(r"^done_check:\s*`?(.*?)`?\s*$", re.IGNORECASE)
@@ -52,7 +53,7 @@ def sections(body: str) -> list[Section]:
 def split_items(task: Task) -> list[Item]:
     """One Item per section; a note without sections is a single Item for the whole note."""
     parts = sections(task.body)
-    if not parts:
+    if not parts or is_umbrella(task.body):  # an umbrella's `## ` sections are its children, not items
         return [
             Item(task.id, 0, task.title, task.body, task.repo, task.status, task.done_check, task.created_by)
         ]

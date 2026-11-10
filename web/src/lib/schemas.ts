@@ -6,6 +6,7 @@ import {
   actions, apiError, checks, column, credits, epoch, itemId, lesson, limit, liveCheck, needs, question, selfCheck, stage, status,
   taskCard, usd,
 } from "@/lib/schemas-common";
+import { umbrellaDetail } from "@/lib/schemas-umbrella";
 
 const keyState = z.enum(["ok", "expiring", "expired", "invalid", "missing", "check_failed"]);
 
@@ -56,6 +57,7 @@ export const taskDetail = z.strictObject({
   self_check: selfCheck,
   skills_loaded: z.array(z.string()),
   stages: z.array(z.strictObject({ ended: epoch.nullable(), stage, started: epoch })),
+  umbrella: umbrellaDetail.optional(),
   worktree: z.string().nullable(),
 });
 

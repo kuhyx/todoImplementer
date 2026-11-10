@@ -11,6 +11,7 @@ from todoimpl.runner.parsing import parse_questions
 
 from .card import Context, build_card
 from .repos import repo_path
+from .umbrella import detail
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
@@ -115,6 +116,7 @@ def build_task(
 ) -> dict[str, Any]:
     """Return the /api/task/<item-id> object: card, plan, questions, live check, checks, diff, session."""
     card = build_card(task, run, ctx)
+    umbrella = detail(task, run)
     return {
         "card": card,
         "body": run.note_body if run is not None and run.note_body is not None else task.body,
@@ -133,4 +135,5 @@ def build_task(
         "resume_command": resume_command(run),
         "lesson": run.lesson if run is not None else None,
         "error": run.error if run is not None else None,
+        **({"umbrella": umbrella} if umbrella is not None else {}),
     }

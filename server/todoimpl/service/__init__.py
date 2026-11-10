@@ -8,6 +8,7 @@ from pathlib import Path
 from todoimpl.board.state import run_root
 from todoimpl.http.main import REPO, git_build_id
 from todoimpl.todo_mcp.client import TodoClient
+from todoimpl.umbrella import registry
 
 from .backend import ServiceBackend
 from .cache import TaskCache
@@ -37,6 +38,7 @@ def build_backend(
 
     def fetch() -> list[CardTask]:
         notes = client.list_tasks(full=True)
+        notes += registry.notes(client, root, {n.id[:8] for n in notes})  # repo-less umbrellas
         cards = [card for note in notes for card in card_tasks(note)]
         return cards + closed.cards({note.id[:8] for note in notes})
 

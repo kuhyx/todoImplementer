@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from .checks import CheckResult, clean_env, run_check
-from .files import write_json
+from .files import root_of, write_json
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
@@ -80,7 +80,7 @@ def _exclusive(lock: Path) -> Iterator[None]:
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the gate named by `<run_dir> <worktree>` (after any gate already running) and write its record."""
     run_dir, wt = (Path(a) for a in (sys.argv[1:3] if argv is None else argv)[:2])
-    with _exclusive(run_dir.parent / LOCK_NAME):
+    with _exclusive(root_of(run_dir) / LOCK_NAME):
         record = run(run_dir, wt)
     write_json(run_dir / "gate" / "exit.json", record)
     return 0

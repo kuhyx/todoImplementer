@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 from typing import TYPE_CHECKING
 
 from todoimpl.todo_mcp.model import Task, TodoError
@@ -23,6 +24,9 @@ class ItemView:
         """Wrap client; cache resolves card ids to notes and is poked after writes."""
         self._client = client
         self._cache = cache
+        self._tick = (
+            threading.Lock()
+        )  # children finish concurrently: one read-modify-write of the note at a time
 
     def _note_of(self, card: str) -> str:
         snap = self._cache.snapshot()
@@ -60,6 +64,12 @@ class ItemView:
     def close_task(self, card: str, evidence: str) -> None:
         """Mark this section done; the note closes once all its sections are."""
         self._client.close_item(self.get_task(card).item, evidence)
+        self._cache.poke()
+
+    def tick_child(self, card: str, cid: str) -> None:
+        """Tick child `cid`'s checkbox in the umbrella note behind `card`."""
+        with self._tick:
+            self._client.tick_child(self._note_of(card), cid)
         self._cache.poke()
 
     def abandon(self, card: str) -> bool:

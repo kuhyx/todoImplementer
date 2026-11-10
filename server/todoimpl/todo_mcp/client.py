@@ -10,6 +10,7 @@ from todoimpl.todo_mcp.items import Item, mark_done, sections, split_items
 from todoimpl.todo_mcp.model import Task, TodoError
 from todoimpl.todo_mcp.parse import added_id, parse_detail, parse_list, to_wire
 from todoimpl.todo_mcp.transport import Transport
+from todoimpl.umbrella.note import is_umbrella, tick
 
 __all__ = ["Item", "Task", "TodoClient", "TodoError"]
 
@@ -96,6 +97,9 @@ class TodoClient:
             msg = "evidence: required, not blank"
             raise TodoError(msg)
         task = self.get_task(item.note_id)
+        if is_umbrella(task.body):  # one item: its `## ` sections are children, never marked here
+            self.close_task(item.note_id, evidence)
+            return
         current = split_items(task)
         if item.index >= len(current) or current[item.index].title != item.title:
             msg = f"section {item.title!r} moved or gone in note {item.note_id}"
@@ -105,3 +109,10 @@ class TodoClient:
             current = split_items(self.get_task(item.note_id))
         if all(entry.status == "done" for entry in current) or not sections(task.body):
             self.close_task(item.note_id, evidence)
+
+    def tick_child(self, id8: str, key: str) -> None:
+        """Tick child `key`'s checkbox in an umbrella note; no write when it is already ticked."""
+        task = self.get_task(id8)
+        body = tick(task.body, key)
+        if body != task.body:
+            self.update_task(id8, body=body)

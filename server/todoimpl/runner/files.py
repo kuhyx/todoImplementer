@@ -39,6 +39,15 @@ def read_json(path: Path) -> Any:  # noqa: ANN401, D103
         return None
 
 
+CHILDREN_DIR = "children"  # an umbrella's child run dirs: <root>/<umbrella card>/children/<child id>/
+
+
+def root_of(run_dir: Path) -> Path:
+    """Return the run root a run dir belongs to (one level up; an umbrella child is two levels deeper)."""
+    parent = run_dir.parent
+    return parent.parent.parent if parent.name == CHILDREN_DIR else parent
+
+
 def worktree_path(root: Path, run_id: str) -> Path:
     """Decide the worktree location in one place: `<root>/<item id>/wt`."""
     return root / run_id / "wt"

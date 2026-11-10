@@ -3,6 +3,7 @@ import type { ActionId } from "@/lib/schemas-common";
 
 /** Drawer sections that depend only on the task detail. Buttons are supplied by the caller from actions[]. */
 import { routeChip, statusChip, tierBadges } from "@/components/card";
+import { renderUmbrella } from "@/components/umbrella";
 import { type Child, h } from "@/lib/dom";
 import { formatClock, humanize } from "@/lib/format";
 import { linkify } from "@/lib/linkify";
@@ -20,6 +21,7 @@ export function renderHead(detail: TaskDetail): HTMLElement {
     h("div", { class: "drawer-chips" }, statusChip(card.status), routeChip(card), ...tierBadges(card), h("span", { class: "chip", text: card.repo ?? "Yours (no repo)" }), h("span", { class: "chip", text: `#${card.id}` })),
     h("h2", { attrs: { id: "drawer-title", title: card.title }, class: "drawer-title", text: card.title }),
     h("p", { class: "drawer-current", text: card.current }),
+    detail.umbrella !== undefined && renderUmbrella(detail.umbrella, card.id),
   );
 }
 

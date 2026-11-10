@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://todoimplementer.local/contracts/umbrella.schema.json",
+  "title": "Umbrella notes",
+  "description": "Child progress on an umbrella card and the drawer's child rows and round history (DOCS-umbrella.md).",
+  "$defs": {
+    "counts": {
+      "type": "object",
+      "description": "Umbrella card: children per bucket (done, running, ready to ship, queued, failed), the width of the next round, rounds finished, and the free-model issues logged so far.",
+      "properties": {
+        "done": {"type": "integer", "minimum": 0}, "running": {"type": "integer", "minimum": 0},
+        "ready": {"type": "integer", "minimum": 0}, "queued": {"type": "integer", "minimum": 0},
+        "failed": {"type": "integer", "minimum": 0}, "total": {"type": "integer", "minimum": 0},
+        "width": {"type": "integer", "minimum": 1}, "round": {"type": "integer", "minimum": 0},
+        "issues": {"type": "integer", "minimum": 0}
+      },
+      "required": ["done", "running", "ready", "queued", "failed", "total", "width", "round", "issues"],
+      "additionalProperties": false
+    },
+    "row": {
+      "type": "object",
+      "description": "One child of an umbrella. status is the child's own server-computed status; verdict is the manager's line for its round (clean, fixed, escalate); free: a free worker was allowed (public repo, gateway up); issues: free-model problems logged for it.",
+      "properties": {
+        "id": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/item_id"},
+        "repo": {"type": "string"}, "title": {"type": "string"},
+        "status": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/status"},
+        "stage": {"anyOf": [{"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/stage"}, {"type": "null"}]},
+        "round": {"type": ["integer", "null"]},
+        "verdict": {"enum": ["clean", "fixed", "escalate", null]},
+        "free": {"type": ["boolean", "null"]},
+        "error": {"type": ["string", "null"]},
+        "cost_usd": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/usd"},
+        "issues": {"type": "integer", "minimum": 0}
+      },
+      "required": ["id", "repo", "title", "status", "stage", "round", "verdict", "free", "error", "cost_usd", "issues"],
+      "additionalProperties": false
+    },
+    "detail": {
+      "type": "object",
+      "description": "Drawer of an umbrella: per-child rows and the round history (width, per-child result, the width that followed).",
+      "properties": {
+        "width": {"type": "integer", "minimum": 1}, "round": {"type": "integer", "minimum": 0},
+        "rows": {"type": "array", "items": {"$ref": "#/$defs/row"}},
+        "rounds": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "n": {"type": "integer", "minimum": 1}, "width": {"type": "integer", "minimum": 1},
+              "next": {"type": "integer", "minimum": 1},
+              "children": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {"type": "string"}, "verdict": {"enum": ["clean", "fixed", "escalate"]},
+                    "detail": {"type": "string"}, "free": {"type": "boolean"},
+                    "checks": {"type": ["boolean", "null"]}, "ok": {"type": "boolean"}
+                  },
+                  "required": ["id", "verdict", "detail", "free", "checks", "ok"],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": ["n", "width", "next", "children"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["width", "round", "rows", "rounds"],
+      "additionalProperties": false
+    }
+  }
+}

@@ -35,7 +35,7 @@ def test_cheap_note_runs_on_sonnet_with_the_manager_addendum(world: Env, free: F
     st = run_to_gate(world, PLAN, IMPL, LIVE_OK, **CHEAP)
     impl = implement_calls(world)
     assert [c["model"] for c in impl] == ["sonnet"]
-    assert "claude-free -p" in str(impl[0]["prompt"])
+    assert "todoimpl.runner.freeworker" in str(impl[0]["prompt"])
     assert free.checked() == [st.worktree]
     assert (st.extra["tier"], st.extra["free_models"]) == ("cheap", True)
     assert not st.extra.get("escalated")
