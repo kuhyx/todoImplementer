@@ -59,6 +59,19 @@ def log_tail(run_dir: Path, cid: str) -> str | None:
         return handle.read().decode("utf-8", errors="replace")
 
 
+def _text(value: object) -> str:
+    """Return a hand-written issue field as text, empty when it is not a string."""
+    return value if isinstance(value, str) else ""
+
+
+def _model(value: object) -> str | None:
+    return value if isinstance(value, str) else None
+
+
+def _epoch(value: object) -> float | None:
+    return float(value) if isinstance(value, int | float) and not isinstance(value, bool) else None
+
+
 def _elapsed(child: RunState | None, now: float) -> float | None:
     if child is None or child.started_at is None:
         return None
@@ -75,8 +88,8 @@ def _kid(row: dict[str, Any], run_dir: Path, now: float, seen: dict[str, Any]) -
         **{k: row[k] for k in ("id", "repo", "title", "status", "stage", "round", "verdict", "free")},
         "elapsed": _elapsed(child, now), "issues": row["issues"],
         "last_issue": None if last is None else {
-            "phase": str(last.get("phase", "")), "model": last.get("model"),
-            "symptom": str(last.get("symptom", "")), "ts": last.get("ts"),
+            "phase": _text(last.get("phase")), "model": _model(last.get("model")),
+            "symptom": _text(last.get("symptom")), "ts": _epoch(last.get("ts")),
         },
         "resting": resting(child), "log": latest_log(run_dir, row["id"]) is not None,
         "attempts": len(runs), "killed": sum(bool(w.get("killed")) for w in runs), "error": row["error"],
@@ -87,7 +100,7 @@ def issue_groups(run_dir: Path) -> dict[str, Any]:
     """Group the issue log by phase and model: counts, how many were fixed, the newest raw lines."""
     groups: dict[tuple[str, str | None], dict[str, Any]] = {}
     for raw, row in issues.read_lines(run_dir):
-        key = (str(row.get("phase", "")), row.get("model"))
+        key = (_text(row.get("phase")), _model(row.get("model")))
         group = groups.setdefault(
             key, {"phase": key[0], "model": key[1], "count": 0, "fixed": 0, "lines": []}
         )
@@ -125,13 +138,21 @@ def _round(rec: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
+ROW_KEYS = ("id", "verdict", "detail", "free", "checks", "ok")  # the contract's keys: nothing else passes
+
+
+def _child(row: dict[str, Any], repos: dict[str, str]) -> dict[str, Any]:
+    """Return one round row with the repo name added and only the contract's keys."""
+    return {**{k: row.get(k) for k in ROW_KEYS}, "repo": repos.get(row["id"], row["id"])}
+
+
 def _rounds(rec: dict[str, Any]) -> list[dict[str, Any]]:
     repos = {k["id"]: k["repo"] for k in rec.get("kids", [])}
     return [
         {
             "n": r["n"], "width": r["width"], "next": r["next"],
             "started": r.get("started"), "ended": r.get("ended"),
-            "children": [{**c, "repo": repos.get(c["id"], c["id"])} for c in r["children"]],
+            "children": [_child(c, repos) for c in r["children"]],
         }
         for r in rec.get("rounds", [])
     ]  # fmt: skip
