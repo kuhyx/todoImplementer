@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 
 from todoimpl.board.parse import StateError
 from todoimpl.board.state import FILE, load
+from todoimpl.board.status import DONE_STAGES
 
 from .cards import card_tasks
 
@@ -59,6 +60,6 @@ class ClosedNotes:
                 run = load(directory)
             except StateError:
                 continue
-            if run is not None and run.stage == "shipped":
+            if run is not None and run.stage in DONE_STAGES:
                 ids.add(id8)
         return ids

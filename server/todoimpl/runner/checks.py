@@ -10,8 +10,9 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import IO, TYPE_CHECKING, Any
 
+from . import checks_guard
 from .claude import kill_tree
 
 if TYPE_CHECKING:
@@ -100,6 +101,40 @@ def discover(wt: Path, done_check: str | None) -> list[tuple[str, str]]:
     return found
 
 
+def run_capped(  # noqa: PLR0913 - guard is keyword-only
+    command: str,
+    cwd: Path,
+    timeout: float,
+    out: IO[str] | int = subprocess.DEVNULL,
+    env: Mapping[str, str] | None = None,
+    *,
+    guard: Path | None = None,
+) -> int | None:
+    """`capped.sh bash -c command` in its own process group; None when it timed out (the tree is killed).
+
+    `guard` is a run dir: the group is recorded there while it runs, so a later server can stop it (T1889).
+    """
+    proc = subprocess.Popen(  # noqa: S603 - argv list; the command is the note's own (trusted) done_check
+        [capped(), "bash", "-c", command],
+        cwd=cwd,
+        env=clean_env(env),
+        stdin=subprocess.DEVNULL,
+        stdout=out,
+        stderr=subprocess.STDOUT,
+        start_new_session=True,
+    )
+    if guard is not None:
+        checks_guard.remember(guard, proc.pid)
+    try:
+        return proc.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        kill_tree(proc, grace=1.0)
+        return None
+    finally:
+        if guard is not None:
+            checks_guard.forget(guard, proc.pid)
+
+
 def run_check(  # noqa: PLR0913, PLR0917 - one knob (env) more than the lint allows
     name: str,
     command: str,
@@ -114,22 +149,10 @@ def run_check(  # noqa: PLR0913, PLR0917 - one knob (env) more than the lint all
     """
     log = run_dir / "evidence" / f"check-{name}-{time.time():.3f}.log"
     log.parent.mkdir(parents=True, exist_ok=True)
+    checks_guard.stop_stale(run_dir)  # a dead server's run of this check would clash with this one (T1889)
     with log.open("w", encoding="utf-8") as out:
-        proc = subprocess.Popen(  # noqa: S603 - argv list; the command is the note's own done_check
-            [capped(), "bash", "-c", command],
-            cwd=cwd,
-            env=clean_env(env),
-            stdin=subprocess.DEVNULL,
-            stdout=out,
-            stderr=subprocess.STDOUT,
-            start_new_session=True,
-        )
-        code: int | None
-        try:
-            code = proc.wait(timeout=timeout)
-        except subprocess.TimeoutExpired:
-            kill_tree(proc, grace=1.0)
-            code = None
+        code = run_capped(command, cwd, timeout, out, env, guard=run_dir)
+        if code is None:
             out.write(f"\n[timed out after {timeout:g} s]\n")
     lines = log.read_text(encoding="utf-8", errors="replace").splitlines()
     return CheckResult(

@@ -14,10 +14,15 @@ from .status import Status
 from .types import MANUAL_REASON, fmt_when, is_manual
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
+    from typing import Any
+
     from .state import RunState
     from .types import Limit, TaskLike
 
-FINAL_STAGES = ("shipped", "cancelled")
+FINAL_STAGES = ("shipped", "closed", "cancelled")
+NO_NOTES = "closing runs take no notes; Start again or Cancel"
+ABANDONED = "the note is abandoned: auto close no longer polls its done_check"
 AUTO_SHIP = "Auto-ship when checks pass"
 
 
@@ -87,6 +92,19 @@ def launch_block(limit: Limit, now: float) -> str | None:
     return None
 
 
+def check_block(
+    run: RunState | None, check: Mapping[str, Any] | None, note_status: str = "todo"
+) -> str | None:
+    """Return why a closing run cannot restart: its done_check is not passing in the latest poll."""
+    if run is None or not run.closing:
+        return None
+    if note_status == "abandoned":  # Cancel abandons the note, and the poll covers open notes only
+        return ABANDONED
+    if check is None:
+        return "done_check not polled (auto close is off, or the first tick has not run)"
+    return None if check.get("passed") else f"done_check is not passing: {check.get('reason')}"
+
+
 def actions(  # noqa: PLR0913 - the signature of the interface plus keyword-only context
     task: TaskLike,
     run: RunState | None,
@@ -95,10 +113,14 @@ def actions(  # noqa: PLR0913 - the signature of the interface plus keyword-only
     *,
     repo_missing: str | None = None,
     now: float | None = None,
+    check: Mapping[str, Any] | None = None,
 ) -> list[Action]:
-    """Return the buttons of a card in display order, each enabled only if it can succeed now."""
+    """Return the buttons of a card in display order, each enabled only if it can succeed now.
+
+    `check` is the card's latest auto-close poll entry; it gates restarting a closing run.
+    """
     clock = time.time() if now is None else now
-    block = launch_block(limit, clock)
+    block = launch_block(limit, clock) or check_block(run, check, task.status)
     out = _primary(task, run, status, block, repo_missing)
     if run is not None and status != Status.DONE:
         out += _session(run, status, block)
@@ -130,6 +152,8 @@ def _primary(  # noqa: PLR0911 - one branch per status keeps the table readable
         return [cancel]
     if status == Status.READY_TO_SHIP:
         return [_gate("Ship", "ship", _ship_block(run), confirm=True), cancel]
+    if status == Status.READY_TO_CLOSE:
+        return [Action("close", "Close", confirm=True), cancel]
     if status == Status.NEEDS_YOU and run is not None:
         return _needs_you(run, block, repo_missing, cancel)
     return []
@@ -192,8 +216,10 @@ def _session(run: RunState, status: Status, block: str | None) -> list[Action]:
     """Return Send to Claude and copy-resume, which depend on the session."""
     out: list[Action] = []
     if run.stage not in FINAL_STAGES and status != Status.YOURS:
-        if not run.session_id:
-            reason: str | None = "no Claude session yet"
+        if run.closing:
+            reason: str | None = NO_NOTES
+        elif not run.session_id:
+            reason = "no Claude session yet"
         elif status == Status.WORKING:
             reason = None
         elif status in (Status.QUEUED, Status.SHIPPING):
@@ -209,6 +235,7 @@ def _session(run: RunState, status: Status, block: str | None) -> list[Action]:
 def _resume(run: RunState) -> Action:
     """Return the copy-resume button carrying `cd <worktree> && claude --resume <id>`."""
     if not run.worktree:
-        return Action("copy-resume", "Copy resume command", enabled=False, reason="no worktree yet")
+        why = "closing runs have no worktree" if run.closing else "no worktree yet"
+        return Action("copy-resume", "Copy resume command", enabled=False, reason=why)
     value = f"cd {shlex.quote(run.worktree)} && claude --resume {shlex.quote(run.session_id or '')}"
     return Action("copy-resume", "Copy resume command", value=value)

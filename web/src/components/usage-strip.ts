@@ -66,6 +66,7 @@ export function renderUsage(usage: null | Usage, board: Board | null, error: nul
       h("h1", { class: "brand", text: "todoImplementer" }),
       build !== null && h("span", { class: "build", text: build }),
       board !== null && h("span", { class: "slots", text: `Running ${String(board.slots.used)}` }),
+      board !== null && h("span", { class: "auto-close", text: `auto close: ${board.auto_close ? "on" : "off"}` }),
       usage !== null && h("span", { class: "today", text: `Today ${formatUsd(usage.cost.today_usd)}` }),
       h("a", { attrs: { href: "/usage" }, class: "usage-link", text: "Usage details" }),
       usage !== null && usage.overage.using && h("span", { attrs: { "data-tone": "warn" }, class: "chip", text: "Overage in use" }),

@@ -80,6 +80,8 @@ export function makeCards(): TaskCard[] {
     return {
       ...preset(status, repository !== null),
       assignee: repository === null ? "human" : "claude",
+      auto: null,
+      auto_start: null,
       cost_usd: cost,
       id: idFor(index),
       partial: null,
@@ -107,6 +109,7 @@ export function makeBoard(cards: TaskCard[] = makeCards()): Board {
   const names = cards.map((card) => card.repo).filter((repo) => repo !== null);
   const repos = [...new Set(names)].toSorted((a, b) => a.localeCompare(b));
   return {
+    auto_close: false,
     build: "abc1234",
     columns: ids.map((id) => ({ count: cards.filter((card) => card.column === id).length, id, label: LABELS[id] })),
     generated_at: NOW,

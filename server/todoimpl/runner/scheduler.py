@@ -12,7 +12,7 @@ from todoimpl.board.types import MANUAL_REASON, is_manual
 from todoimpl.todo_mcp.model import TodoError
 from todoimpl.umbrella.sched import start_stage
 
-from . import adopt, retry
+from . import adopt, closing, retry
 from .engine import Client, default_clock
 from .files import read_json
 from .phone_sched import PhoneEngine
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 log = logging.getLogger("todoimpl.runner")
 SPEC_MARKER = re.compile(r"^\s*(done|verify|done_check)\s*:", re.IGNORECASE | re.MULTILINE)
 RESTARTABLE = ("failed", "cancelled")
-FINAL = ("shipped", "cancelled")
+FINAL = ("shipped", "closed", "cancelled")
 RESUMABLE = ("spec", "plan", "implement", "live_check", "checks")
 COUNTERS = (
     "failure_tail", "live_fixes", "check_fixes", "nudges", "nudge", "failed_stage", "resume_stage",
@@ -47,6 +47,16 @@ class RunnerError(Exception):
 def needs_spec(item: Item) -> bool:
     """Spec runs only when the note says neither a done_check nor done/verify lines."""
     return item.done_check is None and not SPEC_MARKER.search(item.body)
+
+
+def restart_stage(st: RunState, item: Item) -> str:
+    """Return the stage a (re)start enters: closing again, the failed stage, the gate after a failed ship."""
+    if st.closing:
+        return "closing"
+    failed = st.extra.get("failed_stage") if st.stage == "failed" else None
+    fresh = start_stage(item.body, st, "plan" if st.extra.get("spec_ok") or not needs_spec(item) else "spec")
+    resumed = "gate" if failed in ("shipping", "gate") else failed  # a failed Ship goes back to the gate
+    return str(resumed) if resumed in (*RESUMABLE, "gate") else fresh
 
 
 class Scheduler(PhoneEngine):
@@ -70,11 +80,25 @@ class Scheduler(PhoneEngine):
             raise RunnerError(msg, "not_found")
         return st
 
-    def _idle(self, card: str) -> RunState:
+    def idle(self, card: str) -> RunState:
+        """Return the run of a card with no live drive; callers hold the lock."""
         if card in self._active:
             msg = f"{card} has a turn running: wait for it to end"
             raise RunnerError(msg, "conflict")
         return self._load(card)
+
+    _idle = idle
+
+    def busy(self, card: str) -> bool:
+        """Return True while the card is queued or driving; callers hold the lock."""
+        return card in self._active or card in self._queue
+
+    def mark_active(self, card: str, *, active: bool) -> None:
+        """Hold a card live outside a drive (the Close re-run); callers hold the lock."""
+        (self._active.add if active else self._active.discard)(card)
+
+    auto_start = closing.auto_start  # a closing run when the item has none; False when one exists
+    close_item = closing.close  # the Close click on a Ready-to-close run (`close` is the Engine's shutdown)
 
     def start(self, card: str, *, auto_ship: bool | None = None) -> None:
         """Start, Restart, Retry or Hand back; a failed run (Retry, Hand back) keeps its auto-ship choice."""
@@ -86,27 +110,23 @@ class Scheduler(PhoneEngine):
         if is_manual(item.title):
             raise RunnerError(MANUAL_REASON, "disabled")
         with self._cv:
-            if card in self._active or card in self._queue:
+            st = store.load(self.root / card)
+            if st is not None and st.closing and st.stage not in RESTARTABLE:
+                return  # the click lost the race to the auto-start: that run is the one to keep
+            if self.busy(card):
                 msg = f"{card} is already running"
                 raise RunnerError(msg, "conflict")
-            st = store.load(self.root / card)
             if st is not None and st.stage not in RESTARTABLE:
                 msg = f"{card} already has a run ({st.stage})"
                 raise RunnerError(msg, "conflict")
             if st is None or st.stage == "cancelled":
                 st = st or RunState(task_id=card, stage="spec", started_at=self.clock(), repo=item.repo)
                 st.auto_ship = bool(auto_ship)
-            failed = st.extra.get("failed_stage") if st.stage == "failed" else None
-            st.stage = "plan" if st.extra.get("spec_ok") or not needs_spec(item) else "spec"
-            st.stage = start_stage(item.body, st, st.stage)  # an umbrella: rounds, not spec/plan
-            if failed in RESUMABLE:
-                st.stage = str(failed)
+            st.stage = restart_stage(st, item)
             st.error, st.last_tag, st.assignee = None, None, "claude"
             st.note_body = clip_body(item.body)
             for key in COUNTERS:
                 st.extra.pop(key, None)
-            if failed in ("shipping", "gate"):
-                st.stage = "gate"
             self.save(card, st)
             if st.stage != "gate":
                 self.enqueue(card)
@@ -164,6 +184,9 @@ class Scheduler(PhoneEngine):
             raise RunnerError(msg, "bad_request")
         with self._cv:
             st = self._load(card)
+            if st.closing:
+                msg = "closing runs take no notes; Start again or Cancel"
+                raise RunnerError(msg, "disabled")
             if st.stage in (*FINAL, "shipping"):
                 msg = f"The run is {st.stage}: nothing to send to"
                 raise RunnerError(msg, "disabled")
@@ -196,7 +219,7 @@ class Scheduler(PhoneEngine):
     def ship(self, card: str) -> None:  # noqa: D102
         with self._cv:
             st = self._idle(card)
-            if st.stage != "gate":
+            if st.stage != "gate" or st.closing:
                 msg = "Ship is offered only at Ready to ship"
                 raise RunnerError(msg, "disabled")
             st.stage = "shipping"

@@ -23,6 +23,7 @@ export const STATUS_ICON: Record<Status, IconName> = {
   needs_you: "failed",
   paused_limit: "queued",
   queued: "queued",
+  ready_to_close: "ready",
   ready_to_ship: "ready",
   shipping: "running",
   working: "running",

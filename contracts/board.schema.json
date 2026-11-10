@@ -15,6 +15,10 @@
       "additionalProperties": false
     },
     "limit": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/limit"},
+    "auto_close": {
+      "type": "boolean",
+      "description": "settings.json auto_close: trusted done_checks are polled and a red-to-green one starts a closing run."
+    },
     "columns": {
       "type": "array",
       "description": "Always the five columns in this order: backlog, running, needs_you, ready, done.",
@@ -68,6 +72,6 @@
       "additionalProperties": false
     }
   },
-  "required": ["build", "generated_at", "slots", "limit", "columns", "repos", "tasks"],
+  "required": ["build", "generated_at", "slots", "limit", "auto_close", "columns", "repos", "tasks"],
   "additionalProperties": false
 }

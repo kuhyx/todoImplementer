@@ -46,6 +46,11 @@ class CardTask:
             task.created_by,
         )
 
+    @property
+    def note_check(self) -> str | None:
+        """The note-level done_check this item ignores because the note has several items."""
+        return self.item.note_check
+
 
 def card_tasks(task: Task) -> list[CardTask]:
     """Every section of a (full) note as a card."""

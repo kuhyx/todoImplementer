@@ -18,6 +18,7 @@ from todoimpl.board.types import Credits, Limit
 from todoimpl.credits import marks, route, setting
 from todoimpl.http.backend import ERROR_CODES, BackendError
 from todoimpl.lessons import LessonError, approve, draft_lesson, latest_lesson, run_skills
+from todoimpl.runner import autocheck
 from todoimpl.runner.scheduler import RunnerError
 from todoimpl.todo_mcp.model import TodoError
 from todoimpl.umbrella.view import overlay_for
@@ -95,6 +96,8 @@ class ServiceBackend:
             limit=Limit(active, state.until if active else None, Credits(**route.view(self.root, now))),
             now=now,
             repo_missing=self._repo_missing,
+            auto_close=autocheck.enabled(self.root),
+            checks=autocheck.load_cache(self.root),
         )
 
     def _with_extras(self, run: RunState | None) -> RunState | None:
@@ -107,11 +110,8 @@ class ServiceBackend:
         except LessonError as exc:  # a corrupt lessons.json must not take the whole board down
             return replace(run, error=run.error or str(exc))
         skills = run_skills(directory)
-        found = replace(
-            run,
-            lesson=latest.to_dict() if latest else run.lesson,
-            skills_loaded=skills or run.skills_loaded,
-        )
+        lesson = latest.to_dict() if latest else run.lesson
+        found = replace(run, lesson=lesson, skills_loaded=skills or run.skills_loaded)
         return overlay_for(self._context, directory, found)
 
     def board(self) -> dict[str, Any]:
@@ -219,6 +219,10 @@ class ServiceBackend:
     def ship(self, id8: str) -> None:
         """Ship click."""
         self._act(lambda: self.scheduler.ship(id8))
+
+    def close(self, id8: str) -> None:
+        """Close click: re-run the done_check, then close the item (closing runs only)."""
+        self._act(lambda: self.scheduler.close_item(id8))
 
     def cancel(self, id8: str) -> None:
         """Cancel click."""

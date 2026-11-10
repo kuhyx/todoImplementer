@@ -70,6 +70,7 @@ def build_board(
         "generated_at": ctx.now,
         "slots": {"used": len(ctx.live)},
         "limit": ctx.limit.to_dict(),
+        "auto_close": ctx.auto_close,
         "columns": [
             {"id": key, "label": label, "count": sum(1 for card in cards if card["column"] == key)}
             for key, label in COLUMNS

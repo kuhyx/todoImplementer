@@ -1,5 +1,6 @@
 """ServiceBackend actions: delegation, error mapping, lesson drafting on a gate rejection."""
 
+import json
 import threading
 from collections.abc import Callable
 from typing import Any
@@ -92,3 +93,26 @@ def test_default_spawn_runs_the_job_on_a_thread() -> None:
     done = threading.Event()
     _spawn(done.set)
     assert done.wait(5)
+
+
+def test_close_goes_to_the_scheduler(rig: Rig) -> None:
+    rig.backend.close("t1")
+    assert rig.scheduler.calls == [("close_item", "t1")]
+    assert rig.scheduler.auto_start("t1", 1.0)
+
+
+def test_board_reads_the_switch_and_the_poll_cache(rig: Rig) -> None:
+    card = rig.note(done_check="true")
+    assert rig.backend.board()["auto_close"] is False
+    rig.root.mkdir(parents=True, exist_ok=True)
+    (rig.root / "settings.json").write_text('{"auto_close": true}', encoding="utf-8")
+    entry = {
+        "at": 1.0,
+        "passed": False,
+        "trusted": False,
+        "reason": "untrusted check (not in trusted-checks)",
+    }
+    (rig.root / "autocheck.json").write_text(json.dumps({card: entry}), encoding="utf-8")
+    board = rig.backend.board()
+    assert board["auto_close"] is True
+    assert next(c for c in board["tasks"] if c["id"] == card)["auto"] == entry["reason"]

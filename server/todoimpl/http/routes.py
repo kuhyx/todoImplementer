@@ -208,7 +208,10 @@ class Router:
         detail = self.backend.task(id8)
         if detail is None:
             return error_reply("not_found", "unknown task")
-        offered = next((a for a in detail["card"]["actions"] if a["id"] == action), None)
+        card = detail["card"]
+        offered = next((a for a in card["actions"] if a["id"] == action), None)
+        if action == "start" and offered is None and card["auto_start"] is not None:
+            return json_reply({"ok": True, "task": card})  # the click lost the race to the auto-start
         if offered is None or not offered["enabled"]:
             reason = offered["reason"] if offered else None
             return error_reply("disabled", reason or "action not available")
@@ -233,17 +236,9 @@ class Router:
                 backend.start(id8, auto_ship=body.get("auto_ship"))
             case "spec-answers":
                 backend.spec_answers(id8, body["answers"])
-            case "spec-ok":
-                backend.spec_ok(id8)
             case "send":
                 backend.send(id8, body["text"])
-            case "ship":
-                backend.ship(id8)
-            case "cancel":
-                backend.cancel(id8)
-            case "go":
-                backend.go(id8)
-            case "rerun":
-                backend.rerun(id8)
+            case "spec-ok" | "ship" | "close" | "cancel" | "go" | "rerun":  # the clicks that take only the id
+                getattr(backend, action.replace("-", "_"))(id8)
             case _:
                 backend.lesson_approve(id8, body["lesson_id"])

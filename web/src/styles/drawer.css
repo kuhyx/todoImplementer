@@ -77,7 +77,8 @@ ti-drawer {
   text-align: center;
 }
 
-.drawer-current {
+.drawer-current,
+.drawer-auto {
   margin-top: var(--space-1);
   color: var(--text-muted);
 }

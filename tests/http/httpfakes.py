@@ -17,6 +17,7 @@ POST_ACTIONS = (
     "spec-ok",
     "send",
     "ship",
+    "close",
     "cancel",
     "lesson-approve",
     "go",
@@ -115,6 +116,9 @@ class FakeBackend:
 
     def ship(self, id8: str) -> None:
         self._record("ship", id8)
+
+    def close(self, id8: str) -> None:
+        self._record("close", id8)
 
     def cancel(self, id8: str) -> None:
         self._record("cancel", id8)

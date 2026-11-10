@@ -31,7 +31,7 @@ if TYPE_CHECKING:
 
 log = logging.getLogger("todoimpl.runner")
 SIGNAL_EXIT = 128  # a shell reports death by signal N as 128 + N
-WORK_STAGES = ("spec", "plan", "implement", "live_check", "checks", "shipping")
+WORK_STAGES = ("spec", "plan", "implement", "live_check", "checks", "shipping", "closing")
 NUDGE = "(runner) Your last reply had no status tag line: finish the work and end with `D:`, `Q:` or `A:`."
 CONTINUE = "(runner) Continue. Report with a `D:`, `Q:` or `A:` tag line when your background work is done."
 
@@ -110,6 +110,8 @@ class Driver:
             raise CancelledError
 
     def _worktree(self) -> None:
+        if self.state.closing:
+            return  # a closing run has no worktree: it works read-only in the repo's main checkout
         worktree.attach(self.state, self.item.repo, self.ctx.root)  # also rebases a reused worktree (T1864)
         self.save()
 
@@ -155,8 +157,9 @@ class Driver:
         notes = tuple(str(n) for n in st.extra.get("notes", [])) + worktree.conflict_notes(st)
         notes += ((NUDGE if nudge is True else str(nudge),) if nudge else ()) + ((CONTINUE,) if cont else ())
         return PromptContext(
-            title=item.title, body=item.body, repo=item.repo or "", worktree=(wt := Path(str(st.worktree))),
-            run_dir=self.ctx.run_dir, done_check=checks.shown_done_check(item.done_check, wt),
+            title=item.title, body=item.body, repo=item.repo or "",
+            worktree=(wt := worktree.turn_dir(st, item.repo)), run_dir=self.ctx.run_dir,
+            done_check=checks.shown_done_check(item.done_check, wt),
             plan_md=self.plan_md(), spec_answers=answers,
             notes=notes, failure_tail=failure_tail, handoff=handoff,
             phone=st.extra.get("waiting_phone") if st.extra.get("phone_attached") else None,
@@ -194,7 +197,7 @@ class Driver:
                 self.context(failure_tail=failure_tail, nudge=nudge, cont=cont, tier=plan.note),
             )
 
-        env = TurnEnv(ctx.run_dir, Path(str(st.worktree)), ctx.publish, ctx.register, ctx.now)
+        env = TurnEnv(ctx.run_dir, worktree.turn_dir(st, self.item.repo), ctx.publish, ctx.register, ctx.now)
         try:
             res = run_turn(
                 env,

@@ -16,7 +16,7 @@ from .types import Limit, fmt_when, is_manual
 from .umbrella import card_view
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Mapping
 
     from .state import RunState
     from .types import TaskLike
@@ -30,6 +30,8 @@ class Context:
     limit: Limit = field(default_factory=Limit)
     now: float = 0.0
     repo_missing: Callable[[str | None], str | None] = lambda _repo: None
+    auto_close: bool = False  # settings.json `auto_close`
+    checks: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)  # autocheck.json, by item id
 
 
 def current_line(  # noqa: PLR0911 - one return per status
@@ -57,6 +59,7 @@ def current_line(  # noqa: PLR0911 - one return per status
         Status.CANCELLED: "cancelled",
         Status.SHIPPING: "pushing and closing the note",
         Status.READY_TO_SHIP: "waiting for your Ship click",
+        Status.READY_TO_CLOSE: "done_check re-run green: waiting for your Close click",
         Status.DONE: "done",
     }[status]
 
@@ -104,7 +107,9 @@ def build_card(task: TaskLike, run: RunState | None, ctx: Context) -> dict[str, 
         ctx.limit,
         repo_missing=repo_missing,
         now=ctx.now,
+        check=ctx.checks.get(tid),
     )
+    entry = ctx.checks.get(tid) if ctx.auto_close and status == Status.BACKLOG else None
     card = {
         "id": tid,
         "title": task.title,
@@ -125,6 +130,8 @@ def build_card(task: TaskLike, run: RunState | None, ctx: Context) -> dict[str, 
         "resumes_at": resumes_at,
         "updated": run.updated if run is not None else None,
         "actions": [a.to_dict() for a in buttons],
+        "auto_start": run.auto_start if run is not None else None,
+        "auto": str(entry["reason"]) if entry is not None else None,
     }
     if (umbrella := card_view(task, run)) is not None:
         card["umbrella"] = umbrella

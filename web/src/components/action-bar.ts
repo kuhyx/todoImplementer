@@ -20,6 +20,8 @@ export interface BarHost {
   state: () => BarState;
 }
 
+const PRIMARY: ReadonlySet<string> = new Set(["close", "ship", "start"]);
+
 export const idleBar = (): BarState => ({ confirming: null, pending: null, slow: false });
 
 export function renderAction(action: Action, host: BarHost, taskId: string): HTMLElement {
@@ -47,7 +49,7 @@ export function renderAction(action: Action, host: BarHost, taskId: string): HTM
         "data-action": action.id,
         type: "button",
       },
-      class: `btn${action.id === "ship" || action.id === "start" ? " primary" : ""}${isBlocked ? " is-disabled" : ""}`,
+      class: `btn${PRIMARY.has(action.id) ? " primary" : ""}${isBlocked ? " is-disabled" : ""}`,
       on: {
         click: () => {
           if (!isBlocked) host.activate(action);

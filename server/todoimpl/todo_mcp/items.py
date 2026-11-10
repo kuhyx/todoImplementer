@@ -25,6 +25,7 @@ class Item:
     status: str
     done_check: str | None
     created_by: str = "kuhy"
+    note_check: str | None = None  # the note-level check this item ignores (multi-item note, no own check)
 
 
 @dataclass(frozen=True)
@@ -62,9 +63,11 @@ def split_items(task: Task) -> list[Item]:
         lines = [line for line in part.lines if not (part.done and line.startswith("closed:"))]
         own = next((m.group(1) for line in lines if (m := _CHECK.match(line.strip()))), None)
         check = own or (task.done_check if len(parts) == 1 else None)
+        ignored = task.done_check if check is None else None
         status = "done" if part.done else task.status
-        body = "\n".join(lines).strip()
-        items.append(Item(task.id, index, part.title, body, task.repo, status, check, task.created_by))
+        text = "\n".join(lines).strip()
+        item = Item(task.id, index, part.title, text, task.repo, status, check, task.created_by, ignored)
+        items.append(item)
     return items
 
 

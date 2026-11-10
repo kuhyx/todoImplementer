@@ -55,7 +55,7 @@ they mean. Lessons from the predecessor are in `DOCS-lessons.md`.
 ## Stage machine
 
 `stage` is written only by the runner into state.json. `spec_wait`, `failed`, `paused_limit` and `cancelled` are
-resting stages; the rest are work stages. "auto" = no click; "click" = kuhy.
+resting stages; the rest are work stages. "auto" = no click; "click" = kuhy. Closing runs: `DOCS-autoclose.md`.
 
 | From | To | Trigger | Kind |
 |---|---|---|---|
@@ -78,7 +78,7 @@ resting stages; the rest are work stages. "auto" = no click; "click" = kuhy.
 | shipping | failed | rebase conflict, red recheck, push refused | auto |
 | any work stage | paused_limit | plan limit seen; `resume_at` = resetsAt | auto |
 | paused_limit | stage before | `resume_at` passed | auto |
-| any non-final (final = shipped, cancelled) | cancelled | cancel (stops the session, keeps the run dir) | click |
+| any non-final (final = shipped, closed, cancelled) | cancelled | cancel (stops the session, keeps the run dir) | click |
 | failed, cancelled | plan/spec | start again | click |
 | live_check or checks with `error`, or failed | implement | send (kuhy's note; error cleared) | click |
 
@@ -93,11 +93,11 @@ first match wins:
 
 | # | Rule | Status | Column |
 |---|---|---|---|
-| 1 | todo status done, or stage shipped | done | done |
+| 1 | todo status done, or stage shipped or closed | done | done |
 | 1b | todo status abandoned, or stage cancelled (Cancel abandons the note when no other section is open) | cancelled | done |
 | 2 | no run and repo null | yours | backlog |
 | 3 | no run | backlog | backlog |
-| 5 | stage gate | ready_to_ship | ready |
+| 5 | stage gate | ready_to_ship (ready_to_close for a closing run) | ready |
 | 6 | stage failed, or `error` set, or `last_tag` in Q/A while not live, or stage spec_wait | needs_you | needs_you |
 | 7 | stage shipping | shipping | running |
 | 8 | stage paused_limit, or limit active and not live | paused_limit | running |
@@ -115,9 +115,9 @@ Server-computed per card as `{id, label, enabled, reason}`; a disabled action al
 decides. `start` enabled when status is backlog or cancelled, the note has a repo, and no usage limit holds (free
 credits taking over is no hold; a MANUAL WORK REQUIRED title is human work: disabled; board `slots` is just `{used}`);
 `spec-answers` when a question is open; `spec-ok` when every question is answered; `send` while a session exists and the
-stage is not final (`shipped`, `cancelled`), including `failed` and stalled runs; `ship` only at Ready to ship; `cancel`
-on any status whose stage is not final; `lesson-approve` when a lesson is drafted; `copy-resume` (carries `value`, no
-POST) when a session id exists; `go`, `copy-fix` (carries `value`, no POST) and `rerun` on a permission block (below).
+stage is not final (`shipped`, `closed`, `cancelled`), including `failed` and stalled runs but never a closing run; `ship`
+only at Ready to ship; `close` only at Ready to close; `cancel` on any status whose stage is not final; `lesson-approve`
+when a lesson is drafted; `copy-resume` (carries `value`, no POST) when a session id exists; `go`, `copy-fix` (carries `value`, no POST) and `rerun` on a permission block (below).
 Start/Restart carry `option` `auto_ship` (a checkbox sent as `{auto_ship: bool}`), disabled without a done_check;
 Retry and Hand back send `{}` and keep the stored choice.
 
@@ -153,7 +153,7 @@ succeeded after it, and only terminal denials of a turn that did not end on `D:`
 ## Endpoints
 
 GET `/version`, `/api/board`, `/api/task/<item-id>`, `/api/usage`, `/api/live?id=<item-id>` (SSE); POST
-`/api/task/<item-id>/{start,spec-answers,spec-ok,send,ship,cancel,lesson-approve,go,rerun}`, `/api/settings/credits-fallback`. Shapes: `version`, `board`,
+`/api/task/<item-id>/{start,spec-answers,spec-ok,send,ship,close,cancel,lesson-approve,go,rerun}`, `/api/settings/credits-fallback`. Shapes: `version`, `board`,
 `task`, `usage`, `live`, `requests` (one def per POST), `response` (all POSTs). Cross-file refs use each schema's
 `$id` (`https://todoimplementer.local/contracts/<file>`); load every file into one registry
 (`scripts/contract_lib.py` in Python, `ajv.addSchema` in web). POSTs need `X-Todoimpl-Token` and a same-origin
@@ -176,7 +176,7 @@ item marks its section `## [x]` and adds a `closed:` line; the note closes with 
 - `evidence/` check output logs and live-check screenshots (`live_check.shots` paths are relative to the run dir)
 - `logs/checks-<epoch>.log`, `live_check.md` (the report), `self_check.json`
 - `limit-until` (one epoch; shared in the root), `credits-exhausted`, `overage-alert.json`, `<stem>.route`
-- the worktree is `<root>/<item id>/wt` on branch `todo/<item id>`; Ship removes it
+- the worktree is `<root>/<item id>/wt` on branch `todo/<item id>`; Ship removes it. A closing run has none.
 
 ## Sessions
 

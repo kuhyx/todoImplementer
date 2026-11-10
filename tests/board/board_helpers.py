@@ -18,6 +18,8 @@ STAGES = (
     "gate",
     "shipping",
     "shipped",
+    "closing",
+    "closed",
     "failed",
     "paused_limit",
     "paused_retry",

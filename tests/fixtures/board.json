@@ -13,6 +13,7 @@
       "text": "Free API credits take over while the plan limit is active."
     }
   },
+  "auto_close": false,
   "columns": [
     {
       "id": "backlog",
@@ -75,7 +76,9 @@
         }
       ],
       "route": null,
-      "tier": {"cheap": false, "free": false, "escalated": false}
+      "tier": {"cheap": false, "free": false, "escalated": false},
+      "auto_start": null,
+      "auto": null
     }
   ]
 }
