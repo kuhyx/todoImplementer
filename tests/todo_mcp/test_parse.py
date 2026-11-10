@@ -19,10 +19,16 @@ def test_list_lines() -> None:
     ]
 
 
-@pytest.mark.parametrize("text", ["a\tb\tc", "", "x\ttodo\thigh\tr\tt\textra"])
+@pytest.mark.parametrize("text", ["a\tb\tc", ""])
 def test_list_malformed(text: str) -> None:
     with pytest.raises(TodoError, match="malformed"):
         parse_list(text)
+
+
+def test_t1881_list_line_with_extra_columns_parses() -> None:
+    """The todo MCP added a trailing created_by column; the board must not 502 on it."""
+    text = "340c295b\ttodo\thigh\tkuhyx/tutor\ttutor todos\tclaude"
+    assert parse_list(text) == [Task("340c295b", "tutor todos", "", "kuhyx/tutor", "todo", "high", None)]
 
 
 def test_list_unknown_status() -> None:

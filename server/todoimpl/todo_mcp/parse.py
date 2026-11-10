@@ -32,10 +32,11 @@ def parse_list(text: str) -> list[Task]:
     tasks: list[Task] = []
     for line in text.split("\n"):
         parts = line.split("\t")
-        if len(parts) != _LIST_FIELDS:
+        # Trailing columns are newer server fields (created_by, T1881); an older board must still list.
+        if len(parts) < _LIST_FIELDS:
             msg = f"malformed list line: {line[:80]!r}"
             raise TodoError(msg)
-        task_id, status, priority, repo, title = parts
+        task_id, status, priority, repo, title = parts[:_LIST_FIELDS]
         tasks.append(
             Task(task_id[:ID_LEN], title, "", None if repo == "-" else repo, _status(status), priority, None)
         )

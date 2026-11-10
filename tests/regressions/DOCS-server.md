@@ -23,3 +23,4 @@ One row per bug, ids global and never reused. The row's test is named `test_t<N>
 | T1815 | A cancelled card sat in Backlog as a to-do and its note stayed open; Cancel now abandons the note where it can and the card shows Abandoned under Done | tests/board/test_board_status.py, tests/service/test_service_view.py, tests/runner/test_runner_abandon.py |
 | T1835 | A Needs-you card said "Claude needs you to do something: see the feed" (or another generic line) while the reply had an `N:` line, a question round or a last paragraph naming the ask | tests/board/test_board_needs_ask.py |
 | T1880 | A worktree holding a non-UTF-8 file made `/api/task/<id>` answer HTTP 500 (strict decode of `git diff`) | tests/board/test_board_diff.py |
+| T1881 | The todo MCP added a trailing `created_by` column to list lines and every `/api/board` answered 502 "malformed list line" | tests/todo_mcp/test_parse.py |
