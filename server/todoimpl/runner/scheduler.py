@@ -7,7 +7,7 @@ import re
 from typing import TYPE_CHECKING, Any
 
 from todoimpl.board import state as store
-from todoimpl.board.state import RunState
+from todoimpl.board.state import RunState, clip_body
 from todoimpl.board.types import MANUAL_REASON, is_manual
 from todoimpl.todo_mcp.model import TodoError
 
@@ -100,6 +100,7 @@ class Scheduler(PhoneEngine):
             if failed in RESUMABLE:
                 st.stage = str(failed)
             st.error, st.last_tag, st.assignee = None, None, "claude"
+            st.note_body = clip_body(item.body)
             for key in COUNTERS:
                 st.extra.pop(key, None)
             if failed in ("shipping", "gate"):

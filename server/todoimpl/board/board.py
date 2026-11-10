@@ -115,7 +115,7 @@ def build_task(
     card = build_card(task, run, ctx)
     return {
         "card": card,
-        "body": task.body,
+        "body": run.note_body if run is not None and run.note_body is not None else task.body,
         "done_check": task.done_check,
         "plan_md": _read(directory / "plan.md"),
         "questions": [vars(q).copy() for q in run.spec_questions] if run is not None else [],
