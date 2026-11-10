@@ -152,7 +152,9 @@ def _checks(d: Driver) -> str | None:
     )
     if not red:
         st.extra.pop("check_fixes", None)
-        return "shipping" if st.auto_ship and d.item.done_check else "gate"
+        child = "umbrella_round" in st.extra  # an umbrella child ships itself when green (T1923)
+        st.auto_ship = st.auto_ship or child
+        return "shipping" if child or (st.auto_ship and d.item.done_check) else "gate"
     tail = "\n\n".join(f"== {r.name}: {r.command} (exit {r.exit_code})\n{r.tail}" for r in red)
     why = f"Checks still red after {MAX_CHECK_FIXES} fix attempts: {', '.join(r.name for r in red)}"
     return _retry(d, "check_fixes", MAX_CHECK_FIXES, tail, NeedsYouError(why, "checks_failed"))

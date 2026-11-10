@@ -10,14 +10,14 @@ from todoimpl.umbrella import issues
 from umbrellarig import CARD, NOTE, at_rest, boot, manager, script_live, umbrella
 
 
-def test_clean_rounds_double_the_width_and_every_child_reaches_its_gate(world: Env, free: Free) -> None:
+def test_clean_rounds_double_the_width_and_every_child_ships(world: Env, free: Free) -> None:
     sched, client = boot(world)
     world.script(NOTE, *manager("CHILD kuhyx/alpha: clean"))
     world.script(NOTE, *manager("CHILD kuhyx/beta: clean", "CHILD kuhyx/gamma: clean"))
     script_live(world)
     try:
         sched.start(CARD)
-        st = at_rest(world, sched, "gate")
+        st = at_rest(world, sched, "shipped")
     finally:
         sched.close()
     rec = st.extra["umbrella"]
@@ -30,18 +30,16 @@ def test_clean_rounds_double_the_width_and_every_child_reaches_its_gate(world: E
     assert "todoimpl.runner.freeworker" in str(managers[0]["prompt"])
     assert "kuhyx/alpha" in str(managers[0]["prompt"])
     assert "kuhyx/beta" not in str(managers[0]["prompt"])
-    assert not client.closed
+    assert [c for c, _ in client.closed] == [CARD]
 
 
-def test_ship_pushes_every_child_ticks_the_note_and_closes_the_umbrella(world: Env, free: Free) -> None:
+def test_green_children_ship_themselves_tick_the_note_and_close_the_umbrella(world: Env, free: Free) -> None:
     sched, client = boot(world, 2)
     world.script(NOTE, *manager("CHILD kuhyx/alpha: clean"))
     world.script(NOTE, *manager("CHILD kuhyx/beta: clean"))
     script_live(world, 2)
     try:
         sched.start(CARD)
-        at_rest(world, sched, "gate")
-        sched.ship(CARD)
         st = at_rest(world, sched, "shipped")
     finally:
         sched.close()
@@ -61,7 +59,7 @@ def test_fixed_or_unfree_children_keep_the_width(world: Env, free: Free) -> None
     script_live(world)
     try:
         sched.start(CARD)
-        st = at_rest(world, sched, "gate")
+        st = at_rest(world, sched, "shipped")
     finally:
         sched.close()
     rec = st.extra["umbrella"]
@@ -75,7 +73,7 @@ def test_a_fixed_child_without_an_issue_line_is_warned_about(world: Env, free: F
     script_live(world, 1)
     try:
         sched.start(CARD)
-        at_rest(world, sched, "gate")
+        at_rest(world, sched, "shipped")
     finally:
         sched.close()
     feed = (world.root / CARD / "events.jsonl").read_text(encoding="utf-8")
@@ -96,7 +94,7 @@ def test_a_fixed_child_with_an_issue_line_is_not_warned_about(world: Env, free: 
     )
     try:
         sched.start(CARD)
-        at_rest(world, sched, "gate")
+        at_rest(world, sched, "shipped")
     finally:
         sched.close()
     feed = (world.root / CARD / "events.jsonl").read_text(encoding="utf-8")

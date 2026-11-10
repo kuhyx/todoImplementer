@@ -17,7 +17,7 @@ def test_t1902_a_killed_manager_is_retried_and_its_children_are_not_escalated(wo
     script_live(world, 1)
     try:
         sched.start(CARD)
-        st = at_rest(world, sched, "gate")
+        st = at_rest(world, sched, "shipped")
     finally:
         sched.close()
     (row,) = st.extra["umbrella"]["rounds"][0]["children"]

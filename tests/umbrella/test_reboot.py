@@ -45,7 +45,7 @@ def test_t1907_a_manager_turn_lost_to_a_reboot_resumes_its_session_and_starts_no
     script_live(world, 1)
     again = Scheduler(client, world.root, check_timeout=20)  # the board unit came back after the boot
     try:
-        st = at_rest(world, again, "gate")
+        st = at_rest(world, again, "shipped")
     finally:
         again.close()
     managers = [
@@ -77,7 +77,7 @@ def test_a_child_turn_lost_to_a_reboot_resumes_its_session_once(world: Env, free
     world.script(cid, *LIVE)
     again = Scheduler(client, world.root, check_timeout=20)
     try:
-        at_rest(world, again, "gate")
+        at_rest(world, again, "shipped")
     finally:
         again.close()
     calls = [c for c in world.calls() if str(c["cwd"]).endswith("wt")]

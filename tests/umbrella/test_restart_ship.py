@@ -64,3 +64,21 @@ def test_t1905_retry_puts_the_interrupted_child_back_at_the_gate(world: Env, fre
     assert child is not None
     assert child.stage == "gate"
     assert st.error is None
+
+
+def test_t1923_kuhys_ship_click_ships_a_child_whose_ship_a_restart_cut(world: Env, free: Free) -> None:
+    sched, client = boot(world, 1)
+    sched.close()
+    cid = _seed(world, client, "shipping")
+    again = Scheduler(client, world.root, check_timeout=20)
+    try:
+        at_rest(world, again, "failed")
+        again.start(CARD)
+        at_rest(world, again, "gate")  # kuhy checks origin first (T1905)
+        again.ship(CARD)
+        at_rest(world, again, "shipped")
+    finally:
+        again.close()
+    child = store.load(child_dir(world.root / CARD, cid))
+    assert child is not None
+    assert child.stage == "shipped"

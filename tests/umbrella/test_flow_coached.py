@@ -26,7 +26,7 @@ def test_t1887_a_coached_child_doubles_the_width_and_the_task_file_carries_the_t
     script_live(world, 2)
     try:
         sched.start(CARD)
-        st = at_rest(world, sched, "gate")
+        st = at_rest(world, sched, "shipped")
     finally:
         sched.close()
     assert [(r["n"], r["next"]) for r in st.extra["umbrella"]["rounds"]] == [(1, 2), (2, 4)]
@@ -48,7 +48,7 @@ def test_t1887_a_fixed_free_child_with_fewer_than_three_coaching_lines_is_warned
         )
     try:
         sched.start(CARD)
-        at_rest(world, sched, "gate")
+        at_rest(world, sched, "shipped")
     finally:
         sched.close()
     assert "kuhyx/alpha: reported fixed after 2 of 3 coaching attempts" in _feed(world)
@@ -64,7 +64,7 @@ def test_t1887_a_fixed_child_after_three_coaching_lines_is_not_warned_about(worl
         )
     try:
         sched.start(CARD)
-        at_rest(world, sched, "gate")
+        at_rest(world, sched, "shipped")
     finally:
         sched.close()
     assert "coaching attempts" not in _feed(world)
@@ -88,7 +88,7 @@ def test_t1888_a_restarted_round_gets_a_fresh_manager_prompt_and_the_rules_on_an
         world.script(NOTE, *manager("CHILD kuhyx/alpha: coached 1 rules added"))
         script_live(world, 1)
         sched.start(CARD)
-        at_rest(world, sched, "gate")
+        at_rest(world, sched, "shipped")
     finally:
         sched.close()
     managers = [c for c in world.calls() if "Umbrella manager" in str(c["prompt"])]

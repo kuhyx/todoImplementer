@@ -53,8 +53,8 @@ def test_t1913_a_child_waits_for_its_repos_own_task_while_the_other_children_go_
     assert sched.locks.acquire("kuhyx/alpha", HOLDER) is None
     try:
         sched.start(CARD)
-        until(lambda: child_stage(world, "umbr0001-2") == "gate")
-        assert child_stage(world, "umbr0001-2") == "gate"
+        until(lambda: child_stage(world, "umbr0001-2") == "shipped")
+        assert child_stage(world, "umbr0001-2") == "shipped"
         assert child_stage(world, "umbr0001-1") is None  # alpha never started
         assert sched.lock_waits() == {"umbr0001-1": HOLDER}
         st = store.load(world.root / CARD)
@@ -67,8 +67,8 @@ def test_t1913_a_child_waits_for_its_repos_own_task_while_the_other_children_go_
         )  # not started yet; the page draws it queued
         assert "waits_on" not in by_id["umbr0001-2"]
         sched.locks.release(HOLDER)
-        at_rest(world, sched, "gate")
-        assert child_stage(world, "umbr0001-1") == "gate"
+        at_rest(world, sched, "shipped")
+        assert child_stage(world, "umbr0001-1") == "shipped"
         assert sched.lock_waits() == {}
         assert sched.locks.free("kuhyx/alpha", "x")
         assert sched.locks.free("kuhyx/beta", "x")

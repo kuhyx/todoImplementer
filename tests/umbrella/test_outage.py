@@ -35,7 +35,7 @@ def test_t1904_no_network_pauses_the_round_before_any_turn_and_resumes_when_it_r
         assert "offline" in str(st.extra["retry_reason"])
         assert not world.calls()  # no manager turn, no tokens spent
         up["now"] = True
-        st = at_rest(world, sched, "gate")
+        st = at_rest(world, sched, "shipped")
     finally:
         sched.close()
     assert st.error is None
@@ -58,7 +58,7 @@ def test_t1904_an_unreachable_gateway_pauses_the_round_and_is_logged_once_per_at
         assert st.extra["retry_kind"] == "gateway"
         assert st.extra["gw_retries"] == 1
         assert not world.calls()
-        st = at_rest(world, sched, "gate")
+        st = at_rest(world, sched, "shipped")
     finally:
         sched.close()
     (row,) = issues.read(world.root / CARD)

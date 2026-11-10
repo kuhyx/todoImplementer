@@ -94,9 +94,7 @@ def _prepare(u: Umbrella, cur: dict[str, Any], kids: list[Child]) -> None:
         if kid.cid in cur["free"] or kid.cid in cur["failed"]:
             continue
         cdir = child_dir(u.run_dir, kid.cid)
-        st = child_state(u.run_dir, kid.cid) or fresh_state(
-            kid, cur["n"], d.ctx.now(), auto_ship=True
-        )
+        st = child_state(u.run_dir, kid.cid) or fresh_state(kid, cur["n"], d.ctx.now(), auto_ship=True)
         try:
             worktree.attach(st, kid.repo, children_root(u.run_dir))
         except NeedsYouError as exc:

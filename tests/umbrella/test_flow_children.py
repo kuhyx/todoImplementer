@@ -31,7 +31,7 @@ def test_an_escalated_child_gets_one_opus_attempt_and_the_width_stays(world: Env
     world.script(NOTE, *manager("CHILD kuhyx/alpha: escalate the worker looped"))
     world.script("umbr0001-1", {"_fake": "result", "text": "C1: done\n\nD: done"})
     script_live(world, 1)
-    st = _run(world, sched, "gate")
+    st = _run(world, sched, "shipped")
     rec = st.extra["umbrella"]
     assert rec["rounds"][0]["next"] == 1
     assert rec["rounds"][0]["children"][0]["checks"] is None
@@ -46,7 +46,7 @@ def test_a_child_without_a_verdict_line_escalates(world: Env, free: Free) -> Non
     world.script(NOTE, *manager("no verdict here"))
     world.script("umbr0001-1", {"_fake": "result", "text": "C1: done\n\nD: done"})
     script_live(world, 1)
-    st = _run(world, sched, "gate")
+    st = _run(world, sched, "shipped")
     assert st.extra["umbrella"]["rounds"][0]["children"][0]["detail"] == "the manager gave no verdict line"
 
 
@@ -82,7 +82,7 @@ def test_a_missing_clone_fails_that_child_and_retry_picks_it_up(world: Env, free
         world.script("umbr0001-1", {"_fake": "result", "text": "C1: done\n\nD: done"})
         world.script("umbr0001-1", *LIVE)
         sched.start(CARD)
-        st = at_rest(world, sched, "gate")
+        st = at_rest(world, sched, "shipped")
     finally:
         sched.close()
     assert st.error is None
@@ -92,7 +92,7 @@ def test_a_ticked_child_is_not_run_again(world: Env, free: Free) -> None:
     sched, _ = boot(world, 2, done=("aaaa1111",))
     world.script(NOTE, *manager("CHILD kuhyx/beta: clean"))
     script_live(world, 2)
-    st = _run(world, sched, "gate")
+    st = _run(world, sched, "shipped")
     assert [r["n"] for r in st.extra["umbrella"]["rounds"]] == [1]
     assert [c["id"] for c in st.extra["umbrella"]["rounds"][0]["children"]] == ["umbr0001-2"]
 
@@ -107,7 +107,7 @@ def test_a_manager_that_fails_escalates_every_child(world: Env, free: Free, monk
     for key in ("umbr0001-1", "umbr0001-2"):
         world.script(key, {"_fake": "result", "text": "C1: done\n\nD: done"})
     script_live(world, 2)
-    st = _run(world, sched, "gate")
+    st = _run(world, sched, "shipped")
     kinds = [c["verdict"] for c in st.extra["umbrella"]["rounds"][0]["children"]]
     assert kinds == ["escalate"]
 
@@ -126,7 +126,7 @@ def test_a_child_never_shares_a_branch_with_a_live_card_of_its_source_note(world
     sh(repo, "git", "worktree", "add", "-b", "todo/aaaa1111-0", str(elsewhere), "main")
     world.script(NOTE, *manager("CHILD kuhyx/alpha: clean"))
     script_live(world, 1)
-    st = _run(world, sched, "gate")
+    st = _run(world, sched, "shipped")
     assert st.error is None
     child = store.load(world.root / CARD / "children" / "umbr0001-1")
     assert child is not None

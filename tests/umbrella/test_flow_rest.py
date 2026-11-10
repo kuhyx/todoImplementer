@@ -31,7 +31,7 @@ def test_a_child_hitting_the_plan_limit_pauses_the_umbrella_and_it_goes_on_after
         assert child is not None
         assert child.stage == "paused_limit"
         lift_limit(world, sched)
-        at_rest(world, sched, "gate")
+        at_rest(world, sched, "shipped")
     finally:
         sched.close()
 
@@ -43,7 +43,7 @@ def test_a_child_retrying_a_failed_turn_pauses_the_umbrella_on_the_same_timer(wo
     world.script("umbr0001-1", *LIVE)
     try:
         sched.start(CARD)
-        at_rest(world, sched, "gate")
+        at_rest(world, sched, "shipped")
     finally:
         sched.close()
     feed = (world.root / CARD / "events.jsonl").read_text(encoding="utf-8")
@@ -93,7 +93,7 @@ def test_closing_the_server_mid_child_turn_leaves_the_run_resumable(world: Env, 
     assert store.load(world.root / CARD).stage == "implement"  # type: ignore[union-attr]
     again = type(sched)(client, world.root, check_timeout=20)  # the new server adopts the running turn
     try:
-        assert at_rest(world, again, "gate").error is None
+        assert at_rest(world, again, "shipped").error is None
     finally:
         again.close()
 
@@ -105,13 +105,13 @@ def test_a_tick_that_fails_fails_the_child_and_the_umbrella_asks_for_help(world:
     script_live(world, 1)
     try:
         sched.start(CARD)
-        at_rest(world, sched, "gate")
-        sched.ship(CARD)
         st = at_rest(world, sched, "failed")
     finally:
         sched.close()
     assert "1 of 1 children need you" in str(st.error), dump(world)
-    assert st.extra["failed_stage"] == "shipping"
+    child = store.load(world.root / CARD / "children" / "umbr0001-1")
+    assert child is not None
+    assert child.extra["failed_stage"] == "shipping"
 
 
 def test_an_umbrella_note_that_will_not_close_asks_for_help(world: Env, free: Free) -> None:
@@ -121,8 +121,6 @@ def test_an_umbrella_note_that_will_not_close_asks_for_help(world: Env, free: Fr
     script_live(world, 1)
     try:
         sched.start(CARD)
-        at_rest(world, sched, "gate")
-        sched.ship(CARD)
         st = at_rest(world, sched, "failed")
     finally:
         sched.close()
@@ -136,7 +134,7 @@ def test_a_dead_gateway_goes_to_the_issue_log_and_the_child_is_not_free(world: E
     script_live(world, 1)
     try:
         sched.start(CARD)
-        st = at_rest(world, sched, "gate")
+        st = at_rest(world, sched, "shipped")
     finally:
         sched.close()
     (row,) = issues.read(world.root / CARD)

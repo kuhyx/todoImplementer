@@ -33,7 +33,7 @@ def test_a_round_with_verdicts_and_checks_saved_does_not_run_the_manager_again(
     world.script("umbr0001-1", *LIVE)
     again = Scheduler(client, world.root, check_timeout=20)  # recovery requeues the interrupted umbrella
     try:
-        st = at_rest(world, again, "gate")
+        st = at_rest(world, again, "shipped")
     finally:
         again.close()
     assert not [c for c in world.calls() if "Umbrella manager" in str(c["prompt"])]
@@ -53,7 +53,7 @@ def test_restarting_a_cancelled_umbrella_restarts_its_cancelled_child(world: Env
         world.script("umbr0001-1", {"_fake": "result", "text": "C1: done\n\nD: done"})
         world.script("umbr0001-1", *LIVE)
         sched.start(CARD)
-        st = at_rest(world, sched, "gate")
+        st = at_rest(world, sched, "shipped")
     finally:
         sched.close()
     assert st.error is None
