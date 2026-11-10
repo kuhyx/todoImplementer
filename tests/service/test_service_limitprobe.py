@@ -53,3 +53,19 @@ def test_build_backend_starts_the_probe_loop(
         assert backend.limit_probe is not None
         backend.limit_probe.stop()
         backend.cache.stop()
+
+
+def test_t1887_a_probe_that_wins_the_race_does_not_change_the_response_that_poked_it(rig: Rig) -> None:
+    rig.note()
+    probe = rig.backend.limit_probe
+    assert probe is not None
+    probe._fetch = lambda now: oauth.Probe(now, None, oauth.Window(0.03, SOON))
+    probe._min_gap = 0.0
+
+    def win() -> None:  # the background probe finishes before the response is built
+        probe.tick()
+
+    probe.refresh_if_due = win  # type: ignore[method-assign]
+    limits.write_until(rig.root, SOON)
+    assert rig.backend.board()["limit"]["active"] is True  # read before the poke: the stored limit
+    assert rig.backend.board()["limit"]["active"] is False  # the next request sees it lifted

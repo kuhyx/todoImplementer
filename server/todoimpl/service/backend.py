@@ -83,11 +83,11 @@ class ServiceBackend:
 
     # ---- reads ----
     def _context(self) -> Context:
+        now = self._clock()
+        state = limit_state(self.root)  # read first: a fast probe must not change this response mid-build
+        active = state.active(now)
         if self.limit_probe is not None:
             self.limit_probe.refresh_if_due()  # a page load re-checks a held limit in the background
-        now = self._clock()
-        state = limit_state(self.root)
-        active = state.active(now)
         return Context(
             live=frozenset(self.scheduler.running()),
             limit=Limit(active, state.until if active else None, Credits(**route.view(self.root, now))),
