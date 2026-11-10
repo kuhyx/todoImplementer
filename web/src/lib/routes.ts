@@ -5,6 +5,8 @@ export const routes = {
   board: "/api/board",
   creditsFallback: "/api/settings/credits-fallback",
   live: (id: string): string => `/api/live?id=${encodeURIComponent(id)}`,
+  mergeAction: (group: string, action: string): string => `/api/merge/${group}/${action}`,
+  merges: "/api/merges",
   post: (id: string, action: string): string => `/api/task/${encodeURIComponent(id)}/${action}`,
   /** `path` is run-dir relative ("shots/live2/v1.png"); the server serves it from under <run>/shots. */
   shot: (id: string, path: string): string =>

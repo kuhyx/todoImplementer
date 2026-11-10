@@ -11,6 +11,7 @@ const PATHS = {
   escalated: "M12 20V5M6 11l6-6 6 6",
   free: "M4 11h16v9H4zM3 7h18v4H3zM12 7v13M12 7c-2-4-5-3-4 0M12 7c2-4 5-3 4 0",
   info: "M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18zM12 11v5M12 8h.01",
+  merge: "M6 4v5a5 5 0 0 0 5 5h7M6 20v-6M15 10l4 4-4 4",
   one: "M6 4h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM8 12h8",
 } as const;
 

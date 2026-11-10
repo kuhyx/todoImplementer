@@ -51,9 +51,11 @@ def build_backend(
         start_watch()
     # Imported here: apikey.monitor needs service.cards, so a top-level import would be circular.
     from todoimpl.apikey.monitor import KeyMonitor  # noqa: PLC0415
+    from todoimpl.merge.service import MergeService  # noqa: PLC0415 - merge.apply imports service.cards
 
     monitor = KeyMonitor(client, after_write=cache.poke)
     backend = ServiceBackend(cache, scheduler, root, build or git_build_id(REPO), key_monitor=monitor)
+    backend.merge_service = MergeService(client, cache, root)
     if refresh:
         cache.start()
         monitor.start()  # first check runs on its own thread: a slow network never delays startup

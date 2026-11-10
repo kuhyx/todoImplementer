@@ -20,12 +20,12 @@ export class ApiError extends Error {
 
 export const errorText = (error: unknown): string => (Error.isError(error) ? error.message : "unknown error");
 
-function shapeMessage(url: string, error: z.ZodError): string {
+export function shapeMessage(url: string, error: z.ZodError): string {
   const path = error.issues.slice(0, 1).flatMap((issue) => issue.path).join(".");
   return `${url}: the server sent an unexpected shape at ${path === "" ? "root" : path}`;
 }
 
-async function readJson(url: string, response: Response): Promise<unknown> {
+export async function readJson(url: string, response: Response): Promise<unknown> {
   try {
     return (await response.json()) as unknown;
   } catch {
@@ -33,7 +33,7 @@ async function readJson(url: string, response: Response): Promise<unknown> {
   }
 }
 
-async function send(url: string, init: RequestInit): Promise<Response> {
+export async function send(url: string, init: RequestInit): Promise<Response> {
   try {
     return await fetch(url, init);
   } catch {

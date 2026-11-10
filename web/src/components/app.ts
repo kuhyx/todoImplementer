@@ -2,6 +2,7 @@
 import { renderBoard } from "@/components/board-columns";
 import { defineDrawer, TiDrawer } from "@/components/drawer";
 import { loader } from "@/components/feedback";
+import { defineMerges } from "@/components/merge-strip";
 import { createToolbar, type Toolbar } from "@/components/toolbar";
 import { renderUsage } from "@/components/usage-strip";
 import { buildView } from "@/lib/board-model";
@@ -128,7 +129,7 @@ export class TiApp extends HTMLElement {
       this.#setState({ ...this.#state, task: null }, "replace");
     });
     this.#drawer.addEventListener("task-changed", () => void this.#loadBoard());
-    this.append(this.#usageHost, this.#toolbar.el, this.#boardHost, this.#drawer);
+    this.append(this.#usageHost, this.#toolbar.el, document.createElement("ti-merges"), this.#boardHost, this.#drawer);
     this.#paintUsage();
     this.#toolbar.el.hidden = true;
     addEventListener("hashchange", this.#onHash);
@@ -144,5 +145,6 @@ export class TiApp extends HTMLElement {
 
 export function defineApp(): void {
   defineDrawer();
+  defineMerges();
   if (!customElements.get("ti-app")) customElements.define("ti-app", TiApp);
 }

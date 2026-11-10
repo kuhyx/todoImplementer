@@ -14,6 +14,7 @@ from todoimpl.tokens_api import router as tokens_api
 from todoimpl.version import __version__
 
 from . import bodies, settings
+from . import merge as merge_http
 from .auth import check_post
 from .backend import ERROR_CODES, BackendError
 from .reply import Reply, error_reply, json_reply
@@ -80,6 +81,18 @@ class Router:
             "/api/usage": lambda: json_reply(self.backend.usage()),
         }
 
+    def _merges(self) -> merge_http.MergeApi | None:
+        """Return the merge service the backend carries (`merge_service`), None when it has none."""
+        api = getattr(self.backend, "merge_service", None)
+        return api if isinstance(api, merge_http.MergeApi) else None
+
+    def _merge_get(self, path: str) -> Callable[[], Reply] | None:
+        """Return the GET /api/merges handler when the backend has a merge service."""
+        api = self._merges()
+        if path != merge_http.GET_PATH or api is None:
+            return None
+        return lambda: json_reply(api.suggestions())
+
     # ---- GET ----
     def get(self, target: str, last_event_id: str | None = None) -> Reply | SseReply:
         """Answer a GET: API route, SSE feed or static file."""
@@ -87,8 +100,8 @@ class Router:
         path = parts.path
         if path == "/api/live":
             return _guard(lambda: self._live(parse_qs(parts.query), _last_seq(last_event_id)))
-        if path in self._simple:
-            return _guard(self._simple[path])
+        if (handler := self._simple.get(path) or self._merge_get(path)) is not None:
+            return _guard(handler)
         if path == tokens_api.PREFIX or path.startswith(tokens_api.PREFIX + "/"):
             return _guard(lambda: self._tokens(path, parts.query))
         if (reply := self._task_route(path)) is not None:
@@ -158,8 +171,11 @@ class Router:
         if (why := check_post(origin, token, expected=self.token, origins=self.origins)) is not None:
             return error_reply("forbidden", why)
         path = urlsplit(target).path
+        found = merge_http.POST_PATH.fullmatch(path)
         if path == settings.PATH:
             reply = _guard(lambda: settings.handle(self.backend, raw))
+        elif found and (api := self._merges()) is not None:
+            reply = _guard(lambda: merge_http.handle_post(api, found, raw))
         else:
             reply = _guard(lambda: self._action(path, raw))
         assert isinstance(reply, Reply)  # noqa: S101 - _action never returns a stream

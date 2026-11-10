@@ -30,6 +30,7 @@ if TYPE_CHECKING:
 
     from todoimpl.apikey.monitor import KeyMonitor
     from todoimpl.board.state import RunState
+    from todoimpl.merge.service import MergeService
 
     from .cache import TaskCache
     from .scheduling import SchedulerLike
@@ -72,6 +73,7 @@ class ServiceBackend:
         self._repo_missing = repo_missing or repo_checker()
         self.fix_runner = fix_runner  # runs a permission block's one-liner; tests inject a fake
         self.key_monitor = key_monitor  # the API key's newest status rides on the board
+        self.merge_service: MergeService | None = None  # set by build_backend; the http layer looks for it
 
     # ---- reads ----
     def _context(self) -> Context:
