@@ -24,3 +24,4 @@ class PromptContext:
     handoff: str = ""  # summary carried into a fresh session after idle
     phone: dict[str, Any] | None = None  # phone_ready.json of a run whose phone is attached now
     base: str = "main"  # the repo's default branch on origin: where a session lands its work
+    tier: str = ""  # cheap-tier addendum for implement-role prompts (prompts/tier.py); "" = normal tier

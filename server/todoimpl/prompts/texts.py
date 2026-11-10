@@ -185,10 +185,16 @@ STAGES: dict[str, Callable[[PromptContext], str]] = {
 }
 
 
+TIERED = frozenset(
+    {"implement", "fix", "resume_after_kill", "fresh_after_idle"}
+)  # the implement-role prompts
+
+
 def build(stage: str, ctx: PromptContext) -> str:
     """Return the prompt for `stage`; unknown stages raise ValueError (never a silent empty prompt)."""
     fn = STAGES.get(stage)
     if fn is None:
         msg = f"unknown prompt stage {stage!r}; expected one of {sorted(STAGES)}"
         raise ValueError(msg)
-    return fn(ctx)
+    text = fn(ctx)
+    return f"{text}\n{ctx.tier}" if ctx.tier and stage in TIERED else text

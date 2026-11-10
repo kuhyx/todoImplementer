@@ -13,6 +13,7 @@ class TodoError(Exception):
 class Task:
     """One todo-app note; ``id`` is the 8-char prefix, status is ``todo|in progress|done|abandoned``.
 
+    ``created_by`` is ``kuhy`` or ``claude`` (old notes lack it: kuhy).
     ``list_tasks`` leaves ``body`` "" and ``done_check`` None (list lines lack them).
     """
 
@@ -23,3 +24,4 @@ class Task:
     status: str
     priority: str
     done_check: str | None
+    created_by: str = "kuhy"

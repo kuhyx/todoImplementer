@@ -29,7 +29,8 @@
         "reason": "already running"
       }
     ],
-    "route": null
+    "route": null,
+    "tier": {"cheap": false, "free": false, "escalated": false}
   },
   "body": "Do the demo.",
   "done_check": "python demo.py",

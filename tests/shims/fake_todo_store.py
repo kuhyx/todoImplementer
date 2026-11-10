@@ -32,6 +32,7 @@ class FakeNote:
     repo: str | None = None
     done_check: str | None = None
     by: str | None = None
+    created_by: str = "kuhy"
     evidence: str | None = None
     created: str = ""
     updated: str = ""
@@ -84,14 +85,15 @@ def title_of(note: FakeNote) -> str:
 
 def list_line(note: FakeNote) -> str:
     r"""``<id8>\\t<status>\\t<priority>\\t<repo or ->\\t<title>``."""
-    return "\t".join([note.id[:_MIN_PREFIX], note.status, note.priority, note.repo or "-", title_of(note)])
+    cells = [note.id[:_MIN_PREFIX], note.status, note.priority, note.repo or "-", title_of(note)]
+    return "\t".join([*cells, note.created_by])
 
 
 def detail(note: FakeNote) -> str:
     """Metadata lines, ``---``, then the text (``noteDetail`` in note_lookup.dart)."""
     head = [f"id: {note.id}", f"priority: {note.priority}", f"status: {note.status}"]
     head += [f"created: {note.created}", f"updated: {note.updated}"]
-    for key in ("repo", "done_check", "by", "evidence"):
+    for key in ("repo", "done_check", "by", "created_by", "evidence"):
         if (value := getattr(note, key)) is not None:
             head.append(f"{key}: {value}")
     return "\n".join([*head, "---", note.text])
@@ -170,7 +172,9 @@ class FakeStore:
             note.done_check = _join_checks(note.done_check, check)
             note.priority = max(note.priority, prio, key=_PRIORITIES.index)
             return self._saved(note, "appended to")
-        note_id = self.seed(repo, f"{repo.split('/')[-1]} todos", section, priority=prio, by="claude")
+        note_id = self.seed(
+            repo, f"{repo.split('/')[-1]} todos", section, priority=prio, by="claude", created_by="claude"
+        )
         self.notes[note_id].done_check = check
         return self._saved(self.notes[note_id], "added")
 

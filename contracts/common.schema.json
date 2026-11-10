@@ -155,6 +155,12 @@
       "required": ["done", "open", "deferred", "followup_id"],
       "additionalProperties": false
     },
+    "tier_badges": {
+      "type": "object",
+      "description": "Cheap-tier badges (DOCS-tiers.md): cheap = Sonnet manager; free = free models allowed for the latest implement turn; escalated = Opus took over.",
+      "properties": {"cheap": {"type": "boolean"}, "free": {"type": "boolean"}, "escalated": {"type": "boolean"}},
+      "required": ["cheap", "free", "escalated"], "additionalProperties": false
+    },
     "task_card": {
       "type": "object",
       "description": "One board card; also the head of the task detail.",
@@ -172,13 +178,14 @@
         "partial": {"$ref": "#/$defs/partial"},
         "cost_usd": {"$ref": "#/$defs/usd"},
         "route": {"enum": ["plan", "credits", null], "description": "Route of the run's latest turn: plan (Max subscription) or credits (free API credits, badge on the card); null before a turn."},
+        "tier": {"$ref": "#/$defs/tier_badges"},
         "resumes_at": {"anyOf": [{"$ref": "#/$defs/epoch"}, {"type": "null"}]},
         "updated": {"anyOf": [{"$ref": "#/$defs/epoch"}, {"type": "null"}]},
         "actions": {"$ref": "#/$defs/actions"}
       },
       "required": [
         "id", "title", "repo", "priority", "assignee", "stage", "status", "column", "current", "needs",
-        "partial", "cost_usd", "route", "resumes_at", "updated", "actions"
+        "partial", "cost_usd", "route", "tier", "resumes_at", "updated", "actions"
       ],
       "additionalProperties": false
     },

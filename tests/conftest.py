@@ -35,3 +35,9 @@ def _no_real_desktop_notifications(
     shim.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
     shim.chmod(0o755)
     monkeypatch.setenv("PATH", f"{shims}:{os.environ.get('PATH', '')}")
+
+
+@pytest.fixture(autouse=True)
+def _no_real_free_gateway(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep the cheap tier away from kuhy's real OmniRoute gateway (port 1 refuses)."""
+    monkeypatch.setenv("TODOIMPL_FREE_GATEWAY", "http://127.0.0.1:1")

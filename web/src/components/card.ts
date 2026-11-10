@@ -1,6 +1,7 @@
 import type { NeedsCategory, Status, TaskCard } from "@/lib/schemas-common";
 
 /** One board card. Every word comes from the server's card; the status label is display text for the enum only. */
+import { icon, type IconName } from "@/components/icons";
 import { h } from "@/lib/dom";
 import { formatAgo, formatClock, formatIn, formatUsd } from "@/lib/format";
 
@@ -37,6 +38,16 @@ export function statusChip(status: Status): HTMLElement {
 /** "free credits" badge: only when the server says the latest turn ran on free API credits. */
 export function routeChip(card: TaskCard): false | HTMLElement {
   return card.route === "credits" && h("span", { attrs: { "data-tone": "accent" }, class: "chip route-chip", text: "free credits" });
+}
+
+const TIER_ORDER = ["cheap", "free", "escalated"] as const satisfies readonly IconName[];
+const TIER_LABEL: Record<(typeof TIER_ORDER)[number], string> = { cheap: "Cheap", escalated: "Escalated", free: "Free models" };
+
+/** Icon-only cheap-tier badges (cheap, free models, escalated): the flags are the server's, the order is fixed. */
+export function tierBadges(card: TaskCard): HTMLElement[] {
+  return TIER_ORDER.filter((name) => card.tier[name]).map((name) =>
+    h("span", { attrs: { "aria-label": TIER_LABEL[name], "data-tier": name, role: "img", title: TIER_LABEL[name] }, class: "tier-badge" }, icon(name)),
+  );
 }
 
 const CATEGORY_LABEL: Record<NeedsCategory, string> = {
@@ -79,6 +90,7 @@ export function renderCard(card: TaskCard, now: number, shouldShowRepo = false):
       { class: "card-top" },
       statusChip(card.status),
       routeChip(card),
+      ...tierBadges(card),
       h("span", { class: "card-prio", text: card.priority }),
     ),
     h("span", { class: "card-title", text: card.title }),

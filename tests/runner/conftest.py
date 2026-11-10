@@ -7,7 +7,10 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from collections.abc import Iterator
+
 from runnerfakes import Env, make_env
+from tierfakes import Free
 from todoimpl.runner import retry
 
 
@@ -26,3 +29,12 @@ def world(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Env:
     for key in ("TODOIMPL_CLAUDE", "TODOIMPL_MODEL", "TODOIMPL_SRC", "CLAUDECODE"):
         monkeypatch.delenv(key, raising=False)
     return built
+
+
+@pytest.fixture
+def free(world: Env, monkeypatch: pytest.MonkeyPatch) -> Iterator[Free]:
+    """Free models reachable: a public repo and a gateway that answers (flip `public` / `up`)."""
+    outside = Free(world)
+    monkeypatch.setenv("TODOIMPL_FREE_GATEWAY", outside.url)
+    yield outside
+    outside.stop()

@@ -23,6 +23,7 @@ class Item:
     repo: str | None
     status: str
     done_check: str | None
+    created_by: str = "kuhy"
 
 
 @dataclass(frozen=True)
@@ -52,14 +53,17 @@ def split_items(task: Task) -> list[Item]:
     """One Item per section; a note without sections is a single Item for the whole note."""
     parts = sections(task.body)
     if not parts:
-        return [Item(task.id, 0, task.title, task.body, task.repo, task.status, task.done_check)]
+        return [
+            Item(task.id, 0, task.title, task.body, task.repo, task.status, task.done_check, task.created_by)
+        ]
     items = []
     for index, part in enumerate(parts):
         lines = [line for line in part.lines if not (part.done and line.startswith("closed:"))]
         own = next((m.group(1) for line in lines if (m := _CHECK.match(line.strip()))), None)
         check = own or (task.done_check if len(parts) == 1 else None)
         status = "done" if part.done else task.status
-        items.append(Item(task.id, index, part.title, "\n".join(lines).strip(), task.repo, status, check))
+        body = "\n".join(lines).strip()
+        items.append(Item(task.id, index, part.title, body, task.repo, status, check, task.created_by))
     return items
 
 

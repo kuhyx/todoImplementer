@@ -28,7 +28,10 @@ def test_list_malformed(text: str) -> None:
 def test_t1881_list_line_with_extra_columns_parses() -> None:
     """The todo MCP added a trailing created_by column; the board must not 502 on it."""
     text = "340c295b\ttodo\thigh\tkuhyx/tutor\ttutor todos\tclaude"
-    assert parse_list(text) == [Task("340c295b", "tutor todos", "", "kuhyx/tutor", "todo", "high", None)]
+    assert parse_list(text) == [
+        Task("340c295b", "tutor todos", "", "kuhyx/tutor", "todo", "high", None, "claude")
+    ]
+    assert parse_list(f"{text}\tfuture")[0].created_by == "claude"
 
 
 def test_list_unknown_status() -> None:
@@ -44,7 +47,14 @@ DETAIL = (
 
 def test_detail_full() -> None:
     assert parse_detail(DETAIL) == Task(
-        "fda71ed1", "utils todos", "## a\nbody\n\n## b", "kuhyx/utils", "in progress", "high", "make test"
+        "fda71ed1",
+        "utils todos",
+        "## a\nbody\n\n## b",
+        "kuhyx/utils",
+        "in progress",
+        "high",
+        "make test",
+        "claude",
     )
 
 
@@ -91,3 +101,22 @@ def test_to_wire() -> None:
     assert to_wire("in progress") == "in_progress"
     assert to_wire("in_progress") == "in_progress"
     assert to_wire("todo") == "todo"
+
+
+def test_list_created_by_column_is_optional_and_defaults_to_kuhy() -> None:
+    head = "aaaaaaaa\ttodo\thigh\tr/x\t"
+    text = f"{head}t1\tclaude\n{head}t2\tkuhy\n{head}t3"
+    assert [t.created_by for t in parse_list(text)] == ["claude", "kuhy", "kuhy"]
+
+
+def test_list_unknown_created_by_counts_as_kuhy() -> None:
+    assert parse_list("aaaaaaaa\ttodo\thigh\tr/x\tt\tsomeone")[0].created_by == "kuhy"
+
+
+def test_detail_created_by_key_and_legacy_by_key() -> None:
+    head = "id: abcdef12xx\npriority: low\nstatus: todo\n"
+    assert parse_detail(f"{head}created_by: claude\n---\nT").created_by == "claude"
+    assert parse_detail(f"{head}created_by: kuhy\n---\nT").created_by == "kuhy"
+    assert parse_detail(f"{head}---\nT").created_by == "kuhy"
+    assert parse_detail(f"{head}by: claude\n---\nT").created_by == "claude"
+    assert parse_detail(f"{head}by: claude\ncreated_by: kuhy\n---\nT").created_by == "kuhy"

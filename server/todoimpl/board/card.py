@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from .actions import actions
+from .badges import tier_badges
 from .needs import needs
 from .status import Status, column, compute
 from .types import Limit, fmt_when, is_manual
@@ -117,6 +118,7 @@ def build_card(task: TaskLike, run: RunState | None, ctx: Context) -> dict[str, 
         "partial": partial_of(run),
         "cost_usd": run.cost_usd if run is not None else 0,
         "route": run.extra.get("route") if run is not None else None,
+        "tier": tier_badges(task, run),
         "resumes_at": resumes_at,
         "updated": run.updated if run is not None else None,
         "actions": [a.to_dict() for a in buttons],

@@ -1,0 +1,77 @@
+"""The cheap tier inside a drive (DOCS-tiers.md): pick the model and prompt addendum, escalate at most once.
+
+State, all in `extra` (state.schema.json): `tier` (`cheap` | `normal`, decided at the first implement-role
+turn), `free_models` (the server's verdict before the latest implement turn), `escalated`, `escalate_reason`.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+from todoimpl.prompts import tier as texts
+
+from . import freegate, tier
+
+if TYPE_CHECKING:
+    from .pipeline import Driver
+    from .stream import TurnResult
+
+IMPLEMENT = "implement"  # the role (and the stage) a cheap note changes
+
+
+@dataclass(frozen=True)
+class Turn:
+    """What a turn changes for its tier: `model` None = the role's default; `note` is a prompt addendum."""
+
+    model: str | None = None
+    note: str = ""
+
+
+def _cheap(d: Driver) -> bool:
+    return d.state.extra.get("tier") == "cheap"
+
+
+def plan_turn(d: Driver, role: str) -> Turn:
+    """Decide the model and addendum of one turn; an implement turn first takes the free-models verdict."""
+    st = d.state
+    if role != IMPLEMENT:
+        return Turn()
+    if "tier" not in st.extra:
+        st.extra["tier"] = "cheap" if tier.is_cheap(d.item.title, d.item.body) else "normal"
+    if not _cheap(d):
+        return Turn()
+    if st.extra.get("escalated"):
+        note = texts.escalated(str(st.extra.get("escalate_reason", ""))) if st.stage == IMPLEMENT else ""
+        return Turn(None, note)
+    if st.stage != IMPLEMENT:
+        return Turn(tier.MANAGER_MODEL)
+    verdict = freegate.check(Path(str(st.worktree)))
+    st.extra["free_models"] = verdict.allowed
+    if verdict.allowed:
+        d.activity("tier cheap: sonnet manages free models")
+        return Turn(tier.MANAGER_MODEL, texts.manager(Path(str(st.worktree))))
+    d.activity(f"tier cheap: sonnet alone, {verdict.why}")
+    return Turn(tier.MANAGER_MODEL, texts.alone(verdict.why))
+
+
+def escalate(d: Driver, reason: str) -> None:
+    """Record the one escalation of the run; the next implement-role turn runs on Opus."""
+    d.state.extra.update(escalated=True, escalate_reason=reason)
+    d.activity(f"tier escalated to opus: {reason}")
+
+
+def gave_up(d: Driver, res: TurnResult) -> bool:
+    """Return True when a cheap implement turn ended with `ESCALATE:` and the run has not escalated yet."""
+    st = d.state
+    if not _cheap(d) or st.extra.get("escalated") or (reason := tier.escalation(res.text)) is None:
+        return False
+    escalate(d, reason)
+    return True
+
+
+def failed(d: Driver, role: str, reason: str) -> None:
+    """Escalate when a turn of a cheap run failed: the retry is the escalation (once per run)."""
+    if role == IMPLEMENT and _cheap(d) and not d.state.extra.get("escalated"):
+        escalate(d, f"cheap turn failed: {reason}")

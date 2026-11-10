@@ -63,6 +63,14 @@ const ROWS: readonly Row[] = [
   ["ts-config", "Boundaries preset documents elements", "done", "low", 1.2, 500_000],
 ];
 
+const NO_TIER = { cheap: false, escalated: false, free: false };
+/** Cheap-tier badge combinations on a few cards, so the viewport checks see icons next to long titles. */
+const TIERS: Record<string, TaskCard["tier"]> = {
+  "Chapter 4 figure refresh": { cheap: true, escalated: false, free: true },
+  "Palette check covers Tkinter": { cheap: true, escalated: true, free: false },
+  "Render the loop bed at 44.1 kHz": { cheap: true, escalated: false, free: false },
+};
+
 function idFor(index: number): string {
   return `${(index + 1).toString(16).padStart(2, "0")}a1b2c3-0`;
 }
@@ -79,6 +87,7 @@ export function makeCards(): TaskCard[] {
       repo: repository,
       resumes_at: status === "paused_limit" ? NOW + 3 * 3600 : null,
       route: null,
+      tier: TIERS[title] ?? NO_TIER,
       title,
       updated: ago === null ? null : NOW - ago,
     };

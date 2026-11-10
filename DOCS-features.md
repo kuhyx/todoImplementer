@@ -14,7 +14,7 @@
 
 | feature | how to reach it | expected outcome |
 |---|---|---|
-| Board | open `/` -> five columns Backlog / Running / Needs you / Ready to ship / Done | every open todo item is one card, grouped by repo; GET `/api/board` matches `contracts/board.schema.json` |
+| Board | open `/` -> five columns Backlog / Running / Needs you / Ready to ship / Done | every open todo item is one card, grouped by repo, kuhy's own notes above Claude-made ones in each column; GET `/api/board` matches `contracts/board.schema.json` |
 | Yours lane | notes with no `repo` | shown in "Yours", never startable |
 | Start | card -> Start (POST `/api/task/<id>/start`) | card leaves Backlog; at most 3 run at once, the rest are queued |
 | Spec Q&A | card in Needs you with `❓ Qn` cards -> answer -> Spec OK | answers reach the session, Plan starts |
@@ -24,6 +24,7 @@
 | Plan + live check | automatic after Start | `plan.md` and `live_check.md` in the run dir; checks tail in `/api/task/<id>` |
 | Gate | card in Ready to ship -> drawer | plan, diff, live-check report, checks tail; Ship and Send offered |
 | Ship | drawer -> Ship (POST `.../ship`) | one commit with `Todo: <id8>` trailer pushed to origin, section marked `## [x]`, note closed with its last item, worktree removed |
+| Cheap tier | note with a `Tier: cheap` line or the title `text-free (textgate-rework)` | implement role runs on Sonnet (free models via claude-free on public repos, else alone), `ESCALATE:` or a failed turn moves it to Opus once; card icons for cheap / free / escalated (`DOCS-tiers.md`) |
 | Cancel | drawer action | run stops, run dir kept |
 | Free credits fallback | board toggle (POST `/api/settings/credits-fallback`) | while the plan limit is active, turns run on free API credits; card badge "free credits" |
 | Lessons | gate rejection -> drafted lesson -> Approve | lesson written into the named skill via `skill_lesson.py` |

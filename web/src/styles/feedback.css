@@ -84,3 +84,28 @@
 .toast-error {
   border-color: var(--danger);
 }
+
+/* Cheap-tier badges: icon only, named by aria-label and title. */
+.tier-badge {
+  display: inline-grid;
+  place-items: center;
+  color: var(--text-muted);
+}
+
+.tier-badge svg {
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.tier-badge[data-tier="escalated"] {
+  color: var(--warning);
+}
+
+.tier-badge[data-tier="free"] {
+  color: var(--success);
+}

@@ -1,0 +1,19 @@
+"""The card's cheap-tier badges (contracts `tier_badges`): the server decides, the page only draws them."""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from todoimpl.runner.tier import is_cheap
+
+if TYPE_CHECKING:
+    from .state import RunState
+    from .types import TaskLike
+
+
+def tier_badges(task: TaskLike, run: RunState | None) -> dict[str, bool]:
+    """Cheap from the run's record (else from the note), free only while not escalated."""
+    extra = run.extra if run is not None else {}
+    cheap = extra["tier"] == "cheap" if "tier" in extra else is_cheap(task.title, task.body)
+    escalated = bool(extra.get("escalated"))
+    return {"cheap": cheap, "free": bool(extra.get("free_models")) and not escalated, "escalated": escalated}

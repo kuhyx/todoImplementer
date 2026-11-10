@@ -28,5 +28,6 @@
       "reason": "already running"
     }
   ],
-  "route": null
+  "route": null,
+  "tier": {"cheap": false, "free": false, "escalated": false}
 }

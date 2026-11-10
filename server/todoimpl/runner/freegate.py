@@ -1,0 +1,70 @@
+"""May a cheap turn use the free models? Public repo (`free-llm-check-dir`) and a gateway that answers.
+
+Free providers log prompts, so `claude-free` itself refuses non-public repos; the server asks first so the
+manager prompt never promises what the worker cannot do. Every failure is a plain "no": the manager then
+does the work itself. Env: `TODOIMPL_FREE_GATEWAY` (default OmniRoute on 127.0.0.1:20128).
+"""
+
+from __future__ import annotations
+
+import os
+import shutil
+import subprocess
+import urllib.request
+from dataclasses import dataclass
+from pathlib import Path
+
+GATEWAY = "http://127.0.0.1:20128"
+CHECK_TIMEOUT = 20.0  # a cold `gh repo view` inside free-llm-check-dir may take up to 15 s
+PROBE_TIMEOUT = 2.0
+WORKER = "claude-free"
+CHECKER = "free-llm-check-dir"
+_KEY_REL = Path(".config") / "omniroute" / "api_key"
+
+
+@dataclass(frozen=True)
+class Verdict:
+    """`allowed` = free models may do the edits; `why` names the first blocker otherwise."""
+
+    allowed: bool
+    why: str = ""
+
+
+def _public(checker: str, worktree: Path) -> bool:
+    try:
+        done = subprocess.run(  # noqa: S603 - fixed tool, one path argument, no shell
+            [checker, str(worktree)], capture_output=True, timeout=CHECK_TIMEOUT, check=False
+        )
+    except OSError, subprocess.SubprocessError:
+        return False
+    return done.returncode == 0
+
+
+def _gateway_answers(key: str) -> bool:
+    base = os.environ.get("TODOIMPL_FREE_GATEWAY") or GATEWAY
+    request = urllib.request.Request(  # noqa: S310 - loopback gateway URL
+        f"{base}/v1/models", headers={"Authorization": f"Bearer {key}"}
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=PROBE_TIMEOUT):  # noqa: S310
+            return True
+    except OSError:  # URLError, timeouts and refused connections are all OSErrors
+        return False
+
+
+def check(worktree: Path) -> Verdict:
+    """Return whether the free models are allowed for this worktree right now."""
+    checker = shutil.which(CHECKER)
+    if checker is None or shutil.which(WORKER) is None:
+        return Verdict(allowed=False, why=f"{WORKER} is not installed")
+    if not _public(checker, worktree):
+        return Verdict(allowed=False, why="the repo is not public")
+    try:
+        key = (Path.home() / _KEY_REL).read_text(encoding="utf-8").strip()
+    except OSError:
+        key = ""
+    if not key:
+        return Verdict(allowed=False, why="no gateway key")
+    if not _gateway_answers(key):
+        return Verdict(allowed=False, why="the free-model gateway is down")
+    return Verdict(allowed=True)

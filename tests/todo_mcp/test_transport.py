@@ -13,7 +13,7 @@ from todoimpl.todo_mcp.transport import Transport
 def test_handshake_then_call(fake: FakeTodoMcp) -> None:
     fake.seed("kuhyx/a", "a todos")
     text = Transport(fake.url, fake.token).call_tool("list_tasks", {})
-    assert text.endswith("a todos")
+    assert text.endswith("a todos\tkuhy")
     assert fake.methods == ["initialize", "notifications/initialized", "tools/call"]
 
 

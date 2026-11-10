@@ -74,11 +74,12 @@ def _launch(  # noqa: PLR0913, PLR0917 - the turn environment plus its route
     prompt_for: Callable[[session.Situation], str],
     extra_dirs: tuple[Path, ...],
     route: str,
+    model: str | None,
 ) -> orphans.Record:
     plan = session.plan_turn(_prior(env, state, role), now=env.now())
     allow = allowlist.rules_for(env.run_dir.parent, state.repo, state.task_id)
     build = credit.build if route == "credits" else claude.build
-    inv = build(role, prompt_for(plan.situation), env.worktree, plan.resume, extra_dirs, allow)
+    inv = build(role, prompt_for(plan.situation), env.worktree, plan.resume, extra_dirs, allow, model)
     env.activity(
         "system", "turn on free API credits (Agent SDK, sonnet)" if route == "credits" else "turn on the plan"
     )
@@ -154,12 +155,16 @@ def run_turn(  # noqa: PLR0913, PLR0917 - the turn environment plus its route
     prompt_for: Callable[[session.Situation], str],
     extra_dirs: tuple[Path, ...] = (),
     route: str = "plan",
+    model: str | None = None,
 ) -> TurnResult:
-    """Run to exit; `prompt_for` gets the session situation (killed, idle or plain) and returns the prompt."""
+    """Run to exit; `prompt_for` gets the session situation (killed, idle or plain) and returns the prompt.
+
+    `model` overrides the role's default model (the cheap tier); the credit route is always sonnet.
+    """
     lost = 0
     adopt.reap_legacy(env.run_dir)
     while True:
-        rec = orphans.read(env.run_dir) or _launch(env, state, role, prompt_for, extra_dirs, route)
+        rec = orphans.read(env.run_dir) or _launch(env, state, role, prompt_for, extra_dirs, route, model)
         if (res := _consume(env, state, rec)) is None:
             lost += 1
             if lost >= MAX_LOST:

@@ -44,6 +44,26 @@ def test_state_tolerates_extra_keys() -> None:
     validate("state", {**fixture("state"), "future_key": 1})
 
 
+def test_state_takes_the_cheap_tier_keys_and_rejects_a_bad_tier() -> None:
+    tiered = {
+        **fixture("state"),
+        "tier": "cheap",
+        "free_models": True,
+        "escalated": True,
+        "escalate_reason": "x",
+    }
+    validate("state", tiered)
+    with pytest.raises(ValidationError):
+        validate("state", {**tiered, "tier": "pricey"})
+
+
+def test_card_requires_the_tier_badges() -> None:
+    card = fixture("card")
+    broken = {**card, "tier": {"cheap": True}}
+    with pytest.raises(ValidationError):
+        validate("task", {**fixture("task"), "card": broken})
+
+
 def test_unknown_status_is_rejected() -> None:
     card = {**fixture("card"), "status": "mostly_done"}
     with pytest.raises(ValidationError):

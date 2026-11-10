@@ -29,7 +29,7 @@ they mean. Lessons from the predecessor are in `DOCS-lessons.md`.
   without a push. CHANGE 2026-11-09: sessions land their own work (DOCS-landing.md). Never force-push; never edit kuhy's checkout.
 - **Q6** Headless `claude -p` with stream-json, resume by session id, live feed (SSE), a Send-to-Claude box, a "copy
   resume command" button (`cd <worktree> && claude --resume <id>`); never open a terminal on :0.
-- **Q7** No cap on concurrent runs (kuhy, 2026-11-05: the tool exists to run many at once): every Start drives at once. Opus implements, Sonnet specs, Haiku classifies. A plan limit pauses
+- **Q7** No cap on concurrent runs (kuhy, 2026-11-05: the tool exists to run many at once): every Start drives at once. Opus implements (cheap notes: Sonnet manager, `DOCS-tiers.md`), Sonnet specs, Haiku classifies. A plan limit pauses
   all runs and resumes at `resetsAt`, or goes on the free API credits (`DOCS-credits.md`); never overage. Cost per task.
 - **Q8** Lessons go to `~/.claude/skills/*` via `skill_lesson.py add`, only after kuhy approves a lesson drafted on
   each gate rejection. The UI shows which skills a run loaded. No skills inside this repo.

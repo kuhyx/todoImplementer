@@ -6,7 +6,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from . import phone
+from . import phone, tiering
 from .checks import SENTENCE_NOTE, discover, record, run_all
 from .files import NeedsYouError, write_json
 from .live import rejudge, settle
@@ -64,6 +64,8 @@ def _plan(d: Driver) -> str | None:
 def _implement(d: Driver) -> str | None:
     tail = str(d.state.extra.get("failure_tail", ""))
     res = d.turn("implement", "fix" if tail else "implement", failure_tail=tail)
+    if tiering.gave_up(d, res):  # the cheap tier hands over: the same stage again, now on Opus
+        return "implement"
     d.state.extra.pop("failure_tail", None)
     d.state.self_check = parse_self_check(res.text)
     nxt = d.after_tag(res, "shipping" if d.state.extra.get("reship") else "live_check")

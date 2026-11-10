@@ -111,9 +111,10 @@ def build(  # noqa: PLR0913, PLR0917 - one argv, built in one place
     resume: str | None = None,
     extra_dirs: tuple[Path, ...] = (),
     allow: tuple[str, ...] = (),
+    model: str | None = None,
 ) -> Invocation:
     """Build the plan route: kuhy's full setup (no strict MCP); the prompt goes right after -p."""
-    opt = options(role, prompt, worktree, resume, extra_dirs, allow)
+    opt = options(role, prompt, worktree, resume, extra_dirs, allow, model)
     argv = [claude_bin(), "-p", prompt, "--model", opt.model, "--output-format", "stream-json", "--verbose"]
     argv += ["--permission-mode", opt.permission_mode, "--add-dir", *opt.add_dirs]
     if resume:

@@ -32,3 +32,13 @@ def test_two_sections_become_two_cards_with_note_priority() -> None:
 def test_note_without_sections_is_one_card_with_its_done_check() -> None:
     (card,) = card_tasks(note("plain"))
     assert (card.id, card.title, card.done_check) == ("abcdef12-0", "demo todos", "make")
+
+
+def test_cards_carry_the_note_creator() -> None:
+    claude = Task("abcdef12", "t", "## a\n## b", "kuhyx/demo", "todo", "high", None, "claude")
+    assert [c.created_by for c in card_tasks(claude)] == ["claude", "claude"]
+    assert [c.created_by for c in card_tasks(note("## a"))] == ["kuhy"]
+    assert (
+        card_tasks(Task("abcdef12", "t", "plain", "kuhyx/demo", "todo", "high", None, "claude"))[0].created_by
+        == "claude"
+    )

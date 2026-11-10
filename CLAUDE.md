@@ -2,6 +2,7 @@
 
 Board that plans, implements, reviews, verifies and (on kuhy's click) ships todo-app notes with headless Claude Code
 sessions. Spec and decisions: `DOCS-spec.md`. Lessons carried over from the predecessor: `DOCS-lessons.md`. Claude API key lifecycle: `DOCS-apikey.md`. Free API credits, routes, overage guard: `DOCS-credits.md`. Sessions land their own work (grant, backstop, rebase, ship): `DOCS-landing.md`.
+Cheap tier (Sonnet manager, free models, Opus escalation) and human-made-first order: `DOCS-tiers.md`.
 
 ## Commands
 

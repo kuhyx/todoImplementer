@@ -26,6 +26,8 @@ class TaskLike(Protocol):
     def priority(self) -> str: ...  # noqa: D102
     @property
     def done_check(self) -> str | None: ...  # noqa: D102
+    @property
+    def created_by(self) -> str: ...  # noqa: D102
 
 
 MANUAL_PREFIX = "MANUAL WORK REQUIRED:"

@@ -120,6 +120,9 @@ export const apiError = z.strictObject({
   message: z.string().min(1),
 });
 
+/** Cheap-tier badges, decided by the server (common.schema.json $defs/tier_badges). */
+export const tierFlags = z.strictObject({ cheap: z.boolean(), escalated: z.boolean(), free: z.boolean() });
+
 export const taskCard = z.strictObject({
   actions,
   assignee: z.enum(["human", "claude"]),
@@ -135,6 +138,7 @@ export const taskCard = z.strictObject({
   route: z.enum(["plan", "credits"]).nullable(),
   stage: stage.nullable(),
   status,
+  tier: tierFlags,
   title: z.string().min(1),
   updated: epoch.nullable(),
 });

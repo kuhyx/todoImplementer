@@ -29,6 +29,7 @@ class CardTask:
     priority: str
     done_check: str | None
     item: Item
+    created_by: str = "kuhy"
 
     @classmethod
     def of(cls, task: Task, item: Item) -> CardTask:
@@ -42,6 +43,7 @@ class CardTask:
             task.priority,
             item.done_check,
             item,
+            task.created_by,
         )
 
 

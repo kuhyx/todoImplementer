@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 from fake_todo_mcp import FakeTodoMcp
 from fake_todo_store import FakeStore, ToolError
+from todoimpl.todo_mcp.client import TodoClient
 from todoimpl.todo_mcp.transport import Transport
 
 
@@ -78,3 +79,14 @@ def test_seed_sections() -> None:
     with FakeTodoMcp() as fake:
         note = fake.seed_sections("kuhyx/demo", [("a", "text"), ("b", "")])
         assert fake.store.notes[note].text == "demo todos\n\n## a\ntext\n\n## b"
+
+
+def test_fake_reports_the_creator_in_detail_and_list() -> None:
+    with FakeTodoMcp() as fake:
+        fake.seed("kuhyx/r", "mine")
+        fake.seed("kuhyx/r", "theirs", created_by="claude")
+        client = TodoClient(fake.url, fake.token)
+        assert sorted(t.created_by for t in client.list_tasks()) == ["claude", "kuhy"]
+        assert sorted(t.created_by for t in client.list_tasks(full=True)) == ["claude", "kuhy"]
+        added = client.add_task("kuhyx/new", "x")
+        assert added.created_by == "claude"

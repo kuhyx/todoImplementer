@@ -11,7 +11,7 @@ from todoimpl.board import state as store
 from todoimpl.credits import route
 from todoimpl.prompts import PromptContext, build
 
-from . import checks, phone, retry, turncheck, worktree
+from . import checks, phone, retry, tags, tiering, turncheck, worktree
 from .files import NeedsYouError
 from .grant import auto_grant
 from .permit import gate, with_grant
@@ -31,10 +31,8 @@ if TYPE_CHECKING:
 
 log = logging.getLogger("todoimpl.runner")
 WORK_STAGES = ("spec", "plan", "implement", "live_check", "checks", "shipping")
-MAX_NUDGES = 2
 NUDGE = "(runner) Your last reply had no status tag line: finish the work and end with `D:`, `Q:` or `A:`."
 CONTINUE = "(runner) Continue. Report with a `D:`, `Q:` or `A:` tag line when your background work is done."
-MAX_R_CONTINUES = 3
 
 
 class CancelledError(Exception):
@@ -142,7 +140,13 @@ class Driver:
         return plan.read_text(encoding="utf-8") if plan.exists() else ""
 
     def context(
-        self, *, failure_tail: str = "", handoff: str = "", nudge: bool | str = False, cont: bool = False
+        self,
+        *,
+        failure_tail: str = "",
+        handoff: str = "",
+        nudge: bool | str = False,
+        cont: bool = False,
+        tier: str = "",
     ) -> PromptContext:
         """Build the prompts package's view of this run: item, plan, answers and kuhy's notes."""
         st, item = self.state, self.item
@@ -155,7 +159,7 @@ class Driver:
             plan_md=self.plan_md(), spec_answers=answers,
             notes=notes, failure_tail=failure_tail, handoff=handoff,
             phone=st.extra.get("waiting_phone") if st.extra.get("phone_attached") else None,
-            base=str(st.extra.get("base_branch", "main")),
+            base=str(st.extra.get("base_branch", "main")), tier=tier,
         )  # fmt: skip
 
     def turn(self, role: str, stage: str, *, failure_tail: str = "", prompt: str = "") -> TurnResult:
@@ -171,10 +175,11 @@ class Driver:
             st.sessions.pop(role, None)
         if fresh := ctx.inbox():
             st.extra.setdefault("notes", []).extend(fresh)
+        plan = tiering.plan_turn(self, role)
 
         def prompt_for(situation: Situation) -> str:
             if situation == "killed":
-                return build("resume_after_kill", self.context(nudge=nudge))
+                return build("resume_after_kill", self.context(nudge=nudge, tier=plan.note))
             if (situation == "idle" or new_session) and stage != "spec":
                 handoff = handoff_summary(
                     ctx.run_dir,
@@ -182,11 +187,16 @@ class Driver:
                     st.self_check,
                     str((st.live_check or {}).get("report_md", "")),
                 )
-                return build("fresh_after_idle", self.context(handoff=handoff, nudge=nudge))
-            return build(prompt or stage, self.context(failure_tail=failure_tail, nudge=nudge, cont=cont))
+                return build("fresh_after_idle", self.context(handoff=handoff, nudge=nudge, tier=plan.note))
+            return build(
+                prompt or stage,
+                self.context(failure_tail=failure_tail, nudge=nudge, cont=cont, tier=plan.note),
+            )
 
         env = TurnEnv(ctx.run_dir, Path(str(st.worktree)), ctx.publish, ctx.register, ctx.now)
-        res = run_turn(env, st, role, with_grant(st, prompt_for, role), (ctx.run_dir,), choice.route)
+        res = run_turn(
+            env, st, role, with_grant(st, prompt_for, role), (ctx.run_dir,), choice.route, plan.model
+        )
         st.extra["last_reply"] = res.text[-1500:]
         if res.finished and not res.is_error:
             phone.after_turn(st, ctx.run_dir, res)
@@ -207,40 +217,16 @@ class Driver:
         if res.is_error or not res.finished:
             reason = res.text.strip()[:300] or retry.NO_RESULT
             tail = retry.stderr_tail(self.ctx.run_dir, role)
+            tiering.failed(self, role, reason)
             raise retry.failure(self.state, now=self.ctx.now(), stage=stage, reason=reason, tail=tail)
         for key in ("retries", "crash_retries"):
             self.state.extra.pop(key, None)
         return res
 
     def r_continue(self, res: TurnResult) -> str | None:
-        """Resume the same stage with a continue prompt after an `R:` turn, up to MAX_R_CONTINUES times."""
-        st = self.state
-        conts = int(st.extra.get("r_continues", 0))
-        if res.tag != "R" or conts >= MAX_R_CONTINUES:
-            return None
-        st.extra["r_continues"] = conts + 1
-        st.extra["r_continue"] = True
-        return st.stage
+        """Resume the same stage with a continue prompt after an `R:` turn (see tags.py)."""
+        return tags.r_continue(self.state, res)
 
     def after_tag(self, res: TurnResult, nxt: str) -> str | None:
-        """Q/A rests for kuhy, D moves on, R continues the session, no tag nudges, then one fresh retry."""
-        st = self.state
-        if res.tag in ("Q", "A"):
-            return None
-        if res.tag == "D":
-            for key in ("nudges", "r_continues", "tagless_retry"):
-                st.extra.pop(key, None)
-            return nxt
-        if (again := self.r_continue(res)) is not None:
-            return again
-        nudges = int(st.extra.get("nudges", 0)) + 1
-        if nudges > MAX_NUDGES:
-            if st.extra.get("tagless_retry"):
-                msg = f"Claude ended {nudges} turns without a status tag: read the feed and send guidance"
-                raise NeedsYouError(msg, "run_failed")
-            st.extra["tagless_retry"] = True
-            st.extra["fresh"] = True
-            return st.stage
-        st.extra["nudges"] = nudges
-        st.extra["nudge"] = True
-        return st.stage
+        """Q/A rests for kuhy, D moves on, R continues, no tag nudges (see tags.py)."""
+        return tags.after_tag(self.state, res, nxt)

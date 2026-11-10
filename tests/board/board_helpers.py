@@ -36,6 +36,7 @@ class Note:
     status: str = "todo"
     priority: str = "high"
     done_check: str | None = "python demo.py"
+    created_by: str = "kuhy"
 
 
 def run(**fields: Any) -> RunState:
