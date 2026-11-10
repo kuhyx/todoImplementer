@@ -13,7 +13,7 @@ def test_t1883_the_manager_polls_in_short_calls_and_never_ends_its_turn_early(ct
     assert "never `pgrep -f" in text
 
 
-def test_t1885_the_manager_builds_the_worktree_environment_before_the_servers_checks(
+def test_t1886_the_manager_builds_the_worktree_environment_before_the_servers_checks(
     ctx: PromptContext,
 ) -> None:
     text = build("manager", ctx)
