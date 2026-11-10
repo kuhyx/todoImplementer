@@ -145,4 +145,5 @@ def build_card(task: TaskLike, run: RunState | None, ctx: Context) -> dict[str, 
         card["parts"] = parts
     if (waits := ctx.waits.get(tid)) is not None and status == Status.QUEUED:
         card["waits_on"] = waits
+        card["current"] = ""  # the lock badge names the run it waits on; no stage line (T1925)
     return card

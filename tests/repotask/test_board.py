@@ -121,3 +121,12 @@ def test_a_queued_card_names_the_run_it_waits_on_and_a_working_one_does_not() ->
     )
     assert "waits_on" not in working
     assert "waits_on" not in build_card(card_of(part("aaaa1111-0")), run("plan"), Context())
+
+
+def test_t1925_a_card_waiting_on_its_repos_run_shows_only_the_lock_not_a_stage_line() -> None:
+    queued = build_card(card_of(part("aaaa1111-0")), run("plan"), Context(waits={"deadbeef-0": "2d0704cd-7"}))
+    assert queued["current"] == ""  # "waiting to continue plan" read as if the plan had started
+    assert (
+        build_card(card_of(part("aaaa1111-0")), run("plan"), Context())["current"]
+        == "waiting to continue plan"
+    )
