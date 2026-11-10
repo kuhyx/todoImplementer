@@ -10,8 +10,31 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+CACHE_MAX = 4096
+_CACHE: dict[Path, tuple[int, int, list[str]]] = {}
+
+
 def skills_loaded(stream_path: Path) -> list[str]:
-    """Ordered, de-duplicated `input.skill` of every Skill tool_use in one stream file."""
+    """Ordered, de-duplicated `input.skill` of every Skill tool_use in one stream file.
+
+    Cached per (mtime, size): the board asks for every run on each request; a finished stream never changes.
+    """
+    try:
+        info = stream_path.stat()
+    except OSError:
+        return []
+    key = (info.st_mtime_ns, info.st_size)
+    hit = _CACHE.get(stream_path)
+    if hit is not None and hit[:2] == key:
+        return list(hit[2])
+    names = _parse(stream_path)
+    if len(_CACHE) >= CACHE_MAX:  # runs come and go; never grow without bound
+        _CACHE.clear()
+    _CACHE[stream_path] = (*key, names)
+    return list(names)
+
+
+def _parse(stream_path: Path) -> list[str]:
     found: dict[str, None] = {}
     for event in iter_events(stream_path):
         message = event.get("message")

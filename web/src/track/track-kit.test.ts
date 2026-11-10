@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { formatSpan, minutesUntil, restingStat, stat } from "@/track/track-kit";
+import { STAGES } from "@/lib/schemas-common";
+import { formatSpan, minutesUntil, restingStat, STAGE_ICON, stat } from "@/track/track-kit";
 
 describe("formatSpan", () => {
   it("writes seconds, minutes, hours and days, and a dash for nothing measured", () => {
@@ -48,5 +49,11 @@ describe("restingStat", () => {
 
   it("has no countdown when the server gives no instant", () => {
     expect(restingStat({ kind: "limit", until: null }, 1000).querySelector(".t-num")).toBeNull();
+  });
+});
+
+describe("STAGE_ICON", () => {
+  it("has an icon for every stage in the contract enum", () => {
+    for (const stage of STAGES) expect(STAGE_ICON[stage], stage).toBeTypeOf("string");
   });
 });

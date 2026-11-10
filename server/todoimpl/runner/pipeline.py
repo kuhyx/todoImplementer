@@ -199,21 +199,12 @@ class Driver:
 
         env = TurnEnv(ctx.run_dir, worktree.turn_dir(st, self.item.repo), ctx.publish, ctx.register, ctx.now)
         try:
-            res = run_turn(
-                env,
-                st,
-                role,
-                with_grant(st, prompt_for, role),
-                (ctx.run_dir,),
-                choice.route,
-                plan.model,
-                plan.effort,
-            )
+            who = (env, st, role, with_grant(st, prompt_for, role), (ctx.run_dir,))
+            res = run_turn(*who, choice.route, plan.model, plan.effort)
         except KilledError as exc:  # the host died again and again: wait and retry before Needs you
             self.save()
-            raise retry.failure(
-                st, now=ctx.now(), stage=stage, reason=exc.text, tail="", killed=True
-            ) from exc
+            failure = retry.failure(st, now=ctx.now(), stage=stage, reason=exc.text, tail="", killed=True)
+            raise failure from exc
         st.extra["last_reply"] = res.text[-1500:]
         if res.finished and not res.is_error:
             phone.after_turn(st, ctx.run_dir, res)

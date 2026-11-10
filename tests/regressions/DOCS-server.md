@@ -25,3 +25,4 @@ One row per bug, ids global and never reused. The row's test is named `test_t<N>
 | T1835 | A Needs-you card said "Claude needs you to do something: see the feed" (or another generic line) while the reply had an `N:` line, a question round or a last paragraph naming the ask | tests/board/test_board_needs_ask.py |
 | T1880 | A worktree holding a non-UTF-8 file made `/api/task/<id>` answer HTTP 500 (strict decode of `git diff`) | tests/board/test_board_diff.py |
 | T1881 | The todo MCP added a trailing `created_by` column to list lines and every `/api/board` answered 502 "malformed list line" | tests/todo_mcp/test_parse.py |
+| T1908 | Every GET /api/board re-parsed every stream file of every run for the skills list (137k events, 4 s under load), so the board looked down after a deploy; an unchanged stream is now parsed once (cache per mtime and size) | tests/lessons/test_lessons_streams.py |

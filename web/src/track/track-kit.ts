@@ -43,6 +43,8 @@ export const RESTING_LABEL: Record<Resting["kind"], string> = {
 export const STAGE_ICON: Record<NonNullable<TrackKid["stage"]>, IconName> = {
   cancelled: "close",
   checks: "ready",
+  closed: "check",
+  closing: "log",
   failed: "failed",
   gate: "ready",
   implement: "running",
