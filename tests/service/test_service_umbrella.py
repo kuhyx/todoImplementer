@@ -98,4 +98,12 @@ def test_item_view_ticks_a_child_in_the_umbrella_note(rig: Rig) -> None:
     ItemView(TodoClient(rig.fake.url, rig.fake.token), rig.backend.cache).tick_child(card_id, "bbbb2222-0")
     text = next(iter(rig.fake.store.notes.values())).text
     assert "- [x] kuhyx/beta (bbbb2222)" in text
-    assert "- [ ] kuhyx/alpha (aaaa1111)" in text
+
+
+def test_t1921_cancel_never_abandons_an_umbrella_note(rig: Rig) -> None:
+    card_id = rig.note("Make the repos text-free", BODY, repo="kuhyx/hub")
+    view = ItemView(TodoClient(rig.fake.url, rig.fake.token), rig.backend.cache)
+    assert view.abandon(card_id) is False
+    (note,) = rig.fake.store.notes.values()
+    assert note.status == "todo"
+    assert "- [ ] kuhyx/alpha (aaaa1111)" in note.text

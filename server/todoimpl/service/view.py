@@ -9,6 +9,7 @@ from todoimpl.repotask import files, legacy
 from todoimpl.repotask.legacy import Older
 from todoimpl.todo_mcp.items import Item
 from todoimpl.todo_mcp.model import Task, TodoError
+from todoimpl.umbrella.note import is_umbrella
 
 from .cards import CardTask, card_tasks
 from .repocards import group_cards
@@ -117,7 +118,10 @@ class ItemView:
         if self._repo_card(card) is not None:  # the notes of a repo task hold other parts too
             return False
         note = self._note_of(card)
-        cards = card_tasks(self._client.get_task(note))
+        task = self._client.get_task(note)
+        if is_umbrella(task.body):  # an umbrella note outlives a Cancel: its children stay open (T1921)
+            return False
+        cards = card_tasks(task)
         if any(t.id != card and t.status != "done" for t in cards):
             return False
         self._client.update_task(note, status="abandoned")
