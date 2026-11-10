@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://todoimplementer.local/contracts/merge.schema.json",
+  "title": "GET /api/merges (this schema's root) and POST /api/merge/<group>/<merge|dismiss>",
+  "description": "Haiku-suggested groups of similar open notes. The server computes everything; each suggestion carries its two actions with a reason when merge is disabled. POSTs send Content-Type application/json, X-Todoimpl-Token and a same-origin Origin, with an empty object body (`merge`, `dismiss` defs). The answer is `response`.",
+  "$ref": "#/$defs/suggestions",
+  "$defs": {
+    "group_id": {"type": "string", "pattern": "^[0-9a-f]{12}$", "description": "Fingerprint of the sorted member card ids."},
+    "member": {
+      "type": "object",
+      "description": "One open note of the group. Title and repo are the user's own content.",
+      "properties": {
+        "id": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/item_id"},
+        "title": {"type": "string", "minLength": 1},
+        "repo": {"type": "string", "minLength": 1}
+      },
+      "required": ["id", "title", "repo"],
+      "additionalProperties": false
+    },
+    "action": {
+      "type": "object",
+      "description": "merge: one click makes the combined note and closes the members; disabled (with the reason) while a member has a live run. dismiss: hide this exact group for good.",
+      "properties": {
+        "id": {"enum": ["merge", "dismiss"]},
+        "label": {"type": "string", "minLength": 1},
+        "enabled": {"type": "boolean"},
+        "reason": {"type": ["string", "null"]}
+      },
+      "required": ["id", "label", "enabled", "reason"],
+      "additionalProperties": false,
+      "if": {"properties": {"enabled": {"const": false}}},
+      "then": {"properties": {"reason": {"type": "string", "minLength": 1}}}
+    },
+    "suggestion": {
+      "type": "object",
+      "properties": {
+        "id": {"$ref": "#/$defs/group_id"},
+        "title": {"type": "string", "minLength": 1, "description": "Title of the combined note."},
+        "reason": {"type": "string", "minLength": 1, "description": "One line on why these belong together."},
+        "members": {"type": "array", "minItems": 2, "items": {"$ref": "#/$defs/member"}},
+        "actions": {"type": "array", "minItems": 2, "maxItems": 2, "items": {"$ref": "#/$defs/action"}, "description": "Always [merge, dismiss]."}
+      },
+      "required": ["id", "title", "reason", "members", "actions"],
+      "additionalProperties": false
+    },
+    "suggestions": {
+      "type": "object",
+      "properties": {"suggestions": {"type": "array", "items": {"$ref": "#/$defs/suggestion"}}},
+      "required": ["suggestions"],
+      "additionalProperties": false
+    },
+    "merge": {"type": "object", "additionalProperties": false, "description": "POST /api/merge/<group>/merge: empty body."},
+    "dismiss": {"type": "object", "additionalProperties": false, "description": "POST /api/merge/<group>/dismiss: empty body."},
+    "response": {
+      "oneOf": [
+        {
+          "type": "object",
+          "description": "ok:true (HTTP 200): the fresh suggestions; new_id is the merged note (a card id for one repo, a note id8 for an umbrella) after merge, null after dismiss.",
+          "properties": {
+            "ok": {"const": true},
+            "new_id": {"type": ["string", "null"], "minLength": 1},
+            "suggestions": {"type": "array", "items": {"$ref": "#/$defs/suggestion"}}
+          },
+          "required": ["ok", "new_id", "suggestions"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "description": "ok:false: 400 bad_request, 403 forbidden, 404 not_found, 409 disabled (a member has a live run) or conflict, 500 internal, 502 upstream_unavailable.",
+          "properties": {
+            "ok": {"const": false},
+            "error": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/error"}
+          },
+          "required": ["ok", "error"],
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}
