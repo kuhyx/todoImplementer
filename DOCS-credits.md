@@ -37,6 +37,17 @@ A credit turn that ends in a billing or key error ("Credit balance is too low", 
 retried: `credits-exhausted` is written until the limit's end, the run pauses (`paused_limit`) with the visible
 reason "free API credits exhausted", and when the plan limit resets new turns use the plan again.
 
+## A stored limit is re-checked
+
+`limit-until` is a guess from the last rejected turn; plans reset early. `runner/limitprobe.py` asks the plan
+itself (`usage/oauth.py`: the OAuth usage endpoint Claude Code's /usage reads, free, no turn; the token in
+`~/.claude/.credentials.json` is only read, never refreshed, never logged) at start, every 5 min, and in the
+background on a board request while a limit holds (at most once a minute). A usable plan (no full window) clears
+`limit-until` and the exhausted mark, so the queue resumes within `IDLE_WAIT`; a full window moves the limit to
+its real reset. An expired token or a failed call is "unknown" and changes nothing. The newest probe is kept in
+`usage-probe.json`; the usage strip shows it while under 15 min old, and never shows a stream window past its
+reset.
+
 ## Overage guard
 
 A plan turn whose stream carries `rate_limit_event` with `isUsingOverage: true` is killed at once (`runner/guard.py`,

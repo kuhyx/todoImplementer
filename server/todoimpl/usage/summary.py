@@ -7,6 +7,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from todoimpl.credits import route
+from todoimpl.usage import oauth
 from todoimpl.usage.autonomy import autonomy_summary
 from todoimpl.usage.cost import session_costs
 from todoimpl.usage.events import iter_events, stream_files
@@ -17,6 +18,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 WINDOWS = ("five_hour", "seven_day")
+PROBE_FRESH = 900.0  # a plan probe younger than this beats whatever the streams last said
 
 
 def _window(raw: object) -> dict[str, Any] | None:
@@ -54,6 +56,23 @@ def _fold_rate_limits(streams: list[Path]) -> tuple[dict[str, Any], dict[str, An
     return windows, overage
 
 
+def _live_windows(root: Path, folded: dict[str, Any], now: float) -> dict[str, Any]:
+    """Return the plan's own report when fresh, else the streams' windows that have not yet reset."""
+    probe = oauth.load(root)
+    if probe is not None and 0 <= now - probe.at <= PROBE_FRESH:
+        return {
+            key: {
+                "utilization": win.utilization,
+                "resets_at": win.resets_at,
+                "status": "rejected" if win.utilization >= 1 else "allowed",
+            }
+            if (win := getattr(probe, key))
+            else None
+            for key in WINDOWS
+        }
+    return {key: w if w is not None and w["resets_at"] > now else None for key, w in folded.items()}
+
+
 def usage_summary(
     root: Path, now: float | None = None, titles: Mapping[str, str] | None = None
 ) -> dict[str, Any]:
@@ -83,7 +102,8 @@ def usage_summary(
             }
         )
     per_task.sort(key=lambda t: (-t["cost_usd"], t["id"]))
-    windows, overage = _fold_rate_limits(all_streams)
+    folded, overage = _fold_rate_limits(all_streams)
+    windows = _live_windows(root, folded, now)
     limit = limit_state(root)
     active = limit.active(now)
     return {

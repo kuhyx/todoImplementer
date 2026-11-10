@@ -31,6 +31,7 @@ if TYPE_CHECKING:
     from todoimpl.apikey.monitor import KeyMonitor
     from todoimpl.board.state import RunState
     from todoimpl.merge.service import MergeService
+    from todoimpl.runner.limitprobe import LimitProbe
 
     from .cache import TaskCache
     from .scheduling import SchedulerLike
@@ -61,6 +62,7 @@ class ServiceBackend:
         repo_missing: Callable[[str | None], str | None] | None = None,
         fix_runner: Callable[[str], tuple[int, str]] = permission.run_command,
         key_monitor: KeyMonitor | None = None,
+        limit_probe: LimitProbe | None = None,
     ) -> None:
         """Wire the pieces; nothing is read until a request arrives."""
         self.cache = cache
@@ -73,10 +75,13 @@ class ServiceBackend:
         self._repo_missing = repo_missing or repo_checker()
         self.fix_runner = fix_runner  # runs a permission block's one-liner; tests inject a fake
         self.key_monitor = key_monitor  # the API key's newest status rides on the board
+        self.limit_probe = limit_probe  # re-checks a stored plan limit against the plan's real usage
         self.merge_service: MergeService | None = None  # set by build_backend; the http layer looks for it
 
     # ---- reads ----
     def _context(self) -> Context:
+        if self.limit_probe is not None:
+            self.limit_probe.refresh_if_due()  # a page load re-checks a held limit in the background
         now = self._clock()
         state = limit_state(self.root)
         active = state.active(now)

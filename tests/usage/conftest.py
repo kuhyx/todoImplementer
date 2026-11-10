@@ -31,14 +31,14 @@ def _rate(window: str = "seven_day", **over: Any) -> dict[str, Any]:
     """Build a rate_limit_event shaped like one captured from a real session."""
     info: dict[str, Any] = {
         "status": "allowed_warning",
-        "resetsAt": 1788000000,
+        "resetsAt": 1794100000,
         "rateLimitType": window,
         "utilization": 0.77,
         "overageStatus": "rejected",
         "isUsingOverage": False,
         "unifiedWindows": {
-            "five_hour": {"utilization": 0.12, "resetsAt": 1787900000, "status": "allowed"},
-            "seven_day": {"utilization": 0.77, "resetsAt": 1788000000, "status": "allowed_warning"},
+            "five_hour": {"utilization": 0.12, "resetsAt": 1794000000, "status": "allowed"},
+            "seven_day": {"utilization": 0.77, "resetsAt": 1794100000, "status": "allowed_warning"},
         },
     }
     info.update(over)

@@ -22,6 +22,7 @@ def _no_real_credits_inputs(
     monkeypatch.setenv("TODOIMPL_APIKEY", str(empty / "anthropic_api_key"))
     monkeypatch.setenv("TODOIMPL_SDK_VENV", str(empty / "sdk-venv"))
     monkeypatch.delenv("TODOIMPL_SDK_PYTHON", raising=False)
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(empty / "claude"))  # no real OAuth token, no usage probe
     cache.put(None)
 
 

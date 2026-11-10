@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from todoimpl.usage import usage_summary
+from todoimpl.usage import oauth, usage_summary
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -63,15 +63,15 @@ def test_rate_limits_come_from_the_latest_events(
     write_stream(tmp_path / "bbbbbbbb-0", "plan", [newer, {"type": "rate_limit_event"}], NOW)
     out = usage_summary(tmp_path, now=NOW)
     usage_validator.validate(out)
-    assert out["five_hour"] == {"utilization": 0.9, "resets_at": 1787900000.0, "status": "allowed"}
-    assert out["seven_day"] == {"utilization": 0.77, "resets_at": 1788000000.0, "status": "allowed_warning"}
+    assert out["five_hour"] == {"utilization": 0.9, "resets_at": 1794000000.0, "status": "allowed"}
+    assert out["seven_day"] == {"utilization": 0.77, "resets_at": 1794100000.0, "status": "allowed_warning"}
     assert out["overage"] == {"status": "rejected", "using": False}
 
 
 def test_top_level_info_fills_a_window_without_unified_windows(
     tmp_path: Path, write_stream: Callable[..., Path], rate: Callable[..., dict[str, Any]]
 ) -> None:
-    ev = rate("five_hour", utilization=0.4, resetsAt=1787000000, status="allowed")
+    ev = rate("five_hour", utilization=0.4, resetsAt=1794200000, status="allowed")
     del ev["rate_limit_info"]["unifiedWindows"]
     bad = rate("seven_day", utilization="high")
     del bad["rate_limit_info"]["unifiedWindows"]
@@ -79,7 +79,7 @@ def test_top_level_info_fills_a_window_without_unified_windows(
     del other["rate_limit_info"]["unifiedWindows"]
     write_stream(tmp_path / "aaaaaaaa-0", "plan", [ev, bad, other], NOW)
     out = usage_summary(tmp_path, now=NOW)
-    assert out["five_hour"] == {"utilization": 0.4, "resets_at": 1787000000.0, "status": "allowed"}
+    assert out["five_hour"] == {"utilization": 0.4, "resets_at": 1794200000.0, "status": "allowed"}
     assert out["seven_day"] is None
 
 
@@ -115,3 +115,41 @@ def test_default_now_is_the_wall_clock(tmp_path: Path) -> None:
     out = usage_summary(tmp_path)
     assert out["generated_at"] > NOW
     json.dumps(out)
+
+
+def test_t1882_a_window_past_its_reset_is_not_shown(
+    tmp_path: Path,
+    write_stream: Callable[..., Path],
+    rate: Callable[..., dict[str, Any]],
+    usage_validator: Any,
+) -> None:
+    """The header kept "5 h 76% resets now" from a stream line written before the reset."""
+    ev = rate()
+    ev["rate_limit_info"]["unifiedWindows"]["five_hour"] = {
+        "utilization": 0.76,
+        "resetsAt": NOW - 60,
+        "status": "allowed_warning",
+    }
+    write_stream(tmp_path / "aaaaaaaa-0", "plan", [ev], NOW)
+    out = usage_summary(tmp_path, now=NOW)
+    usage_validator.validate(out)
+    assert out["five_hour"] is None
+    assert out["seven_day"] is not None
+
+
+def test_t1882_a_fresh_probe_replaces_the_stream_windows(
+    tmp_path: Path,
+    write_stream: Callable[..., Path],
+    rate: Callable[..., dict[str, Any]],
+    usage_validator: Any,
+) -> None:
+    write_stream(tmp_path / "aaaaaaaa-0", "plan", [rate()], NOW)
+    oauth.save(tmp_path, oauth.Probe(NOW - 60, None, oauth.Window(0.03, NOW + 3 * 86400)))
+    out = usage_summary(tmp_path, now=NOW)
+    usage_validator.validate(out)
+    assert out["five_hour"] is None
+    assert out["seven_day"] == {"utilization": 0.03, "resets_at": NOW + 3 * 86400, "status": "allowed"}
+    oauth.save(tmp_path, oauth.Probe(NOW - 60, oauth.Window(1.0, NOW + 60), None))
+    assert usage_summary(tmp_path, now=NOW)["five_hour"]["status"] == "rejected"
+    oauth.save(tmp_path, oauth.Probe(NOW - 4000, None, None))  # too old to trust: the stream shows again
+    assert usage_summary(tmp_path, now=NOW)["seven_day"]["utilization"] == 0.77
