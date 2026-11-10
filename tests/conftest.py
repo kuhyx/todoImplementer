@@ -42,3 +42,11 @@ def _no_real_desktop_notifications(
 def _no_real_free_gateway(monkeypatch: pytest.MonkeyPatch) -> None:
     """Keep the cheap tier away from kuhy's real OmniRoute gateway (port 1 refuses)."""
     monkeypatch.setenv("TODOIMPL_FREE_GATEWAY", "http://127.0.0.1:1")
+
+
+@pytest.fixture(autouse=True)
+def _no_real_umbrella_registry(
+    tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Point the umbrella registry at a missing temp file: kuhy's real list is never read."""
+    monkeypatch.setenv("TODOIMPL_UMBRELLAS", str(tmp_path_factory.mktemp("umbrellas") / "umbrellas.txt"))

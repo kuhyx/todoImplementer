@@ -10,6 +10,7 @@ from todoimpl.board import state as store
 from todoimpl.board.state import RunState, clip_body
 from todoimpl.board.types import MANUAL_REASON, is_manual
 from todoimpl.todo_mcp.model import TodoError
+from todoimpl.umbrella.sched import start_stage
 
 from . import adopt, retry
 from .engine import Client, default_clock
@@ -97,6 +98,7 @@ class Scheduler(PhoneEngine):
                 st.auto_ship = bool(auto_ship)
             failed = st.extra.get("failed_stage") if st.stage == "failed" else None
             st.stage = "plan" if st.extra.get("spec_ok") or not needs_spec(item) else "spec"
+            st.stage = start_stage(item.body, st, st.stage)  # an umbrella: rounds, not spec/plan
             if failed in RESUMABLE:
                 st.stage = str(failed)
             st.error, st.last_tag, st.assignee = None, None, "claude"

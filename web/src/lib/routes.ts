@@ -4,6 +4,7 @@ import type { ActionId } from "@/lib/schemas-common";
 export const routes = {
   board: "/api/board",
   creditsFallback: "/api/settings/credits-fallback",
+  issues: (id: string): string => `/api/task/${encodeURIComponent(id)}/issues`,
   live: (id: string): string => `/api/live?id=${encodeURIComponent(id)}`,
   mergeAction: (group: string, action: string): string => `/api/merge/${group}/${action}`,
   merges: "/api/merges",

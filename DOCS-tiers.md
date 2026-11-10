@@ -26,9 +26,14 @@ For a cheap run the **implement role** (the implement and fix stages and the liv
    free providers log prompts; the check reads the GitHub origin's visibility, so a worktree under `~/.cache`
    passes for a public repo), `~/.config/omniroute/api_key` exists and the gateway (`http://127.0.0.1:20128`,
    `$TODOIMPL_FREE_GATEWAY`) answers `GET /v1/models` within 2 s. The verdict is `state.extra.free_models`.
-2. **Allowed:** the prompt gets the manager addendum. Sonnet delegates bounded sub-tasks with
-   `timeout 55 claude-free -p '<sub-task>' --permission-mode bypassPermissions` from the worktree, reads each diff,
-   runs the checks itself, repairs permission blocks the worker hit, and redoes or finishes what it botched.
+2. **Allowed:** the prompt gets the manager addendum. Sonnet writes each bounded sub-task to a file and runs it
+   through the server's worker command (`python -m todoimpl.runner.freeworker <worktree> <file> <log> --issues
+   <run dir> --child <repo>`, never raw `claude-free`: it loads kuhy's `~/.claude` and answers with a grilling
+   round instead of editing). The command runs `claude-free` with hooks off and a no-questions preamble, logs to
+   `<log>` and exits 0 only when the worktree changed. Sonnet reads each diff, runs the checks itself, repairs
+   permission blocks the worker hit, and redoes or finishes what it botched. Every free-model problem goes to
+   `<run dir>/free-issues.jsonl` (format and the raw `GET /api/task/<id>/issues` in `DOCS-umbrella.md`); a gateway
+   failure the server saw is logged there too.
 3. **Not allowed** (private repo, gateway down, tool missing): the addendum says to do the work alone, no
    `claude-free`. The feed names the reason.
 4. **Escalation, at most once per run.** A cheap implement turn that ends with a line `ESCALATE: <reason>`, or

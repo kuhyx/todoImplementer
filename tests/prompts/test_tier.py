@@ -24,11 +24,11 @@ def test_other_stages_never_carry_it(stage: str, ctx: PromptContext) -> None:
     assert build(stage, replace(ctx, tier="TIER-NOTE")) == build(stage, ctx)
 
 
-def test_manager_names_the_worker_the_checks_and_the_give_up_line() -> None:
-    text = texts.manager(Path("/wt/x"))
-    assert "claude-free -p" in text
-    assert "--permission-mode bypassPermissions" in text
-    assert "/wt/x" in text
+def test_manager_names_the_worker_command_the_checks_the_issue_log_and_the_give_up_line() -> None:
+    text = texts.manager(Path("/wt/x"), Path("/run/r1"), "W-CMD", "kuhyx/x")
+    assert "W-CMD /wt/x <sub-task file> /run/r1/worker-<n>.log --issues /run/r1 --child kuhyx/x" in text
+    assert "never raw `claude-free`" in text
+    assert "/run/r1/free-issues.jsonl" in text
     assert "git diff" in text
     assert "permission block" in text
     assert "ESCALATE: <reason>" in text

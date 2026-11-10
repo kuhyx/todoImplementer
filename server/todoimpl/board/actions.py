@@ -7,6 +7,8 @@ import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from todoimpl.umbrella.note import is_umbrella
+
 from .needs import needs
 from .status import Status
 from .types import MANUAL_REASON, fmt_when, is_manual
@@ -65,7 +67,11 @@ def _missing(repo_missing: str | None, block: str | None) -> str | None:
 
 def _start_block(task: TaskLike, block: str | None, repo_missing: str | None) -> str | None:
     """Return why a first start cannot succeed."""
-    return "note has no repo" if task.repo is None else _missing(repo_missing, block)
+    return (
+        "note has no repo"
+        if task.repo is None and not is_umbrella(task.body)
+        else _missing(repo_missing, block)
+    )
 
 
 def _gate(label: str, action_id: str, reason: str | None, *, confirm: bool = False) -> Action:
@@ -156,7 +162,7 @@ def _needs_you(run: RunState, block: str | None, repo_missing: str | None, cance
 
 def _auto_ship(task: TaskLike) -> Option:
     """Return the Auto-ship checkbox of Start/Restart: only a done_check note can ship itself."""
-    if task.done_check is None:
+    if task.done_check is None and not is_umbrella(task.body):  # an umbrella's children bring their own
         return Option("auto_ship", AUTO_SHIP, enabled=False, reason="the note has no done_check")
     return Option("auto_ship", AUTO_SHIP)
 

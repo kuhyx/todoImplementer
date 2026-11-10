@@ -123,6 +123,19 @@ export const apiError = z.strictObject({
 /** Cheap-tier badges, decided by the server (common.schema.json $defs/tier_badges). */
 export const tierFlags = z.strictObject({ cheap: z.boolean(), escalated: z.boolean(), free: z.boolean() });
 
+/** Umbrella card progress (common.schema.json $defs/umbrella_counts): children per bucket, next round width, issues. */
+export const umbrellaCounts = z.strictObject({
+  done: z.number().int().min(0),
+  failed: z.number().int().min(0),
+  issues: z.number().int().min(0),
+  queued: z.number().int().min(0),
+  ready: z.number().int().min(0),
+  round: z.number().int().min(0),
+  running: z.number().int().min(0),
+  total: z.number().int().min(0),
+  width: z.number().int().min(1),
+});
+
 export const taskCard = z.strictObject({
   actions,
   assignee: z.enum(["human", "claude"]),
@@ -140,6 +153,7 @@ export const taskCard = z.strictObject({
   status,
   tier: tierFlags,
   title: z.string().min(1),
+  umbrella: umbrellaCounts.optional(),
   updated: epoch.nullable(),
 });
 
@@ -148,6 +162,7 @@ export type ActionOption = z.infer<typeof actionOption>;
 export type Credits = z.infer<typeof credits>;
 export type Question = z.infer<typeof question>;
 export type TaskCard = z.infer<typeof taskCard>;
+export type UmbrellaCounts = z.infer<typeof umbrellaCounts>;
 export type NeedsCategory = (typeof NEEDS_CATEGORIES)[number];
 export type ColumnId = z.infer<typeof column>;
 export type Status = z.infer<typeof status>;

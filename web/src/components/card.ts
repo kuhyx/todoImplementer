@@ -2,6 +2,7 @@ import type { NeedsCategory, Status, TaskCard } from "@/lib/schemas-common";
 
 /** One board card. Every word comes from the server's card; the status label is display text for the enum only. */
 import { icon, type IconName } from "@/components/icons";
+import { umbrellaProgress } from "@/components/umbrella";
 import { h } from "@/lib/dom";
 import { formatAgo, formatClock, formatIn, formatUsd } from "@/lib/format";
 
@@ -96,6 +97,7 @@ export function renderCard(card: TaskCard, now: number, shouldShowRepo = false):
     h("span", { class: "card-title", text: card.title }),
     h("span", { class: "card-current", text: card.current }),
     resume !== null && h("span", { class: "card-current", text: resume }),
+    card.umbrella !== undefined && umbrellaProgress(card.umbrella),
     card.needs !== null && card.needs.text !== card.current && h("span", { class: "card-needs", text: card.needs.text }),
     card.needs !== null && h("span", { attrs: { "data-category": card.needs.category }, class: "card-category", text: CATEGORY_LABEL[card.needs.category] }),
     card.partial !== null && h("span", { class: "card-partial", text: partialLine(card.partial) }),

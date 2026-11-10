@@ -6,11 +6,14 @@ import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from todoimpl.umbrella.note import is_umbrella
+
 from .actions import actions
 from .badges import tier_badges
 from .needs import needs
 from .status import Status, column, compute
 from .types import Limit, fmt_when, is_manual
+from .umbrella import card_view
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -81,7 +84,7 @@ def _assignee(task: TaskLike, run: RunState | None) -> str:
         return "human"
     if run is not None:
         return run.assignee
-    return "human" if task.repo is None else "claude"
+    return "human" if task.repo is None and not is_umbrella(task.body) else "claude"
 
 
 def build_card(task: TaskLike, run: RunState | None, ctx: Context) -> dict[str, Any]:
@@ -102,7 +105,7 @@ def build_card(task: TaskLike, run: RunState | None, ctx: Context) -> dict[str, 
         repo_missing=repo_missing,
         now=ctx.now,
     )
-    return {
+    card = {
         "id": tid,
         "title": task.title,
         "repo": task.repo,
@@ -123,3 +126,6 @@ def build_card(task: TaskLike, run: RunState | None, ctx: Context) -> dict[str, 
         "updated": run.updated if run is not None else None,
         "actions": [a.to_dict() for a in buttons],
     }
+    if (umbrella := card_view(task, run)) is not None:
+        card["umbrella"] = umbrella
+    return card

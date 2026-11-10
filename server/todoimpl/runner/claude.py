@@ -16,6 +16,7 @@ from . import policy
 ROLE_MODELS = {
     "spec": "sonnet",
     "plan": "sonnet",
+    "manager": "sonnet",  # umbrella rounds: runs the free workers
     "implement": "opus",
     "verify": "opus",
     "classify": "haiku",

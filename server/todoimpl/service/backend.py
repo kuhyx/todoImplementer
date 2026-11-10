@@ -20,6 +20,8 @@ from todoimpl.http.backend import ERROR_CODES, BackendError
 from todoimpl.lessons import LessonError, approve, draft_lesson, latest_lesson, run_skills
 from todoimpl.runner.scheduler import RunnerError
 from todoimpl.todo_mcp.model import TodoError
+from todoimpl.umbrella import issues
+from todoimpl.umbrella.view import overlay_for
 from todoimpl.usage import limit_state, usage_summary
 from todoimpl.usage.interventions import record
 
@@ -102,11 +104,12 @@ class ServiceBackend:
         except LessonError as exc:  # a corrupt lessons.json must not take the whole board down
             return replace(run, error=run.error or str(exc))
         skills = run_skills(directory)
-        return replace(
+        found = replace(
             run,
             lesson=latest.to_dict() if latest else run.lesson,
             skills_loaded=skills or run.skills_loaded,
         )
+        return overlay_for(self._context, directory, found)
 
     def board(self) -> dict[str, Any]:
         """GET /api/board."""
@@ -148,6 +151,12 @@ class ServiceBackend:
             return path.read_bytes()
         except OSError:
             return None
+
+    def issues(self, id8: str) -> str | None:
+        """GET /api/task/<id8>/issues: the raw free-model issue log of a known task."""
+        if not any(t.id == id8 for t in self.cache.snapshot().tasks):
+            return None
+        return issues.raw(run_dir(self.root, id8))
 
     def usage(self) -> dict[str, Any]:
         """GET /api/usage."""

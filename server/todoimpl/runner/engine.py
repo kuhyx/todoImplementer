@@ -13,12 +13,13 @@ from todoimpl.board import state as store
 from todoimpl.board.parse import StateError
 from todoimpl.credits import marks, route
 from todoimpl.todo_mcp.model import TodoError
+from todoimpl.umbrella.driver import driver_for
 from todoimpl.usage.limits import UNTIL_FILE
 
 from . import adopt, limits, live, orphans, retry
 from .bus import Bus
 from .files import read_json, write_json
-from .pipeline import WORK_STAGES, Ctx, Driver
+from .pipeline import WORK_STAGES, Ctx
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -232,7 +233,7 @@ class Engine:
             self.root, run_dir, self.client, publish, partial(self._register, card), self.clock,
             lambda: card in self._cancel, self.check_timeout, partial(self._drain, card),
         )  # fmt: skip
-        Driver(ctx, st, item).run()
+        driver_for(ctx, st, item).run()
 
 
 def default_clock() -> float:  # noqa: D103

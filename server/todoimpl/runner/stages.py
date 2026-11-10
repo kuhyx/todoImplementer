@@ -6,6 +6,9 @@ from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from todoimpl.umbrella.note import is_umbrella
+from todoimpl.umbrella.run import run as run_umbrella
+
 from . import phone, tiering
 from .checks import SENTENCE_NOTE, discover, record, run_all
 from .files import NeedsYouError, write_json
@@ -62,6 +65,8 @@ def _plan(d: Driver) -> str | None:
 
 
 def _implement(d: Driver) -> str | None:
+    if is_umbrella(d.item.body):  # the rounds of an umbrella note (umbrella/run.py)
+        return run_umbrella(d)  # type: ignore[arg-type]
     tail = str(d.state.extra.get("failure_tail", ""))
     res = d.turn("implement", "fix" if tail else "implement", failure_tail=tail)
     if tiering.gave_up(d, res):  # the cheap tier hands over: the same stage again, now on Opus
@@ -143,6 +148,8 @@ def live_summary(report: str) -> str:
 
 
 def _shipping(d: Driver) -> str | None:
+    if is_umbrella(d.item.body):  # Ship ships every child at its gate
+        return run_umbrella(d)  # type: ignore[arg-type]
     st, wt = d.state, Path(str(d.state.worktree))
     live = live_summary(str((st.live_check or {}).get("report_md", "")))
     checks = discover(wt, d.item.done_check)

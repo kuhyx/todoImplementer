@@ -77,7 +77,7 @@ def _launch(  # noqa: PLR0913, PLR0917 - the turn environment plus its route
     model: str | None,
 ) -> orphans.Record:
     plan = session.plan_turn(_prior(env, state, role), now=env.now())
-    allow = allowlist.rules_for(env.run_dir.parent, state.repo, state.task_id)
+    allow = allowlist.rules_for(files.root_of(env.run_dir), state.repo, state.task_id)
     build = credit.build if route == "credits" else claude.build
     inv = build(role, prompt_for(plan.situation), env.worktree, plan.resume, extra_dirs, allow, model)
     env.activity(
@@ -125,7 +125,7 @@ def _consume(env: TurnEnv, state: RunState, rec: orphans.Record) -> TurnResult |
     parser: StreamParser = StreamParser()
     if files.route_of(env.run_dir, stem) == "plan":  # the free credits cannot spend overage; the plan can
         parser = guard.OverageGuard(
-            env.run_dir.parent,
+            files.root_of(env.run_dir),
             env.run_dir.name,
             handle.stop,
             lambda text: env.activity("error", text),

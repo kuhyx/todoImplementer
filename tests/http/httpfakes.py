@@ -48,6 +48,7 @@ class FakeBackend:
         self.failure: Exception | None = None
         self.hang = False
         self.shots: dict[str, bytes] = {}
+        self.issues_text = ""
 
     @property
     def task_id(self) -> str:
@@ -70,6 +71,11 @@ class FakeBackend:
         self._maybe_fail()
         self.calls.append(("shot", id8, name))
         return self.shots.get(name) if id8 == self.task_id else None
+
+    def issues(self, id8: str) -> str | None:
+        self._maybe_fail()
+        self.calls.append(("issues", id8))
+        return self.issues_text if id8 == self.task_id else None
 
     def usage(self) -> dict[str, Any]:
         self._maybe_fail()

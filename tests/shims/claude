@@ -118,7 +118,8 @@ def main() -> int:
             "phone_owner": os.environ.get("PHONE_LEASE_OWNER")}
     with (base / "calls.jsonl").open("a", encoding="utf-8") as log:
         log.write(json.dumps(call) + "\n")
-    key = (cwd.parent.name if cwd.name == "wt" else cwd.name)[:8]
+    name = cwd.parent.name if cwd.name == "wt" else cwd.name
+    key = name if "children" in cwd.parts else name[:8]  # umbrella children share the umbrella's id8: keep the -<n>
     steps = next_script(base, key)
     bare = steps[0].get("_fake") == "bare"
     sid = "" if bare else opts["resume"] or f"fake-{uuid.uuid4().hex[:8]}"

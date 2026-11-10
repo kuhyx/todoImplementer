@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from . import phone, standing
 from .kind import HINTS, detect_kind
+from .umbrella import manager
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -182,6 +183,7 @@ STAGES: dict[str, Callable[[PromptContext], str]] = {
     "fix": fix,
     "resume_after_kill": resume_after_kill,
     "fresh_after_idle": fresh_after_idle,
+    "manager": manager,
 }
 
 

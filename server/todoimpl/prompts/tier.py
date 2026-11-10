@@ -7,14 +7,19 @@ from pathlib import Path
 GIVE_UP = "If you cannot finish, end your reply with a line `ESCALATE: <reason>`."
 
 
-def manager(worktree: Path) -> str:
-    """Sonnet as a manager: the free models type, Sonnet reviews, checks and repairs."""
+def manager(worktree: Path, run_dir: Path, worker: str, repo: str) -> str:
+    """Sonnet as a manager: free models type through the server's worker command, Sonnet reviews."""
     return (
-        "Tier cheap, free models allowed. You manage; free models do the edits. From "
-        f"{worktree} run `timeout 55 claude-free -p '<one bounded sub-task>' --permission-mode "
-        "bypassPermissions` per sub-task (small, one concern, files named). After each call read "
+        "Tier cheap, free models allowed. You manage; free models do the edits. Per bounded sub-task "
+        f"(small, one concern, files named) write it to a file in {run_dir} and run `timeout 3000 {worker} "
+        f"{worktree} <sub-task file> {run_dir}/worker-<n>.log --issues {run_dir} --child {repo}`; never raw "
+        "`claude-free` (it answers with a grilling round). The command exits 0 only when the worktree "
+        "changed: judge by `git diff` and the checks, not by what the worker says. After each call read "
         "`git diff`, run the checks yourself, fix any permission block the worker hit, and redo or finish "
-        f"whatever it botched. Never hand it secrets or paths outside the worktree. {GIVE_UP}"
+        f"whatever it botched. Log every free-model problem as one JSON line in {run_dir}/free-issues.jsonl: "
+        "ts, child, phase (start|edit|tool-call|permission|checks|output), model, symptom (exact text, cut "
+        "at 500 chars), action, fixed. Never hand it secrets or paths outside the worktree. "
+        f"{GIVE_UP}"
     )
 
 

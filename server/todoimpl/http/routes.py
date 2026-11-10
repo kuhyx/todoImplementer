@@ -13,7 +13,7 @@ from urllib.parse import parse_qs, urlsplit
 from todoimpl.tokens_api import router as tokens_api
 from todoimpl.version import __version__
 
-from . import bodies, settings
+from . import bodies, issues, settings
 from . import merge as merge_http
 from .auth import check_post
 from .backend import ERROR_CODES, BackendError
@@ -114,6 +114,8 @@ class Router:
         """Answer /api/task/<id> and its screenshots; None when path is neither."""
         if match := SHOT_PATH.fullmatch(path):
             return _guard(partial(self._shot, *match.groups()))
+        if match := issues.PATH.fullmatch(path):
+            return _guard(partial(issues.reply, self.backend, match.group(1)))
         if match := TASK_PATH.fullmatch(path):
             return _guard(lambda: self._task(match.group(1)))
         return None
