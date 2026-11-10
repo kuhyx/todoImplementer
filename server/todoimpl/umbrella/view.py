@@ -18,7 +18,7 @@ from . import issues
 from .store import RECORD, child_dir
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Mapping
     from pathlib import Path
 
     from todoimpl.board.card import Context
@@ -47,22 +47,25 @@ def child_state(run_dir: Path, cid: str) -> RunState | None:
         return store.RunState(task_id=cid, stage="failed", error=str(exc))
 
 
-def _row(
+def _row(  # noqa: PLR0913 - one child row from its parts
     kid: dict[str, Any],
     child: RunState | None,
     counts: dict[str, int],
     *,
     live: bool,
     limit_until: float | None,
+    waits_on: str | None = None,
 ) -> dict[str, Any]:
     task = KidTask(kid["id"], kid["title"], kid["repo"], "done" if kid["done"] else "todo")
-    working = live and child is not None and child.stage in (*WORK_STAGES, "shipping")
+    working = live and child is not None and child.stage in (*WORK_STAGES, "shipping") and waits_on is None
     verdict = child.extra.get("verdict") if child is not None else None
+    status = compute(task, child, working, limit_until).value
     return {
         "id": kid["id"],
         "repo": kid["repo"],
         "title": kid["title"],
-        "status": compute(task, child, working, limit_until).value,
+        "status": status,
+        **({"waits_on": waits_on} if waits_on is not None and status in ("queued", "backlog") else {}),
         "stage": child.stage if child is not None else None,
         "round": child.extra.get("umbrella_round") if child is not None else None,
         "verdict": verdict.get("kind") if isinstance(verdict, dict) else None,
@@ -74,23 +77,42 @@ def _row(
 
 
 def rows(
-    run_dir: Path, st: RunState, *, live: bool, limit_until: float | None
+    run_dir: Path,
+    st: RunState,
+    *,
+    live: bool,
+    limit_until: float | None,
+    waits: Mapping[str, str] | None = None,
 ) -> tuple[list[dict[str, Any]], float]:
-    """Return (a row per child in the umbrella's order, the children's summed cost)."""
+    """Return (a row per child in the umbrella's order, the children's summed cost).
+
+    `waits` = child run id -> the run of its repo it waits on (per-repo lock): that child reads as queued.
+    """
     counts = issues.counts(run_dir)
     out, cost = [], 0.0
     for kid in st.extra.get(RECORD, {}).get("kids", []):
         child = child_state(run_dir, kid["id"])
-        out.append(_row(kid, child, counts, live=live, limit_until=limit_until))
+        out.append(
+            _row(
+                kid, child, counts, live=live, limit_until=limit_until, waits_on=(waits or {}).get(kid["id"])
+            )
+        )
         cost += child.cost_usd if child is not None else 0.0
     return out, cost
 
 
-def overlay(run_dir: Path, st: RunState, *, live: bool, limit_until: float | None) -> RunState:
+def overlay(
+    run_dir: Path,
+    st: RunState,
+    *,
+    live: bool,
+    limit_until: float | None,
+    waits: Mapping[str, str] | None = None,
+) -> RunState:
     """Return the umbrella run with its child rows attached and the children's cost added (not saved)."""
     if RECORD not in st.extra:
         return st
-    found, cost = rows(run_dir, st, live=live, limit_until=limit_until)
+    found, cost = rows(run_dir, st, live=live, limit_until=limit_until, waits=waits)
     return replace(st, extra={**st.extra, VIEW: {"rows": found}}, cost_usd=round(st.cost_usd + cost, 6))
 
 
@@ -100,4 +122,4 @@ def overlay_for(context: Callable[[], Context], run_dir: Path, st: RunState) -> 
         return st
     ctx = context()
     until = ctx.limit.until if ctx.limit.holds else None
-    return overlay(run_dir, st, live=st.task_id in ctx.live, limit_until=until)
+    return overlay(run_dir, st, live=st.task_id in ctx.live, limit_until=until, waits=ctx.waits)

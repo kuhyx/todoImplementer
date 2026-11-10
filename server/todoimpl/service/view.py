@@ -5,11 +5,17 @@ from __future__ import annotations
 import threading
 from typing import TYPE_CHECKING
 
+from todoimpl.repotask import files, legacy
+from todoimpl.repotask.legacy import Older
+from todoimpl.todo_mcp.items import Item
 from todoimpl.todo_mcp.model import Task, TodoError
 
 from .cards import CardTask, card_tasks
+from .repocards import group_cards
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from todoimpl.todo_mcp.client import TodoClient
 
     from .cache import TaskCache
@@ -20,10 +26,11 @@ PASS_THROUGH = frozenset({"status", "priority", "repo"})
 class ItemView:
     """Duck-types TodoClient for the Scheduler. Reads are fresh (get_task) or cached (list_tasks)."""
 
-    def __init__(self, client: TodoClient, cache: TaskCache) -> None:
-        """Wrap client; cache resolves card ids to notes and is poked after writes."""
+    def __init__(self, client: TodoClient, cache: TaskCache, root: Path | None = None) -> None:
+        """Wrap client; cache resolves card ids to notes and is poked after writes; `root` = the run root."""
         self._client = client
         self._cache = cache
+        self._root = root
         self._tick = (
             threading.Lock()
         )  # children finish concurrently: one read-modify-write of the note at a time
@@ -31,14 +38,34 @@ class ItemView:
     def _note_of(self, card: str) -> str:
         snap = self._cache.snapshot()
         for task in snap.tasks:
+            if task.id == card and task.parts:
+                msg = f"{card} is a repo task: it spans several notes"
+                raise TodoError(msg)
             if task.id == card:
                 return task.item.note_id
         # Before the first good load (boot, MCP still down) a miss proves nothing: report it as transient.
         msg = f"unknown task {card}" if snap.loaded else f"todo app offline, {snap.error}"
         raise TodoError(msg)
 
+    def _repo_card(self, card: str) -> CardTask | None:
+        """Return the cached repo task of this card id, None when it is a section card."""
+        return next((t for t in self._cache.snapshot().tasks if t.id == card and t.parts), None)
+
+    def _fresh_repo(self, found: CardTask) -> CardTask:
+        """Rebuild a repo task from its notes, read now: the parts it has left."""
+        notes = self._client.list_tasks(repo=found.repo, full=True)
+        root = self._root
+        cards = group_cards(notes, lambda key: legacy.older(root, key) if root is not None else Older())
+        for task in cards:
+            if task.id == found.id:
+                return task
+        msg = f"repo task {found.id} has no open part left"
+        raise TodoError(msg)
+
     def get_task(self, card: str) -> CardTask:
-        """Fetch the note fresh and return the section behind this card id."""
+        """Fetch the note fresh and return the section behind this card id (a repo task: its fresh parts)."""
+        if (repo_card := self._repo_card(card)) is not None:
+            return self._fresh_repo(repo_card)
         for task in card_tasks(self._client.get_task(self._note_of(card))):
             if task.id == card:
                 return task
@@ -62,9 +89,22 @@ class ItemView:
         return self.get_task(card)
 
     def close_task(self, card: str, evidence: str) -> None:
-        """Mark this section done; the note closes once all its sections are."""
-        self._client.close_item(self.get_task(card).item, evidence)
+        """Mark this section done (a repo task: its ticked parts); the note closes with its last section."""
+        task = self.get_task(card)
+        if task.parts:
+            self._close_parts(task, evidence)
+        else:
+            self._client.close_item(task.item, evidence)
         self._cache.poke()
+
+    def _close_parts(self, task: CardTask, evidence: str) -> None:
+        """Close the section of every part the run ticked; the other parts stay open for the next cycle."""
+        if self._root is None or not (done := files.ticked(self._root / task.id, task.item)):
+            msg = f"{task.id}: no part is ticked, nothing to close"
+            raise TodoError(msg)
+        for part in done:  # close_item re-reads the note and fails closed on a section that moved
+            item = Item(part.note_id, part.index, part.title, part.body, task.repo, "todo", part.done_check)
+            self._client.close_item(item, evidence)
 
     def tick_child(self, card: str, cid: str) -> None:
         """Tick child `cid`'s checkbox in the umbrella note behind `card`."""
@@ -74,6 +114,8 @@ class ItemView:
 
     def abandon(self, card: str) -> bool:
         """Set the note abandoned when this card is its only open section; True when it did (T1815)."""
+        if self._repo_card(card) is not None:  # the notes of a repo task hold other parts too
+            return False
         note = self._note_of(card)
         cards = card_tasks(self._client.get_task(note))
         if any(t.id != card and t.status != "done" for t in cards):

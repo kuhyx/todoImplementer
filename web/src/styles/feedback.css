@@ -166,3 +166,54 @@
 .u-error {
   flex-basis: 100%;
 }
+
+.p-strip,
+.p-row,
+.p-steps {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.p-strip {
+  flex-wrap: wrap;
+}
+
+.p-mark svg,
+.p-steps svg {
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+.p-mark[data-state="done"] {
+  color: var(--success);
+}
+
+.p-mark[data-state="working"] {
+  color: var(--accent);
+}
+
+.p-mark[data-state="human"],
+.p-mark[data-state="held"] {
+  color: var(--warning);
+}
+
+.p-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.p-row {
+  display: flex;
+  padding: 0.25rem 0;
+}
+
+.p-title {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

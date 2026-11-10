@@ -18,6 +18,7 @@ from todoimpl.board.types import Credits, Limit
 from todoimpl.credits import marks, route, setting
 from todoimpl.http.backend import ERROR_CODES, BackendError
 from todoimpl.lessons import LessonError, approve, draft_lesson, latest_lesson, run_skills
+from todoimpl.repotask.files import overlay as ticks_overlay
 from todoimpl.runner import autocheck
 from todoimpl.runner.scheduler import RunnerError
 from todoimpl.todo_mcp.model import TodoError
@@ -98,6 +99,7 @@ class ServiceBackend:
             repo_missing=self._repo_missing,
             auto_close=autocheck.enabled(self.root),
             checks=autocheck.load_cache(self.root),
+            waits=dict(getattr(self.scheduler, "lock_waits", dict)()),
         )
 
     def _with_extras(self, run: RunState | None) -> RunState | None:
@@ -112,7 +114,7 @@ class ServiceBackend:
         skills = run_skills(directory)
         lesson = latest.to_dict() if latest else run.lesson
         found = replace(run, lesson=lesson, skills_loaded=skills or run.skills_loaded)
-        return overlay_for(self._context, directory, found)
+        return overlay_for(self._context, directory, ticks_overlay(directory, found))
 
     def board(self) -> dict[str, Any]:
         """GET /api/board."""

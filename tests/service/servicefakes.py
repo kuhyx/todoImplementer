@@ -8,7 +8,9 @@ from typing import Any
 
 from fake_todo_mcp import FakeTodoMcp
 from todoimpl.board.state import RunState, run_dir, save
+from todoimpl.repotask.ids import repo_card_id
 from todoimpl.service import ServiceBackend
+from todoimpl.umbrella.note import is_umbrella
 
 
 class FakeScheduler:
@@ -69,10 +71,20 @@ class Rig:
     def note(
         self, title: str = "demo todos", body: str = "", repo: str | None = "kuhyx/demo", **f: str | None
     ) -> str:
-        """Seed a note, refresh the cache, return the card id of its first section."""
+        """Seed a note, refresh the cache, return its card id (the repo task's; `<id8>-0` without a repo)."""
         note_id = self.fake.seed(repo, title, body, **f)
         self.backend.cache.refresh()
-        return f"{note_id[:8]}-0"
+        return repo_card_id(repo) if repo and not is_umbrella(body) else f"{note_id[:8]}-0"
+
+    def sections(self, body: str, repo: str | None = "kuhyx/demo", title: str = "demo todos") -> list[str]:
+        """Seed a note whose every section has an older run in flight (so each keeps its own section card)."""
+        note_id = self.fake.seed(repo, title, body)
+        count = sum(1 for line in body.split("\n") if line.startswith("## "))
+        ids = [f"{note_id[:8]}-{i}" for i in range(max(count, 1))]
+        for card in ids:
+            self.run(card, "gate")
+        self.backend.cache.refresh()
+        return ids
 
     def run(self, task_id: str, stage: str = "implement", **fields: Any) -> RunState:
         """Write a state.json for a card."""

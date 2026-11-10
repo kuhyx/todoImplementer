@@ -1,4 +1,4 @@
-"""No cap on parallel runs: every Start drives at once, none waits behind other runs."""
+"""No cap on parallel runs: every Start drives at once, none waits behind a run of another repo."""
 
 import threading
 
@@ -12,7 +12,9 @@ def test_five_starts_while_four_run_all_run_at_once(world: Env, monkeypatch: pyt
     release = threading.Event()
     monkeypatch.setattr(Scheduler, "_drive", lambda _self, _card: release.wait(20))
     cards = [f"abcd{i:04d}-0" for i in range(9)]
-    client = FakeClient({card[:8]: task(card[:8], body="done: ok") for card in cards})
+    client = FakeClient(
+        {card[:8]: task(card[:8], repo=f"kuhyx/r{n}", body="done: ok") for n, card in enumerate(cards)}
+    )
     sched = Scheduler(client, world.root, check_timeout=20)
     try:
         for card in cards[:4]:

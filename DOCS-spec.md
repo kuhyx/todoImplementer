@@ -161,9 +161,9 @@ GET `/version`, `/api/board`, `/api/task/<item-id>`, `/api/usage`, `/api/live?id
 
 ## Cards are items
 
-A note's `## ` sections are its items (`todo_mcp/items.py`); a note without sections is one item. A card, a run, its
-run dir and every `/api` path use the item id `<note id8>-<index>` (index 0-based, e.g. `c59d2588-0`). Closing an
-item marks its section `## [x]` and adds a `closed:` line; the note closes with its last open item.
+A note's `## ` sections are its items (`todo_mcp/items.py`); a note without sections is one item. A repo is ONE card
+(1 repo = 1 task): its open sections are the parts of one run, id `<repo hash8>-0` (`DOCS-repotask.md`); a section card
+`<note id8>-<index>` lasts only for a run begun before. Closing an item marks `## [x]` + `closed:`; the note closes last.
 
 ## Run-dir layout
 

@@ -10,6 +10,7 @@ from servicefakes import Rig, write_stream
 from todoimpl.board.state import run_dir
 from todoimpl.http.backend import BackendError
 from todoimpl.lessons.store import Lesson, save_lessons
+from todoimpl.repotask.ids import repo_card_id
 from todoimpl.service import ServiceBackend, TaskCache
 from todoimpl.service.cards import CardTask, card_tasks
 from todoimpl.todo_mcp.model import Task
@@ -21,7 +22,7 @@ def test_board_before_any_successful_fetch_is_an_upstream_error(rig: Rig) -> Non
     assert err.value.code == "upstream_unavailable"
 
 
-def test_board_has_one_valid_card_per_section(rig: Rig) -> None:
+def test_board_has_one_valid_card_per_repo(rig: Rig) -> None:
     note = rig.note(body="## a\nx\n## b\ny", priority="high")
     rig.note(title="solo", repo="kuhyx/other")
     board = rig.backend.board()
@@ -29,9 +30,8 @@ def test_board_has_one_valid_card_per_section(rig: Rig) -> None:
     assert board["build"] == "b1"
     assert board["repos"] == ["kuhyx/demo", "kuhyx/other"]
     ids = [c["id"] for c in board["tasks"]]
-    assert len(ids) == 3
-    assert len(set(ids)) == 3
-    assert note in ids
+    assert sorted(ids) == sorted({note, repo_card_id("kuhyx/other")})
+    assert [part["title"] for part in rig.card(note)["parts"]] == ["a", "b"]
     assert board["slots"] == {"used": 0}
 
 
@@ -118,7 +118,7 @@ def test_usage_validates_and_names_tasks(rig: Rig) -> None:
     write_stream(run_dir(rig.root, tid), [])
     usage = rig.backend.usage()
     validate("usage", usage)
-    assert usage["cost"]["per_task"][0]["title"] == "Named note"
+    assert usage["cost"]["per_task"][0]["title"] == "demo"
 
 
 def test_usage_works_while_the_todo_app_is_down(rig: Rig) -> None:

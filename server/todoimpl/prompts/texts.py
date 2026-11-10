@@ -37,6 +37,8 @@ def _item(ctx: PromptContext) -> str:
     lines = [f"Item: {ctx.title} (repo: {ctx.repo})"]
     if ctx.body:
         lines.append(ctx.body)
+    if ctx.parts:
+        lines.append(ctx.parts)
     lines.append(f"done_check: {ctx.done_check or 'none'}")
     if ctx.spec_answers:
         lines += ["Spec answers:", *(f"- {q}: {a}" for q, a in ctx.spec_answers)]

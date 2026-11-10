@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
+from todoimpl.repotask.model import Part
 from todoimpl.todo_mcp.model import Task
 from todoimpl.umbrella.note import is_umbrella
 
@@ -26,6 +27,7 @@ class Item:
     done_check: str | None
     created_by: str = "kuhy"
     note_check: str | None = None  # the note-level check this item ignores (multi-item note, no own check)
+    parts: tuple[Part, ...] = ()  # set on a repo task's item (DOCS-repotask.md); empty on a section
 
 
 @dataclass(frozen=True)

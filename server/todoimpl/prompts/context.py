@@ -27,3 +27,4 @@ class PromptContext:
     base: str = "main"  # the repo's default branch on origin: where a session lands its work
     resumed: bool = False  # the session is resumed: it already holds plan.md, so prompts name its path only
     tier: str = ""  # cheap-tier addendum for implement-role prompts (prompts/tier.py); "" = normal tier
+    parts: str = ""  # a repo task's parts and the tick command (repotask/prompt.py); "" for a section

@@ -48,4 +48,4 @@ def test_a_created_task_refreshes_the_cache_at_once(rig: Rig) -> None:
     assert any(
         t["title"].startswith("MANUAL WORK REQUIRED: rotate Claude API key")
         for t in rig.backend.board()["tasks"]
-    )
+    )  # the repo's only part is human work, so the card carries its title

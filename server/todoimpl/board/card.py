@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
@@ -11,6 +12,7 @@ from todoimpl.umbrella.note import is_umbrella
 from .actions import actions
 from .badges import tier_badges
 from .needs import needs
+from .parts import human_only, is_repo_task, parts_of
 from .status import Status, column, compute
 from .types import Limit, fmt_when, is_manual
 from .umbrella import card_view
@@ -32,6 +34,7 @@ class Context:
     repo_missing: Callable[[str | None], str | None] = lambda _repo: None
     auto_close: bool = False  # settings.json `auto_close`
     checks: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)  # autocheck.json, by item id
+    waits: Mapping[str, str] = field(default_factory=dict)  # queued run -> the run of its repo it waits on
 
 
 def current_line(  # noqa: PLR0911 - one return per status
@@ -83,7 +86,7 @@ def partial_of(run: RunState | None) -> dict[str, Any] | None:
 
 def _assignee(task: TaskLike, run: RunState | None) -> str:
     """Return the human for a manual note or no repo, else the run's assignee (Claude by default)."""
-    if is_manual(task.title):
+    if is_manual(task.title) or human_only(task):
         return "human"
     if run is not None:
         return run.assignee
@@ -93,6 +96,9 @@ def _assignee(task: TaskLike, run: RunState | None) -> str:
 def build_card(task: TaskLike, run: RunState | None, ctx: Context) -> dict[str, Any]:
     """Return the task_card object for one note."""
     tid = task.id
+    spent = 0.0
+    if run is not None and run.stage == "shipped" and is_repo_task(task):  # parts are left: the next cycle
+        spent, run = run.cost_usd, None
     live = tid in ctx.live
     limit_until = ctx.limit.until if ctx.limit.active else None
     status = compute(task, run, live, limit_until if ctx.limit.holds else None)
@@ -124,7 +130,7 @@ def build_card(task: TaskLike, run: RunState | None, ctx: Context) -> dict[str, 
         ),
         "needs": needs(run).to_dict() if status == Status.NEEDS_YOU and run is not None else None,
         "partial": partial_of(run),
-        "cost_usd": run.cost_usd if run is not None else 0,
+        "cost_usd": run.cost_usd if run is not None else spent,
         "route": run.extra.get("route") if run is not None else None,
         "tier": tier_badges(task, run),
         "resumes_at": resumes_at,
@@ -135,4 +141,8 @@ def build_card(task: TaskLike, run: RunState | None, ctx: Context) -> dict[str, 
     }
     if (umbrella := card_view(task, run)) is not None:
         card["umbrella"] = umbrella
+    if (parts := parts_of(task, run, working=status == Status.WORKING)) is not None:
+        card["parts"] = parts
+    if (waits := ctx.waits.get(tid)) is not None and status == Status.QUEUED:
+        card["waits_on"] = waits
     return card

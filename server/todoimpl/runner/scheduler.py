@@ -3,35 +3,32 @@
 from __future__ import annotations
 
 import logging
-import re
 from typing import TYPE_CHECKING, Any
 
 from todoimpl.board import state as store
 from todoimpl.board.state import RunState, clip_body
 from todoimpl.board.types import MANUAL_REASON, is_manual
+from todoimpl.repotask.start import prepare
 from todoimpl.todo_mcp.model import TodoError
-from todoimpl.umbrella.sched import start_stage
 
 from . import adopt, closing, retry
 from .engine import Client, default_clock
 from .files import read_json
 from .phone_sched import PhoneEngine
+from .restart import restart_stage
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
     from pathlib import Path
 
-    from todoimpl.todo_mcp.items import Item
 
 log = logging.getLogger("todoimpl.runner")
-SPEC_MARKER = re.compile(r"^\s*(done|verify|done_check)\s*:", re.IGNORECASE | re.MULTILINE)
 RESTARTABLE = ("failed", "cancelled")
 FINAL = ("shipped", "closed", "cancelled")
-RESUMABLE = ("spec", "plan", "implement", "live_check", "checks")
 COUNTERS = (
     "failure_tail", "live_fixes", "check_fixes", "nudges", "nudge", "failed_stage", "resume_stage",
     "resettle", "retries", "crash_retries", "r_continues", "r_continue", "tagless_retry", "fresh",
-    "ship_fixes", "reship", "hands_nudged", "ask_grants",
+    "ship_fixes", "reship", "hands_nudged", "ask_grants", "part_nudges",
 )  # fmt: skip
 
 
@@ -42,21 +39,6 @@ class RunnerError(Exception):
         super().__init__(message)
         self.code = code
         self.message = message
-
-
-def needs_spec(item: Item) -> bool:
-    """Spec runs only when the note says neither a done_check nor done/verify lines."""
-    return item.done_check is None and not SPEC_MARKER.search(item.body)
-
-
-def restart_stage(st: RunState, item: Item) -> str:
-    """Return the stage a (re)start enters: closing again, the failed stage, the gate after a failed ship."""
-    if st.closing:
-        return "closing"
-    failed = st.extra.get("failed_stage") if st.stage == "failed" else None
-    fresh = start_stage(item.body, st, "plan" if st.extra.get("spec_ok") or not needs_spec(item) else "spec")
-    resumed = "gate" if failed in ("shipping", "gate") else failed  # a failed Ship goes back to the gate
-    return str(resumed) if resumed in (*RESUMABLE, "gate") else fresh
 
 
 class Scheduler(PhoneEngine):
@@ -116,12 +98,14 @@ class Scheduler(PhoneEngine):
             if self.busy(card):
                 msg = f"{card} is already running"
                 raise RunnerError(msg, "conflict")
-            if st is not None and st.stage not in RESTARTABLE:
+            if st is not None and st.stage not in RESTARTABLE and not (item.parts and st.stage == "shipped"):
                 msg = f"{card} already has a run ({st.stage})"
                 raise RunnerError(msg, "conflict")
-            if st is None or st.stage == "cancelled":
+            if st is None or st.stage in ("cancelled", "shipped"):  # shipped: a repo task's next cycle
                 st = st or RunState(task_id=card, stage="spec", started_at=self.clock(), repo=item.repo)
                 st.auto_ship = bool(auto_ship)
+            if item.parts:
+                prepare(st, item, self.root / card)
             st.stage = restart_stage(st, item)
             st.error, st.last_tag, st.assignee = None, None, "claude"
             st.note_body = clip_body(item.body)
@@ -237,6 +221,7 @@ class Scheduler(PhoneEngine):
             else:
                 if card in self._queue:
                     self._queue.remove(card)
+                    self.locks.release(card)
                 adopt.abandon(self.root / card)  # a turn no drive follows must not go on editing the worktree
                 st.stage = "cancelled"
                 self.save(card, st)

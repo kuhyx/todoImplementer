@@ -10,16 +10,18 @@ from functools import partial
 from typing import TYPE_CHECKING, Any, Protocol
 
 from todoimpl.board import state as store
-from todoimpl.board.parse import StateError
 from todoimpl.credits import marks, route
+from todoimpl.repotask import files
 from todoimpl.todo_mcp.model import TodoError
 from todoimpl.umbrella.driver import driver_for
+from todoimpl.umbrella.note import is_umbrella
 from todoimpl.usage.limits import UNTIL_FILE
 
-from . import adopt, limits, live, orphans, retry
+from . import adopt, limits, orphans, recovery, retry
 from .bus import Bus
 from .files import read_json, write_json
-from .pipeline import WORK_STAGES, Ctx
+from .pipeline import Ctx
+from .repolock import RepoLocks
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -52,6 +54,7 @@ class Engine:
         """Recover interrupted runs, then start the dispatcher that gives every queued card its own thread."""
         self.client, self.root, self.clock, self.check_timeout = client, root, clock, check_timeout
         self.bus = Bus(root)
+        self.locks = RepoLocks()
         self._cv = threading.Condition()
         self._queue: deque[str] = deque()
         self._active: set[str] = set()
@@ -65,30 +68,7 @@ class Engine:
 
     def recover(self) -> None:
         """Re-queue runs a restart interrupted; a half-done ship is never redone on its own."""
-        for path in sorted(self.root.glob("*/state.json")):
-            try:
-                st = store.load(path.parent)
-            except StateError:
-                continue
-            if st is None:  # pragma: no cover - the file was just globbed
-                continue
-            if st.stage == "shipping":
-                st.extra["failed_stage"] = "gate"
-                st.error = (
-                    "Ship was interrupted by a restart: check origin and the note before shipping again"
-                )
-                st.stage = "failed"
-                store.save(path.parent, st)
-            elif live.rejudgeable(st):  # judged under older rules: judge the stored report again, no turn
-                st.stage, st.error, st.last_tag, st.assignee = "live_check", None, None, "claude"
-                st.extra.pop("failed_stage", None)
-                st.extra["resettle"] = True
-                store.save(path.parent, st)
-                self._queue.append(st.task_id)
-            elif st.stage in (*WORK_STAGES, "paused_limit", retry.PAUSED) and (
-                st.last_tag not in ("Q", "A") or orphans.read(path.parent) is not None
-            ):  # a turn still recorded means last_tag is stale: it is running or its result waits
-                self._queue.append(st.task_id)
+        self._queue.extend(recovery.interrupted(self.root))
 
     def close(self) -> None:
         """Stop the dispatcher and the drives (after their current turn) and end every subscription."""
@@ -156,6 +136,22 @@ class Engine:
             return 0.0
         return st.resume_at - now
 
+    def _admit(self, card: str) -> bool:
+        """Take the card's repo lock; False while another run of that repo holds it (the card stays queued).
+
+        A run whose turn is still recorded (it was running before a restart) joins the lock without waiting:
+        it is already working. Every other run waits its turn, a click on an older card included. A card with
+        no repo, or an umbrella, takes no lock.
+        """
+        st = store.load_runs(self.root, [card]).get(card)
+        if st is None or not st.repo or is_umbrella(st.note_body or ""):
+            return True
+        return self.locks.acquire(st.repo, card, force=orphans.read(self.root / card) is not None) is None
+
+    def lock_waits(self) -> dict[str, str]:
+        """Return queued run -> the run of its repo it waits on (the board shows a lock for it)."""
+        return self.locks.waits()
+
     def _take(self) -> str | None:
         with self._cv:
             while not self._closed:
@@ -170,7 +166,7 @@ class Engine:
                 for card in [c for c in self._queue if c not in self._active]:
                     if (hold := self._retry_wait(card, now)) > 0:
                         wake = min(wake, hold)
-                    elif free:
+                    elif free and self._admit(card):
                         self._queue.remove(card)
                         self._active.add(card)
                         return card
@@ -195,6 +191,7 @@ class Engine:
         finally:
             with self._cv:
                 self._active.discard(card)
+                self.locks.release(card)
                 self._procs.pop(card, None)
                 self._cancel.discard(card)
                 self._drives.discard(threading.current_thread())
@@ -228,10 +225,14 @@ class Engine:
             with self._cv:
                 self.save(card, st)
             return
+        if item.parts:
+            files.snapshot(
+                run_dir, item
+            )  # the parts of this drive, for the tick command to check keys against
         publish: Callable[[dict[str, Any]], None] = partial(self.bus.publish, card)
         ctx = Ctx(
             self.root, run_dir, self.client, publish, partial(self._register, card), self.clock,
-            lambda: card in self._cancel, self.check_timeout, partial(self._drain, card),
+            lambda: card in self._cancel, self.check_timeout, partial(self._drain, card), self.locks,
         )  # fmt: skip
         driver_for(ctx, st, item).run()
 

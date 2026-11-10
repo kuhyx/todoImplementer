@@ -1,0 +1,50 @@
+"""The parts of a repo task as its card shows them: one server-computed state per part."""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .state import RunState
+    from .types import TaskLike
+
+TICKS = "parts_ticks"  # overlay of the run dir's parts-done.json: {"done": [...], "progress": {key: {...}}}
+
+
+def is_repo_task(task: TaskLike) -> bool:
+    """Say whether the card is a repo task (it has parts); a section card or an umbrella has none."""
+    return bool(getattr(task, "parts", ()))
+
+
+def human_only(task: TaskLike) -> bool:
+    """Say whether a repo task has no part for Claude (all are human work or held by an older run)."""
+    parts = getattr(task, "parts", ())
+    return bool(parts) and not any(part.actionable for part in parts)
+
+
+def parts_of(task: TaskLike, run: RunState | None, *, working: bool) -> list[dict[str, Any]] | None:
+    """Return the card's `parts`, None for a card that is not a repo task.
+
+    done = ticked in the run; human / held = never the run's; working = the first part still owed while the
+    run works; every other part waits (todo).
+    """
+    parts = getattr(task, "parts", ())
+    if not parts:
+        return None
+    ticks = run.extra.get(TICKS, {}) if run is not None else {}
+    done = set(ticks.get("done", ()))
+    progress = ticks.get("progress", {})
+    out, current = [], working
+    for part in parts:
+        if part.held:
+            state = "held"
+        elif part.human:
+            state = "human"
+        elif part.key in done:
+            state = "done"
+        elif current:
+            state, current = "working", False
+        else:
+            state = "todo"
+        out.append({"id": part.key, "title": part.title, "state": state, "steps": progress.get(part.key)})
+    return out

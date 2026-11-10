@@ -166,6 +166,14 @@ round, verdict icon, free-worker icon, issue count and its error text. Child row
   Restart resumes cancelled children.
 - **Send** reaches the next manager turn as a note; a child that ends on a `Q:` or `A:` is treated as needing kuhy.
 
+## The one exception to one card per repo
+
+kuhy's rule is one card and one run per repo (`DOCS-repotask.md`); the umbrella (cross-repo text-free batch, kuhy's
+earlier explicit request) stays, but its children obey the per-repo lock: a child of repo X is not claimed for a
+round, and its drive does not start, while X's own task (or another child of X) has an active run, and X's task
+waits while a child holds X. A waiting child's row carries `waits_on` (the holder's run id) and reads queued. Free
+workers of a round start only for claimed children, so a blocked repo is never edited by a worker.
+
 ## Defaults chosen (not in the brief)
 
 - Discovery by the merge ledger plus a registry file (above), because repo-less notes are invisible to the todo MCP.

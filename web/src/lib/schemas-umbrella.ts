@@ -17,6 +17,7 @@ export const umbrellaRow = z.strictObject({
   status,
   title: z.string(),
   verdict: z.enum(VERDICTS).nullable(),
+  waits_on: itemId.nullable().optional(),
 });
 
 const umbrellaRound = z.strictObject({

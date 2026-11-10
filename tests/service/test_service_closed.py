@@ -8,7 +8,8 @@ from servicefakes import Rig
 
 
 def _closed_shipped(rig: Rig, fake: FakeTodoMcp, *, stage: str = "shipped") -> str:
-    card = rig.note()
+    rig.note()
+    card = f"{next(iter(fake.store.notes))[:8]}-0"  # a section run of the days before the repo task
     rig.run(card, stage)
     fake.store.notes[next(iter(fake.store.notes))].status = "done"
     rig.backend.cache.refresh()

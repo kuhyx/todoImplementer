@@ -4,21 +4,40 @@ from __future__ import annotations
 
 import importlib
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from todoimpl.board.state import run_root
 from todoimpl.http.main import REPO, git_build_id
+from todoimpl.repotask import legacy
 from todoimpl.runner.autocheck import AutoCloser
 from todoimpl.todo_mcp.client import TodoClient
 from todoimpl.umbrella import registry
 
 from .backend import ServiceBackend
 from .cache import TaskCache
-from .cards import CardTask, card_tasks
+from .cards import CardTask
 from .closed import ClosedNotes
+from .repocards import group_cards
 from .scheduling import SchedulerLike
 from .view import ItemView
 
-__all__ = ["CardTask", "ItemView", "ServiceBackend", "TaskCache", "build_backend"]
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+__all__ = ["CardTask", "ItemView", "ServiceBackend", "TaskCache", "board_fetch", "build_backend"]
+
+
+def board_fetch(client: TodoClient, root: Path) -> Callable[[], list[CardTask]]:
+    """Return the cache's fetch: one card per repo (its open parts), the other notes' cards, the Done ones."""
+    closed = ClosedNotes(client, root)
+
+    def fetch() -> list[CardTask]:
+        notes = client.list_tasks(full=True)
+        notes += registry.notes(client, root, {n.id[:8] for n in notes})  # repo-less umbrellas
+        cards = group_cards(notes, lambda card: legacy.older(root, card))
+        return cards + closed.cards({note.id[:8] for note in notes}, {card.id for card in cards})
+
+    return fetch
 
 
 def build_backend(
@@ -35,21 +54,13 @@ def build_backend(
     """
     root = root or run_root()
     client = client or TodoClient.from_env()
-    closed = ClosedNotes(client, root)
-
-    def fetch() -> list[CardTask]:
-        notes = client.list_tasks(full=True)
-        notes += registry.notes(client, root, {n.id[:8] for n in notes})  # repo-less umbrellas
-        cards = [card for note in notes for card in card_tasks(note)]
-        return cards + closed.cards({note.id[:8] for note in notes})
-
-    cache = TaskCache(fetch)
+    cache = TaskCache(board_fetch(client, root))
     if refresh:
         # Before the Scheduler: its recovery drives resolve card ids through this cache at once.
         cache.refresh()
     if scheduler is None:
         module = importlib.import_module("todoimpl.runner.scheduler")
-        scheduler = module.Scheduler(ItemView(client, cache), root)
+        scheduler = module.Scheduler(ItemView(client, cache, root), root)
     if callable(start_watch := getattr(scheduler, "start_phone_watch", None)):
         start_watch()
     # Imported here: apikey.monitor needs service.cards, so a top-level import would be circular.
@@ -72,5 +83,6 @@ def build_backend(
         probe.start()
         gateway.start()  # a dead gateway only makes its reading `down`
         # Auto close: polls trusted done_checks every 5 min (first tick now); off until settings.json says so.
-        AutoCloser(root, lambda: cache.snapshot().tasks, scheduler).start()
+        # A repo task ships its ticked parts; a closing run belongs to one section's card: no repo cards here.
+        AutoCloser(root, lambda: [c for c in cache.snapshot().tasks if not c.parts], scheduler).start()
     return backend

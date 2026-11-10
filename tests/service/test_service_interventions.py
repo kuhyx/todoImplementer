@@ -32,7 +32,7 @@ def test_a_refused_action_leaves_no_record(rig: Rig) -> None:
 
 def test_go_and_rerun_clicks_are_recorded(rig: Rig) -> None:
     for kind in ("go", "rerun"):
-        tid = rig.note()
+        tid = rig.note(repo=f"kuhyx/{kind}")
         rig.run(tid, "failed", extra={"permission": {"command": "echo hi", "tty": False}})
         rig.backend.fix_runner = lambda _command: (0, "")
         getattr(rig.backend, kind)(tid)

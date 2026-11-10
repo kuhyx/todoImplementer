@@ -9,6 +9,7 @@ import pytest
 from fake_todo_mcp import FakeTodoMcp
 from servicefakes import FakeScheduler
 from todoimpl.http.backend import BackendError
+from todoimpl.repotask.ids import repo_card_id
 from todoimpl.service import ItemView, build_backend
 from todoimpl.todo_mcp.client import TodoClient
 
@@ -66,7 +67,8 @@ def test_t901_scheduler_recovery_can_read_the_notes_at_construction(
     fake: FakeTodoMcp, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """The engine's first act (recover -> drive -> get_task) must not race the first note fetch."""
-    card = f"{fake.seed('kuhyx/demo', 'demo todos', '')[:8]}-0"
+    fake.seed("kuhyx/demo", "demo todos", "")
+    card = repo_card_id("kuhyx/demo")
     seen: dict[str, object] = {}
 
     class Scheduler(FakeScheduler):

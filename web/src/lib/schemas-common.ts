@@ -139,6 +139,15 @@ export const umbrellaCounts = z.strictObject({
 /** Set when a passing done_check started the run (a closing run); kept after Close. */
 export const autoStart = z.strictObject({ passed_at: epoch, reason: z.literal("done_check") });
 
+/** One part of a repo task (repotask.schema.json $defs/part): its state and, when split, the sub-step counts. */
+export const PART_STATES = ["todo", "working", "done", "human", "held"] as const;
+export const repoPart = z.strictObject({
+  id: itemId,
+  state: z.enum(PART_STATES),
+  steps: z.strictObject({ done: z.number().int().min(0), total: z.number().int().min(1) }).nullable(),
+  title: z.string().min(1),
+});
+
 export const taskCard = z.strictObject({
   actions,
   assignee: z.enum(["human", "claude"]),
@@ -150,6 +159,7 @@ export const taskCard = z.strictObject({
   id: itemId,
   needs,
   partial,
+  parts: z.array(repoPart).optional(),
   priority: z.string(),
   repo: z.string().nullable(),
   resumes_at: epoch.nullable(),
@@ -160,12 +170,14 @@ export const taskCard = z.strictObject({
   title: z.string().min(1),
   umbrella: umbrellaCounts.optional(),
   updated: epoch.nullable(),
+  waits_on: itemId.nullable().optional(),
 });
 
 export type Action = z.infer<typeof action>;
 export type ActionOption = z.infer<typeof actionOption>;
 export type Credits = z.infer<typeof credits>;
 export type Question = z.infer<typeof question>;
+export type RepoPart = z.infer<typeof repoPart>;
 export type TaskCard = z.infer<typeof taskCard>;
 export type UmbrellaCounts = z.infer<typeof umbrellaCounts>;
 export type NeedsCategory = (typeof NEEDS_CATEGORIES)[number];

@@ -12,15 +12,16 @@ from typing import TYPE_CHECKING
 from todoimpl.board.parse import StateError
 from todoimpl.board.state import FILE, load
 from todoimpl.board.status import DONE_STAGES
+from todoimpl.todo_mcp.items import Item
 
-from .cards import card_tasks
+from .cards import CardTask, card_tasks
 
 if TYPE_CHECKING:
+    from collections.abc import Collection
     from pathlib import Path
 
     from todoimpl.todo_mcp.client import TodoClient
 
-    from .cards import CardTask
 
 log = logging.getLogger("todoimpl.service")
 
@@ -34,9 +35,12 @@ class ClosedNotes:
         self._root = root
         self._cards: dict[str, list[CardTask]] = {}
 
-    def cards(self, open_ids: set[str]) -> list[CardTask]:
-        """Return the cards of closed notes with a shipped item; a failed fetch skips that note this round."""
-        found: list[CardTask] = []
+    def cards(self, open_ids: set[str], on_board: Collection[str] = ()) -> list[CardTask]:
+        """Return the cards of closed notes with a shipped item; a failed fetch skips that note this round.
+
+        `on_board` = the card ids already shown: a shipped repo task is a Done card only when none is open.
+        """
+        found: list[CardTask] = [card for card in self._repo_cards() if card.id not in on_board]
         for id8 in sorted(self._shipped_ids() - open_ids):
             if id8 not in self._cards:
                 try:
@@ -60,6 +64,25 @@ class ClosedNotes:
                 run = load(directory)
             except StateError:
                 continue
-            if run is not None and run.stage in DONE_STAGES:
+            if run is not None and run.stage in DONE_STAGES and not run.extra.get("repotask"):
                 ids.add(id8)
         return ids
+
+    def _repo_cards(self) -> list[CardTask]:
+        """Done cards of repo tasks whose last cycle shipped; the run dir holds all there is to know."""
+        found: list[CardTask] = []
+        for directory in sorted(self._root.iterdir()) if self._root.is_dir() else []:
+            if not (directory / FILE).is_file():
+                continue
+            try:
+                run = load(directory)
+            except StateError:
+                continue
+            if run is None or run.stage != "shipped" or not run.extra.get("repotask") or not run.repo:
+                continue
+            title = str(run.extra.get("repotask_title") or run.repo)
+            item = Item(
+                directory.name.partition("-")[0], 0, title, run.note_body or "", run.repo, "done", None
+            )
+            found.append(CardTask(directory.name, title, item.body, run.repo, "done", "medium", None, item))
+        return found

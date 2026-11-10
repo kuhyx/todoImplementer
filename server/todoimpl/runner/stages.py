@@ -6,6 +6,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from todoimpl.repotask import files
 from todoimpl.umbrella.note import is_umbrella
 from todoimpl.umbrella.run import run as run_umbrella
 
@@ -27,6 +28,7 @@ if TYPE_CHECKING:
 
 MAX_CHECK_FIXES = 2
 MAX_SHIP_FIXES = 2
+MAX_PART_NUDGES = 2
 
 
 def merge_questions(old: list[SpecQuestion], new: list[SpecQuestion]) -> list[SpecQuestion]:
@@ -79,7 +81,23 @@ def _implement(d: Driver) -> str | None:
         d.state.extra.pop("reship")
     elif nxt == "live_check":  # new work to check: a new live-check session, seeded from the handoff
         d.state.sessions.pop("live_check", None)
+        return _owed(d)
     return nxt
+
+
+def _owed(d: Driver) -> str:
+    """Ask twice when a repo task ends its implement turn with parts unticked, then go on (they stay open)."""
+    left = files.unticked(d.ctx.run_dir, d.item)
+    nudges = int(d.state.extra.get("part_nudges", 0))
+    if not left or nudges >= MAX_PART_NUDGES:
+        return "live_check"
+    d.state.extra["part_nudges"] = nudges + 1
+    d.state.extra["nudge"] = (
+        "(runner) Parts not ticked: "
+        + "; ".join(f"[{p.key}] {p.title}" for p in left)
+        + ". Finish and tick each (see the tick command above), or end with `A:` and say what stops you."
+    )
+    return "implement"
 
 
 def _retry(d: Driver, key: str, cap: int, tail: str, stop: NeedsYouError) -> str:
@@ -154,6 +172,9 @@ def _shipping(d: Driver) -> str | None:
     if is_umbrella(d.item.body):  # Ship ships every child at its gate
         return run_umbrella(d)  # type: ignore[arg-type]
     st, wt = d.state, Path(str(d.state.worktree))
+    if d.item.parts and not files.ticked(d.ctx.run_dir, d.item):
+        msg = "No part is ticked, so Ship would close nothing: tick the finished parts, then ship again"
+        raise NeedsYouError(msg, "run_failed")
     live = live_summary(str((st.live_check or {}).get("report_md", "")))
     checks = discover(wt, d.item.done_check)
     plan = ShipPlan(

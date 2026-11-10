@@ -3,6 +3,7 @@ import type { UmbrellaDetail, UmbrellaRow } from "@/lib/schemas-umbrella";
 
 /** Umbrella notes: child progress on the card and per-child rows in the drawer. Icons and numbers only; names are aria-label and title. */
 import { icon, type IconName } from "@/components/icons";
+import { waitsBadge } from "@/components/repo-parts";
 import { h } from "@/lib/dom";
 import { routes } from "@/lib/routes";
 import { trackLink } from "@/track/track-link";
@@ -62,6 +63,7 @@ function renderRow(row: UmbrellaRow): HTMLElement {
     h("code", { class: "u-repo", text: row.repo }),
     row.round !== null && badge("width", "Round", row.round),
     row.verdict !== null && badge(VERDICT_ICON[row.verdict], row.verdict, undefined, { "data-verdict": row.verdict }),
+    row.waits_on != null && waitsBadge(row.waits_on),
     row.free === true && badge("free", "Free worker"),
     row.issues > 0 && badge("issue", "Free-model issues", row.issues),
     row.error !== null && h("span", { class: "u-error", text: row.error }),

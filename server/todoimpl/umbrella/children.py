@@ -146,7 +146,7 @@ class Pool:
         run_dir = self.ctx.run_dir / "children" / cid
         return Ctx(
             self.ctx.root, run_dir, self.client, publish, self.fan.slot(cid), self.ctx.now,
-            self.ctx.cancelled, self.ctx.check_timeout, list,
+            self.ctx.cancelled, self.ctx.check_timeout, list, locks=self.ctx.locks,
         )  # fmt: skip
 
     def start(self, cid: str, st: RunState) -> None:
@@ -158,12 +158,18 @@ class Pool:
         thread.start()
 
     def _drive(self, driver: ChildDriver) -> None:
+        """Drive one child once its repo is free (the repo task or another child may hold it); then let go."""
+        cid, locks = driver.state.task_id, self.ctx.locks
         try:
+            if not locks.wait(self.kids[cid].repo, cid, self.ctx.cancelled):
+                return
             driver.run()
         except adopt.Detached:
             self.detached = True  # the server is closing: the turn keeps running, the next server adopts it
         except Exception:
-            log.exception("child %s crashed", driver.state.task_id)
+            log.exception("child %s crashed", cid)
+        finally:
+            locks.release(cid)
 
     def wait(self) -> None:
         """Block until every child thread has ended."""

@@ -3,19 +3,21 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from todoimpl.board import state as store
 from todoimpl.credits import route
 from todoimpl.prompts import PromptContext
+from todoimpl.repotask.prompt import addendum
 
 from . import checks, phone, retry, tags, tiering, turncheck, worktree
 from .files import KilledError, NeedsYouError
 from .grant import auto_grant
 from .permit import gate, with_grant
 from .prompting import Ask, prompt_for
+from .repolock import RepoLocks
 from .turn import TurnEnv, run_turn
 
 if TYPE_CHECKING:
@@ -60,6 +62,9 @@ class Ctx:
     cancelled: Callable[[], bool]
     check_timeout: float
     inbox: Callable[[], list[str]]
+    locks: RepoLocks = field(
+        default_factory=RepoLocks
+    )  # the engine's per-repo lock; umbrella children take it too
 
 
 class Driver:
@@ -164,6 +169,7 @@ class Driver:
             notes=notes, failure_tail=failure_tail, handoff=handoff,
             phone=st.extra.get("waiting_phone") if st.extra.get("phone_attached") else None,
             base=str(st.extra.get("base_branch", "main")), tier=tier, resumed=resumed,
+            parts=addendum(item, self.ctx.run_dir),
         )  # fmt: skip
 
     def turn(self, role: str, stage: str, *, failure_tail: str = "", prompt: str = "") -> TurnResult:

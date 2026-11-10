@@ -30,7 +30,8 @@
         "free": {"type": ["boolean", "null"]},
         "error": {"type": ["string", "null"]},
         "cost_usd": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/usd"},
-        "issues": {"type": "integer", "minimum": 0}
+        "issues": {"type": "integer", "minimum": 0},
+        "waits_on": {"anyOf": [{"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/item_id"}, {"type": "null"}], "description": "The run of the same repo this child waits on (per-repo lock, DOCS-repotask.md); status is queued then."}
       },
       "required": ["id", "repo", "title", "status", "stage", "round", "verdict", "free", "error", "cost_usd", "issues"],
       "additionalProperties": false

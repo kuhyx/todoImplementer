@@ -10,6 +10,7 @@ from functools import partial
 from typing import TYPE_CHECKING, Any
 
 from todoimpl.http.backend import BackendError
+from todoimpl.service.repocards import section_cards
 from todoimpl.todo_mcp.model import TodoError
 
 from . import incremental
@@ -80,7 +81,7 @@ class MergeService:
         """Open cards of a repo that a human has not claimed (manual work is never merged away)."""
         return [
             card
-            for card in self.cache.snapshot().tasks
+            for card in section_cards(list(self.cache.snapshot().tasks))
             if card.status in OPEN and card.repo and not card.title.startswith("MANUAL WORK REQUIRED:")
         ]
 

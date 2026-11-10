@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Protocol
 
+from todoimpl.repotask import files
 from todoimpl.todo_mcp.model import TodoError
 
 from . import gate
@@ -95,7 +96,8 @@ def _squash(plan: ShipPlan, ref: str, *, allow_empty: bool) -> bool:
             return False
         msg = "Nothing to ship: the worktree has no changes against its base"
         raise NeedsYouError(msg, "run_failed")
-    message = commit_message(plan.item.title, plan.item.note_id)
+    title, notes = files.commit_identity(plan.item, plan.run_dir)
+    message = commit_message(title, "\nTodo: ".join(notes))
     commit = git(wt, "commit", "--quiet", "-m", message, check=False, timeout=plan.timeout)
     if commit.returncode:
         raise CommitRefusedError(output_tail(commit, OUTPUT_TAIL))

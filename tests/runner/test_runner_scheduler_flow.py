@@ -2,7 +2,8 @@ import pytest
 from contract_lib import validate
 from runnerfakes import Env, sh
 from schedfakes import CARD, IMPL, LIVE_BAD, LIVE_OK, PLAN, boot, reply, wait, wait_stage
-from todoimpl.runner.scheduler import RunnerError, needs_spec
+from todoimpl.runner.restart import needs_spec
+from todoimpl.runner.scheduler import RunnerError
 from todoimpl.todo_mcp.items import Item
 
 

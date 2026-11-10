@@ -92,6 +92,12 @@ def tier(body: str) -> str | None:
     return None
 
 
+def scan_size(text: str) -> int | None:
+    """Return the smallest `Scan ...: N items` number in the text, None when it has none."""
+    scans = [int(s) for s in _SCAN.findall(text)]
+    return min(scans) if scans else None
+
+
 def _title(text: str, repo: str) -> str:
     """Return the first non-empty line of the original text without markdown heading marks."""
     for line in text.split("\n"):
@@ -121,7 +127,6 @@ def children(body: str, umbrella: str = "") -> list[Child]:
     for n, (at, head) in enumerate(heads):
         stop = heads[n + 1][0] if n + 1 < len(heads) else len(lines)
         text = "\n".join(lines[at + 1 : stop]).strip()
-        scans = [int(s) for s in _SCAN.findall(text)]
         check = next((m.group(1) for line in text.split("\n") if (m := _CHECK.match(line.strip()))), None)
         key, repo = head.group("key"), head.group("repo")
         occ = seen[key] = seen.get(key, -1) + 1
@@ -135,7 +140,7 @@ def children(body: str, umbrella: str = "") -> list[Child]:
                 n,
                 text,
                 _title(text, repo),
-                min(scans) if scans else None,
+                scan_size(text),
                 check or None,
                 done,
                 f"{umbrella}-{n + 1}",

@@ -6,11 +6,13 @@ import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from fake_todo_mcp import FakeTodoMcp
 from todoimpl.board import state as store
 from todoimpl.runner.launch import Handle
+from todoimpl.runner.repolock import RepoLocks
 from todoimpl.todo_mcp.client import TodoClient
 from todoimpl.todo_mcp.model import Task
 from todoimpl.umbrella import children, note, registry, view
@@ -86,6 +88,8 @@ def test_a_crashing_child_drive_is_logged_not_raised(tmp_path: Path) -> None:
 
     pool = children.Pool.__new__(children.Pool)
     pool.detached = False
+    pool.kids = {"aaaa1111-0": SimpleNamespace(repo="kuhyx/a")}  # type: ignore[dict-item]
+    pool.ctx = SimpleNamespace(locks=RepoLocks(), cancelled=lambda: False)  # type: ignore[assignment]
     pool._drive(Boom())  # type: ignore[arg-type]
     assert not pool.detached
     pool.threads = {"x": threading.Thread(target=lambda: None)}

@@ -6,6 +6,7 @@ Rests at `gate` (children wait for Ship), `failed` (children need kuhy) or ends 
 
 from __future__ import annotations
 
+import threading
 from typing import TYPE_CHECKING, cast
 
 from todoimpl.board import state as store
@@ -14,7 +15,7 @@ from todoimpl.runner.files import NeedsYouError
 from todoimpl.runner.pipeline import WORK_STAGES, CancelledError, LimitHitError
 from todoimpl.todo_mcp.model import TodoError
 
-from . import note, ramp
+from . import note
 from . import store as ustore
 from .children import Pool, Ticker
 from .rounds import run_round
@@ -25,6 +26,7 @@ if TYPE_CHECKING:
 
 RESTING = ("paused_limit", "paused_retry")
 INTERRUPTED = "Ship was interrupted by a restart: check origin and the note before shipping again"
+REPO_POLL = 2.0
 COUNTERS = ("live_fixes", "check_fixes", "nudges", "nudge", "retries", "crash_retries", "ask_grants")
 
 
@@ -89,10 +91,24 @@ class Umbrella:
                 store.save(ustore.child_dir(self.run_dir, cid), st)
                 self.pool.start(cid, st)
 
+    def _let_go(self) -> None:
+        """Free the repo locks (and wait marks) of children that never started or have ended."""
+        for cid in self.kids:
+            self.d.ctx.locks.release(cid)
+
     def pending(self) -> list[str]:
         """Return the children no round took yet, in ease order."""
         taken = ustore.taken(self.rec)
         return [k["id"] for k in self.rec["kids"] if not k["done"] and k["id"] not in taken]
+
+    def claim(self, width: int) -> list[str]:
+        """Take the next `width` children, easiest first, whose repo is free (their lock is taken here)."""
+        locks = self.d.ctx.locks
+        batch: list[str] = []
+        for cid in self.pending():
+            if len(batch) < width and locks.acquire(self.kids[cid].repo, cid) is None:
+                batch.append(cid)
+        return batch
 
     def go(self) -> str | None:
         """Run the whole umbrella drive; return the next stage."""
@@ -104,10 +120,14 @@ class Umbrella:
             self.resume(shipping=shipping, retry_failed=retry_failed)
             if self.rec.get("current"):
                 run_round(self, None)
-            while not shipping and (batch := ramp.take(self.pending(), int(self.rec["width"]))):
-                run_round(self, batch)
+            while not shipping and self.pending() and not d.ctx.cancelled():
+                if batch := self.claim(int(self.rec["width"])):
+                    run_round(self, batch)
+                else:  # every pending child waits on its repo's other run: look again shortly
+                    threading.Event().wait(REPO_POLL)
         finally:
             self.pool.wait()  # never leave child threads behind: the next drive would start them twice
+            self._let_go()
         if self.pool.detached:
             raise adopt.Detached
         if d.ctx.cancelled():  # the children stopped because kuhy cancelled: that is not "children need you"

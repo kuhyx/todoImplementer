@@ -194,6 +194,7 @@ def _finish(u: Umbrella, cur: dict[str, Any], kids: list[Child]) -> None:
     for kid in kids:
         cid = kid.cid
         if cid in cur["failed"]:
+            d.ctx.locks.release(cid)  # this child never starts: its repo is free for others
             rows.append(_row(cid, "escalate", cur["failed"][cid], free=False, green=None, ok=False))
             oks.append(False)
             continue

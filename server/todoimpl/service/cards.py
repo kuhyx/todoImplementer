@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 from todoimpl.todo_mcp.items import split_items
 
 if TYPE_CHECKING:
+    from todoimpl.repotask.model import Part
     from todoimpl.todo_mcp.items import Item
     from todoimpl.todo_mcp.model import Task
 
@@ -30,6 +31,11 @@ class CardTask:
     done_check: str | None
     item: Item
     created_by: str = "kuhy"
+
+    @property
+    def parts(self) -> tuple[Part, ...]:
+        """The parts of a repo task's card (DOCS-repotask.md); empty for a section card."""
+        return self.item.parts
 
     @classmethod
     def of(cls, task: Task, item: Item) -> CardTask:
