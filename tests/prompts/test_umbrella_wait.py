@@ -11,3 +11,11 @@ def test_t1883_the_manager_polls_in_short_calls_and_never_ends_its_turn_early(ct
     assert "Never use Monitor" in text
     assert "kill -0" in text
     assert "never `pgrep -f" in text
+
+
+def test_t1885_the_manager_builds_the_worktree_environment_before_the_servers_checks(
+    ctx: PromptContext,
+) -> None:
+    text = build("manager", ctx)
+    assert "no .venv or node_modules" in text
+    assert "leave them in the worktree" in text
