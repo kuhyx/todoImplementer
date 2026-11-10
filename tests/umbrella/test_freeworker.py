@@ -17,6 +17,10 @@ case "$MODE" in
   edit) echo "edited" > made.txt; echo "stderr line" >&2 ;;
   grill) echo "❓ **Q1** - **Goal**: what?" ;;
   fail) echo "boom" >&2; exit 7 ;;
+  noisy)
+    echo "Warning: Advisor disabled - base model 'free-best' has no advisor rank" >&2
+    echo '[claude-code:unrecognized_model] {"model":"free-best","query_source":"sdk"}' >&2
+    echo "No changes needed." ;;
 esac
 exit 0
 """
@@ -129,3 +133,13 @@ def test_the_module_runs_as_a_script(world: Path, monkeypatch: pytest.MonkeyPatc
     with pytest.raises(SystemExit) as stop:
         runpy.run_module("todoimpl.runner.freeworker", run_name="__main__")
     assert stop.value.code == 0
+
+
+def test_t1884_the_issue_keeps_the_answer_and_the_model_not_the_startup_warnings(
+    world: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    run_dir = world.parent / "run"
+    assert _run(world, "noisy", monkeypatch, "--issues", str(run_dir)) == freeworker.NO_WORK
+    (row,) = issues.read(run_dir)
+    assert row["symptom"] == "no edit, exit 0: No changes needed."
+    assert row["model"] == "free-best"

@@ -11,6 +11,7 @@ Exit 0 = the worktree changed; 3 = no work; 4 = no `claude-free`.
 from __future__ import annotations
 
 import argparse
+import re
 import shutil
 import subprocess
 import sys
@@ -30,6 +31,8 @@ GRILL = "❓"
 GRILLING = "spec-gate grilling instead of work"
 TIMEOUT = 3600.0
 TAIL = 500
+NOISE = ("⚠", "Warning:", "[claude-code:", "Claude Code doesn't recognize")  # startup lines, not the answer
+MODEL = re.compile(r'"model":"([^"]+)"')
 NO_WORK, NO_TOOL = 3, 4
 
 
@@ -75,13 +78,27 @@ def run(worktree: Path, prompt_file: Path, log: Path, *, run_dir: Path | None = 
     if not changed and GRILL in text:
         _issue(run_dir, child, "start", GRILLING)
     elif not changed:
-        _issue(run_dir, child, "output", f"no edit, exit {code}: {text[-TAIL:].strip()}")
+        _issue(run_dir, child, "output", f"no edit, exit {code}: {_answer(text)}", _model(text))
     return 0 if changed else NO_WORK
 
 
-def _issue(run_dir: Path | None, child: str, phase: str, symptom: str) -> None:
+def _answer(text: str) -> str:
+    """Return the tail of the worker's own words: the startup warnings would fill the 500 chars alone."""
+    lines = [ln for ln in text.splitlines() if not ln.startswith(NOISE)]
+    return "\n".join(lines).strip()[-TAIL:]
+
+
+def _model(text: str) -> str | None:
+    """Return the model the log names (Claude Code prints it in its unrecognized-model line), if any."""
+    found = MODEL.search(text)
+    return found.group(1) if found else None
+
+
+def _issue(run_dir: Path | None, child: str, phase: str, symptom: str, model: str | None = None) -> None:
     if run_dir is not None:
-        issues.append(run_dir, time.time(), child, phase, symptom, "the manager takes this child over")
+        issues.append(
+            run_dir, time.time(), child, phase, symptom, "the manager takes this child over", model=model
+        )
 
 
 def main(argv: list[str] | None = None) -> int:

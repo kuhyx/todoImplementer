@@ -40,3 +40,4 @@ One row per bug, ids global and never reused. The row's test is named `test_t<N>
 | T1681 | Copy and Go on a permission card did not copy the command or post to /go | web/src/components/drawer-actions.test.ts |
 | T1665 | The command runner lost output or the exit code | tests/service/test_service_permission.py |
 | T1666 | A Go command that hangs was never killed | tests/service/test_service_permission.py |
+| T1885 | A live check left probe notes (Cross title, probe A/B, livecheck3-*) in the real todo app and on the board | tests/prompts/test_leak.py |

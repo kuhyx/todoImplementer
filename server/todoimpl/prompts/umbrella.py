@@ -35,6 +35,12 @@ WORKER_NOTE = (
     "only when the worktree changed (3: no edit). Judge a worker by `git diff` and the checks, never by "
     "what it says."
 )
+WAIT = (
+    "Wait for the workers inside this turn, in plain Bash calls that each end within 50 s (`kill -0 <pid>` "
+    "of the worker, or the `worker exit=` line it prints; never `pgrep -f <path>`, it matches its own "
+    "command line and never ends). Never use Monitor or any background wait, and never end your turn before "
+    "every worker has exited and every CHILD line is written: a turn that ends early escalates the round."
+)
 LOOK_AFTER = (
     "Watch the workers. Fix every problem they hit (permission blocks, broken edits, failing checks), "
     "finish or redo their work, then run each child's checks (its done_check, `make test`, `pre-commit "
@@ -53,6 +59,7 @@ def manager(ctx: PromptContext) -> str:
         WORKERS,
         WORKER_LINE,
         WORKER_NOTE,
+        WAIT,
         "Children marked free: no are not allowed to leave this machine: do them yourself, no claude-free.",
         LOOK_AFTER,
         f"{ISSUE_LOG} {issues}:",

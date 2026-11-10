@@ -26,6 +26,7 @@ from todoimpl.usage import limit_state, usage_summary
 from todoimpl.usage.interventions import record
 
 from . import permission
+from .shots import read_shot
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -140,17 +141,7 @@ class ServiceBackend:
 
     def shot(self, id8: str, name: str) -> bytes | None:
         """Bytes of the png at `name` (a/b.png) under `<run dir>/shots`; None when it resolves outside it."""
-        shots = (run_dir(self.root, id8) / "shots").resolve()
-        parts = name.split("/")
-        if name.startswith("/") or any(p in ("", ".", "..") for p in parts) or not name.endswith(".png"):
-            return None
-        path = (shots / name).resolve()
-        if not path.is_relative_to(shots) or not path.is_file():
-            return None
-        try:
-            return path.read_bytes()
-        except OSError:
-            return None
+        return read_shot(run_dir(self.root, id8), name)
 
     def issues(self, id8: str) -> str | None:
         """GET /api/task/<id8>/issues: the raw free-model issue log of a known task."""
