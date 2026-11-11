@@ -51,6 +51,18 @@ def test_a_turn_prints_the_cli_stream_and_passes_the_options(
     assert opt["prompt"] == "do it"
 
 
+def test_t1986_mcp_servers_and_strictness_reach_the_sdk_options(
+    world: Env, capsys: pytest.CaptureFixture[str]
+) -> None:
+    world.script("abcd1234", {"_fake": "result", "text": "ok"})
+    servers = {"godot-mcp-runtime": {"type": "stdio", "command": "node"}}
+    assert sdkturn.main([spec(world, mcp_servers=servers, strict_mcp_config=True)]) == 0
+    capsys.readouterr()
+    (opt,) = options(world)
+    assert opt["mcp_servers"] == servers
+    assert opt["strict_mcp_config"] is True
+
+
 def test_control_traffic_is_not_printed(capsys: pytest.CaptureFixture[str]) -> None:
     seen = sdkturn.Seen()
     sdkturn.record({"type": "control_response", "response": {}}, seen)

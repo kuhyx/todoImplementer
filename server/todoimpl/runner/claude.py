@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 import contextlib
+import json
 import os
 import shutil
 import signal
 import subprocess
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from . import buildlock, policy
+from . import buildlock, mcpconf, policy
 
 ROLE_MODELS = {
     "spec": "sonnet",
@@ -64,6 +65,7 @@ class Options:
     cwd: Path
     notes: tuple[str, ...]
     effort: str = "medium"
+    mcp_servers: dict[str, Any] = field(default_factory=dict)  # strict: only these start (mcpconf.py)
 
 
 def claude_bin() -> str:
@@ -120,6 +122,7 @@ def options(  # noqa: PLR0913, PLR0917 - one set of turn options, built in one p
         worktree,
         notes,
         effort_for(role, effort),
+        mcpconf.servers(worktree),
     )
 
 
@@ -133,11 +136,12 @@ def build(  # noqa: PLR0913, PLR0917 - one argv, built in one place
     model: str | None = None,
     effort: str | None = None,
 ) -> Invocation:
-    """Build the plan route: kuhy's full setup (no strict MCP); the prompt goes right after -p."""
+    """Build the plan route: kuhy's full setup but strict MCP (T1986); the prompt goes right after -p."""
     opt = options(role, prompt, worktree, resume, extra_dirs, allow, model, effort)
     argv = [claude_bin(), "-p", prompt, "--model", opt.model, "--output-format", "stream-json", "--verbose"]
     argv += ["--permission-mode", opt.permission_mode, "--add-dir", *opt.add_dirs]
     argv += ["--effort", opt.effort]
+    argv += ["--strict-mcp-config", "--mcp-config", json.dumps({"mcpServers": opt.mcp_servers})]
     if resume:
         argv += ["--resume", resume]
     if allow:

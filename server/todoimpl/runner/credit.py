@@ -47,6 +47,7 @@ def build(  # noqa: PLR0913, PLR0917 - same signature as claude.build
         "permission_mode": opt.permission_mode, "resume": opt.resume, "settings": opt.settings,
         "allowed_tools": list(opt.allow), "disallowed_tools": list(opt.deny),
         "setting_sources": list(SETTING_SOURCES), "effort": opt.effort,
+        "mcp_servers": opt.mcp_servers, "strict_mcp_config": True,
     }  # fmt: skip
     path = os.pathsep.join(p for p in (str(SERVER_DIR), os.environ.get("PYTHONPATH", "")) if p)
     env = {**opt.env, claude.KEY_VAR: key, "PYTHONPATH": path}

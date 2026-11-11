@@ -80,6 +80,8 @@ async def turn(spec: dict[str, Any], seen: Seen) -> None:
         disallowed_tools=spec["disallowed_tools"],
         setting_sources=spec["setting_sources"],
         effort=spec.get("effort"),
+        mcp_servers=spec.get("mcp_servers", {}),
+        strict_mcp_config=spec.get("strict_mcp_config", False),
         # The SDK sends no Claude Code prompt unless asked; `claude -p` always does.
         system_prompt={"type": "preset", "preset": "claude_code"},
     )

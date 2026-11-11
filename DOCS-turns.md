@@ -51,3 +51,11 @@ across all board sessions and the board's own checks. Code: `server/todoimpl/run
   `CARGO_BUILD_JOBS=4`; no `MAKEFLAGS` (make already runs one job; `-j4` would raise it). The standing prompt says a wait is normal and never to kill a waiting build.
 - Not locked on purpose: a job started with `systemd-run` (it gets the user manager's PATH, no shims). It may
   outlive the turn, and a server or watcher there would hold the lock for good; the slice caps its memory.
+
+## Lean MCP (T1986)
+
+Every turn, plan route and credit route, passes `--strict-mcp-config --mcp-config <json>`, so none of kuhy's user,
+project or plugin MCP servers start (about 500 MB per session; 25 sessions froze the PC). The json holds nothing,
+except the driver of the repo kind: Flutter adds flutter-web-drive, Godot godot-mcp-runtime (`runner/mcpconf.py`).
+The definition comes from `~/.claude.json` (a restored server), else `~/.claude/mcp-parked.json`; a server kuhy
+does not have is skipped silently. The board's own tasks need no MCP: sessions tick through the repotask CLI.
