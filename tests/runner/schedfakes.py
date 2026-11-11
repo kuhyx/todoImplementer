@@ -48,7 +48,10 @@ def state(world: Env, card: str = CARD) -> RunState:
     return st
 
 
-def wait(cond: Callable[[], bool], timeout: float = 20.0) -> None:
+TURN_WAIT = 20.0  # one fake turn's budget on a busy gate run; a drive of n turns waits n times this
+
+
+def wait(cond: Callable[[], bool], timeout: float = TURN_WAIT) -> None:
     """Poll until cond holds."""
     deadline = time.monotonic() + timeout
     while not cond():
@@ -57,12 +60,13 @@ def wait(cond: Callable[[], bool], timeout: float = 20.0) -> None:
 
 
 def wait_stage(
-    world: Env, sched: Scheduler, stage: str, card: str = CARD, *, tag: str | None = None
+    world: Env, sched: Scheduler, stage: str, card: str = CARD, *, tag: str | None = None, turns: int = 1
 ) -> RunState:
     """Wait until the run rests in `stage` with no live drive; `tag` also needs that last_tag.
 
     A started run sits in its first stage while still queued (not yet active), so a stage alone
     cannot tell "not picked up yet" from "rested": pass the `tag` the drive ends on to be sure.
+    A drive of several turns in a row passes `turns`: the wait grows with it (T1985).
     """
 
     def done() -> bool:
@@ -70,7 +74,7 @@ def wait_stage(
         at_rest = st is not None and st.stage == stage and (tag is None or st.last_tag == tag)
         return at_rest and card not in sched.running()
 
-    wait(done)
+    wait(done, TURN_WAIT * turns)
     return state(world, card)
 
 

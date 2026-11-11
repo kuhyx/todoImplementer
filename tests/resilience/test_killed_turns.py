@@ -46,9 +46,25 @@ def test_t1902_a_turn_killed_six_times_asks_kuhy_after_the_bound(world: Env) -> 
     sched, _ = boot_single(world, PLAN, *kills, done_check="true")
     try:
         sched.start(SINGLE)
-        st = wait_stage(world, sched, "failed")
+        st = wait_stage(world, sched, "failed", turns=len(kills) + 1)
     finally:
         sched.close()
     assert st.error is not None
     assert st.error.startswith("The implement turn failed")
     assert len(world.calls()) == 1 + retry.MAX_KILL_RETRIES + 1
+
+
+SLOW_KILL = ({"_fake": "sleep", "sec": 3.1}, *KILL)  # a loaded machine: each turn takes seconds, not tenths
+
+
+def test_t1985_the_bound_is_reached_however_slow_each_turn_is(world: Env) -> None:
+    # Seven turns in a row once shared one 20 s wait; under a busy gate run that wait ran out first.
+    kills: list[tuple[dict[str, Any], ...]] = [SLOW_KILL] * (retry.MAX_KILL_RETRIES + 1)
+    sched, _ = boot_single(world, PLAN, *kills, done_check="true")
+    try:
+        sched.start(SINGLE)
+        st = wait_stage(world, sched, "failed", turns=len(kills) + 1)
+    finally:
+        sched.close()
+    assert st.error is not None
+    assert st.error.startswith("The implement turn failed")
