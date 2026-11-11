@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from todoimpl.repotask import files
+from todoimpl.umbrella import bounce
 from todoimpl.umbrella.note import is_umbrella
 from todoimpl.umbrella.run import run as run_umbrella
 
@@ -76,6 +77,9 @@ def _implement(d: Driver) -> str | None:
         return "implement"
     d.state.extra.pop("failure_tail", None)
     d.state.self_check = parse_self_check(res.text)
+    if res.tag in ("Q", "A") and bounce.again(d.state):  # an umbrella child has no one to ask (T1952)
+        d.state.extra["nudge"] = bounce.brief(res.text)
+        return "implement"
     nxt = d.after_tag(res, "shipping" if d.state.extra.get("reship") else "live_check")
     if nxt == "shipping":
         d.state.extra.pop("reship")
@@ -123,7 +127,11 @@ def _live_check(d: Driver) -> str | None:
     if phone.hands_nudge(st, res, attached=attached, info=info):
         return "live_check"
     if res.tag in ("Q", "A"):
-        return None
+        if not bounce.again(st):
+            return None
+        st.extra["failure_tail"] = bounce.brief(res.text)  # a child fixes what its live check found (T1952)
+        return "implement"
+    st.extra.pop("bounces", None)
     if res.tag == "R":  # background work: continue first; settle's one redo only when this runs out
         if (again := d.r_continue(res)) is not None:
             return again
@@ -155,9 +163,12 @@ def _checks(d: Driver) -> str | None:
         child = "umbrella_round" in st.extra  # an umbrella child ships itself when green (T1923)
         st.auto_ship = st.auto_ship or child
         return "shipping" if child or (st.auto_ship and d.item.done_check) else "gate"
-    tail = "\n\n".join(f"== {r.name}: {r.command} (exit {r.exit_code})\n{r.tail}" for r in red)
-    why = f"Checks still red after {MAX_CHECK_FIXES} fix attempts: {', '.join(r.name for r in red)}"
-    return _retry(d, "check_fixes", MAX_CHECK_FIXES, tail, NeedsYouError(why, "checks_failed"))
+    tail = bounce.red_tail(
+        st, "\n\n".join(f"== {r.name}: {r.command} (exit {r.exit_code})\n{r.tail}" for r in red)
+    )
+    cap = bounce.check_cap(st, MAX_CHECK_FIXES)
+    why = f"Checks still red after {cap} fix attempts: {', '.join(r.name for r in red)}"
+    return _retry(d, "check_fixes", cap, tail, NeedsYouError(why, "checks_failed"))
 
 
 def _word(row: dict[str, object]) -> str:
@@ -173,6 +184,8 @@ def live_summary(report: str) -> str:
 def _shipping(d: Driver) -> str | None:
     if is_umbrella(d.item.body):  # Ship ships every child at its gate
         return run_umbrella(d)  # type: ignore[arg-type]
+    if bounce.unverified(d.state):  # a child ships only on green checks, whatever path led here (T1955)
+        return "checks"
     st, wt = d.state, Path(str(d.state.worktree))
     if d.item.parts and not files.ticked(d.ctx.run_dir, d.item):
         msg = "No part is ticked, so Ship would close nothing: tick the finished parts, then ship again"

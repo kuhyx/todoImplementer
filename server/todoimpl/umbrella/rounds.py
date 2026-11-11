@@ -18,7 +18,7 @@ from todoimpl.prompts.tier import escalated
 from todoimpl.runner import checks, freegate, freeworker, worktree
 from todoimpl.runner.files import KilledError, NeedsYouError
 
-from . import issues, outage, ramp
+from . import bounce, issues, outage, ramp
 from .children import fresh_state
 from .store import child_dir, children_root
 from .view import child_state
@@ -173,8 +173,8 @@ def _check(u: Umbrella, cur: dict[str, Any], live: list[Child]) -> None:
         st.checks = checks.record(results, log, d.ctx.now())
         red = [r for r in results if not r.passed]
         if red:
-            st.extra["failure_tail"] = "\n\n".join(
-                f"== {r.name}: {r.command} (exit {r.exit_code})\n{r.tail}" for r in red
+            st.extra["failure_tail"] = bounce.red_tail(
+                st, "\n\n".join(f"== {r.name}: {r.command} (exit {r.exit_code})\n{r.tail}" for r in red)
             )
         store.save(cdir, st)
         return kid.cid, not red

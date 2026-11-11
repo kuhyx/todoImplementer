@@ -171,6 +171,15 @@ round, verdict icon, free-worker icon, issue count and its error text. Child row
   Restart resumes cancelled children.
 - **Send** reaches the next manager turn as a note; a child that ends on a `Q:` or `A:` is treated as needing kuhy.
 
+## Children answer to no one (`umbrella/bounce.py`)
+
+- A child whose live check or implement turn ends on `Q:`/`A:` goes back to implement with the reply as its fix
+  brief (3 passes, T1952; the counter resets when a live check passes) and rests on kuhy only after that.
+- Red checks get 5 fix turns (T1954) and the brief says old red (stale pins, format) is the child's to fix.
+- The card text names what each child waits for: its `A:`/`Q:` line, else its error, else its last issue (T1953).
+- A child never ships on unpassed checks (T1955): `_shipping` sends it to Checks first, and the umbrella does not
+  close while a done child's checks are not green. Not covered: "done" stops at origin/main; no deploy step runs.
+
 ## The one exception to one card per repo
 
 kuhy's rule is one card and one run per repo (`DOCS-repotask.md`); the umbrella (cross-repo text-free batch, kuhy's

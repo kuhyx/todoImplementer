@@ -17,7 +17,7 @@ from todoimpl.runner.files import NeedsYouError
 from todoimpl.runner.pipeline import WORK_STAGES, CancelledError, LimitHitError
 from todoimpl.todo_mcp.model import TodoError
 
-from . import archived, note
+from . import archived, bounce, issues, note
 from . import store as ustore
 from .children import Pool, Ticker
 from .rounds import run_round
@@ -30,7 +30,9 @@ log = logging.getLogger("todoimpl.runner")
 RESTING = ("paused_limit", "paused_retry")
 INTERRUPTED = "Ship was interrupted by a restart: check origin and the note before shipping again"
 REPO_POLL = 2.0
-COUNTERS = ("live_fixes", "check_fixes", "nudges", "nudge", "retries", "crash_retries", "ask_grants")
+COUNTERS = (
+    "bounces", "live_fixes", "check_fixes", "nudges", "nudge", "retries", "crash_retries", "ask_grants",
+)  # fmt: skip
 
 
 class Umbrella:
@@ -179,9 +181,14 @@ class Umbrella:
             raise NeedsYouError(msg, "run_failed")
         states = {r["id"]: child_state(self.run_dir, r["id"]) for r in found}
         self._pause(states)
-        needy = [r["repo"] for r in found if r["status"] not in ("done", "ready_to_ship")]
-        if needy:
-            msg = f"{len(needy)} of {len(found)} children need you: {', '.join(needy[:5])}"
+        needy = [r for r in found if r["status"] not in ("done", "ready_to_ship")]
+        unverified = [r for r in found if r["status"] == "done" and bounce.unverified(states[r["id"]])]
+        if needy or unverified:  # T1953: say what each child waits for; T1955: done needs green checks
+            last = {str(row.get("child")): str(row.get("symptom", "")) for row in issues.read(self.run_dir)}
+            what = [(r, bounce.needs(states[r["id"]], last.get(r["repo"], ""))) for r in needy]
+            what += [(r, "checks not green") for r in unverified]
+            listed = "; ".join(f"{r['repo']} ({why})" if why else r["repo"] for r, why in what[:5])
+            msg = f"{len(what)} of {len(found)} children need you: {listed}"
             raise NeedsYouError(msg, "run_failed")
         if all(r["status"] == "done" for r in found):
             return self._close(states)
