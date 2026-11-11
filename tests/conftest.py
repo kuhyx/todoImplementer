@@ -79,3 +79,9 @@ def _no_real_build_lock(tmp_path_factory: pytest.TempPathFactory, monkeypatch: p
     monkeypatch.setenv("TODOIMPL_BUILD_ROOT", str(tmp_path_factory.mktemp("build-lock")))
     monkeypatch.delenv("TODOIMPL_BUILD_LOCK_HELD", raising=False)
     monkeypatch.delenv("TODOIMPL_BUILD_CARD", raising=False)
+
+
+@pytest.fixture(autouse=True)
+def _no_real_todo_images(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Point the todo images root at a missing temp dir: kuhy's real dufs folder is never read or written."""
+    monkeypatch.setenv("TODOIMPL_IMAGES_ROOT", str(tmp_path_factory.mktemp("todo-images") / "missing"))

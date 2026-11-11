@@ -3,6 +3,7 @@ import { renderBoard } from "@/components/board-columns";
 import { defineDrawer, TiDrawer } from "@/components/drawer";
 import { loader } from "@/components/feedback";
 import { defineMerges } from "@/components/merge-strip";
+import { defineNewTask, TiNewTask } from "@/components/new-task";
 import { createToolbar, type Toolbar } from "@/components/toolbar";
 import { renderUsage } from "@/components/usage-strip";
 import { buildView } from "@/lib/board-model";
@@ -24,6 +25,7 @@ export class TiApp extends HTMLElement {
   #boardError: null | string = null;
   #boardHost = h("main", { attrs: { "aria-live": "off" }, class: "board-host" }, loader(`Loading the board from ${routes.board}…`));
   readonly #drawer = new TiDrawer();
+  readonly #newTask = new TiNewTask();
   readonly #track = new TiTrack();
   #signature = "";
   #state: ViewState = DEFAULT_STATE;
@@ -114,6 +116,8 @@ export class TiApp extends HTMLElement {
     if (board === null) return;
     this.#toolbar.el.hidden = false;
     this.#toolbar.update(board, this.#state);
+    this.#newTask.repos = board.repos;
+    this.#newTask.defaultRepo = this.#state.repo;
     const now = nowSeconds();
     const signature = JSON.stringify([board, this.#state.q, this.#state.repo, this.#state.sort, this.#state.col, Math.floor(now / 60)]);
     if (!isForced && signature === this.#signature) return;
@@ -141,6 +145,11 @@ export class TiApp extends HTMLElement {
       this.#setState({ ...this.#state, task: null }, "replace");
     });
     this.#drawer.addEventListener("task-changed", () => void this.#loadBoard());
+    this.#newTask.addEventListener("task-created", (event) => {
+      this.#setState({ ...this.#state, task: (event as CustomEvent<{ id: string }>).detail.id }, "push");
+      void this.#loadBoard();
+    });
+    this.#toolbar.el.append(this.#newTask);
     this.#track.addEventListener("track-close", () => {
       this.#setState({ ...this.#state, umbrella: null }, "push");
     });
@@ -162,6 +171,7 @@ export class TiApp extends HTMLElement {
 export function defineApp(): void {
   defineDrawer();
   defineMerges();
+  defineNewTask();
   defineTrack();
   if (!customElements.get("ti-app")) customElements.define("ti-app", TiApp);
 }

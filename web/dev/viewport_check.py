@@ -95,7 +95,18 @@ def step_flow(cdp: Cdp, url: str, out: Path, tag: str) -> dict[str, Any]:
     return {"problems": problems, "loader": loader, "after": after}
 
 
+def step_newtask(cdp: Cdp, url: str, out: Path, tag: str) -> dict[str, Any]:
+    goto(cdp, url)
+    cdp.js("document.querySelector('[data-new-task=open]').click()")
+    time.sleep(0.3)
+    cdp.shot(out / f"{tag}-newtask.png")
+    fields = ["input[name=repo]", "input[name=title]", "textarea[name=body]"]
+    buttons = [f"[data-new-task={name}]" for name in ("pick", "cancel", "submit")]
+    return probe(cdp, [f"ti-new-task {sel}" for sel in fields] + buttons)
+
+
 STEPS = {
+    "newtask": step_newtask,
     "board": step_board,
     "filtered": step_filtered,
     "drawer": step_drawer,

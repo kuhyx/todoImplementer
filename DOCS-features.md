@@ -26,6 +26,7 @@
 | Ship | drawer -> Ship (POST `.../ship`) | one commit with `Todo: <id8>` trailer pushed to origin, section marked `## [x]`, note closed with its last item, worktree removed |
 | Cheap tier | note with a `Tier: cheap` line or the title `text-free (textgate-rework)` | implement role runs on Sonnet (free models via claude-free on public repos, else alone), `ESCALATE:` or a failed turn moves it to Opus once; card icons for cheap / free / escalated (`DOCS-tiers.md`) |
 | Cancel | drawer action | run stops, run dir kept |
+| New task | toolbar + -> repo (board repos or typed `owner/name`), title, details, pictures (picker/camera, paste, drop) -> create (POST `/api/new-task`) | a `## title` section in the repo's note links the pictures on dufs, the repo card starts (or keeps working) and opens; sessions read the pictures from disk (`DOCS-repotask.md`) |
 | Free credits fallback | board toggle (POST `/api/settings/credits-fallback`) | while the plan limit is active, turns run on free API credits; card badge "free credits" |
 | Lessons | gate rejection -> drafted lesson -> Approve | lesson written into the named skill via `skill_lesson.py` |
 | Usage | header (GET `/api/usage`) | per-task cost, plan limit state, reset time |

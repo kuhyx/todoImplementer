@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from typing import Any
 
@@ -19,6 +20,15 @@ ACTIONS = (
     "go",
     "rerun",
 )
+
+
+def parse(raw: bytes) -> dict[str, Any] | str:
+    """Return the JSON object in `raw` (empty means {}), or why it is not one."""
+    try:
+        body = json.loads(raw) if raw else {}
+    except ValueError:
+        return "body is not valid JSON"
+    return body if isinstance(body, dict) else "body must be a JSON object"
 
 
 def _only(body: dict[str, Any], key: str) -> str | None:

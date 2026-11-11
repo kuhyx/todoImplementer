@@ -126,6 +126,28 @@ Dry run on the real todo app (2026-11-10, read only): the first run found 1 repo
 notes in 18 repos, 48 open parts. Live board through the new grouping: 58 cards in 27 repos; 7 repos still show more
 than one card because 7 older section runs are working or at Ready to ship (they fold as they rest).
 
+## kuhy's own task from the board: `POST /api/new-task`
+
+The toolbar's + opens a dialog: repo (an `<input list>` over the board's repos, free `owner/name` allowed), title,
+details and up to 8 pictures (file picker `accept="image/*"`, so the phone offers its camera; Ctrl+V; drag and drop).
+The page re-encodes every picture to JPEG (longest side 2560 px, quality 0.85, `web/src/lib/jpeg.ts`) and posts
+`{repo, title, body, images: [{data_b64}]}` (`contracts/requests.schema.json` `new_task`; up to 40 MB per request,
+6 MB per decoded picture, JPEG magic bytes checked). Code: `http/newtask.py`, `newtask/service.py`, `newtask/images.py`.
+
+1. A title an open section of that repo already has is refused (`conflict`): two parts nobody could tell apart.
+2. The pictures go to a fresh uuid4 folder `<root>/<uuid>/<n>.jpg` (root `$TODOIMPL_IMAGES_ROOT`, default
+   `~/data/cloud/todo-images`, which dufs serves as `https://kuhy-cloud.duckdns.org/todo-images/`), written atomically.
+3. `add_task` appends `## title` with the details and one `![](<dufs url>)` line per picture to the repo's open note
+   (or creates one). The cache is refreshed at once, so the card is there before the answer.
+4. The router then presses that card's Start through the very path of a Start click (`_action`): a new repo card or
+   one resting at Backlog starts; a card already at work refuses, and the section is simply a new part, worked by this
+   run or the next cycle (as with any part added in the todo app). The answer is `{ok, note, started, task}`; the page opens the card.
+   A `MANUAL WORK REQUIRED:` title lands on the repo's `-1` card, whose Start is disabled (`started: false`).
+
+Sessions cannot log in to dufs, so every stage prompt rewrites those links to the local paths and adds one line
+asking the session to open each with Read (`prompts/texts.py`, `newtask/images.localize`); this covers pictures
+attached in the todo app too. Every turn gets the images root as an extra `--add-dir` when it exists.
+
 ## Defaults chosen (not in the brief)
 
 - Part key = the section card id; `Todo:` trailer per note of the ticked parts (not per part).

@@ -97,6 +97,7 @@ def test_board_has_five_columns() -> None:
         ("go", {}),
         ("rerun", {}),
         ("lesson_approve", {"lesson_id": "l1"}),
+        ("new_task", {"repo": "kuhyx/demo", "title": "x", "body": "", "images": [{"data_b64": "/9j/"}]}),
     ],
 )
 def test_request_bodies_accept_valid(fragment: str, body: dict[str, Any]) -> None:
@@ -122,6 +123,7 @@ def test_request_bodies_reject_invalid(fragment: str, body: dict[str, Any]) -> N
 def test_response_ok_and_error() -> None:
     validate("response", {"ok": True, "task": fixture("card")})
     validate("response", {"ok": False, "error": {"code": "disabled", "message": "usage limit until 09:00"}})
+    validate("response", {"ok": True, "note": "abcd1234", "started": False, "task": fixture("card")})
     with pytest.raises(ValidationError):
         validate("response", {"ok": True})
 

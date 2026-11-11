@@ -93,3 +93,17 @@ def test_effort_comes_from_the_caller_else_the_roles_default(tmp_path: Path) -> 
     assert effort(claude.build("manager", "p", tmp_path, effort="low")) == "low"
     assert effort(claude.build("implement", "p", tmp_path)) == "medium"
     assert effort(claude.build("classify", "p", tmp_path)) == "low"
+
+
+def test_an_existing_todo_images_root_is_readable_by_every_turn(
+    world: Env, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "todo-images"
+    monkeypatch.setenv("TODOIMPL_IMAGES_ROOT", str(root))
+    assert str(root) not in claude.build("implement", "p", tmp_path / "wt").argv
+    root.mkdir()
+    argv = claude.build("implement", "p", tmp_path / "wt").argv
+    assert argv[argv.index("--add-dir") + 1 : argv.index("--add-dir") + 3] == (
+        str(tmp_path / "wt"),
+        str(root),
+    )

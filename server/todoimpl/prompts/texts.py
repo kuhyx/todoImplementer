@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from todoimpl.newtask import images
+
 from . import phone, standing
 from .kind import HINTS, detect_kind
 from .umbrella import manager
@@ -35,10 +37,13 @@ SELF_CHECK = (
 def _item(ctx: PromptContext) -> str:
     """Item, spec answers and kuhy's notes: the part every stage shares."""
     lines = [f"Item: {ctx.title} (repo: {ctx.repo})"]
-    if ctx.body:
-        lines.append(ctx.body)
-    if ctx.parts:
-        lines.append(ctx.parts)
+    body, pictures = images.localize(f"{ctx.body}\n{ctx.parts}".strip(), images.root())  # dufs needs a login
+    if body:
+        lines.append(body)
+    if pictures:
+        lines.append(
+            f"Images attached to this item: open each with the Read tool: {', '.join(map(str, pictures))}"
+        )
     lines.append(f"done_check: {ctx.done_check or 'none'}")
     if ctx.spec_answers:
         lines += ["Spec answers:", *(f"- {q}: {a}" for q, a in ctx.spec_answers)]

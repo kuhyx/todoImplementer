@@ -192,6 +192,20 @@ describe("ti-app", () => {
     expect(q(".col[data-active] .col-body").scrollTop).toBe(40);
   });
 
+  it("offers the board's repos to a new task and opens the card the server answers", async () => {
+    await mountApp("#repo=kuhyx%2Fwidget");
+    const options = [...document.querySelectorAll("ti-new-task datalist option")].map((o) => o.getAttribute("value"));
+    expect(options).toEqual(makeBoard().repos);
+    q<HTMLButtonElement>("[data-new-task=open]").click();
+    expect(q<HTMLInputElement>("ti-new-task input[name=repo]").value).toBe("kuhyx/widget");
+    const before = stub.calls.filter((c) => c.url === "/api/board").length;
+    q("ti-new-task").dispatchEvent(new CustomEvent("task-created", { bubbles: true, detail: { id: READY } }));
+    await settle(0);
+    expect(location.hash).toContain(`task=${READY}`);
+    expect(q("ti-drawer").hidden).toBe(false);
+    expect(stub.calls.filter((c) => c.url === "/api/board")).toHaveLength(before + 1);
+  });
+
   it("stops polling when removed", async () => {
     const app = await mountApp();
     app.remove();

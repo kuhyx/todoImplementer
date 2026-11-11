@@ -60,6 +60,28 @@
       "required": ["enabled"],
       "additionalProperties": false
     },
+    "new_task": {
+      "type": "object",
+      "description": "POST /api/new-task (not task-scoped): kuhy's own task. The server writes the images to a fresh dufs folder, appends a `## title` section linking them to the repo's open note (or a new note), then presses Start on the repo card. The request may be up to 40 MB.",
+      "properties": {
+        "repo": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"},
+        "title": {"type": "string", "minLength": 1, "maxLength": 200, "pattern": "^[^\\r\\n]*\\S[^\\r\\n]*$"},
+        "body": {"type": "string", "maxLength": 20000},
+        "images": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "description": "One JPEG (the page re-encodes every picture), at most 6 MB decoded.",
+            "properties": {"data_b64": {"type": "string", "minLength": 4, "contentEncoding": "base64", "contentMediaType": "image/jpeg"}},
+            "required": ["data_b64"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["repo", "title"],
+      "additionalProperties": false
+    },
     "lesson_approve": {
       "type": "object",
       "properties": {"lesson_id": {"type": "string", "minLength": 1}},

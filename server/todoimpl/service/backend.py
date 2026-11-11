@@ -36,6 +36,7 @@ if TYPE_CHECKING:
     from todoimpl.board.state import RunState
     from todoimpl.gateway.monitor import GatewayMonitor
     from todoimpl.merge.service import MergeService
+    from todoimpl.newtask.service import NewTaskService
     from todoimpl.runner.limitprobe import LimitProbe
 
     from .cache import TaskCache
@@ -84,6 +85,7 @@ class ServiceBackend:
         self.limit_probe = limit_probe  # re-checks a stored plan limit against the plan's real usage
         self.gateway = gateway  # the free-model gateway's newest reading rides on /api/usage
         self.merge_service: MergeService | None = None  # set by build_backend; the http layer looks for it
+        self.new_task_service: NewTaskService | None = None  # the same for POST /api/new-task
 
     # ---- reads ----
     def _context(self) -> Context:
@@ -147,8 +149,7 @@ class ServiceBackend:
         """Bytes of the png at `name` (a/b.png) under `<run dir>/shots`; None when it resolves outside it."""
         return read_shot(run_dir(self.root, id8), name)
 
-    # Read-side endpoints that need only the cache, run dirs and the gateway reading (service/tracking.py).
-    issues = tracking.issues  # GET /api/task/<id8>/issues
+    issues = tracking.issues  # GET /api/task/<id8>/issues; these four need only the cache, run dirs, gateway
     usage = tracking.usage  # GET /api/usage
     umbrella = tracking.umbrella  # GET /api/umbrella/<id8>
     worker_log = tracking.worker_log  # the tail of a child's newest worker log

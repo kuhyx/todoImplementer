@@ -1,0 +1,129 @@
+/* <ti-new-task>: the + button sits in the toolbar; its dialog is a centred sheet over a scrim. */
+ti-new-task {
+  display: inline-flex;
+  align-self: flex-end;
+}
+
+.nt-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 11;
+  display: grid;
+  place-items: center;
+  padding: var(--space-3);
+}
+
+.nt-panel[hidden] {
+  display: none;
+}
+
+.nt-scrim {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+}
+
+.nt-dialog {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: min(40rem, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  padding: var(--space-4);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.nt-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.nt-row > input,
+.nt-row > textarea {
+  flex: 1 1 12rem;
+  min-width: 0;
+  padding: var(--space-2);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.nt-row > textarea {
+  resize: vertical;
+}
+
+.nt-glyph {
+  display: inline-grid;
+  place-items: center;
+  width: calc(var(--space-5) + var(--space-1));
+  height: calc(var(--space-5) + var(--space-1));
+  color: var(--text-muted);
+}
+
+.nt-glyph svg,
+.nt-thumbs svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.nt-thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.nt-thumbs li {
+  position: relative;
+}
+
+.nt-thumbs img {
+  display: block;
+  width: 5rem;
+  height: 5rem;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.nt-thumbs .icon-btn {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+}
+
+.nt-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+/* A refused create: shake once and tint the edge (errors are shown, not worded). */
+.nt-shake {
+  border-color: var(--danger);
+  animation: nt-shake 0.3s ease-in-out;
+}
+
+@keyframes nt-shake {
+  25% { transform: translateX(-0.4rem); }
+  75% { transform: translateX(0.4rem); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nt-shake {
+    animation: none;
+  }
+}

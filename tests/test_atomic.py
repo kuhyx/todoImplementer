@@ -90,3 +90,21 @@ def test_a_non_durable_write_is_still_atomic_but_skips_the_syncs(
     target = tmp_path / "x.fed"
     files.write_json(target, 5, durable=False)
     assert files.read_json(target) == 5
+
+
+def test_write_bytes_replaces_the_file_whole_and_syncs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    order: list[str] = []
+    real_fsync = os.fsync
+
+    def fsync(fd: int) -> None:
+        order.append("fsync")
+        real_fsync(fd)
+
+    monkeypatch.setattr(os, "fsync", fsync)
+    target = tmp_path / "img" / "1.jpg"
+    atomic.write_bytes(target, b"\xff\xd8\xff\x00")
+    assert target.read_bytes() == b"\xff\xd8\xff\x00"
+    assert order == ["fsync", "fsync"]
+    assert [p.name for p in target.parent.iterdir()] == ["1.jpg"]

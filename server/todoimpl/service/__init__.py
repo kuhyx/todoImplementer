@@ -69,6 +69,7 @@ def build_backend(
     from todoimpl.apikey.monitor import KeyMonitor  # noqa: PLC0415
     from todoimpl.gateway.monitor import GatewayMonitor  # noqa: PLC0415 - gateway imports the runner
     from todoimpl.merge.service import MergeService  # noqa: PLC0415 - merge.apply imports service.cards
+    from todoimpl.newtask.service import NewTaskService  # noqa: PLC0415 - it imports service.cards
     from todoimpl.runner.limitprobe import LimitProbe  # noqa: PLC0415 - runner imports the service view
 
     monitor = KeyMonitor(client, after_write=cache.poke)
@@ -79,6 +80,7 @@ def build_backend(
         gateway=gateway,
     )  # fmt: skip
     backend.merge_service = MergeService(client, cache, root)
+    backend.new_task_service = NewTaskService(client, cache)
     if refresh:
         cache.start()
         monitor.start()  # first check runs on its own thread: a slow network never delays startup

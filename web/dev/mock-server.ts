@@ -10,6 +10,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { extname, join, normalize } from "node:path";
 
 import { ASK_IDS, askCards, askDetail, FREE_ID, freeDetail } from "#fixtures/fixture-ask";
+import { makeCredits } from "#fixtures/fixture-credits";
 import { makeDetail, makeUsage } from "#fixtures/fixture-detail";
 import { preset } from "#fixtures/fixture-presets";
 import { makeBoard, makeCards, NOW } from "#fixtures/fixtures";
@@ -26,7 +27,7 @@ const offset = Math.floor(Date.now() / 1000) - NOW;
 const cards = [...makeCards(), ...askCards()].map((card) => (card.status === "working" && card.repo === "gatelock" ? { ...card, route: "credits" as const } : card));
 cards.push(umbrellaCard());
 let isCreditsOn = true;
-const creditsNow = (): unknown => ({ enabled: isCreditsOn, state: isCreditsOn ? "ready" : "off", text: isCreditsOn ? "Free API credits take over while the plan limit is active." : "Runs wait for the plan limit to end." });
+const creditsNow = (): unknown => makeCredits({ enabled: isCreditsOn, state: isCreditsOn ? "ready" : "off", text: isCreditsOn ? "Free API credits take over while the plan limit is active." : "Runs wait for the plan limit to end." }); // the paced fields of a real answer
 const streams = new Map<string, Set<ServerResponse>>();
 
 function shift(value: unknown, key = ""): unknown {

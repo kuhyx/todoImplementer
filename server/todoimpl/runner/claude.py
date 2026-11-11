@@ -12,6 +12,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from todoimpl.newtask import images
+
 from . import buildlock, mcpconf, policy
 
 ROLE_MODELS = {
@@ -106,7 +108,11 @@ def options(  # noqa: PLR0913, PLR0917 - one set of turn options, built in one p
         "PHONE_LEASE_OWNER": f"todoimpl:{worktree.parent.name}",
         **buildlock.turn_env(worktree.parent.name),
     }
-    dirs = (str(worktree), *map(str, extra_dirs), *pol.add_dirs)
+    dirs = (
+        str(worktree),
+        *map(str, (*extra_dirs, *images.session_dirs())),
+        *pol.add_dirs,
+    )  # images: the note's
     hooks = policy.HOOKS_OFF if pol.disable_hooks else None
     notes = (pol.warning,) if pol.warning else ()
     return Options(
