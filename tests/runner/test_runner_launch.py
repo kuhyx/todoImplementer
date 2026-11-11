@@ -30,6 +30,7 @@ def test_t1817_production_launch_is_a_systemd_unit_with_the_env_only_in_a_privat
     assert seen == [
         [
             "systemd-run", "--user", "--collect", "--quiet", f"--unit={unit}",
+            f"--slice={launch.SLICE}",
             "-p", "KillMode=control-group", "-p", "TimeoutStopSec=10",
             "-E", f"PYTHONPATH={launch.SERVER_DIR}",
             "--", sys.executable, "-m", "todoimpl.runner.turnhost", str(run_dir), STEM,

@@ -17,6 +17,8 @@ source "$(dirname "${BASH_SOURCE[0]}")/../deploy/lib.sh"
 
 readonly UNIT=todoimplementer.service
 readonly PREVIEW_UNIT=todoimplementer-preview.service
+# The cap every board unit runs under (deploy/todoimpl.slice, T1982).
+readonly SLICE=todoimpl.slice
 readonly WAIT_TRIES="${RUN_WAIT_TRIES:-60}"
 readonly WAIT_INTERVAL="${RUN_WAIT_INTERVAL:-0.5}"
 
@@ -81,8 +83,9 @@ ensure_sdk_venv() {
 }
 
 restart_server() {
-	step "installing ${UNIT}"
+	step "installing ${UNIT} and ${SLICE}"
 	install_unit "$UNIT"
+	install_unit "$SLICE"
 	systemctl --user daemon-reload
 	# The transient preview unit holds the port the real unit needs.
 	if systemctl --user is-active --quiet "$PREVIEW_UNIT"; then

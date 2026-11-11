@@ -93,6 +93,9 @@ def test_run_happy_path_order(box: tuple[Env, Stubber]) -> None:
     assert _opened(env).splitlines()[-1] == f"xdg-open {URL}"
     unit = env.home / ".config" / "systemd" / "user" / "todoimplementer.service"
     assert unit.read_text() == (DEPLOY / "todoimplementer.service").read_text()
+    # The turn/gate/deploy cap (T1982) is installed beside the unit, before the daemon-reload.
+    cap = env.home / ".config" / "systemd" / "user" / "todoimpl.slice"
+    assert cap.read_text() == (DEPLOY / "todoimpl.slice").read_text()
     assert "pacman" not in env.calls
 
 

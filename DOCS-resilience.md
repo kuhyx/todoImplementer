@@ -53,3 +53,10 @@ its `resume_at`; a note from kuhy ends the wait. The reason is `state.extra.retr
 - A reboot in the middle of a Ship click leaves the umbrella `failed` ("Ship was interrupted"); check origin, then
   Retry.
 - The 1, 2, 5, 10, 30 ladder is shared by every run; there is no per-run setting.
+
+## Resource cap
+
+Every turn, gate and deploy unit joins `todoimpl.slice` (`deploy/todoimpl.slice`, installed by `scripts/deploy.sh`):
+`MemoryHigh` 14G (reclaim pressure), `MemoryMax` 18G, `MemorySwapMax` 8G, `CPUQuota` 1600 %, `CPUWeight` 20,
+`TasksMax` 8192. Many parallel builds once filled RAM and 43 GB of swap and froze the PC (T1982). Past the cap the
+kernel OOM-kills inside the slice, never the desktop; the killed turn is a failed turn and the retry ladder resumes it.

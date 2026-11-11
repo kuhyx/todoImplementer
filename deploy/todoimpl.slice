@@ -1,0 +1,16 @@
+# Every todoImplementer board unit (claude turns, gates, deploys, and the services sessions start with
+# `systemd-run --slice=todoimpl.slice`) shares this one cap, so ~30 sessions building at once can no longer
+# swap the whole PC into a freeze (T1982, 2026-11-11). Sized for 30 GiB RAM / 24 threads: the desktop keeps
+# >= 12 GiB RAM and 8 threads. MemorySwapMax is the setting that stops thrash: past RAM + 8 GiB swap the
+# kernel OOM-kills inside this slice (a turn dies and the board's retry ladder resumes it) instead of
+# freezing the machine. Installed by scripts/deploy.sh; transient units pick it up via --slice.
+[Unit]
+Description=todoImplementer board sessions (memory, swap and CPU capped)
+
+[Slice]
+MemoryHigh=14G
+MemoryMax=18G
+MemorySwapMax=8G
+CPUQuota=1600%
+CPUWeight=20
+TasksMax=8192

@@ -94,7 +94,7 @@ def systemd_argv(unit: str, run_dir: Path, wt: Path, command: str) -> list[str]:
     env = clean_env()
     keep = [f"{key}={env[key]}" for key in UNIT_ENV if key in env]
     return [
-        "systemd-run", "--user", "--collect", "--quiet", f"--unit={unit}",
+        "systemd-run", "--user", "--collect", "--quiet", f"--unit={unit}", f"--slice={launch.SLICE}",
         "-p", "KillMode=control-group", "-p", f"RuntimeMaxSec={UNIT_MAX:.0f}",
         "-E", f"PYTHONPATH={launch.SERVER_DIR}", *(arg for kv in keep for arg in ("-E", kv)),
         "--", *host_argv(run_dir, wt, command),
