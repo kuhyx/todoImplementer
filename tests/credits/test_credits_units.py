@@ -143,3 +143,23 @@ def test_before_the_first_key_check_a_readable_key_counts(ready: Path) -> None:
     (ready / "key").write_text("")
     assert route.choose(ready, NOW).route is None
     assert "no API key" in route.view(ready, NOW)["text"]
+
+
+def test_t1989_credits_first_uses_credits_without_a_limit_and_only_when_ready(
+    ready: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    assert setting.credits_first() is False
+    setting.set_credits_first(value=True)
+    assert setting.credits_first() is True
+    assert route.choose(ready, NOW + 601) == route.Choice(route.CREDITS)  # no limit active: credits anyway
+    marks.mark_exhausted(ready, NOW + 900, "x")
+    assert route.choose(ready, NOW + 601) == route.Choice(route.PLAN)  # exhausted: back on the plan
+    marks.clear_exhausted(ready)
+    setting.set_enabled(value=False)
+    assert route.choose(ready, NOW + 601) == route.Choice(route.PLAN)  # fallback off: the plan
+    setting.set_enabled(value=True)
+    monkeypatch.delenv("TODOIMPL_SDK_PYTHON")
+    assert route.choose(ready, NOW + 601) == route.Choice(route.PLAN)  # no SDK venv: the plan
+    path = setting.settings_path()
+    path.write_text('{"credits_first": "yes"}')
+    assert setting.credits_first() is False  # garbage means the default, off

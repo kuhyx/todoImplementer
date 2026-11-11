@@ -9,6 +9,7 @@ from pathlib import Path
 from todoimpl import atomic
 
 KEY = "credits_fallback"
+FIRST_KEY = "credits_first"
 
 
 def settings_path() -> Path:
@@ -35,3 +36,14 @@ def set_enabled(*, value: bool) -> None:
     """Store the setting atomically, keeping any other key of the file."""
     path = settings_path()
     atomic.write_text(path, json.dumps({**_read(), KEY: value}, indent=2) + "\n")
+
+
+def credits_first() -> bool:
+    """Return True when new turns use the free credits even with no plan limit; default off."""
+    value = _read().get(FIRST_KEY)
+    return value if isinstance(value, bool) else False
+
+
+def set_credits_first(*, value: bool) -> None:
+    """Store the credits-first setting atomically, keeping any other key of the file."""
+    atomic.write_text(settings_path(), json.dumps({**_read(), FIRST_KEY: value}, indent=2) + "\n")

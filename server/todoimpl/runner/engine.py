@@ -10,7 +10,7 @@ from functools import partial
 from typing import TYPE_CHECKING, Any, Protocol
 
 from todoimpl.board import state as store
-from todoimpl.credits import marks, route
+from todoimpl.credits import marks, route, setting
 from todoimpl.repotask import files
 from todoimpl.todo_mcp.model import TodoError
 from todoimpl.umbrella.driver import driver_for
@@ -159,7 +159,7 @@ class Engine:
                 until = limits.active_until(self.root, now)
                 if until is None and (self.root / UNTIL_FILE).exists():
                     limits.clear(self.root)
-                if until is None:
+                if until is None and not setting.credits_first():  # credits-first keeps the mark to its end
                     marks.clear_exhausted(self.root)
                 free = until is None or route.choose(self.root, now).route == route.CREDITS
                 wake = IDLE_WAIT if until is None else min(until - now, IDLE_WAIT)

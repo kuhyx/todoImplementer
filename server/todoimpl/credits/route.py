@@ -53,8 +53,12 @@ def view(root: Path, now: float) -> dict[str, Any]:
 
 
 def choose(root: Path, now: float) -> Choice:
-    """Plan while no limit is active; credits while one is and the fallback is ready; else wait."""
+    """Plan while no limit is active; credits while one is and the fallback is ready; else wait.
+
+    The `credits_first` setting sends turns to the credits even with no limit while they are ready, and to the
+    plan when they are not (exhausted, key or SDK missing): the plan is then the fallback, never a wait.
+    """
     state = limit_state(root)
     if not state.active(now):
-        return Choice(PLAN)
+        return Choice(CREDITS if setting.credits_first() and state_of(root, now)[0] == "ready" else PLAN)
     return Choice(CREDITS) if state_of(root, now)[0] == "ready" else Choice(None, state.until)

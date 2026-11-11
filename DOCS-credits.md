@@ -20,6 +20,11 @@ settings.json`, `$TODOIMPL_SETTINGS`; toggled on the board through `POST /api/se
 never a network call in a request or the queue) and the credits are not exhausted. The server words the state
 (`off`, `ready`, `exhausted`, `unavailable`) in `limit.credits`; the page only shows it.
 
+Credits first (kuhy, 2026-11-11, weekly plan at 75 %): `"credits_first": true` in `settings.json` sends every new turn
+to the credits while the fallback is `ready`, with or without a plan limit (T1989). Default off, edited in the file (no
+endpoint). Credits not ready (exhausted, key or SDK missing, fallback off) means the plan, never a wait; the exhausted
+mark then lasts its 30 min instead of being cleared at once. Turns already running finish on their route.
+
 ## Credit turns
 
 `<sdk venv python> -m todoimpl.runner.sdkturn <spec>` runs under the same turn host, unit and adoption machinery

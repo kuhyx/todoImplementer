@@ -187,3 +187,36 @@ def test_a_turn_adopted_after_a_restart_keeps_its_route(world: Env, monkeypatch:
         assert [c["via_sdk"] for c in world.calls()] == [True, True, True]
     finally:
         sched2.close()
+
+
+def test_t1989_credits_first_runs_every_turn_on_credits_with_no_limit(
+    world: Env, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    enable_credits(monkeypatch)
+    setting.set_credits_first(value=True)
+    sched, _ = boot(world, PLAN, IMPL, LIVE_OK, done_check="true")
+    try:
+        sched.start(CARD)
+        st = wait_stage(world, sched, "gate")
+        assert [c["via_sdk"] for c in world.calls()] == [True, True, True]
+        assert st.extra["route"] == "credits"
+        assert limits.active_until(world.root, time.time()) is None
+    finally:
+        sched.close()
+
+
+def test_t1989_credits_first_falls_back_to_the_plan_when_credits_run_out(
+    world: Env, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    enable_credits(monkeypatch)
+    setting.set_credits_first(value=True)
+    out = reply("API Error: 400 Credit balance is too low", is_error=True)
+    sched, _ = boot(world, out, PLAN, IMPL, LIVE_OK, done_check="true")
+    try:
+        sched.start(CARD)
+        st = wait_stage(world, sched, "gate")
+        assert [c["via_sdk"] for c in world.calls()] == [True, False, False, False]
+        assert st.extra["route"] == "plan"
+        assert marks.exhausted(world.root, time.time())  # kept: no credit retry on every dispatch
+    finally:
+        sched.close()
