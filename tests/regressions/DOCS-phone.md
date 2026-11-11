@@ -42,3 +42,4 @@ One row per bug, ids global and never reused. The row's test is named `test_t<N>
 | T1832 | A note from kuhy did not reset the nudge counter, so the next ask never got its nudge | tests/runner/test_runner_phone_hands.py |
 | T1833 | Each board turn is a new claude process, so a card lost its phone test slot between turns | tests/runner/test_runner_claude.py |
 | T1834 | A board session could install over, stop or launch kuhy's running workout app: the phone prompts never forbade a non-slot package | tests/prompts/test_phone.py |
+| T1981 | kuhy replied to a live check's phone or hands-on ask ("it is ok, push", "no manual checks on my side") and the next live check asked him the same thing again; a live check that takes his reply in and still ends `A:` now drops the phone wait and settles on its checklist (`[~]` rows become the after-ship follow-up) | tests/runner/test_runner_phone_reply.py |

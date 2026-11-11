@@ -123,10 +123,15 @@ def _live_check(d: Driver) -> str | None:
     shots.mkdir(parents=True, exist_ok=True)
     redo = str(st.extra.pop("live_redo", ""))  # set: ask for the checklist only, verify nothing again
     attached, info = bool(st.extra.get("phone_attached")), st.extra.get("waiting_phone")
+    carried = bool(st.extra.pop(phone.REPLY_CARRY, False))  # the reply came in before a hands nudge
+    st.extra.pop(phone.REPLIED, None)  # else only a reply taken in by THIS turn counts
     res = d.turn("live_check", "live_check", failure_tail=redo, prompt="live_checklist" if redo else "")
-    if phone.hands_nudge(st, res, attached=attached, info=info):
+    replied = bool(st.extra.pop(phone.REPLIED, False)) or carried
+    if phone.hands_nudge(st, res, attached=attached, info=info):  # Claude tries the phone itself first
+        st.extra[phone.REPLY_CARRY] = replied
         return "live_check"
-    if res.tag in ("Q", "A"):
+    settles = phone.answered(st, run_dir, res.tag, replied=replied)
+    if res.tag == "Q" or (res.tag == "A" and not settles):
         if not bounce.again(st):
             return None
         st.extra["failure_tail"] = bounce.brief(res.text)  # a child fixes what its live check found (T1952)

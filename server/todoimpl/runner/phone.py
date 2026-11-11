@@ -23,6 +23,8 @@ TRIED = "tried_attached"
 ADB_TIMEOUT = 5.0
 DEVICE_COLUMNS = 2
 HANDS = "hands_nudged"
+REPLIED = "replied"  # set by a turn that took kuhy's reply in (pipeline.Pipeline.turn)
+REPLY_CARRY = "reply_carry"  # that reply, kept across the one hands nudge turn
 HANDS_ASK = r"\btaps?\b|open .* on the (pixel|phone)|real screen|\bpause\b|look at the phone|\bfeel\b"
 PLUG_ASK = r"plug"
 HANDS_NUDGE = (
@@ -67,6 +69,20 @@ def hands_nudge(st: RunState, res: TurnResult, *, attached: bool, info: object) 
     st.last_tag = None
     if attached and isinstance(info, dict):
         st.extra.update(phone_attached=True, waiting_phone=info)
+    return True
+
+
+def answered(st: RunState, run_dir: Path, tag: str | None, *, replied: bool) -> bool:
+    """Say whether an `A:` live check answers a reply of kuhy's: then it settles on its checklist (T1981).
+
+    kuhy answered the last ask (he sent a note), so the same ask may not rest on him again: the phone wait
+    goes, and the checklist decides (`[~]` rows become the after-ship follow-up).
+    """
+    if not replied or tag != "A":
+        return False
+    st.extra.pop("waiting_phone", None)
+    (run_dir / READY).unlink(missing_ok=True)
+    st.last_tag = None
     return True
 
 

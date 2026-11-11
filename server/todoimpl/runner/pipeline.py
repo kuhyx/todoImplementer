@@ -185,6 +185,7 @@ class Driver:
             st.sessions.pop(role, None)
         if fresh := ctx.inbox():
             st.extra.setdefault("notes", []).extend(fresh)
+            st.extra[phone.REPLIED] = True  # this turn takes kuhy's reply in: its ask may not return (T1981)
         plan = tiering.plan_turn(self, role)
 
         ask = Ask(stage, prompt, failure_tail, nudge, cont, new_session, plan.note)

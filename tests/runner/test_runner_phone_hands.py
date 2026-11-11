@@ -131,8 +131,7 @@ def test_t1832_a_note_from_kuhy_gives_the_next_ask_a_fresh_nudge(world: Env) -> 
         assert state(world).extra["hands_nudged"] is True
         sched.send(CARD, "try again")
         wait_until_calls(world, 6)
-        wait_stage(world, sched, "live_check", tag="A")
-        assert len(world.calls()) == 6
+        assert "do not ask kuhy" in world.calls()[5]["prompt"]  # T1981 settles only an ask that comes back
     finally:
         sched.close()
 
