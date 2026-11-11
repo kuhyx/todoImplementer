@@ -29,6 +29,16 @@ describe("a Claude question after the spec was answered", () => {
     expect(document.activeElement).toBe(q("textarea[name=Q1]"));
   });
 
+  it("[T1993] a card with ask buttons and a free question shows both, buttons in their own slot above the box", async () => {
+    const detail = { ...laterDetail(), ask_items: [{ id: "c1", options: ["a", "b"], recommended: "a", risk: "risky", state: "open", title: "Pick", type: "choice" }] } as never;
+    const c = (detail as { card: { id: string } }).card;
+    await open(c as never, { [`GET /api/task/${c.id}`]: detail });
+    expect(q(".drawer").classList.contains("drawer--only-ask")).toBe(true);
+    expect(q('[data-slot="asks"] [data-option=a]')).toBeTruthy();
+    expect(q('[data-slot="questions"] textarea[name=Q1]')).toBeTruthy();
+    expect(q('[data-slot="asks"]').nextElementSibling).not.toBeNull();
+  });
+
   it("[T1816] OK walks every card, then sends all answers as one message", async () => {
     const detail = laterDetail();
     const c = detail.card;

@@ -29,7 +29,7 @@
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, var(--measure));
-  grid-template-rows: calc(3 * 1.5 * var(--text-body)) minmax(0, 1fr);
+  grid-template-rows: calc(3 * 1.5 * var(--text-body)) auto minmax(0, 1fr);
   justify-content: center;
   font-size: var(--text-subtitle);
 }
@@ -40,8 +40,16 @@
   overflow-y: auto;
 }
 
-.drawer--only-ask [data-slot="questions"] {
+/* The note's ask buttons sit in their own auto row above the free question (T1993). */
+.drawer--only-ask [data-slot="asks"] {
   grid-row: 2;
+  min-height: 0;
+  overflow-y: auto;
+  max-height: 40vh;
+}
+
+.drawer--only-ask [data-slot="questions"] {
+  grid-row: 3;
   min-height: 0;
 }
 
