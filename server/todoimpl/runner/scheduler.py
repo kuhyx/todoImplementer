@@ -28,7 +28,7 @@ FINAL = ("shipped", "closed", "cancelled")
 COUNTERS = (
     "failure_tail", "live_fixes", "check_fixes", "nudges", "nudge", "failed_stage", "resume_stage",
     "resettle", "retries", "crash_retries", "r_continues", "r_continue", "tagless_retry", "fresh",
-    "ship_fixes", "reship", "hands_nudged", "ask_grants", "part_nudges",
+    "ship_fixes", "reship", "hands_nudged", "ask_grants", "part_nudges", "ship_resumes",
 )  # fmt: skip
 
 
@@ -207,6 +207,7 @@ class Scheduler(PhoneEngine):
                 msg = "Ship is offered only at Ready to ship"
                 raise RunnerError(msg, "disabled")
             st.stage = "shipping"
+            st.extra.pop("ship_resumes", None)
             self.save(card, st)
             self.enqueue(card)
 

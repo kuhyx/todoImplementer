@@ -4,14 +4,14 @@ An umbrella run takes days (note 2d0704cd: 48 children, rounds of 1, 2, 4, 8). I
 restarted or redeployed, a turn or worker can be killed, the PC can reboot or shut down, and the network can go
 away. This file lists what is guaranteed, what keeps it true, and which test breaks when it stops being true.
 Code: `server/todoimpl/atomic.py`, `runner/{retry,netwait,freeworker}.py`, `umbrella/{outage,run,rounds,workers}.py`,
-`deploy/todoimplementer.service`, `scripts/deploy.sh`. Regression ids T1901 to T1907.
+`deploy/todoimplementer.service`, `scripts/deploy.sh`. Regression ids T1901 to T1907, T1988.
 
 ## Guarantees
 
 | Event | What happens | Test |
 |---|---|---|
 | Board killed, restarted or deployed | Turns are their own units and keep running; the new server adopts them (`DOCS-spec.md`, "Turns outlive the server"). An umbrella resumes its round at the step it reached: a saved manager verdict is never asked for twice, and the pool starts each unfinished child once. | `tests/umbrella/test_flow_resume.py`, `tests/runner/test_runner_adopt.py` |
-| Restart while a child was shipping | The child is not shipped again at once: it fails with "Ship was interrupted by a restart: check origin and the note before shipping again" (the same guard as a single card). Retry on the umbrella puts it back at the gate. | `tests/umbrella/test_restart_ship.py` (T1905) |
+| Restart while a card or child was shipping | Kuhy's Ship click survives it: the run is queued again in `shipping` and ships by itself, no second click, no Needs you. Ship is idempotent at every cut point (before the push, after it before `pushed.json`, mid-deploy, before the close, mid-rebase). At most 2 automatic resumes per click (`restart.MAX_RESUMES`, counter `ship_resumes`); a ship that keeps restarting the board then fails "Ship was interrupted by a restart N times in a row: check origin and the note, then Retry", and Retry goes straight back to `shipping`. | `tests/runner/test_runner_ship_resume.py`, `tests/umbrella/test_restart_ship.py` (T1905, T1988) |
 | Reboot or shutdown | The board unit and the transient turn units die; the board comes back at boot (below). A turn with no exit record and a dead host is lost: the same stage resumes the stored session (`claude --resume <id>`) with the kill note, or starts a fresh session with a handoff summary when it was idle for over an hour. Manager and children alike; nothing is started twice. | `tests/umbrella/test_reboot.py` (T1907), `tests/runner/test_runner_adopt.py` |
 | Power cut during a write | Every state, round, mark, setting, plan and jsonl write goes through `todoimpl.atomic`: temp file, `fsync`, rename, directory `fsync` (appends are `fsync`ed). A reader sees the old file or the new one. A torn last line of a jsonl log is skipped by its readers. `tests/test_atomic.py` fails when a module renames a temp file by hand. | `tests/test_atomic.py` (T1901), `tests/umbrella/test_workers.py` |
 | Turn killed by a signal (OOM, SIGKILL, host died) | Exit code below 0 or from 128 up, with no result event: the stage rests as `paused_retry` with reason `killed` and reruns on the ladder below, at most 5 times (`retry.MAX_KILL_RETRIES`), then Needs you ("The implement turn failed ..."). A crash with an error result keeps its 3 tries. | `tests/resilience/test_killed_turns.py` (T1902) |

@@ -9,13 +9,13 @@ from __future__ import annotations
 
 import logging
 import threading
-from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from todoimpl.board import state as store
-from todoimpl.runner import adopt, deploy, retry
+from todoimpl.runner import adopt, retry
 from todoimpl.runner.files import NeedsYouError
 from todoimpl.runner.pipeline import WORK_STAGES, CancelledError, LimitHitError
+from todoimpl.runner.restart import INTERRUPTED, resume_ship
 from todoimpl.todo_mcp.model import TodoError
 
 from . import archived, bounce, issues, note
@@ -29,10 +29,10 @@ if TYPE_CHECKING:
 
 log = logging.getLogger("todoimpl.runner")
 RESTING = ("paused_limit", "paused_retry")
-INTERRUPTED = "Ship was interrupted by a restart: check origin and the note before shipping again"
 REPO_POLL = 2.0
 COUNTERS = (
     "bounces", "live_fixes", "check_fixes", "nudges", "nudge", "retries", "crash_retries", "ask_grants",
+    "ship_resumes",
 )  # fmt: skip
 
 
@@ -70,37 +70,32 @@ class Umbrella:
     def _reset(self, st: store.RunState) -> None:
         """Retry a child that needed kuhy: back to the stage it stopped in."""
         stopped = str(st.extra.pop("failed_stage", ""))
-        st.stage = (
-            "gate" if stopped in ("shipping", "gate") else stopped if stopped in WORK_STAGES else st.stage
-        )
+        cut = str(st.error).startswith(INTERRUPTED)  # a cut Ship goes on (T1988)
+        if stopped in ("shipping", "gate"):
+            st.stage = "shipping" if cut else "gate"
+        elif stopped in WORK_STAGES:
+            st.stage = stopped
         if st.stage in ("failed", "cancelled"):
             st.stage = "implement"
         st.error, st.last_tag, st.assignee = None, None, "claude"
         for key in COUNTERS:
             st.extra.pop(key, None)
 
-    def _cut(self, cid: str, st: store.RunState) -> bool:
-        """Return True for a child caught mid-Ship with no record of its push (after it, Ship goes on)."""
-        wt = Path(st.worktree) if st.worktree else None
-        return st.stage == "shipping" and not (wt and deploy.pushed(ustore.child_dir(self.run_dir, cid), wt))
-
-    def resume(self, *, shipping: bool, retry_failed: bool) -> None:
-        """Restart the drive of every unfinished child; Ship moves gate children on, Retry the failed ones."""
+    def resume(self, *, retry_failed: bool) -> None:
+        """Restart the drive of every unfinished child; gate children ship, Retry restarts the failed ones."""
         current = self.rec.get("current")
         held = set(current["ids"]) if current else set()  # the round in progress starts them itself
         for cid, kid in self.kids.items():
             st = child_state(self.run_dir, cid)
             if st is None or kid.done or st.stage == "shipped" or cid in held:
                 continue
-            if self._cut(cid, st):  # a restart cut its Ship short before its push landed: check origin first
-                st.extra["failed_stage"], st.stage, st.error = "gate", "failed", INTERRUPTED
-                store.save(ustore.child_dir(self.run_dir, cid), st)
+            if st.stage == "shipping" and not resume_ship(st):  # a restart cut its Ship: it goes on (T1988)
+                store.save(ustore.child_dir(self.run_dir, cid), st)  # ...unless that happened too often
                 continue
-            cut = st.error == INTERRUPTED  # T1905: kuhy checks origin before a cut Ship goes again
             if retry_failed and (st.stage in ("failed", "cancelled") or st.last_tag in ("Q", "A")):
                 self._reset(st)
                 store.save(ustore.child_dir(self.run_dir, cid), st)  # a gate child is not restarted below
-            if st.stage == "gate" and (shipping or not cut):  # they ship themselves (T1923)
+            if st.stage == "gate":  # they ship themselves (T1923)
                 st.stage, st.auto_ship = "shipping", True
             if st.stage in (*WORK_STAGES, "shipping", *RESTING):
                 store.save(ustore.child_dir(self.run_dir, cid), st)
@@ -161,7 +156,7 @@ class Umbrella:
         self.sync()
         self._drop()
         try:
-            self.resume(shipping=shipping, retry_failed=retry_failed)
+            self.resume(retry_failed=retry_failed)
             if self.rec.get("current"):
                 run_round(self, None)
             while not shipping and self.pending() and not d.ctx.cancelled():

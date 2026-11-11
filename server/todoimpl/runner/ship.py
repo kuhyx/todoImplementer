@@ -25,6 +25,7 @@ EVIDENCE_TAIL = 8
 PUSH_TIMEOUT = 600.0
 PUSH_TRIES = 3  # a push that lost a race is rebased and gated again, this many pushes in all
 OUTPUT_TAIL = 3000
+REBASING = "rebasing"  # in the run dir while Ship's own rebase runs: a restart may leave it half done
 
 
 class CommitRefusedError(NeedsYouError):
@@ -110,10 +111,14 @@ def _squash(plan: ShipPlan, ref: str, *, allow_empty: bool) -> bool:
 
 def _rebase(plan: ShipPlan, ref: str) -> None:
     wt = plan.worktree
+    mark = plan.run_dir / REBASING  # a restart can kill the rebase half way: the next ship aborts it (T1988)
+    mark.write_text("1", encoding="utf-8")
     if git(wt, "rebase", ref, check=False, timeout=plan.timeout).returncode == 0:
+        mark.unlink()
         return
     files = git(wt, "diff", "--name-only", "--diff-filter=U", check=False).stdout.split()
     git(wt, "rebase", "--abort", check=False)
+    mark.unlink()
     where = ", ".join(files) or "unknown files"
     msg = f"Rebase on {ref} conflicts in {where}: resolve it in {wt}, then ship again"
     raise NeedsYouError(msg, "run_failed")
@@ -166,6 +171,9 @@ def ship(
     wt = plan.worktree
     git(wt, "fetch", "--quiet", "origin")
     ref, branch = base_ref(plan.repo)
+    if (plan.run_dir / REBASING).exists():  # a restart cut Ship's own rebase (never kuhy's or the session's)
+        git(wt, "rebase", "--abort", check=False)
+        (plan.run_dir / REBASING).unlink()
     if has_conflicts(wt):  # `add --all` would commit the markers as if resolved
         msg = f"Unresolved conflicts in {wt}: resolve them and finish the rebase, then ship again"
         raise NeedsYouError(msg, "run_failed")

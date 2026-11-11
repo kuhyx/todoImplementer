@@ -1,12 +1,9 @@
 """A run pushed but not deployed: Retry goes straight back to Ship, a restart mid-deploy adopts the deploy."""
 
-from pathlib import Path
-
 import pytest
 from runnerfakes import Env, FakeClient, executable, sh
-from schedfakes import CARD, IMPL, LIVE_OK, PLAN, boot, reply, state, wait_stage
+from schedfakes import CARD, IMPL, LIVE_OK, PLAN, boot, reply, wait_stage
 from todoimpl.board import state as store
-from todoimpl.runner import deploy
 from todoimpl.runner.scheduler import Scheduler
 
 
@@ -65,29 +62,6 @@ def test_t1968_a_restart_during_the_deploy_goes_on_to_the_deploy_instead_of_fail
         again.close()
     assert done.error is None
     assert (_count(world, "pushes"), len(client.closed)) == (1, 1)
-
-
-def test_t1968_a_restart_before_the_push_still_asks_kuhy_to_check_origin(
-    world: Env, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    sched, client = _booted(world, monkeypatch)
-    monkeypatch.setenv("DEPLOY_EXIT", "3")
-    try:
-        sched.start(CARD, auto_ship=True)
-        st = wait_stage(world, sched, "failed")
-    finally:
-        sched.close()
-    (world.root / CARD / deploy.PUSHED).unlink()  # no record of a push
-    st.stage, st.error = "shipping", None
-    store.save(world.root / CARD, st)
-    again = Scheduler(client, world.root, check_timeout=20)
-    try:
-        stopped = wait_stage(world, again, "failed")
-    finally:
-        again.close()
-    assert "interrupted by a restart" in str(stopped.error)
-    assert state(world).stage == "failed"
-    assert Path(str(stopped.worktree)).exists()
 
 
 def test_t1970_a_note_after_a_failed_deploy_is_new_work_that_ships_and_deploys_too(

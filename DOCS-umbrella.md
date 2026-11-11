@@ -74,9 +74,9 @@ Round width `w` starts at 1. Each round:
 6. Each child then goes through its own pipeline in its own thread, while the next round starts: `escalate` -> one
    higher-effort Opus implement attempt (with `prompts/tier.escalated`); red checks -> a fix turn (the usual `check_fixes` path);
    otherwise Live check -> Checks -> Ship: every child auto-ships when its checks pass, with or without a `done_check`
-   (kuhy, 2026-11-10: shipping is the umbrella's job; T1923), and a child left at its gate ships on the next drive
-   unless a restart cut its Ship (T1905). Children are normal runs of their repo: `Todo: <source id8>` trailer, rebase, gate,
-   push, `DOCS-landing.md` rules. They run on the normal tier (`extra.tier = normal`), never the cheap one.
+   (kuhy, 2026-11-10: shipping is the umbrella's job; T1923), and a child left at its gate ships on the next drive,
+   and so does a child whose Ship a restart cut (T1905, T1988). Children are normal runs of their repo: `Todo: <source
+   id8>` trailer, rebase, gate, push, `DOCS-landing.md` rules. They run on the normal tier (`extra.tier = normal`), never the cheap one.
 
 Rounds continue until every child is taken. A plan limit pauses the umbrella like any run (a child that hit the
 limit pauses it with the same `resume_at`; a child on a retry timer pauses it on that timer).

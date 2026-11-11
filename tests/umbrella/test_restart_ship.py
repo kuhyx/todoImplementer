@@ -1,4 +1,4 @@
-"""A restart while a child was shipping: no blind second Ship; Retry puts the child back at the gate."""
+"""A restart while a child was shipping: the child ships again by itself, a few times at most (T1988)."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ from typing import Any
 from runnerfakes import Env
 from tierfakes import Free
 from todoimpl.board import state as store
+from todoimpl.runner.restart import MAX_RESUMES
 from todoimpl.runner.scheduler import Scheduler
 from todoimpl.umbrella.children import fresh_state
 from todoimpl.umbrella.note import children
@@ -14,7 +15,7 @@ from todoimpl.umbrella.store import child_dir
 from umbrellarig import CARD, NOTE, at_rest, boot
 
 
-def _seed(world: Env, client: Any, stage: str) -> str:
+def _seed(world: Env, client: Any, stage: str, parent: str = "implement") -> str:
     """Save an umbrella a restart finds mid-run with its one child already in `stage`."""
     (kid,) = children(client.tasks[NOTE].body, NOTE)
     child = fresh_state(kid, 1, 0.0, auto_ship=False)
@@ -26,59 +27,83 @@ def _seed(world: Env, client: Any, stage: str) -> str:
         "width": 2, "tier": None, "kids": kids, "current": None,
         "rounds": [{"n": 1, "width": 1, "next": 2, "children": [row]}],
     }  # fmt: skip
-    store.save(world.root / CARD, store.RunState(task_id=CARD, stage="implement", extra={"umbrella": record}))
+    store.save(world.root / CARD, store.RunState(task_id=CARD, stage=parent, extra={"umbrella": record}))
     return kid.cid
 
 
-def test_t1905_a_child_found_mid_ship_after_a_restart_is_not_shipped_again_blindly(
+def _after_restart(world: Env, client: Any, cid: str, stage: str) -> store.RunState:
+    again = Scheduler(client, world.root, check_timeout=20)
+    try:
+        at_rest(world, again, stage)
+    finally:
+        again.close()
+    child = store.load(child_dir(world.root / CARD, cid))
+    assert child is not None
+    return child
+
+
+def test_t1988_a_child_found_mid_ship_after_a_restart_ships_again_by_itself(world: Env, free: Free) -> None:
+    sched, client = boot(world, 1)
+    sched.close()
+    cid = _seed(world, client, "shipping")
+    child = _after_restart(world, client, cid, "shipped")
+    assert (child.stage, child.error) == ("shipped", None)
+    assert child.extra["ship_resumes"] == 1
+
+
+def test_t1905_a_child_cut_again_and_again_stops_with_the_interrupted_text_and_retry_ships_it(
     world: Env, free: Free
 ) -> None:
     sched, client = boot(world, 1)
     sched.close()
     cid = _seed(world, client, "shipping")
-    again = Scheduler(client, world.root, check_timeout=20)  # recovery requeues the interrupted umbrella
+    stuck = store.load(child_dir(world.root / CARD, cid))
+    assert stuck is not None
+    stuck.extra["ship_resumes"] = MAX_RESUMES
+    store.save(child_dir(world.root / CARD, cid), stuck)
+    again = Scheduler(client, world.root, check_timeout=20)
     try:
         st = at_rest(world, again, "failed")
-    finally:
-        again.close()
-    child = store.load(child_dir(world.root / CARD, cid))
-    assert child is not None
-    assert (child.stage, child.extra["failed_stage"]) == ("failed", "gate")
-    assert "interrupted by a restart" in str(child.error)
-    assert "1 of 1 children need you" in str(st.error)
-    assert not [c for c in world.calls() if str(c["cwd"]).endswith("wt")]  # nothing ran in the child
-
-
-def test_t1905_retry_puts_the_interrupted_child_back_at_the_gate(world: Env, free: Free) -> None:
-    sched, client = boot(world, 1)
-    sched.close()
-    cid = _seed(world, client, "shipping")
-    again = Scheduler(client, world.root, check_timeout=20)
-    try:
-        at_rest(world, again, "failed")
-        again.start(CARD)
-        st = at_rest(world, again, "gate")
-    finally:
-        again.close()
-    child = store.load(child_dir(world.root / CARD, cid))
-    assert child is not None
-    assert child.stage == "gate"
-    assert st.error is None
-
-
-def test_t1923_kuhys_ship_click_ships_a_child_whose_ship_a_restart_cut(world: Env, free: Free) -> None:
-    sched, client = boot(world, 1)
-    sched.close()
-    cid = _seed(world, client, "shipping")
-    again = Scheduler(client, world.root, check_timeout=20)
-    try:
-        at_rest(world, again, "failed")
-        again.start(CARD)
-        at_rest(world, again, "gate")  # kuhy checks origin first (T1905)
-        again.ship(CARD)
+        child = store.load(child_dir(world.root / CARD, cid))
+        assert child is not None
+        assert (child.stage, child.extra["failed_stage"]) == ("failed", "shipping")
+        assert str(child.error).startswith("Ship was interrupted by a restart")
+        assert "1 of 1 children need you" in str(st.error)
+        again.start(CARD)  # Retry: no second Ship click
         at_rest(world, again, "shipped")
     finally:
         again.close()
-    child = store.load(child_dir(world.root / CARD, cid))
-    assert child is not None
-    assert child.stage == "shipped"
+    done = store.load(child_dir(world.root / CARD, cid))
+    assert done is not None
+    assert (done.stage, done.error) == ("shipped", None)
+
+
+def test_t1988_retry_sends_a_child_a_pre_fix_restart_failed_straight_to_ship(world: Env, free: Free) -> None:
+    sched, client = boot(world, 1)
+    sched.close()
+    cid = _seed(world, client, "failed")
+    old = store.load(child_dir(world.root / CARD, cid))
+    assert old is not None
+    old.extra["failed_stage"] = "gate"  # the form a restart left before T1988
+    old.error = "Ship was interrupted by a restart: check origin and the note before shipping again"
+    store.save(child_dir(world.root / CARD, cid), old)
+    again = Scheduler(client, world.root, check_timeout=20)
+    try:
+        at_rest(world, again, "failed")
+        again.start(CARD)
+        at_rest(world, again, "shipped")
+    finally:
+        again.close()
+
+
+def test_t1988_an_umbrella_kuhy_clicked_ship_on_ships_its_children_again_after_a_restart(
+    world: Env, free: Free
+) -> None:
+    sched, client = boot(world, 1)
+    sched.close()
+    cid = _seed(world, client, "gate", parent="shipping")
+    child = _after_restart(world, client, cid, "shipped")
+    assert child.error is None
+    parent = store.load(world.root / CARD)
+    assert parent is not None
+    assert "ship_resumes" not in parent.extra  # the children count their own resumes

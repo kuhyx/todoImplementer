@@ -108,7 +108,7 @@ def _seed(world: Env, card: str, stage: str, **extra: object) -> RunState:
     return st
 
 
-def test_recover_resumes_a_killed_turn_and_fails_an_interrupted_ship(world: Env) -> None:
+def test_recover_resumes_a_killed_turn_and_queues_an_interrupted_ship_again(world: Env) -> None:
     repo = make_repo(world)
     wt = worktree.add(repo, world.root, CARD)
     sessions = {"implement": {"session_id": "s-old", "last_turn_end": time.time()}}
@@ -129,7 +129,7 @@ def test_recover_resumes_a_killed_turn_and_fails_an_interrupted_ship(world: Env)
         assert first["resume"] == "s-old"
         assert "killed mid-work" in first["prompt"]
         shipped = state(world, "cccc3333-0")
-        assert (shipped.stage, shipped.extra["failed_stage"]) == ("failed", "gate")
+        assert shipped.extra["ship_resumes"] == 1  # queued again, not failed (T1988); no note to ship here
         lost = wait_stage(world, sched, "failed", "dddd4444-0")
         assert lost.error is not None
         assert "could not be read" in lost.error

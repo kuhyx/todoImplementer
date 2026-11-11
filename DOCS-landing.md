@@ -74,10 +74,14 @@ the "session already pushed" path) and before the note closes, Ship runs the rep
   <sha>" as for a first-time push. Any drive but Ship (a note from kuhy sends the run back to implement) drops the
   record first, so new work is squashed and pushed as usual (T1970); after every deploy the worktree is reset to HEAD
   and cleaned (`git reset --hard`, `git clean -fd`), so build leftovers never reach a later squash.
-- **A restart mid-deploy** (todoImplementer's own deploy restarts the server): recovery requeues a run in `shipping`
-  whose `pushed.json` matches HEAD instead of failing it "Ship was interrupted by a restart"; Ship adopts the running
-  unit or its record. An umbrella child is resumed the same way. Without that record the restart still ends in Needs
-  you (check origin first).
+- **A restart mid-Ship** (todoImplementer's own deploy restarts the server; T1988): recovery queues every run found in
+  `shipping` again, no click and no Needs you. Ship is idempotent at each cut point: before the push it squashes and
+  pushes; after the push, before `pushed.json`, it recognises the push on origin (`_landed`) and goes on to the checks
+  and the deploy; mid-deploy it adopts the running unit or its record; after the deploy it reuses the green record and
+  closes (closing a closed note overwrites the evidence); a rebase the restart cut half way (`<run dir>/rebasing`) is
+  aborted first. At most 2 automatic resumes per click (`ship_resumes`, reset by Ship and Retry); then the run fails
+  "Ship was interrupted by a restart N times in a row ..." and Retry goes straight back to `shipping`, as does Retry on
+  the older form of that failure. An umbrella child is resumed the same way.
 - **Umbrella card.** Children that are pushed but not deployed are listed apart from children that need kuhy:
   `3 of 7 children need you: a (why); b. 4 pushed, not deployed: c (declares no deploy: command in CLAUDE.md); ...`.
 - **Self-healing.** The implement prompt (`prompts/standing.py`, `DEPLOY`) tells a session to add the line when the repo

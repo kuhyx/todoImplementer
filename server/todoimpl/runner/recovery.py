@@ -1,4 +1,4 @@
-"""What a restart finds in the run root: the runs to queue again, and the half-done ship it marks failed."""
+"""What a restart finds in the run root: the runs to queue again, a half-done ship included."""
 
 from __future__ import annotations
 
@@ -7,12 +7,13 @@ from pathlib import Path
 from todoimpl.board import state as store
 from todoimpl.board.parse import StateError
 
-from . import deploy, live, orphans, retry
+from . import live, orphans, retry
 from .pipeline import WORK_STAGES
+from .restart import resume_ship
 
 
 def interrupted(root: Path) -> list[str]:
-    """Return the card ids to queue again; a run caught mid-ship becomes `failed` (never shipped twice)."""
+    """Return the card ids to queue again; a run caught mid-ship ships again, at most `MAX_RESUMES` times."""
     queue: list[str] = []
     for path in sorted(root.glob("*/state.json")):
         try:
@@ -21,12 +22,9 @@ def interrupted(root: Path) -> list[str]:
             continue
         if st is None:  # pragma: no cover - the file was just globbed
             continue
-        if st.stage == "shipping" and st.worktree and deploy.pushed(path.parent, Path(st.worktree)):
-            queue.append(st.task_id)  # its own push landed: Ship goes on at the deploy, which it adopts
-        elif st.stage == "shipping":
-            st.extra["failed_stage"] = "gate"
-            st.error = "Ship was interrupted by a restart: check origin and the note before shipping again"
-            st.stage = "failed"
+        if st.stage == "shipping":  # Ship is idempotent: it goes on by itself, no click, no Needs you (T1988)
+            if "umbrella" in st.extra or resume_ship(st):  # the umbrella's children count their own resumes
+                queue.append(st.task_id)
             store.save(path.parent, st)
         elif live.rejudgeable(st):  # judged under older rules: judge the stored report again, no turn
             st.stage, st.error, st.last_tag, st.assignee = "live_check", None, None, "claude"
