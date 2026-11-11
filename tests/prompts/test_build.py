@@ -131,3 +131,13 @@ def test_minimal_context_omits_optional_blocks(tmp_path: Path) -> None:
 def test_unknown_stage_raises(ctx: PromptContext) -> None:
     with pytest.raises(ValueError, match="unknown prompt stage 'review'"):
         build("review", ctx)
+
+
+def test_t1969_implement_tells_a_repo_without_a_deploy_line_to_add_one(ctx: PromptContext) -> None:
+    text = build("implement", ctx)
+    assert "- deploy: `<command>`" in text
+    assert "no `- deploy:" in text
+    assert "exits non-zero unless its own health check passes" in text
+    assert "idempotent" in text
+    assert "Never uninstall an app or `pm clear`" in text
+    assert "git -C ~/src/<repo> pull --ff-only" in text

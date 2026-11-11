@@ -178,7 +178,11 @@ round, verdict icon, free-worker icon, issue count and its error text. Child row
 - Red checks get 5 fix turns (T1954) and the brief says old red (stale pins, format) is the child's to fix.
 - The card text names what each child waits for: its `A:`/`Q:` line, else its error, else its last issue (T1953).
 - A child never ships on unpassed checks (T1955): `_shipping` sends it to Checks first, and the umbrella does not
-  close while a done child's checks are not green. Not covered: "done" stops at origin/main; no deploy step runs.
+  close while a done child's checks are not green.
+- A child's Ship also deploys (`DOCS-landing.md`, "Done means deployed"). A child that is pushed but not deployed
+  (its repo declares no `- deploy:` line, or the deploy failed) fails with "pushed, not deployed: ..."; the card lists
+  those apart from children that need kuhy ("N of M children need you: ...; K pushed, not deployed: ...", T1967).
+  Retry re-ships such a child without pushing again, and a restart mid-deploy resumes it (T1968).
 
 ## The one exception to one card per repo
 

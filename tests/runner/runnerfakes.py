@@ -57,6 +57,16 @@ def executable(path: Path, text: str) -> None:
 GH_SHIM = '#!/bin/sh\ncase " $FAKE_GH_ARCHIVED " in *" ${2#repos/} "*) echo true ;; *) echo false ;; esac\n'
 
 
+# The deploy line every demo repo declares (T1960): it logs a line to $DEPLOY_LOG, leaves a file in the tree,
+# prints, and exits $DEPLOY_EXIT.
+DEPLOY_COMMAND = (
+    'echo deployed >> "${DEPLOY_LOG:-/dev/null}"; touch deploy-artifact.txt; '
+    'echo shim-deploy-output; exit "${DEPLOY_EXIT:-0}"'
+)
+CLAUDE_MD = f"# demo\n\n## Commands\n\n- run: `./run.sh`\n- deploy: `{DEPLOY_COMMAND}`\n"
+NO_DEPLOY_MD = "# demo\n\n## Commands\n\n- run: `./run.sh`\n"
+
+
 def make_env(tmp: Path) -> tuple[Env, dict[str, str]]:
     """Build the world; return it and the env vars a test must set."""
     world = Env(tmp, tmp / "home", tmp / "bin", tmp / "fake", tmp / "root", tmp / "home" / "src")
@@ -66,6 +76,7 @@ def make_env(tmp: Path) -> tuple[Env, dict[str, str]]:
     executable(world.bin / "git", f'#!/bin/sh\nexec "{SHIMS / "git_push_refuse"}" "$@"\n')
     executable(world.bin / "capped.sh", '#!/bin/sh\nexec "$@"\n')
     executable(world.bin / "gh", GH_SHIM)
+    executable(world.bin / "systemctl", "#!/bin/sh\nexit 3\n")  # no unit is ever running: never the real one
     env = {
         "HOME": str(world.home),
         "PATH": f"{world.bin}:{os.environ['PATH']}",
@@ -90,14 +101,14 @@ def sh(cwd: Path, *argv: str) -> str:
 
 
 def make_repo(world: Env, name: str = "demo", files: dict[str, str] | None = None) -> Path:
-    """Make a clone at ~/src/<name> of a local bare remote with one commit on main."""
+    """Make a clone at ~/src/<name> of a local bare remote, one commit on main, CLAUDE.md with a deploy."""
     bare = world.tmp / "remotes" / f"{name}.git"
     bare.mkdir(parents=True)
     sh(bare, "git", "init", "--bare", "-q", "-b", "main")
     repo = world.src / name
     repo.mkdir()
     sh(repo, "git", "init", "-q", "-b", "main")
-    for rel, text in (files or {"README.md": "demo\n"}).items():
+    for rel, text in {"CLAUDE.md": CLAUDE_MD, **(files or {"README.md": "demo\n"})}.items():
         (repo / rel).write_text(text, encoding="utf-8")
     sh(repo, "git", "add", "-A")
     sh(repo, "git", "commit", "-q", "-m", "init")

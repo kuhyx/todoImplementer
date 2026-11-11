@@ -22,6 +22,13 @@ GRANT = (
     "round, a check only he can see, hear or touch (phone, audio, screen), or a physical tap; never for "
     "permission."
 )
+DEPLOY = (
+    "Done means deployed: after Ship pushes, the server runs the repo's `- deploy: `<command>`` bullet from "
+    "CLAUDE.md (Commands section). If CLAUDE.md has no `- deploy: `<command>`` line, add one that installs, "
+    "releases and deploys this change everywhere it runs; it is idempotent and exits non-zero unless its own "
+    "health check passes. Never uninstall an app or `pm clear`. A service that runs from "
+    "~/src/<repo> updates it with `git -C ~/src/<repo> pull --ff-only` (fails on a dirty tree)."
+)
 REBASE_NOTE = (
     "(runner) The worktree was rebased onto {ref} and has conflicts: resolve them first (fix the files, "
     "`git add`, `git rebase --continue`), then carry on."

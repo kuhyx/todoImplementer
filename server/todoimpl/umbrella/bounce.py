@@ -12,12 +12,15 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
+from todoimpl.runner.deploy import PREFIX
+
 if TYPE_CHECKING:
     from todoimpl.board.state import RunState
 
 MAX_BOUNCES = 3
 MAX_CHILD_CHECK_FIXES = 5
 SHORT = 100
+LISTED = 5  # children named per kind on the umbrella's card
 UNATTENDED = (
     "(runner) You are an unattended umbrella child: nobody answers `Q:` or `A:`. Do the work yourself "
     "(edit, bump pins, run the tool, reconnect what you need) and end with `D:`. Use `A:` only for a step "
@@ -70,6 +73,11 @@ def short(text: str) -> str:
     return flat if len(flat) <= SHORT else flat[: SHORT - 1].rstrip() + "…"
 
 
+def undeployed(st: RunState | None) -> bool:
+    """Return True for a child whose code is on origin but whose deploy is missing or failed (T1967)."""
+    return st is not None and (st.error or "").startswith(PREFIX)
+
+
 def needs(st: RunState | None, symptom: str = "") -> str:
     """Return what a child waits for, shortened: its `Q:`/`A:` line, else its error, else the last issue."""
     if st is None:
@@ -79,4 +87,24 @@ def needs(st: RunState | None, symptom: str = "") -> str:
         for i in range(len(lines) - 1, -1, -1):
             if found := _TAGGED.match(lines[i]):
                 return short(" ".join([found.group(1), *lines[i + 1 :]]))
-    return short(st.error or symptom)
+    return short((st.error or symptom).removeprefix(f"{PREFIX}: "))
+
+
+def _listed(pairs: list[tuple[str, str]]) -> str:
+    """List the first `LISTED` children, each with what it waits for (its own repo name left out of that)."""
+    return "; ".join(
+        f"{repo} ({why.removeprefix(f'{repo} ')})" if why else repo for repo, why in pairs[:LISTED]
+    )
+
+
+def summary(total: int, need: list[tuple[str, str]], held: list[tuple[str, str]]) -> str:
+    """Say which children need kuhy and which are pushed, not deployed (each a repo and what it waits for)."""
+    parts = [f"{len(need)} of {total} children need you: {_listed(need)}"] if need else []
+    if held:
+        lead = (
+            f"{len(held)} pushed, not deployed"
+            if need
+            else f"{len(held)} of {total} children pushed, not deployed"
+        )
+        parts.append(f"{lead}: {_listed(held)}")
+    return ". ".join(parts)

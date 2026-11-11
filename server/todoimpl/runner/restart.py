@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING
 
 from todoimpl.umbrella.sched import start_stage
 
+from . import deploy
+
 if TYPE_CHECKING:
     from todoimpl.board.state import RunState
     from todoimpl.todo_mcp.items import Item
@@ -25,6 +27,10 @@ def restart_stage(st: RunState, item: Item) -> str:
     if st.closing:
         return "closing"
     failed = st.extra.get("failed_stage") if st.stage == "failed" else None
+    if failed == "shipping" and str(st.error).startswith(
+        deploy.PREFIX
+    ):  # pushed already: Ship goes on, no click
+        return "shipping"
     fresh = start_stage(item.body, st, "plan" if st.extra.get("spec_ok") or not needs_spec(item) else "spec")
     resumed = "gate" if failed in ("shipping", "gate") else failed  # a failed Ship goes back to the gate
     return str(resumed) if resumed in (*RESUMABLE, "gate") else fresh

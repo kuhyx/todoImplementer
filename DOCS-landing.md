@@ -43,6 +43,45 @@ them first" until HEAD contains the ref again. No rebase in the Ship drive or wh
 ## Ship (`runner/ship.py`, T1865)
 
 A branch the session committed ships as before (squash, rebase, gate, push). A branch with a clean tree whose HEAD is
-on origin closes the item with "Pushed by the session: <short shas>." and cleans up; no commit, no checks, and
-`state.ship` has no `pushed_at`. Partly pushed work squashes only what origin lacks (the merge base is the last
-pushed commit).
+on origin gets no new commit and no push: it closes with "Pushed by the session: <short shas>." and cleans up, and
+`state.ship` has no `pushed_at`. Its checks run again first (T1964), because the session never ran them for this
+HEAD: red checks end in Needs you and nothing is deployed. Partly pushed work squashes only what origin lacks (the
+merge base is the last pushed commit). Every path that pushed then deploys (below) before it closes the note.
+
+## Done means deployed (kuhy, 2026-11-11; `runner/deploy.py`, `runner/deployhost.py`, T1960-T1962, T1964-T1970)
+
+A change is not done until it is installed, released and deployed everywhere it runs. After a successful push (and on
+the "session already pushed" path) and before the note closes, Ship runs the repo's deploy. A close with no code change
+(nothing pushed) deploys nothing.
+
+- **Declaration.** The repo's CLAUDE.md, Commands section, has a bullet ``- deploy: `<command>` `` (same shape as
+  `- run: ...`). Ship reads it from the worktree at the pushed HEAD (`git show HEAD:CLAUDE.md`, first match outside
+  code fences), never from `~/src/<repo>`. The command runs in the worktree through `capped.sh` (4 GiB, 20 % CPU) and
+  must be idempotent and exit non-zero unless its own health check passes.
+- **Where it runs.** Like the pre-push gate (`DOCS-spec.md`), as its own transient unit `todoimpl-deploy-<card>`
+  (`systemd-run --user --collect`, `RuntimeMaxSec` 4 h), one at a time with gates (the `gate.lock` flock). The host
+  kills the command after 1800 s and writes `<run dir>/deploy/exit.json` (`commit`, `ok`, `exit`, `command`, `tail`,
+  `log`); the server only waits for that file. A green record for the same commit is reused, a unit still running is
+  waited for, a red or missing one starts again. Tests swap `deploy._run`; with `TODOIMPL_TURN_LAUNCH=direct` the host
+  is a detached child.
+- **Outcomes**, all `NeedsYouError` kind `run_failed` (no schema change), the note open and the worktree kept:
+  `pushed, not deployed: <repo> declares no deploy: command in CLAUDE.md`;
+  `pushed, not deployed: deploy failed (exit N): <tail>` (also `timed out`); a success adds
+  ``deploy `<command>` exit 0:`` and its tail to the close evidence.
+- **Retry never pushes twice.** After the push Ship writes `<run dir>/pushed.json` (commit, time, the green check
+  results). Retry on a "pushed, not deployed" failure goes straight back to Ship (no gate click); Ship sees the record
+  matches HEAD and origin has it, skips squash, push and checks, and deploys again. The evidence then says "Shipped
+  <sha>" as for a first-time push. Any drive but Ship (a note from kuhy sends the run back to implement) drops the
+  record first, so new work is squashed and pushed as usual (T1970); after every deploy the worktree is reset to HEAD
+  and cleaned (`git reset --hard`, `git clean -fd`), so build leftovers never reach a later squash.
+- **A restart mid-deploy** (todoImplementer's own deploy restarts the server): recovery requeues a run in `shipping`
+  whose `pushed.json` matches HEAD instead of failing it "Ship was interrupted by a restart"; Ship adopts the running
+  unit or its record. An umbrella child is resumed the same way. Without that record the restart still ends in Needs
+  you (check origin first).
+- **Umbrella card.** Children that are pushed but not deployed are listed apart from children that need kuhy:
+  `3 of 7 children need you: a (why); b. 4 pushed, not deployed: c (declares no deploy: command in CLAUDE.md); ...`.
+- **Self-healing.** The implement prompt (`prompts/standing.py`, `DEPLOY`) tells a session to add the line when the repo
+  lacks one: installs, releases and deploys the change, idempotent, non-zero unless its own health check passes, never
+  uninstalls an app or `pm clear`; a service that runs from `~/src/<repo>` updates it with `git -C ~/src/<repo> pull
+  --ff-only` (fails on a dirty tree). Umbrella children are worked by free workers that never see that prompt, so most
+  of them end "pushed, not deployed" until their repo has the line.

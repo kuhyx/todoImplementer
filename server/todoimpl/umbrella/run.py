@@ -9,10 +9,11 @@ from __future__ import annotations
 
 import logging
 import threading
+from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from todoimpl.board import state as store
-from todoimpl.runner import adopt, retry
+from todoimpl.runner import adopt, deploy, retry
 from todoimpl.runner.files import NeedsYouError
 from todoimpl.runner.pipeline import WORK_STAGES, CancelledError, LimitHitError
 from todoimpl.todo_mcp.model import TodoError
@@ -78,6 +79,11 @@ class Umbrella:
         for key in COUNTERS:
             st.extra.pop(key, None)
 
+    def _cut(self, cid: str, st: store.RunState) -> bool:
+        """Return True for a child caught mid-Ship with no record of its push (after it, Ship goes on)."""
+        wt = Path(st.worktree) if st.worktree else None
+        return st.stage == "shipping" and not (wt and deploy.pushed(ustore.child_dir(self.run_dir, cid), wt))
+
     def resume(self, *, shipping: bool, retry_failed: bool) -> None:
         """Restart the drive of every unfinished child; Ship moves gate children on, Retry the failed ones."""
         current = self.rec.get("current")
@@ -86,7 +92,7 @@ class Umbrella:
             st = child_state(self.run_dir, cid)
             if st is None or kid.done or st.stage == "shipped" or cid in held:
                 continue
-            if st.stage == "shipping":  # a restart cut its Ship short: check origin before shipping again
+            if self._cut(cid, st):  # a restart cut its Ship short before its push landed: check origin first
                 st.extra["failed_stage"], st.stage, st.error = "gate", "failed", INTERRUPTED
                 store.save(ustore.child_dir(self.run_dir, cid), st)
                 continue
@@ -187,9 +193,9 @@ class Umbrella:
             last = {str(row.get("child")): str(row.get("symptom", "")) for row in issues.read(self.run_dir)}
             what = [(r, bounce.needs(states[r["id"]], last.get(r["repo"], ""))) for r in needy]
             what += [(r, "checks not green") for r in unverified]
-            listed = "; ".join(f"{r['repo']} ({why})" if why else r["repo"] for r, why in what[:5])
-            msg = f"{len(what)} of {len(found)} children need you: {listed}"
-            raise NeedsYouError(msg, "run_failed")
+            held = [(r["repo"], why) for r, why in what if bounce.undeployed(states[r["id"]])]  # T1967
+            need = [(r["repo"], why) for r, why in what if not bounce.undeployed(states[r["id"]])]
+            raise NeedsYouError(bounce.summary(len(found), need, held), "run_failed")
         if all(r["status"] == "done" for r in found):
             return self._close(states)
         return "gate"

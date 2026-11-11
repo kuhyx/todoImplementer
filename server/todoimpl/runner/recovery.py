@@ -2,16 +2,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 from todoimpl.board import state as store
 from todoimpl.board.parse import StateError
 
-from . import live, orphans, retry
+from . import deploy, live, orphans, retry
 from .pipeline import WORK_STAGES
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def interrupted(root: Path) -> list[str]:
@@ -24,7 +21,9 @@ def interrupted(root: Path) -> list[str]:
             continue
         if st is None:  # pragma: no cover - the file was just globbed
             continue
-        if st.stage == "shipping":
+        if st.stage == "shipping" and st.worktree and deploy.pushed(path.parent, Path(st.worktree)):
+            queue.append(st.task_id)  # its own push landed: Ship goes on at the deploy, which it adopts
+        elif st.stage == "shipping":
             st.extra["failed_stage"] = "gate"
             st.error = "Ship was interrupted by a restart: check origin and the note before shipping again"
             st.stage = "failed"

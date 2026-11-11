@@ -46,10 +46,13 @@ def test_ship_squashes_rebases_pushes_closes_and_cleans_up(world: Env) -> None:
     ]
     assert info == {"commit": info["commit"], "pushed_at": 42.0, "closed_at": 42.0}
     assert client.closed[0][0] == "abcd1234-0"
-    assert (
-        client.closed[0][1]
-        == f"Shipped {info['commit'][:12]} to origin/main.\ndone_check `test -f hello.txt` exit 0:"
-    )
+    lines = client.closed[0][1].splitlines()
+    assert lines[:2] == [
+        f"Shipped {info['commit'][:12]} to origin/main.",
+        "done_check `test -f hello.txt` exit 0:",
+    ]
+    assert lines[2].startswith("deploy `echo deployed")
+    assert lines[3] == "shim-deploy-output"
     assert not wt.path.exists()
 
 

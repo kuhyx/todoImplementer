@@ -97,6 +97,7 @@ def implement(ctx: PromptContext) -> str:
         _rules(ctx),
         "Write the failing check first, see it red, implement, see it green.",
         SELF_CHECK,
+        standing.DEPLOY,
         phone.IMPLEMENT,
         "End with `D:`.",
     )

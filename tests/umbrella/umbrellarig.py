@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from runnerfakes import Env, FakeClient, make_repo, task
+from runnerfakes import NO_DEPLOY_MD, Env, FakeClient, make_repo, task
 from schedfakes import state, wait
 from todoimpl.board import state as store
 from todoimpl.runner.scheduler import Scheduler
@@ -31,13 +31,18 @@ def boot(
     checks: dict[str, str] | None = None,
     done: tuple[str, ...] = (),
     missing: tuple[str, ...] = (),
+    undeployed: tuple[str, ...] = (),
     body: str | None = None,
 ) -> tuple[Scheduler, FakeClient]:
-    """Make `count` repos (not those in `missing`), one repo-less umbrella note over them and a Scheduler."""
+    """Make `count` repos (not `missing` ones; `undeployed` ones declare no deploy) and an umbrella note."""
     made = KIDS[:count]
     for name, _, _ in made:
         if name not in missing:
-            make_repo(world, name)
+            make_repo(
+                world,
+                name,
+                {"README.md": "demo\n", "CLAUDE.md": NO_DEPLOY_MD} if name in undeployed else None,
+            )
     text = umbrella_body(
         *((n, k, child_text(f"Make {n} text-free", scan=s, check=(checks or {}).get(n))) for n, k, s in made),
         done=done,

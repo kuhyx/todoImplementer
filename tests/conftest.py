@@ -65,3 +65,9 @@ def _no_real_gateway_secrets(
 def _network_is_up(monkeypatch: pytest.MonkeyPatch) -> None:
     """No test opens a socket to the internet: the connectivity probe says yes unless a test flips it."""
     monkeypatch.setattr("todoimpl.runner.netwait.probe", lambda: True)
+
+
+@pytest.fixture(autouse=True)
+def _quick_deploy_poll(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every ship waits for a deploy host: look for its record every 20 ms, not every second."""
+    monkeypatch.setattr("todoimpl.runner.deploy.POLL", 0.02)

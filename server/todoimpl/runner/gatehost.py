@@ -70,7 +70,7 @@ def run(run_dir: Path, wt: Path) -> dict[str, Any]:
 
 
 @contextlib.contextmanager
-def _exclusive(lock: Path) -> Iterator[None]:
+def exclusive(lock: Path) -> Iterator[None]:
     """Hold an flock on `lock` (waiting for it): gates in parallel OOM-killed each other in capped.slice."""
     with lock.open("a", encoding="utf-8") as handle:
         fcntl.flock(handle, fcntl.LOCK_EX)
@@ -80,7 +80,7 @@ def _exclusive(lock: Path) -> Iterator[None]:
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the gate named by `<run_dir> <worktree>` (after any gate already running) and write its record."""
     run_dir, wt = (Path(a) for a in (sys.argv[1:3] if argv is None else argv)[:2])
-    with _exclusive(root_of(run_dir) / LOCK_NAME):
+    with exclusive(root_of(run_dir) / LOCK_NAME):
         record = run(run_dir, wt)
     write_json(run_dir / "gate" / "exit.json", record)
     return 0

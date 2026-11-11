@@ -12,7 +12,7 @@ from todoimpl.credits import route
 from todoimpl.prompts import PromptContext
 from todoimpl.repotask.prompt import addendum
 
-from . import checks, phone, retry, tags, tiering, turncheck, worktree
+from . import checks, deploy, phone, retry, tags, tiering, turncheck, worktree
 from .files import KilledError, NeedsYouError
 from .grant import auto_grant
 from .permit import gate, with_grant
@@ -84,6 +84,8 @@ class Driver:
             st.stage = st.extra.pop("resume_stage", "implement")
             st.extra.pop("retry_reason", None)
             st.resume_at = None
+        if st.stage != "shipping":  # work may follow: the record of an earlier push no longer fits the tree
+            deploy.forget(self.ctx.run_dir)
         try:
             self._worktree()
             while st.stage in WORK_STAGES:

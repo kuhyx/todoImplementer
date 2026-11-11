@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING, Any, Protocol
 from todoimpl.repotask import files
 from todoimpl.todo_mcp.model import TodoError
 
-from . import gate
-from .checks import run_all
+from . import deploy, gate
+from .checks import CheckResult, run_all
 from .files import NeedsYouError
 from .worktree import base_ref, git, has_conflicts, output_tail, remove
 
@@ -19,8 +19,6 @@ if TYPE_CHECKING:
 
     from todoimpl.todo_mcp.items import Item
     from todoimpl.todo_mcp.model import Task
-
-    from .checks import CheckResult
 
 SUBJECT_MAX = 50
 EVIDENCE_TAIL = 8
@@ -66,9 +64,12 @@ def commit_message(title: str, id8: str) -> str:  # noqa: D103
     return f"{subject}\n\nTodo: {id8}\n"
 
 
-def evidence(sha: str, branch: str, results: list[CheckResult], live: str = "") -> str:
-    """Return the close evidence: the commit (or no code change), the live-check summary, each check tail."""
-    head = f"Shipped {sha[:12]} to origin/{branch}." if sha else "Closed with no code change."
+def evidence(sha: str, branch: str, results: list[CheckResult], live: str = "", head: str = "") -> str:
+    """Return the close evidence: the commit (or no code change), the live-check summary, each check tail.
+
+    The deploy is a result like any check (`deploy `<command>` exit 0:`), the last one.
+    """
+    head = head or (f"Shipped {sha[:12]} to origin/{branch}." if sha else "Closed with no code change.")
     parts = [head, *([live] if live else [])]
     for r in results:
         tail = "\n".join(r.tail.splitlines()[-EVIDENCE_TAIL:])
@@ -76,12 +77,15 @@ def evidence(sha: str, branch: str, results: list[CheckResult], live: str = "") 
     return "\n".join(parts if results else [*parts, "No checks were found."])
 
 
+def _on_origin(wt: Path, ref: str) -> bool:
+    """Return True when HEAD is already on `ref`."""
+    return git(wt, "merge-base", "--is-ancestor", "HEAD", ref, check=False).returncode == 0
+
+
 def _landed(plan: ShipPlan, ref: str) -> list[str]:
     """Short shas of the commits the session already pushed, when nothing is left for Ship to push (T1865)."""
     wt = plan.worktree
-    if not plan.base_sha or git(wt, "status", "--porcelain").stdout.strip():
-        return []
-    if git(wt, "merge-base", "--is-ancestor", "HEAD", ref, check=False).returncode:
+    if not plan.base_sha or git(wt, "status", "--porcelain").stdout.strip() or not _on_origin(wt, ref):
         return []
     return git(wt, "rev-list", "--reverse", "--abbrev-commit", f"{plan.base_sha}..HEAD").stdout.split()
 
@@ -165,10 +169,18 @@ def ship(
     if has_conflicts(wt):  # `add --all` would commit the markers as if resolved
         msg = f"Unresolved conflicts in {wt}: resolve them and finish the rebase, then ship again"
         raise NeedsYouError(msg, "run_failed")
-    if landed := _landed(plan, ref):  # the session pushed its own work: close, no commit, no checks
-        said = [f"Pushed by the session: {', '.join(landed)}.", plan.live_summary]
+    if (own := deploy.pushed(plan.run_dir, wt)) and _on_origin(wt, ref):  # a Retry after this ship's own push
+        kept = {
+            "commit": own["commit"],
+            "pushed_at": own["pushed_at"],
+        }  # checked then: only the deploy is left
+        return _finish(plan, client, now, kept, [CheckResult(**row) for row in own["results"]], branch)
+    if landed := _landed(plan, ref):  # the session pushed its own work: check it, deploy it, close (T1964)
+        command = deploy.command_of(wt, plan.item.repo)  # no line: stop before the checks run
+        results = _verified(plan, ref, changed=False)
+        said = f"Pushed by the session: {', '.join(landed)}."
         head = git(wt, "rev-parse", "HEAD").stdout.strip()
-        return _close(plan, client, "\n".join(line for line in said if line), {"commit": head}, now)
+        return _finish(plan, client, now, {"commit": head}, results, branch, said, command)
     changed = _squash(plan, ref, allow_empty=allow_empty)
     if changed:
         _rebase(plan, ref)
@@ -176,7 +188,25 @@ def ship(
     info: dict[str, Any] = {"commit": ""}
     if changed:
         info.update(commit=_push_rebasing(plan, ref, branch, results), pushed_at=now())
-    text = evidence(str(info["commit"]), branch, results, plan.live_summary)
+        deploy.mark_pushed(plan.run_dir, str(info["commit"]), info["pushed_at"], results)
+    return _finish(plan, client, now, info, results, branch)
+
+
+def _finish(  # noqa: PLR0913, PLR0917 - one ship's parts
+    plan: ShipPlan,
+    client: Closer,
+    now: Callable[[], float],
+    info: dict[str, Any],
+    results: list[CheckResult],
+    branch: str,
+    head: str = "",
+    command: str | None = None,
+) -> dict[str, Any]:
+    """Deploy what was pushed (a close with no code change deploys nothing), then close with the evidence."""
+    if info["commit"]:
+        card = f"{plan.item.note_id}-{plan.item.index}"
+        results = [*results, deploy.run(plan.worktree, plan.run_dir, card, plan.item.repo, command)]
+    text = evidence(str(info["commit"]), branch, results, plan.live_summary, head)
     return _close(plan, client, text, info, now)
 
 

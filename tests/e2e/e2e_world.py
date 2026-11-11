@@ -159,6 +159,7 @@ def make_repo(state: State) -> Path:
     repo.mkdir(parents=True)
     _git(repo, "init", "-q", "-b", "main")
     (repo / "README.md").write_text("e2e demo\n", encoding="utf-8")
+    (repo / "CLAUDE.md").write_text("# e2e demo\n\n## Commands\n\n- deploy: `true`\n", encoding="utf-8")
     _git(repo, "add", "-A")
     _git(repo, "commit", "-q", "-m", "init")
     _git(repo, "remote", "add", "origin", str(bare))
