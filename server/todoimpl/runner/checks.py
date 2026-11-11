@@ -101,6 +101,16 @@ def discover(wt: Path, done_check: str | None) -> list[tuple[str, str]]:
     return found
 
 
+def pool_env(run_dir: Path) -> dict[str, str]:
+    """capped.sh pools scopes per CLAUDE_CODE_SESSION_ID: give each run's checks a pool of their own.
+
+    Without it every run's checks shared one 4 GiB `capped-nosession` pool, and a sibling run's
+    build filling it got this run's astro build OOM-killed mid pre-commit (exit -15, 2026-11-11).
+    The machine-wide capped.slice backstop still bounds all runs together.
+    """
+    return {"CLAUDE_CODE_SESSION_ID": "todoimpl" + re.sub(r"[^A-Za-z0-9]", "", run_dir.name)}
+
+
 def run_capped(  # noqa: PLR0913 - guard is keyword-only
     command: str,
     cwd: Path,
@@ -153,7 +163,7 @@ def run_check(  # noqa: PLR0913, PLR0917 - one knob (env) more than the lint all
     log.parent.mkdir(parents=True, exist_ok=True)
     checks_guard.stop_stale(run_dir)  # a dead server's run of this check would clash with this one (T1889)
     with log.open("w", encoding="utf-8") as out:
-        code = run_capped(command, cwd, timeout, out, env, guard=run_dir)
+        code = run_capped(command, cwd, timeout, out, {**pool_env(run_dir), **(env or {})}, guard=run_dir)
         if code is None:
             out.write(f"\n[timed out after {timeout:g} s]\n")
     lines = log.read_text(encoding="utf-8", errors="replace").splitlines()

@@ -120,3 +120,21 @@ def test_t1836_checks_and_git_do_not_inherit_the_servers_venv(
     monkeypatch.delenv("VIRTUAL_ENV")
     monkeypatch.setattr(sys, "prefix", sys.base_prefix)  # not inside a venv at all
     assert "VIRTUAL_ENV" not in checks.clean_env()
+
+
+def test_checks_get_a_capped_pool_of_their_own_run(
+    world: Env, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Each run's checks get their own capped.sh pool, keyed by CLAUDE_CODE_SESSION_ID.
+
+    Without one every run shared the 4 GiB `capped-nosession` pool, so sibling runs OOM-killed
+    each other's builds (exit -15).
+    """
+    monkeypatch.setenv("CLAUDE_CODE_SESSION_ID", "server-own-session")
+    probe = 'echo "POOL=[${CLAUDE_CODE_SESSION_ID-}]"'
+    a = checks.run_check("pool", probe, tmp_path, tmp_path / "1d2e8ace-0", 10).tail
+    b = checks.run_check("pool", probe, tmp_path, tmp_path / "22a62776-0", 10).tail
+    assert "POOL=[todoimpl1d2e8ace0]" in a
+    assert "POOL=[todoimpl22a627760]" in b
+    unset = {"CLAUDE_CODE_SESSION_ID": ""}  # a caller's own env still wins
+    assert "POOL=[]" in checks.run_check("pool", probe, tmp_path, tmp_path / "x", 10, unset).tail
