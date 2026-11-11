@@ -27,8 +27,8 @@ The grant is about $200 a month (the promotional grant of 2026-11-10 lasts to 20
 margin, because billing lags and week 4 must never push the balance negative again), `credits_month_start_day`
 (default 10, 1 to 28: the period starts on the grant day at 00:00 local and lasts to the next), `credits_cost_factor`
 (default 1.0). Week = `min(4, days since the period start // 7 + 1)`; cap = `week x monthly / 4` (days 22 on are
-week 4 = the whole grant). A new turn takes the credits only while `spent + 2 x running credit turns < cap`;
-past that it takes the plan, and if the plan is limited it waits for the limit: the cap is never spent past, not
+week 4 = the whole grant). A new turn takes the credits only while the spend plus the exposure of the running credit
+turns is below the cap (the brakes below give the exposure); past that it takes the plan, and if the plan is limited it waits for the limit: the cap is never spent past, not
 even as a limit fallback. Turns already running finish on their route. The old `credits_first` setting is gone:
 pacing is always on (the key in an old file is ignored). A real billing error still marks the credits exhausted
 (below), and the mark is kept to its end even with no plan limit, so no credit retry follows every dispatch.

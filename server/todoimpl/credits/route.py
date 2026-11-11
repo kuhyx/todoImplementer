@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 PLAN = "plan"
 CREDITS = "credits"
 READY_TEXT = "Turns run on free API credits, paced by week (model sonnet)."
-CAPPED_TEXT = "Free API credits are at this week's cap: turns use the plan."
+CAPPED_TEXT = "Free API credits are at this week's cap."
 OFF_TEXT = "Free API credits fallback is off: runs wait for the plan limit."
 EXHAUSTED_TEXT = "Free API credits exhausted: runs wait until the plan limit resets."
 

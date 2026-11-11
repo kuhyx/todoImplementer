@@ -1,6 +1,7 @@
 """The credit brake end to end: the cap cuts a running credit turn, the plan goes on; near it, one at once."""
 
 import json
+import os
 import time
 from pathlib import Path
 
@@ -102,5 +103,31 @@ def test_a_claim_lost_to_another_card_waits_and_the_run_goes_on_when_room_is_bac
         wait_stage(world, sched, "gate", turns=3)
         assert lost == [CARD]
         assert [c["via_sdk"] for c in world.calls()] == [True, True, True]
+    finally:
+        sched.close()
+
+
+def test_the_stop_takes_the_whole_process_chain_down_with_the_turn(
+    world: Env, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    enable_credits(monkeypatch)
+    pidfile = world.tmp / "grandchild.pid"
+    held = ({"_fake": "spawn_sleeper", "pidfile": str(pidfile)}, *HOLD)  # a process below the fake CLI
+    sched, _ = boot(world, held, PLAN, IMPL, LIVE_OK, done_check="true")
+    try:
+        sched.start(CARD)
+        wait_stage(world, sched, "gate")
+        pid = int(pidfile.read_text())
+
+        def gone() -> bool:
+            try:
+                os.kill(pid, 0)
+            except ProcessLookupError:
+                return True
+            return (
+                Path(f"/proc/{pid}/stat").read_text().split()[2] == "Z"
+            )  # a zombie waits for its reaper only
+
+        wait(gone, 3.0)  # no CLI process is left to keep spending after the stop
     finally:
         sched.close()
