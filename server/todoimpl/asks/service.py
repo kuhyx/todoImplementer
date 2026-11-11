@@ -1,0 +1,186 @@
+"""Clicks on asks: answer, take recommended, run, undo, screenshot verdict, auto-adopt after 24 h."""
+# ruff: noqa: EM101
+
+from __future__ import annotations
+
+import logging
+import threading
+import time
+from collections.abc import Callable
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
+
+from todoimpl.board.state import load, run_dir
+from todoimpl.http.backend import BackendError
+
+from . import allow, cmdrun, store
+from .parse import Ask
+from .view import DAY, is_open, source
+
+if TYPE_CHECKING:
+    from todoimpl.service.cache import TaskCache
+    from todoimpl.service.scheduling import SchedulerLike
+
+log = logging.getLogger("todoimpl.asks")
+TICK = 300.0
+Runner = Callable[[str, Path | None], dict[str, Any]]
+
+
+def refuse(code: str, message: str) -> BackendError:
+    """Return the refusal the page shows as-is."""
+    return BackendError(code, message)
+
+
+class AskService:
+    """Everything behind POST /api/task/<id>/ask/<verb>; refusals are BackendError."""
+
+    def __init__(
+        self,
+        cache: TaskCache,
+        scheduler: SchedulerLike,
+        root: Path,
+        *,
+        clock: Callable[[], float] = time.time,
+        runner: Runner = cmdrun.run,
+    ) -> None:
+        """Wire the collaborators; tests inject a clock and a command runner."""
+        self.cache, self.scheduler, self.root, self._clock, self._runner = (
+            cache,
+            scheduler,
+            root,
+            clock,
+            runner,
+        )
+
+    def _card(self, id8: str) -> tuple[list[Ask], Path]:
+        task = next((t for t in self.cache.snapshot().tasks if t.id == id8), None)
+        if task is None:
+            raise refuse("not_found", "unknown task")
+        directory = run_dir(self.root, id8)
+        asks = source(task.body, load(directory))
+        if not asks:
+            raise refuse("disabled", "this card has no asks")
+        return asks, directory
+
+    def _find(self, id8: str, ask_id: str) -> tuple[Ask, list[Ask], Path]:
+        asks, directory = self._card(id8)
+        ask = next((a for a in asks if a.id == ask_id), None)
+        if ask is None:
+            raise refuse("not_found", "no such ask")
+        return ask, asks, directory
+
+    def _resolve(self, id8: str, directory: Path, asks: list[Ask], text: str) -> None:
+        """Tell the session once no choice is left open; the saved state is already durable."""
+        data = store.load(directory)
+        if any(a.type == "choice" and is_open(data["items"].get(a.id)) for a in asks):
+            return
+        if load(directory) is None:
+            return
+        try:
+            self.scheduler.send(id8, f"(runner) kuhy answered in the note: {text}")
+        except Exception:
+            log.exception("ask answer for %s not delivered", id8)
+
+    def _set(self, directory: Path, ask_id: str, record: dict[str, Any]) -> None:
+        data = store.load(directory)
+        data["items"][ask_id] = {**record, "at": self._clock()}
+        store.save(directory, data)
+
+    def answer(self, id8: str, ask_id: str, option: str) -> None:
+        """Click an option of a choice."""
+        ask, asks, directory = self._find(id8, ask_id)
+        if ask.type != "choice" or option not in ask.options:
+            raise refuse("bad_request", "not an option of this ask")
+        self._set(directory, ask_id, {"state": "answered", "answer": option})
+        self._resolve(id8, directory, asks, f"{ask.title}: {option}")
+
+    def take_recommended(self, id8: str) -> None:
+        """Every open choice takes its recommended option."""
+        asks, directory = self._card(id8)
+        data = store.load(directory)
+        taken = [a for a in asks if a.type == "choice" and is_open(data["items"].get(a.id))]
+        if not taken:
+            raise refuse("disabled", "no open choice")
+        for ask in taken:
+            self._set(directory, ask.id, {"state": "answered", "answer": ask.recommended})
+        self._resolve(id8, directory, asks, "; ".join(f"{a.title}: {a.recommended}" for a in taken))
+
+    def run_command(self, id8: str, ask_id: str, *, add: bool) -> dict[str, Any]:
+        """RUN (allow-listed) or add-then-run; never for the never-add set or a root command."""
+        ask, _asks, directory = self._find(id8, ask_id)
+        command = ask.command or ""
+        if ask.type != "command":
+            raise refuse("bad_request", "not a command ask")
+        how = allow.mode(self.root, command)
+        if how == "terminal" or (how == "add_run" and not (add and allow.add(self.root, command))):
+            raise refuse("disabled", "run this one in a terminal")
+        run = load(directory)
+        result = self._runner(command, Path(run.worktree) if run and run.worktree else None)
+        self._set(directory, ask_id, {"state": "done", "result": result})
+        return result
+
+    def undo(self, id8: str, ask_id: str) -> None:
+        """Reopen an auto-adopted choice; it never auto-adopts again."""
+        ask, _asks, directory = self._find(id8, ask_id)
+        record = store.load(directory)["items"].get(ask_id) or {}
+        if ask.type != "choice" or record.get("state") != "auto":
+            raise refuse("disabled", "nothing to undo")
+        self._set(directory, ask_id, {"state": "open", "undone": True})
+
+    def verdict(self, id8: str, ask_id: str, *, approve: bool) -> None:
+        """Approve a screenshot, or reject it and send the card back to its session."""
+        ask, asks, directory = self._find(id8, ask_id)
+        if ask.type != "screenshot":
+            raise refuse("bad_request", "not a screenshot ask")
+        self._set(directory, ask_id, {"state": "approved" if approve else "rejected"})
+        if not approve and load(directory) is not None:
+            self.scheduler.send(id8, f"(runner) kuhy rejected the screenshot: {ask.title}")
+        elif approve:
+            self._resolve(id8, directory, asks, f"approved: {ask.title}")
+
+    def adopt_due(self) -> int:
+        """Take the recommended option of every reversible choice open for 24 h; return how many."""
+        now, count = self._clock(), 0
+        for task in self.cache.snapshot().tasks:
+            directory = run_dir(self.root, task.id)
+            asks = source(task.body, load(directory))
+            if asks:
+                count += self._adopt_card(task.id, directory, asks, now)
+        return count
+
+    def _adopt_card(self, id8: str, directory: Path, asks: list[Ask], now: float) -> int:
+        data = store.load(directory)
+        taken = []
+        for ask in asks:
+            data["seen"].setdefault(ask.id, now)
+            record = data["items"].get(ask.id) or {}
+            due = now - data["seen"][ask.id] >= DAY
+            if (
+                ask.type == "choice"
+                and ask.risk == "reversible"
+                and is_open(record)
+                and not record.get("undone")
+                and due
+            ):
+                data["items"][ask.id] = {"state": "auto", "answer": ask.recommended, "at": now}
+                data["log"].append(f"auto-adopted {ask.id}: {ask.recommended}")
+                taken.append(ask)
+        store.save(directory, data)
+        if taken:
+            self._resolve(
+                id8, directory, asks, "; ".join(f"{a.title}: {a.recommended} (auto)" for a in taken)
+            )
+        return len(taken)
+
+    def start(self) -> None:
+        """Tick adopt_due on a daemon thread."""
+
+        def loop() -> None:
+            while True:
+                try:
+                    self.adopt_due()
+                except Exception:
+                    log.exception("auto-adopt tick failed")
+                time.sleep(TICK)
+
+        threading.Thread(target=loop, name="ask-adopt", daemon=True).start()

@@ -13,6 +13,7 @@ from todoimpl.sessions.commands import CommandRunner, SubprocessRunner
 from todoimpl.tokens_api import router as tokens_api
 from todoimpl.version import __version__
 
+from . import asks as asks_http
 from . import bodies, issues, newtask, settings
 from . import merge as merge_http
 from . import sessions as sessions_http
@@ -51,8 +52,7 @@ def _guard[R: Reply | SseReply](call: Callable[[], R]) -> R | Reply:
     try:
         return call()
     except BackendError as exc:
-        code = exc.code if exc.code in ERROR_CODES else "internal"
-        return error_reply(code, exc.message)
+        return error_reply(exc.code if exc.code in ERROR_CODES else "internal", exc.message)
     except Exception:
         log.exception("request failed")
         return error_reply("internal", "internal error")
@@ -97,7 +97,6 @@ class Router:
             return None
         return lambda: json_reply(api.suggestions())
 
-    # ---- GET ----
     def get(self, target: str, last_event_id: str | None = None) -> Reply | SseReply:
         """Answer a GET: API route, SSE feed or static file."""
         parts = urlsplit(target)
@@ -158,7 +157,6 @@ class Router:
         snapshot = {"type": "stage", **{key: card[key] for key in SNAPSHOT_KEYS}}
         return SseReply(snapshot, self.backend.subscribe(ids[0]), last_seq)
 
-    # ---- POST ----
     def post(
         self,
         target: str,
@@ -190,6 +188,8 @@ class Router:
             reply = _guard(lambda: settings.handle(self.backend, raw))
         elif found and (api := self._merges()) is not None:
             reply = _guard(lambda: merge_http.handle_post(api, found, raw))
+        elif (hit := asks_http.POST_PATH.fullmatch(path)) and (ask := asks_http.api_of(self.backend)):
+            reply = _guard(lambda: asks_http.handle_post(ask, hit, raw))
         elif mutation := sessions_http.POST_PATH.fullmatch(path):
             reply = _guard(lambda: sessions_http.handle_post(self.sessions_runner, mutation, raw))
         else:

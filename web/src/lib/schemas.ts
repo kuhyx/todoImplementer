@@ -1,6 +1,7 @@
 /** Zod mirrors of the GET/POST/SSE contracts (board, task, usage, version, live, response). */
 import { z } from "zod";
 
+import { askItem } from "@/lib/schemas-asks";
 import { autonomy } from "@/lib/schemas-autonomy";
 import {
   actions, apiError, checks, column, credits, epoch, itemId, lesson, limit, liveCheck, needs, question, selfCheck, stage, status,
@@ -35,6 +36,7 @@ export const board = z.strictObject({
 });
 
 export const taskDetail = z.strictObject({
+  ask_items: z.array(askItem),
   asks: z.array(question),
   body: z.string(),
   branch: z.string().nullable(),

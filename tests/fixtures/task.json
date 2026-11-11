@@ -30,7 +30,11 @@
       }
     ],
     "route": null,
-    "tier": {"cheap": false, "free": false, "escalated": false},
+    "tier": {
+      "cheap": false,
+      "free": false,
+      "escalated": false
+    },
     "auto_start": null,
     "auto": null
   },
@@ -98,5 +102,6 @@
     "shots": [
       "evidence/shot1.png"
     ]
-  }
+  },
+  "ask_items": []
 }

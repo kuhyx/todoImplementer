@@ -67,6 +67,7 @@ def build_backend(
         start_watch()
     # Imported here: apikey.monitor needs service.cards, so a top-level import would be circular.
     from todoimpl.apikey.monitor import KeyMonitor  # noqa: PLC0415
+    from todoimpl.asks.service import AskService  # noqa: PLC0415 - it imports http.backend
     from todoimpl.gateway.monitor import GatewayMonitor  # noqa: PLC0415 - gateway imports the runner
     from todoimpl.merge.service import MergeService  # noqa: PLC0415 - merge.apply imports service.cards
     from todoimpl.newtask.service import NewTaskService  # noqa: PLC0415 - it imports service.cards
@@ -81,8 +82,10 @@ def build_backend(
     )  # fmt: skip
     backend.merge_service = MergeService(client, cache, root)
     backend.new_task_service = NewTaskService(client, cache)
+    backend.ask_service = AskService(cache, scheduler, root)
     if refresh:
         cache.start()
+        backend.ask_service.start()  # 24 h auto-adopt of reversible choices
         monitor.start()  # first check runs on its own thread: a slow network never delays startup
         probe.start()
         gateway.start()  # a dead gateway only makes its reading `down`

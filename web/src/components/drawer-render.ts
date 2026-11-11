@@ -5,6 +5,7 @@ import type { ActionId } from "@/lib/schemas-common";
 
 /** Fill the drawer's slots and panels from one task detail. Every button comes from the card's actions[]. */
 import { type BarHost, type BarState, pendingLoader, renderAction } from "@/components/action-bar";
+import { renderAskItems } from "@/components/ask-items";
 import {
   renderChecks, renderDetails, renderDiff, renderHead, renderLesson, renderLiveCheck, renderNeeds, renderPlan,
 } from "@/components/drawer-sections";
@@ -30,6 +31,7 @@ export function paintDetail(root: HTMLElement, detail: TaskDetail, host: BarHost
   const pending = detail.card.actions.find((action) => action.id === bar.pending);
   slot("head").replaceChildren(renderHead(detail));
   slot("needs").replaceChildren(...present(renderNeeds(detail, ask.interactive)));
+  slot("asks").replaceChildren(...present(renderAskItems(detail)));
   slot("actions").replaceChildren(h("div", { class: "actions" }, ...rest));
   slot("pending").replaceChildren(...present(pendingLoader(pending, detail.card.id, bar)));
   slot("questions").replaceChildren(...present(questions));

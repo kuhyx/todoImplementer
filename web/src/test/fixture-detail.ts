@@ -39,6 +39,7 @@ export function makeDetail(card: TaskCard): TaskDetail {
   const isNeedsSpec = card.needs?.kind === "spec_questions";
   const isWorked = card.column === "ready" || card.column === "done" || card.status === "working";
   return {
+    ask_items: [],
     asks: [],
     body: `${card.title}\n\nDone when the behaviour is visible in the app.`,
     branch: isWorked ? `todoimpl/${card.id}` : null,

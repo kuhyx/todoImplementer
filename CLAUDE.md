@@ -8,6 +8,7 @@ Umbrella tracking view and the free-token strip (gateway quotas, cooldowns, ETA)
 Merging similar tasks (Haiku suggestions, one-click merge, umbrella notes, CLI): `DOCS-merge.md`.
 Manual Claude Code sessions page (status tags, resume, mark, delete, guard, phone): `DOCS-sessions.md`.
 One card, one run per repo (parts, ticks, per-repo lock, section-run transition, note migration CLI): `DOCS-repotask.md`.
+Asks as buttons in the note (`ask` block: choice, command, screenshot, risk rule, 24 h auto-adopt, sweep): `DOCS-asks.md`.
 
 ## Commands
 

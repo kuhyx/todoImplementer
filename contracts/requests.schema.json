@@ -82,6 +82,26 @@
       "required": ["repo", "title"],
       "additionalProperties": false
     },
+    "ask_answer": {
+      "type": "object",
+      "description": "POST /api/task/<id>/ask/answer: click one option of a choice.",
+      "properties": {"ask": {"$ref": "#/$defs/ask_id"}, "option": {"type": "string", "minLength": 1, "maxLength": 20000}},
+      "required": ["ask", "option"],
+      "additionalProperties": false
+    },
+    "ask_take_recommended": {"type": "object", "additionalProperties": false, "description": "POST .../ask/take-recommended: every open choice takes its recommended option."},
+    "ask_run": {
+      "type": "object",
+      "description": "POST .../ask/run: run the command (add true: add the exact string to the allow-list first). Answer {ok, result: {exit, tail, capped}}.",
+      "properties": {"ask": {"$ref": "#/$defs/ask_id"}, "add": {"type": "boolean"}},
+      "required": ["ask"],
+      "additionalProperties": false
+    },
+    "ask_undo": {"$ref": "#/$defs/ask_ref", "description": "POST .../ask/undo: reopen an auto-adopted choice."},
+    "ask_approve": {"$ref": "#/$defs/ask_ref", "description": "POST .../ask/approve: approve a screenshot."},
+    "ask_reject": {"$ref": "#/$defs/ask_ref", "description": "POST .../ask/reject: reject a screenshot; the session gets the card back."},
+    "ask_id": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,15}$"},
+    "ask_ref": {"type": "object", "properties": {"ask": {"$ref": "#/$defs/ask_id"}}, "required": ["ask"], "additionalProperties": false},
     "lesson_approve": {
       "type": "object",
       "properties": {"lesson_id": {"type": "string", "minLength": 1}},

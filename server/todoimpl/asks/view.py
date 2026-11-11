@@ -1,0 +1,56 @@
+"""The `ask_items` of a task detail: parsed asks joined with their saved state (ask.schema.json)."""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+from . import allow, store
+from .parse import Ask, parse_asks
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from todoimpl.board.state import RunState
+
+DAY = 24 * 3600.0
+RESOLVED = ("answered", "auto", "done", "approved")
+
+
+def source(body: str, run: RunState | None) -> list[Ask]:
+    """Return the asks of the newest reply when it has an ask block, else those of the note body."""
+    reply = str(run.extra.get("last_reply", "")) if run is not None else ""
+    return parse_asks(reply) or parse_asks(body)
+
+
+def is_open(record: dict[str, Any] | None) -> bool:
+    """Return True while the ask waits for kuhy (no record, undone, or rejected)."""
+    return not record or record.get("state") in ("open", "rejected")
+
+
+def _item(ask: Ask, record: dict[str, Any] | None, root: Path, seen: float | None) -> dict[str, Any]:
+    out: dict[str, Any] = {"id": ask.id, "type": ask.type, "title": ask.title, "risk": ask.risk}
+    out["state"] = (
+        "open" if is_open(record) and (record or {}).get("state") != "rejected" else (record or {})["state"]
+    )
+    if ask.type == "choice":
+        out |= {"options": list(ask.options), "recommended": ask.recommended}
+        if ask.risk == "reversible" and out["state"] == "open" and seen is not None:
+            out["auto_at"] = seen + DAY
+    if ask.type == "command":
+        out |= {"command": ask.command, "mode": allow.mode(root, ask.command or "")}
+        out["warning"] = out["mode"] == "terminal"
+    if ask.type == "screenshot" and ask.shot:
+        out["shot"] = ask.shot
+    for key in ("answer", "at", "result"):
+        if record and key in record:
+            out[key] = record[key]
+    return out
+
+
+def items(body: str, run: RunState | None, directory: Path) -> list[dict[str, Any]]:
+    """Return the contract list for one card; empty when the note has no valid ask block."""
+    asks = source(body, run)
+    if not asks:
+        return []
+    data = store.load(directory)
+    return [_item(a, data["items"].get(a.id), directory.parent, data["seen"].get(a.id)) for a in asks]

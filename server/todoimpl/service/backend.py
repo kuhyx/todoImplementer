@@ -33,6 +33,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
 
     from todoimpl.apikey.monitor import KeyMonitor
+    from todoimpl.asks.service import AskService
     from todoimpl.board.state import RunState
     from todoimpl.gateway.monitor import GatewayMonitor
     from todoimpl.merge.service import MergeService
@@ -85,9 +86,9 @@ class ServiceBackend:
         self.limit_probe = limit_probe  # re-checks a stored plan limit against the plan's real usage
         self.gateway = gateway  # the free-model gateway's newest reading rides on /api/usage
         self.merge_service: MergeService | None = None  # set by build_backend; the http layer looks for it
+        self.ask_service: AskService | None = None  # POST /api/task/<id>/ask/<verb>
         self.new_task_service: NewTaskService | None = None  # the same for POST /api/new-task
 
-    # ---- reads ----
     def _context(self) -> Context:
         now = self._clock()
         state = limit_state(self.root)  # read first: a fast probe must not change this response mid-build
@@ -174,7 +175,6 @@ class ServiceBackend:
             return None
         return build_card(found, self._with_extras(load(run_dir(self.root, id8))), self._context())
 
-    # ---- actions ----
     def _act(self, call: Callable[[], object]) -> None:
         try:
             call()

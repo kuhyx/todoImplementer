@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://todoimplementer.local/contracts/ask.schema.json",
+  "title": "One ask of a card (task.ask_items[])",
+  "description": "What a task wants from kuhy, parsed from the fenced `ask` block of the note or the newest reply. A malformed block gives an empty list (free-text ask). Verbs: POST /api/task/<id>/ask/<answer|take-recommended|run|undo|approve|reject>.",
+  "$defs": {
+    "ask": {
+      "type": "object",
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z][a-z0-9_]{0,15}$"},
+        "type": {"enum": ["choice", "command", "screenshot"]},
+        "title": {"type": "string", "minLength": 1},
+        "risk": {"enum": ["reversible", "risky"], "description": "The fixed rule overrides a `reversible` tag to risky on a risky word; untagged is risky."},
+        "state": {"enum": ["open", "answered", "auto", "done", "approved", "rejected"]},
+        "options": {"type": "array", "minItems": 2, "maxItems": 8, "items": {"type": "string", "minLength": 1}},
+        "recommended": {"type": "string"},
+        "answer": {"type": "string"},
+        "at": {"type": "number"},
+        "auto_at": {"type": "number", "description": "Epoch when an open reversible choice takes its recommended option."},
+        "command": {"type": "string"},
+        "mode": {"enum": ["run", "add_run", "terminal"], "description": "run: allow-listed; add_run: not listed yet; terminal: never-add set or root, copy text only."},
+        "warning": {"type": "boolean"},
+        "shot": {"type": "string", "pattern": "\\.png$"},
+        "result": {
+          "type": "object",
+          "properties": {"exit": {"type": "integer"}, "tail": {"type": "string"}, "capped": {"type": "boolean"}},
+          "required": ["exit", "tail", "capped"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["id", "type", "title", "risk", "state"],
+      "additionalProperties": false
+    }
+  },
+  "type": "array",
+  "items": {"$ref": "#/$defs/ask"}
+}

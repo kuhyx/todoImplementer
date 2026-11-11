@@ -17,7 +17,7 @@ const TAB_LABEL: Record<Tab, string> = {
   questions: "Questions",
 };
 const FOCUSABLE = 'button:not([aria-disabled="true"]), textarea, input, select, summary, [href]';
-const SLOTS = ["head", "needs", "actions", "pending", "lesson"];
+const SLOTS = ["head", "needs", "asks", "actions", "pending", "lesson"];
 
 export interface ShellHandlers {
   onClose: () => void;

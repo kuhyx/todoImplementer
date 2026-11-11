@@ -7,6 +7,7 @@ import shlex
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from todoimpl.asks.view import items as ask_items
 from todoimpl.runner.parsing import parse_questions
 
 from .card import Context, build_card
@@ -125,6 +126,7 @@ def build_task(
         "plan_md": _read(directory / "plan.md"),
         "questions": [vars(q).copy() for q in run.spec_questions] if run is not None else [],
         "asks": _asks(card, run),
+        "ask_items": ask_items(task.body, run, directory),
         "checks": run.checks if run is not None else None,
         "live_check": run.live_check if run is not None else None,
         "self_check": run.self_check if run is not None else [],

@@ -16,6 +16,10 @@
         "$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/question"
       }
     },
+    "ask_items": {
+      "description": "Buttons of the note's `ask` block (contracts/ask.schema.json); empty when there is none.",
+      "$ref": "https://todoimplementer.local/contracts/ask.schema.json"
+    },
     "questions": {
       "type": "array",
       "items": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/question"}
@@ -90,6 +94,7 @@
     "plan_md",
     "questions",
     "asks",
+    "ask_items",
     "diff",
     "stages",
     "skills_loaded",
