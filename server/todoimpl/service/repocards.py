@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from todoimpl.board.types import is_manual
-from todoimpl.repotask.ids import norm, repo_card_id
+from todoimpl.repotask.ids import norm, repo_card_id, repo_human_id
 from todoimpl.repotask.legacy import Older
 from todoimpl.repotask.model import Part
 from todoimpl.todo_mcp.items import Item, split_items
@@ -73,10 +73,9 @@ def _check(parts: list[Part]) -> str | None:
     return " && ".join(f"({c})" for c in checks)
 
 
-def _repo_card(repo: str, entries: list[_Entry]) -> CardTask:
+def _repo_card(repo: str, entries: list[_Entry], cid: str) -> CardTask:
     parts = [entry.part for entry in entries]
     work = [part for part in parts if part.actionable]
-    cid = repo_card_id(repo)
     title = repo.rpartition("/")[2] or repo
     if not work:  # only human work (or parts held by older runs) is open: the card reads as that work
         title = next(part.title for part in parts if part.human)
@@ -84,7 +83,8 @@ def _repo_card(repo: str, entries: list[_Entry]) -> CardTask:
     by = "claude" if all(entry.task.created_by == "claude" for entry in entries) else "kuhy"
     body, check = _body(work), _check(work)
     status = "in progress" if any(entry.task.status == "in progress" for entry in entries) else "todo"
-    item = Item(cid.partition("-")[0], 0, title, body, repo, status, check, by, parts=tuple(parts))
+    note, _, index = cid.partition("-")  # `-0` Claude's parts, `-1` the human ones (T1980)
+    item = Item(note, int(index), title, body, repo, status, check, by, parts=tuple(parts))
     return CardTask(cid, title, body, repo, status, top, check, item, by)
 
 
@@ -103,8 +103,13 @@ def group_cards(notes: list[Task], older: Callable[[str], Older]) -> list[CardTa
     for key, entries in repos.items():
         entries.sort(key=_order)
         cards += [CardTask.of(entry.task, entry.item) for entry in entries if entry.part.held]
-        if any(not entry.part.held for entry in entries):
-            cards.append(_repo_card(names[key], entries))
+        # Claude's parts ship and go to Done; the human parts wait in Backlog on a card of their own (T1980)
+        work = [entry for entry in entries if not entry.part.human]  # held parts still show on it
+        human = [entry for entry in entries if entry.part.human]
+        if any(not entry.part.held for entry in work):
+            cards.append(_repo_card(names[key], work, repo_card_id(names[key])))
+        if human:
+            cards.append(_repo_card(names[key], human, repo_human_id(names[key])))
     return cards
 
 

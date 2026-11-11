@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from todoimpl.repotask.ids import norm, repo_card_id
+from todoimpl.repotask.ids import norm, repo_card_id, repo_human_id
 from todoimpl.repotask.legacy import Older
 from todoimpl.service.repocards import group_cards, section_cards
 from todoimpl.todo_mcp.model import Task
@@ -89,16 +89,17 @@ def test_done_sections_are_not_parts_and_a_note_without_sections_is_one() -> Non
     assert [p.title for p in whole.parts] == ["Plain note"]
 
 
-def test_manual_parts_are_human_and_skipped_by_the_run() -> None:
+def test_t1980_manual_parts_get_their_own_yours_card_apart_from_claude_work() -> None:
     notes = [
         note("aaaa1111", "kuhyx/r", "## real work\nx"),
         note("bbbb2222", "kuhyx/r", "do it", title="MANUAL WORK REQUIRED: rotate the key"),
     ]
-    (card,) = group_cards(notes, NEVER)
-    human = [p for p in card.parts if p.human]
-    assert [p.title for p in human] == ["MANUAL WORK REQUIRED: rotate the key"]
-    assert "rotate the key" not in card.body
-    assert card.title == "r"
+    work, human = group_cards(notes, NEVER)
+    assert (work.id, work.title, [p.human for p in work.parts]) == (repo_card_id("kuhyx/r"), "r", [False])
+    assert "rotate the key" not in work.body
+    assert human.id == repo_human_id("kuhyx/r")
+    assert [p.title for p in human.parts] == ["MANUAL WORK REQUIRED: rotate the key"]
+    assert human.title == "MANUAL WORK REQUIRED: rotate the key"
 
 
 def test_a_human_part_never_counts_as_held_by_a_stale_run() -> None:

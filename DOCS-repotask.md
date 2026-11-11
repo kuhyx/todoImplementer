@@ -13,7 +13,10 @@ board made one card per `## ` section and the cards of one repo ran in parallel 
   without sections is one part. A section marked `## [x]` is not a part.
 - The card id is `<sha1(repo)[:8]>-0` (`ids.repo_card_id`): stable whatever notes the repo has or loses, shaped like
   every card id, so the run dir `<root>/<id>/`, the branch `todo/<id>`, the gate unit and the phone lease need no new
-  rules. The card title is the repo name; a repo whose only open parts are human work reads as that work.
+  rules. The card title is the repo name.
+- Human parts (`MANUAL WORK REQUIRED:`) never sit on that card (T1980): they get a card of their own, id
+  `<sha1(repo)[:8]>-1` (`ids.repo_human_id`), status Yours in Backlog, titled after its first human part. So Claude's
+  ticked parts ship to Done while the manual work waits in Backlog.
 - Card fields: `priority` = the highest part priority that Claude can work, `status` `in progress` when any note
   is, `body` = the work parts as `### Part <key>: <title>` blocks (level 3 on purpose: a `## ` line would split the
   card), `done_check` = the one check of the work parts or the distinct ones chained `(a) && (b)`.
@@ -30,11 +33,11 @@ is the section card id `<note id8>-<index>`. Order of work: priority (high first
 | todo | not ticked yet |
 | working | the first part still owed while the run works (display only, from the card status) |
 | done | ticked in this cycle |
-| human | a `MANUAL WORK REQUIRED:` part (title start, exact caps): shown, skipped by the run, never ticked |
+| human | a `MANUAL WORK REQUIRED:` part (title start, exact caps): on the repo's `-1` card, never run or ticked |
 | held | an older per-section run still owns the section (below); it has its own card |
 
-A card with parts but none for Claude (all human or held) is **Yours** and its Start is disabled with the MANUAL
-reason. A repo with only held parts has no repo card. Part titles are user content; the page adds no words (icon per
+A card with parts but none for Claude (the human `-1` card) is **Yours** and its Start is disabled with the MANUAL
+reason; its line is the parts' `Needs:` lines (T1951). A repo with only held or human parts has no `-0` card. Part titles are user content; the page adds no words (icon per
 state, a number for steps, names in `aria-label` and `title`).
 
 ## One run, cycles, ticks

@@ -8,7 +8,8 @@ from typing import Any
 
 from fake_todo_mcp import FakeTodoMcp
 from todoimpl.board.state import RunState, run_dir, save
-from todoimpl.repotask.ids import repo_card_id
+from todoimpl.board.types import is_manual
+from todoimpl.repotask.ids import repo_card_id, repo_human_id
 from todoimpl.service import ServiceBackend
 from todoimpl.umbrella.note import is_umbrella
 
@@ -74,7 +75,9 @@ class Rig:
         """Seed a note, refresh the cache, return its card id (the repo task's; `<id8>-0` without a repo)."""
         note_id = self.fake.seed(repo, title, body, **f)
         self.backend.cache.refresh()
-        return repo_card_id(repo) if repo and not is_umbrella(body) else f"{note_id[:8]}-0"
+        if not repo or is_umbrella(body):
+            return f"{note_id[:8]}-0"
+        return repo_human_id(repo) if is_manual(title) else repo_card_id(repo)  # manual: own card (T1980)
 
     def sections(self, body: str, repo: str | None = "kuhyx/demo", title: str = "demo todos") -> list[str]:
         """Seed a note whose every section has an older run in flight (so each keeps its own section card)."""

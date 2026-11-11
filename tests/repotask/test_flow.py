@@ -8,7 +8,7 @@ from repofakes import IMPL, LIVE, PLAN, Rig
 from runnerfakes import sh
 from schedfakes import reply
 from todoimpl.repotask import files
-from todoimpl.repotask.ids import repo_card_id
+from todoimpl.repotask.ids import repo_card_id, repo_human_id
 from todoimpl.runner.files import write_json
 from todoimpl.runner.scheduler import RunnerError
 
@@ -99,7 +99,7 @@ def test_a_repo_with_only_human_work_cannot_be_started(rig: Rig) -> None:
     repo = rig.repo()
     rig.note(repo, "MANUAL WORK REQUIRED: rotate the key", "do it by hand")
     with pytest.raises(RunnerError, match="MANUAL WORK REQUIRED"):
-        rig.sched.start(repo_card_id(repo))
+        rig.sched.start(repo_human_id(repo))
 
 
 def test_a_held_only_repo_has_nothing_for_the_run(rig: Rig) -> None:
@@ -108,7 +108,7 @@ def test_a_held_only_repo_has_nothing_for_the_run(rig: Rig) -> None:
     other = rig.note(repo, "held note", "## held\nx")
     write_json(rig.run_dir(f"{other}-0") / "state.json", {"x": 1})  # unreadable as a run: counts as in flight
     rig.cache.refresh()
-    card = rig.card(repo)
+    card = rig.card(repo, human=True)
     assert card["title"].startswith("MANUAL WORK REQUIRED")
-    assert [p["state"] for p in card["parts"]] == ["held", "human"]
+    assert [p["state"] for p in card["parts"]] == ["human"]
     assert card["status"] == "yours"
