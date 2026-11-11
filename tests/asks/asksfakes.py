@@ -17,9 +17,15 @@ screenshot s1: Looks fine? | shots/a.png
 
 
 @dataclass
+class PartBody:
+    body: str
+
+
+@dataclass
 class Task:
     id: str
     body: str
+    parts: tuple[Any, ...] = ()
 
 
 @dataclass

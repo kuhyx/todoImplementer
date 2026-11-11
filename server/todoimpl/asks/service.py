@@ -57,7 +57,7 @@ class AskService:
         if task is None:
             raise refuse("not_found", "unknown task")
         directory = run_dir(self.root, id8)
-        asks = source(task.body, load(directory))
+        asks = source(task.body, load(directory), task.parts)
         if not asks:
             raise refuse("disabled", "this card has no asks")
         return asks, directory
@@ -143,7 +143,7 @@ class AskService:
         now, count = self._clock(), 0
         for task in self.cache.snapshot().tasks:
             directory = run_dir(self.root, task.id)
-            asks = source(task.body, load(directory))
+            asks = source(task.body, load(directory), task.parts)
             if asks:
                 count += self._adopt_card(task.id, directory, asks, now)
         return count

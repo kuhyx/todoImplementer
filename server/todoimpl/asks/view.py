@@ -8,18 +8,25 @@ from . import allow, store
 from .parse import Ask, parse_asks
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
     from pathlib import Path
 
     from todoimpl.board.state import RunState
+    from todoimpl.repotask.model import Part
 
 DAY = 24 * 3600.0
 RESOLVED = ("answered", "auto", "done", "approved")
 
 
-def source(body: str, run: RunState | None) -> list[Ask]:
-    """Return the asks of the newest reply when it has an ask block, else those of the note body."""
+def source(body: str, run: RunState | None, parts: Iterable[Part] = ()) -> list[Ask]:
+    """Return the asks of the newest reply, else those of the body and of a repo card's parts."""
     reply = str(run.extra.get("last_reply", "")) if run is not None else ""
-    return parse_asks(reply) or parse_asks(body)
+    if found := parse_asks(reply):
+        return found
+    found = parse_asks(body)
+    for part in parts:
+        found += [a for a in parse_asks(part.body) if all(a.id != b.id for b in found)]
+    return found
 
 
 def is_open(record: dict[str, Any] | None) -> bool:
@@ -47,9 +54,11 @@ def _item(ask: Ask, record: dict[str, Any] | None, root: Path, seen: float | Non
     return out
 
 
-def items(body: str, run: RunState | None, directory: Path) -> list[dict[str, Any]]:
+def items(
+    body: str, run: RunState | None, directory: Path, parts: Iterable[Part] = ()
+) -> list[dict[str, Any]]:
     """Return the contract list for one card; empty when the note has no valid ask block."""
-    asks = source(body, run)
+    asks = source(body, run, parts)
     if not asks:
         return []
     data = store.load(directory)

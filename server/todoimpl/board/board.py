@@ -126,7 +126,7 @@ def build_task(
         "plan_md": _read(directory / "plan.md"),
         "questions": [vars(q).copy() for q in run.spec_questions] if run is not None else [],
         "asks": _asks(card, run),
-        "ask_items": ask_items(task.body, run, directory),
+        "ask_items": ask_items(task.body, run, directory, getattr(task, "parts", ())),
         "checks": run.checks if run is not None else None,
         "live_check": run.live_check if run is not None else None,
         "self_check": run.self_check if run is not None else [],

@@ -34,3 +34,4 @@ One row per bug, ids global and never reused. The row's test is named `test_t<N>
 | T1914 | The move to repo tasks could lose or restart per-section runs: a run in flight keeps its own card and its section stays out of the repo run, and no new section-level run starts | tests/repotask/test_legacy.py |
 | T1915 | A repo kept several open notes in the todo app, against the rule one repo = one note; the migration merges them (dry run first), skips notes with a run in flight and never closes a note whose sections did not arrive | tests/repotask/test_migrate.py |
 | T1951 | A MANUAL WORK REQUIRED card with a repo read "yours: no repo on this note" and never said what kuhy must do; it now shows the `Needs:` lines of its manual note or human parts, or says the note has none | tests/repotask/test_board.py |
+| T1992 | A repo card's body is empty (its text lives in its parts), so an ask block written in a part never reached the card | tests/asks/test_asks_parts.py |
