@@ -29,6 +29,7 @@
 | Free credits fallback | board toggle (POST `/api/settings/credits-fallback`) | while the plan limit is active, turns run on free API credits; card badge "free credits" |
 | Lessons | gate rejection -> drafted lesson -> Approve | lesson written into the named skill via `skill_lesson.py` |
 | Usage | header (GET `/api/usage`) | per-task cost, plan limit state, reset time |
+| Manual sessions | terminal icon link in the header -> `/sessions` (GET `/api/sessions`, POST `/api/sessions/<resume\|mark\|delete>`) | hand-started Claude Code sessions not done yet, grouped by status tag (headless runs hidden); resume opens terminator (a copy button on a phone), mark done writes `~/.claude/session-status.json`, delete moves to `~/.claude/projects-trash`; POSTs need Origin + CSRF (`DOCS-sessions.md`) |
 | Build id | GET `/version` | `{build, version}`; the page reloads when `build` changes |
 | CSRF | every POST | needs same-origin `Origin` + `X-Todoimpl-Token` (the single `todoimpl-csrf` meta tag of `/`) |
 

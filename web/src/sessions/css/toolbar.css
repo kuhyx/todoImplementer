@@ -1,0 +1,114 @@
+/* The toolbar: search, status chips, project, idle days, mark choices. Tokens only. */
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.search-box,
+.field {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-muted);
+}
+
+.search-box {
+  flex: 1 1 14rem;
+  max-width: 24rem;
+}
+
+.search-box input {
+  flex: 1;
+  min-width: 0;
+}
+
+.search-box svg,
+.field svg,
+.chip svg,
+.pill svg,
+.mark svg,
+.outcome svg,
+.detail-line svg,
+.sort-btn svg,
+.group-row svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  flex: none;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.field select {
+  max-width: 11rem;
+}
+
+.idle {
+  width: 5rem;
+}
+
+.chips,
+.marks,
+.row-actions,
+.bulk-bar {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.chip[aria-pressed="true"],
+.icon-btn[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--surface-1);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.chip[data-tone="danger"] svg {
+  color: var(--danger);
+}
+
+.chip[data-tone="warning"] svg {
+  color: var(--warning);
+}
+
+.chip[data-tone="info"] svg {
+  color: var(--info);
+}
+
+.chip[data-tone="muted"] svg {
+  color: var(--text-muted);
+}
+
+.chip-count,
+.shown-count,
+.bulk-count,
+.group-count,
+.armed-count {
+  font-size: var(--text-label);
+  font-variant-numeric: tabular-nums;
+}
+
+.shown-count {
+  margin-left: auto;
+  color: var(--text-muted);
+}
+

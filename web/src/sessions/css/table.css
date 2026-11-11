@@ -1,0 +1,133 @@
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-label);
+}
+
+th,
+td {
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface-2);
+  white-space: nowrap;
+}
+
+.sort-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+th[aria-sort="ascending"] .sort-btn,
+th[aria-sort="descending"] .sort-btn {
+  color: var(--text);
+}
+
+.arrow {
+  min-width: 1ch;
+  font-size: var(--text-caption);
+}
+
+.select-cell {
+  width: 2rem;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.group-row th {
+  background: var(--surface-1);
+}
+
+.group-row th span {
+  margin-left: var(--space-2);
+}
+
+.group-row .pill {
+  vertical-align: middle;
+}
+
+tbody tr[data-id] {
+  cursor: pointer;
+}
+
+tbody tr[data-id]:hover {
+  background: var(--surface-1);
+}
+
+tr.dim {
+  color: var(--text-muted);
+}
+
+.title-btn {
+  max-width: 40rem;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.detail {
+  padding: var(--space-3);
+  background: var(--surface-1);
+}
+
+.detail-line {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  overflow-wrap: anywhere;
+}
+
+.detail-line svg {
+  margin-top: 0.15rem;
+  color: var(--text-muted);
+}
+
+.detail-line > :last-child {
+  min-width: 0;
+  max-width: 80rem;
+}
+
+.prompt {
+  white-space: pre-wrap;
+}
+
+code {
+  font-family: var(--font-mono);
+}
+
+/* A phone keeps status, idle time, title and the actions. */
+@media (max-width: 700px) {
+  .col-project,
+  .col-mark,
+  .col-markRank {
+    display: none;
+  }
+}

@@ -1,0 +1,28 @@
+---
+import "@kuhyx/web-ui/tokens.css";
+import "@/styles/base.css";
+import "@/sessions/css/sessions.css";
+import "@/sessions/css/toolbar.css";
+import "@/sessions/css/table.css";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="todoimpl-csrf" content="__TODOIMPL_CSRF__" />
+    <meta name="todoimpl-build" content="__TODOIMPL_BUILD__" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>todoImplementer</title>
+  </head>
+  <body>
+    <sessions-app></sessions-app>
+    <script>
+      import { boot } from "@/sessions/boot";
+
+      boot();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,36 @@
+{
+  "sessions": [
+    {
+      "id": "11111111-2222-4333-8444-555555555555",
+      "cwd": "/home/tester/src/demo",
+      "project": "demo",
+      "title": "Fix the flaky test",
+      "status": "needs_action",
+      "done": false,
+      "group": 0,
+      "manual_mark": null,
+      "mark": "open",
+      "last_ts": "2026-11-10T08:00:02.000Z",
+      "last_user": "fix the thing",
+      "last_assistant": "A: run `! sudo systemctl restart x`",
+      "resume_command": "cd '/home/tester/src/demo' && claude --resume 11111111-2222-4333-8444-555555555555"
+    },
+    {
+      "id": "99999999-8888-4777-8666-555555555555",
+      "cwd": "/home/tester",
+      "project": "~",
+      "title": "",
+      "status": "question",
+      "done": true,
+      "group": 4,
+      "manual_mark": "done",
+      "mark": "manual",
+      "last_ts": null,
+      "last_user": "hi",
+      "last_assistant": "",
+      "resume_command": "cd '/home/tester' && claude --resume 99999999-8888-4777-8666-555555555555"
+    }
+  ],
+  "scanned": 2,
+  "scan_ms": 3.2
+}

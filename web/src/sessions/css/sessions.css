@@ -1,0 +1,176 @@
+/* The page frame, toolbar, bulk bar and the small icon parts. Tokens only (unified design system); base.css gives .btn and .icon-btn. */
+sessions-app {
+  --ui-scale: 1;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  zoom: var(--ui-scale);
+  height: calc(100dvh / var(--ui-scale));
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@media (min-width: 2400px) {
+  sessions-app {
+    --ui-scale: 1.25;
+  }
+}
+
+@media (min-width: 3200px) {
+  sessions-app {
+    --ui-scale: 1.75;
+  }
+}
+
+@media (min-width: 3600px) {
+  sessions-app {
+    --ui-scale: 2;
+  }
+}
+
+a {
+  color: var(--accent);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.back {
+  display: inline-grid;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.main {
+  min-height: 0;
+  padding: var(--space-3);
+  overflow: auto;
+}
+
+/* Bulk bar -------------------------------------------------------------- */
+
+.bulk-bar {
+  position: sticky;
+  top: calc(var(--space-3) * -1);
+  z-index: 2;
+  width: 100%;
+  margin-bottom: var(--space-2);
+  padding: var(--space-2);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.bulk-count {
+  min-width: 1.5rem;
+  text-align: center;
+}
+
+/* Parts ---------------------------------------------------------------- */
+
+.pill {
+  display: inline-grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: var(--surface-2);
+  border: 1px solid currentcolor;
+}
+
+.pill[data-tone="danger"] {
+  color: var(--danger);
+}
+
+.pill[data-tone="warning"] {
+  color: var(--warning);
+}
+
+.pill[data-tone="info"] {
+  color: var(--info);
+}
+
+.pill[data-tone="muted"] {
+  color: var(--text-muted);
+}
+
+.mark {
+  display: inline-grid;
+  color: var(--text-muted);
+}
+
+.mark[data-mark="manual"] {
+  color: var(--accent);
+}
+
+.outcome[data-kind="ok"] {
+  color: var(--success);
+}
+
+.outcome[data-kind="refused"] {
+  color: var(--warning);
+}
+
+.outcome[data-kind="failed"] {
+  color: var(--danger);
+}
+
+.icon-btn[data-armed="true"] {
+  width: auto;
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
+  border-color: var(--danger);
+  color: var(--danger);
+  display: inline-flex;
+  align-items: center;
+}
+
+.failure {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--danger);
+}
+
+.failure svg {
+  width: 1.5rem;
+  height: 1.5rem;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2;
+}
+
+.spinner {
+  display: block;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}
+
+/* A phone has no terminator to open: only the copy button stays (the command is pasted in a shell there). */
+@media (max-width: 700px) {
+  .desktop-only {
+    display: none !important;
+  }
+
+  .search-box {
+    max-width: none;
+  }
+}

@@ -3,10 +3,18 @@ import type { Board, Usage } from "@/lib/schemas";
 /** 5 h / 7 d plan windows, today's dollars, running count and any active limit. All numbers come from /api/usage and /api/board. */
 import { renderCreditsToggle } from "@/components/credits-toggle";
 import { renderFree } from "@/components/free-strip";
+import { icon } from "@/components/icons";
 import { h } from "@/lib/dom";
 import { formatClock, formatIn, formatPercent, formatUsd } from "@/lib/format";
 
 const noop = (): void => undefined;
+
+/** Icon link to the page of sessions kuhy started by hand; its name lives in `title` and `aria-label` (textgate). */
+function sessionsLink(): HTMLElement {
+  const link = h("a", { attrs: { "aria-label": "Manual sessions", href: "/sessions", title: "Manual sessions" }, class: "btn icon-btn sessions-link" });
+  link.append(icon("terminal"));
+  return link;
+}
 type Window = Usage["five_hour"];
 
 function tone(utilization: number): string {
@@ -69,6 +77,7 @@ export function renderUsage(usage: null | Usage, board: Board | null, error: nul
       board !== null && h("span", { class: "auto-close", text: `auto close: ${board.auto_close ? "on" : "off"}` }),
       usage !== null && h("span", { class: "today", text: `Today ${formatUsd(usage.cost.today_usd)}` }),
       h("a", { attrs: { href: "/usage" }, class: "usage-link", text: "Usage details" }),
+      sessionsLink(),
       usage !== null && usage.overage.using && h("span", { attrs: { "data-tone": "warn" }, class: "chip", text: "Overage in use" }),
     ),
     usage !== null && h("div", { class: "usage-row" }, meter("5 h", usage.five_hour, now), meter("7 d", usage.seven_day, now), renderFree(usage.free, now)),

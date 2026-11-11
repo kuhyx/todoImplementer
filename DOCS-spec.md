@@ -225,26 +225,26 @@ with the ask text. An unattached `A: phone:` (the cable wait) and an attached on
 
 ## Token usage (CHANGE 4)
 
-The token-usage tracker lives in this repo, no longer in its three old homes. Layout: `server/todoimpl/tokens/`
-(ingest, store, analysis, audit, prices), `server/todoimpl/tokens_api/` (routes under `/api/tokens/*`, registered by
-the http layer), `mcp/` (stdio MCP server with the old tool names, calling `127.0.0.1:8786/api/tokens`), and the
-web pages `web/src/pages/usage*.astro` with `web/src/usage/`. The SQLite DB stays at
-`~/data/token-dashboard/tokens.sqlite` with no migration; tests use temp DBs only and never touch the real one.
-Ingest runs as `python -m todoimpl.tokens.ingest --budget 45` (a unit file in `deploy/`, not installed). The join:
-a run's session ids give cost per item, repo and stage. The old code is removed only after kuhy confirms parity
+The token-usage tracker lives in this repo, no longer in its three old homes. Layout: `server/todoimpl/tokens/` (ingest, store, analysis, audit, prices), `server/todoimpl/tokens_api/` (routes under
+`/api/tokens/*`, registered by the http layer), `mcp/` (stdio MCP server with the old tool names, calling `127.0.0.1:8786/api/tokens`), and the web pages `web/src/pages/usage*.astro` with
+`web/src/usage/`. The SQLite DB stays at `~/data/token-dashboard/tokens.sqlite` with no migration; tests use temp DBs only and never touch the real one. Ingest runs as `python -m
+todoimpl.tokens.ingest --budget 45` (a unit file in `deploy/`, not installed). The join: a run's session ids give cost per item, repo and stage. The old code is removed only after kuhy confirms parity
 (the new API's answers equal the old `:8760/api/tokens` answers on the real DB, read-only, for the main endpoints).
 
 ## Autonomy metrics (CHANGE 5)
 
-`GET /api/usage` carries `autonomy` (`contracts/autonomy.schema.json`), shown on the usage page tab Autonomy. Four
-metrics, each with value, target, direction and a per-ISO-week series; Ship is not an intervention.
+`GET /api/usage` carries `autonomy` (`contracts/autonomy.schema.json`), shown on the usage page tab Autonomy. Four metrics, each with value, target, direction and a per-ISO-week series; Ship is not an
+intervention.
 
 - `done_unassisted` (up, target 100 %): finished cards (Ready to ship, shipping, Done) with no recorded intervention.
 - `permission_asks` (down, 0): A: turns whose line asks for a permission or approval (`usage/asks.py`).
 - `questions_asked` (down, 0): spec question cards plus the questions of free Q: turns.
 - `criteria_failed` (down, 0): open plus deferred criteria of a settled live check (`extra.partial`, else the report).
 
-Interventions are appended to `<run dir>/interventions.jsonl` by the service when an action is accepted (`start`,
-`retry`, `spec_answers`, `spec_ok`, `send`, `cancel`; any new kuhy click, such as `go`, calls
-`usage.interventions.record`). Cards without that file are backfilled from answers, Spec OK, Send notes
-and Q:/A: turns; restarts, cancels and `go` clicks before the record cannot be recovered.
+Interventions are appended to `<run dir>/interventions.jsonl` by the service when an action is accepted (`start`, `retry`, `spec_answers`, `spec_ok`, `send`, `cancel`; any new kuhy click, such as
+`go`, calls `usage.interventions.record`). Cards without that file are backfilled from answers, Spec OK, Send notes and Q:/A: turns; restarts, cancels and `go` clicks before the record cannot be
+recovered.
+
+## Manual sessions (CHANGE 6)
+
+The Sessions tab of control-panel lives here as the page `/sessions` (`web/src/pages/sessions.astro`, `web/src/sessions/`; icon link on the board next to the usage link), backend `server/todoimpl/sessions/` plus `http/sessions.py`, contract `contracts/sessions.schema.json`: kuhy's hand-started Claude Code sessions (headless `sdk-cli`/`sdk-py` runs hidden), status from the reply's tag line, resume (terminator via `systemd-run`, a copy button on a phone), mark done (shared `~/.claude/session-status.json`) and delete (to `~/.claude/projects-trash`); the POSTs sit behind the Ship guard (Origin + CSRF). Details, parity and decisions: `DOCS-sessions.md`.

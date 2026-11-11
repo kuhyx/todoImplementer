@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://todoimplementer.local/contracts/sessions.schema.json",
+  "title": "GET /api/sessions (this schema's root) and POST /api/sessions/<resume|mark|delete>",
+  "description": "Claude Code sessions kuhy started by hand (headless runs, entrypoint sdk-cli and sdk-py, are never listed), read from ~/.claude/projects. `status` comes from the tag line of the last reply; `done` also counts a manual mark in ~/.claude/session-status.json; `group` is the server's urgency rank (0 needs_action, 1 question, 2 untagged, 3 running, 4 done or continuing), and the list arrives sorted by it, newest first. POSTs send Content-Type application/json, X-Todoimpl-Token and a same-origin Origin like every other action; the body is `resume_body`, `mark_body` or `delete_body`, the answer is `result`.",
+  "$ref": "#/$defs/list",
+  "$defs": {
+    "session_id": {"type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", "description": "Canonical lowercase hyphenated UUID, the only spelling the mutations accept."},
+    "status": {"enum": ["needs_action", "question", "untagged", "running", "done", "continuing"]},
+    "session": {
+      "type": "object",
+      "description": "One session. Title, prompt and reply are the user's own content (last_user cut to 400 characters, last_assistant to its last 600).",
+      "properties": {
+        "id": {"$ref": "#/$defs/session_id"},
+        "cwd": {"type": "string"},
+        "project": {"type": "string", "description": "Basename of cwd, `~` for home."},
+        "title": {"type": "string"},
+        "status": {"$ref": "#/$defs/status"},
+        "done": {"type": "boolean"},
+        "group": {"type": "integer", "minimum": 0, "maximum": 4},
+        "manual_mark": {"enum": ["done", null]},
+        "mark": {"enum": ["manual", "tag", "open"], "description": "How the row stands: marked done by hand, done by its own status tag, or not done."},
+        "last_ts": {"type": ["string", "null"], "description": "ISO time of the newest prompt or reply."},
+        "last_user": {"type": "string"},
+        "last_assistant": {"type": "string"},
+        "resume_command": {"type": "string", "description": "`cd '<cwd>' && claude --resume <id>`, single-quoted for a POSIX shell."}
+      },
+      "required": ["id", "cwd", "project", "title", "status", "done", "group", "manual_mark", "mark", "last_ts", "last_user", "last_assistant", "resume_command"],
+      "additionalProperties": false
+    },
+    "list": {
+      "type": "object",
+      "properties": {
+        "sessions": {"type": "array", "items": {"$ref": "#/$defs/session"}},
+        "scanned": {"type": "integer", "minimum": 0, "description": "Transcript files examined."},
+        "scan_ms": {"type": "number", "minimum": 0}
+      },
+      "required": ["sessions", "scanned", "scan_ms"],
+      "additionalProperties": false
+    },
+    "one_or_many": {
+      "oneOf": [
+        {"required": ["id"], "not": {"required": ["ids"]}},
+        {"required": ["ids"], "not": {"required": ["id"]}}
+      ]
+    },
+    "resume_body": {
+      "type": "object",
+      "description": "One `id`, or `ids` (1 to 5). Opens a terminal per session in its transcript's cwd.",
+      "properties": {
+        "id": {"$ref": "#/$defs/session_id"},
+        "ids": {"type": "array", "minItems": 1, "maxItems": 5, "items": {"$ref": "#/$defs/session_id"}}
+      },
+      "allOf": [{"$ref": "#/$defs/one_or_many"}],
+      "additionalProperties": false
+    },
+    "mark_body": {
+      "type": "object",
+      "description": "`mark` done sets the manual mark, null clears it. All-or-nothing over `ids`.",
+      "properties": {
+        "id": {"$ref": "#/$defs/session_id"},
+        "ids": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/session_id"}},
+        "mark": {"enum": ["done", null]}
+      },
+      "required": ["mark"],
+      "allOf": [{"$ref": "#/$defs/one_or_many"}],
+      "additionalProperties": false
+    },
+    "delete_body": {
+      "type": "object",
+      "description": "Moves transcripts to ~/.claude/projects-trash/<date>/; never unlinks, refuses any id written in the last 10 minutes. All-or-nothing over `ids`.",
+      "properties": {
+        "id": {"$ref": "#/$defs/session_id"},
+        "ids": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/session_id"}}
+      },
+      "allOf": [{"$ref": "#/$defs/one_or_many"}],
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "object",
+      "description": "HTTP 200 whether the guard allowed it or not. `refused` is the guard doing its job (nothing was changed), not a crash; `ok` false with `refused` false means it could not be attempted. 400 and 403 use the common error shape instead.",
+      "properties": {
+        "ok": {"type": "boolean"},
+        "refused": {"type": "boolean"},
+        "summary": {"type": "string"},
+        "stdout": {"type": "string"},
+        "stderr": {"type": "string"},
+        "argv": {"type": "array", "items": {"type": "string"}}
+      },
+      "required": ["ok", "refused", "summary", "stdout", "stderr", "argv"],
+      "additionalProperties": false
+    }
+  }
+}

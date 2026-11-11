@@ -10,11 +10,13 @@ from functools import partial
 from typing import TYPE_CHECKING, Any
 from urllib.parse import parse_qs, urlsplit
 
+from todoimpl.sessions.commands import CommandRunner, SubprocessRunner
 from todoimpl.tokens_api import router as tokens_api
 from todoimpl.version import __version__
 
 from . import bodies, issues, settings
 from . import merge as merge_http
+from . import sessions as sessions_http
 from . import umbrella as umbrella_http
 from .auth import check_post
 from .backend import ERROR_CODES, BackendError
@@ -80,7 +82,9 @@ class Router:
             "/version": lambda: json_reply({"build": self.build, "version": __version__}),
             "/api/board": lambda: json_reply(self.backend.board()),
             "/api/usage": lambda: json_reply(self.backend.usage()),
+            sessions_http.GET_PATH: sessions_http.listing,
         }
+        self.sessions_runner: CommandRunner = SubprocessRunner()  # tests swap in a recorder
 
     def _merges(self) -> merge_http.MergeApi | None:
         """Return the merge service the backend carries (`merge_service`), None when it has none."""
@@ -180,6 +184,8 @@ class Router:
             reply = _guard(lambda: settings.handle(self.backend, raw))
         elif found and (api := self._merges()) is not None:
             reply = _guard(lambda: merge_http.handle_post(api, found, raw))
+        elif mutation := sessions_http.POST_PATH.fullmatch(path):
+            reply = _guard(lambda: sessions_http.handle_post(self.sessions_runner, mutation, raw))
         else:
             reply = _guard(lambda: self._action(path, raw))
         assert isinstance(reply, Reply)  # noqa: S101 - _action never returns a stream

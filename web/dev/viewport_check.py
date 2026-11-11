@@ -17,6 +17,7 @@ from typing import Any
 
 from cdp_driver import Cdp, goto, launch, page_ws, probe
 from viewport_questions import step_questions
+from viewport_sessions import step_detail, step_sessions
 from viewport_track import step_track
 
 WORKING = "17a1b2c3-0"
@@ -102,6 +103,8 @@ STEPS = {
     "flow": step_flow,
     "questions": step_questions,
     "track": step_track,
+    "sessions": step_sessions,
+    "sessions-detail": step_detail,
 }
 
 

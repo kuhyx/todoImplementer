@@ -6,6 +6,7 @@ Cheap tier (Sonnet manager, free models, Opus escalation) and human-made-first o
 Multi-day survival (kills, reboot, power cut, no internet, gateway down, durable writes, backoff ladder): `DOCS-resilience.md`.
 Umbrella tracking view and the free-token strip (gateway quotas, cooldowns, ETA): `DOCS-tracking.md`.
 Merging similar tasks (Haiku suggestions, one-click merge, umbrella notes, CLI): `DOCS-merge.md`.
+Manual Claude Code sessions page (status tags, resume, mark, delete, guard, phone): `DOCS-sessions.md`.
 One card, one run per repo (parts, ticks, per-repo lock, section-run transition, note migration CLI): `DOCS-repotask.md`.
 
 ## Commands
