@@ -6,13 +6,14 @@ import { board as boardSchema, creditsFallbackResponse } from "@/lib/schemas";
 import { ACTION_IDS } from "@/lib/schemas-common";
 import { contractValidator } from "@/test/contract-ajv";
 import { card, json, q } from "@/test/drawer-harness";
+import { makeCredits } from "@/test/fixture-credits";
 import { preset } from "@/test/fixture-presets";
 import { makeBoard, NOW } from "@/test/fixtures";
 import { settle, stubFetch } from "@/test/net";
 
-const ready = { enabled: true, state: "ready" as const, text: "Free API credits take over while the plan limit is active." };
-const off = { enabled: false, state: "off" as const, text: "Runs wait for the plan limit to end." };
-const withCredits = (credits: typeof off | typeof ready) => ({ ...makeBoard(), limit: { active: false, credits, until: null } });
+const ready = makeCredits({ text: "Turns run on free API credits." });
+const off = makeCredits({ enabled: false, route: "plan", state: "off", text: "Runs wait for the plan limit to end." });
+const withCredits = (credits: typeof off) => ({ ...makeBoard(), limit: { active: false, credits, until: null } });
 const mount = (board = makeBoard(), onCredits = vi.fn()): HTMLElement => {
   const element = renderUsage(null, board, null, null, NOW, onCredits);
   document.body.append(element);

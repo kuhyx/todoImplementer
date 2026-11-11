@@ -10,7 +10,18 @@
     "credits": {
       "enabled": true,
       "state": "ready",
-      "text": "Free API credits take over while the plan limit is active."
+      "text": "Turns run on free API credits, paced by week (model sonnet).",
+      "route": "credits",
+      "period_start": 1792800000,
+      "week": 2,
+      "monthly_usd": 190,
+      "cap_usd": 95,
+      "spent_period_usd": 40,
+      "credit_turns_period": 12,
+      "remaining_usd": 150,
+      "over_cap": false,
+      "running_credit_turns": 1,
+      "cost_factor": 1
     }
   },
   "auto_close": false,

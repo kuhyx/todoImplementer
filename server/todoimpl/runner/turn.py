@@ -12,8 +12,9 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from todoimpl.board import state as store
+from todoimpl.credits import ledger, live
 
-from . import adopt, allowlist, claude, credit, files, guard, launch, orphans, session
+from . import adopt, allowlist, claude, credit, creditguard, files, guard, launch, orphans, session
 from .files import KilledError
 from .stream import StreamParser, TurnResult, state_tag
 
@@ -52,19 +53,9 @@ def _prior(env: TurnEnv, state: RunState, role: str) -> session.Prior | None:
 
 
 def _turn_cost(state: RunState, res: TurnResult) -> float:
-    """total_cost_usd is cumulative over a resumed session: charge only what this turn added.
-
-    A positive total below the last one cannot be cumulative: the counter restarted (another route's process,
-    or the CLI losing its per-session record), so that turn's whole total is its cost. Zero says nothing.
-    """
+    """total_cost_usd is cumulative over a resumed session: charge what this turn added (`ledger.delta`)."""
     seen: dict[str, float] = state.extra.setdefault("session_costs", {})
-    if res.cost_usd <= 0:
-        return 0.0
-    if not res.session_id:
-        return res.cost_usd
-    prev = seen.get(res.session_id, 0.0)
-    seen[res.session_id] = res.cost_usd
-    return res.cost_usd if res.cost_usd < prev else res.cost_usd - prev
+    return ledger.delta(seen, res.session_id, res.cost_usd)
 
 
 def _launch(  # noqa: PLR0913, PLR0917 - the turn environment plus its route
@@ -122,6 +113,8 @@ def _apply(env: TurnEnv, state: RunState, rec: orphans.Record, res: TurnResult, 
         "effort": models.get("effort"),
         "session_id": res.session_id,
         "cost_usd": res.cost_usd,
+        "total_cost_usd": res.cost_usd if res.finished else None,  # the stream's cumulative session total
+        "model_usage": res.model_usage,
         "turn_cost_usd": spent,
         "route": route,
         "tag": res.tag,
@@ -132,6 +125,11 @@ def _apply(env: TurnEnv, state: RunState, rec: orphans.Record, res: TurnResult, 
         "denials": [{"tool": d.tool_name, "hook": d.hook, "terminal": d.terminal} for d in res.denials],
     }
     files.write_json(files.sibling(env.run_dir, stem, files.RESULT_SUFFIX), record)
+    ledger.record(
+        files.root_of(env.run_dir), task=env.run_dir.name, stem=stem, role=role, route=route,
+        session_id=res.session_id, cumulative=res.cost_usd if res.finished else None, ended_at=env.now(),
+        estimate=res.live_usd,
+    )  # fmt: skip
     if res.session_id:
         state.sessions[role] = {"session_id": res.session_id, "last_turn_end": env.now(), "route": route}
         state.session_id = res.session_id
@@ -149,7 +147,12 @@ def _consume(env: TurnEnv, state: RunState, rec: orphans.Record) -> TurnResult |
     handle = launch.handle_for(env.run_dir, rec)
     env.register(handle)
     parser: StreamParser = StreamParser()
-    if files.route_of(env.run_dir, stem) == "plan":  # the free credits cannot spend overage; the plan can
+    if files.route_of(env.run_dir, stem) == "credits":  # an adopted turn counts as running too
+        root, card = files.root_of(env.run_dir), env.run_dir.name
+        live.begin(root, card)
+        live.attach(root, card, lambda: state.extra.update(cap_hit=True), handle.stop)
+        parser = creditguard.CreditGuard(root, card, env.now)
+    else:  # the free credits cannot spend overage; the plan can
         parser = guard.OverageGuard(
             files.root_of(env.run_dir),
             env.run_dir.name,
@@ -190,14 +193,17 @@ def run_turn(  # noqa: PLR0913, PLR0917 - the turn environment plus its route
     """
     lost = 0
     adopt.reap_legacy(env.run_dir)
-    while True:
-        rec = orphans.read(env.run_dir) or _launch(
-            env, state, role, prompt_for, extra_dirs, route, model, effort
-        )
-        if (res := _consume(env, state, rec)) is None:
-            lost += 1
-            if lost >= MAX_LOST:
-                msg = f"The {role} turn was lost {lost} times: its host keeps dying; read the journal"
-                raise KilledError(msg)
-        elif rec.role == role:
-            return res
+    try:
+        while True:
+            rec = orphans.read(env.run_dir) or _launch(
+                env, state, role, prompt_for, extra_dirs, route, model, effort
+            )
+            if (res := _consume(env, state, rec)) is None:
+                lost += 1
+                if lost >= MAX_LOST:
+                    msg = f"The {role} turn was lost {lost} times: its host keeps dying; read the journal"
+                    raise KilledError(msg)
+            elif rec.role == role:
+                return res
+    finally:  # the credit claim (`route.claim`) or an adopted turn's mark ends with the turn, however it ends
+        live.end(files.root_of(env.run_dir), env.run_dir.name)

@@ -114,7 +114,9 @@ def test_sdk_python_is_found_by_env_or_venv(tmp_path: Path, monkeypatch: pytest.
 
 def test_t1850_credits_only_when_limit_active_setting_on_and_key_usable(ready: Path) -> None:
     assert route.choose(ready, NOW) == route.Choice(route.CREDITS)
-    assert route.choose(ready, NOW + 601) == route.Choice(route.PLAN)  # no active limit: the plan
+    assert route.choose(ready, NOW + 601) == route.Choice(
+        route.CREDITS
+    )  # no limit: paced credits all the same
     assert route.view(ready, NOW)["state"] == "ready"
 
 
@@ -122,7 +124,8 @@ def test_each_missing_condition_holds_the_run(ready: Path, monkeypatch: pytest.M
     held = route.Choice(None, NOW + 600)
     setting.set_enabled(value=False)
     assert route.choose(ready, NOW) == held
-    assert route.view(ready, NOW) == {"enabled": False, "state": "off", "text": route.OFF_TEXT}
+    off = route.view(ready, NOW)
+    assert (off["enabled"], off["state"], off["text"], off["route"]) == (False, "off", route.OFF_TEXT, None)
     setting.set_enabled(value=True)
     cache.put(KeyStatus("expired", date(2026, 11, 1), "expired on 2026-11-01"))
     assert route.choose(ready, NOW) == held
@@ -143,23 +146,3 @@ def test_before_the_first_key_check_a_readable_key_counts(ready: Path) -> None:
     (ready / "key").write_text("")
     assert route.choose(ready, NOW).route is None
     assert "no API key" in route.view(ready, NOW)["text"]
-
-
-def test_t1989_credits_first_uses_credits_without_a_limit_and_only_when_ready(
-    ready: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    assert setting.credits_first() is False
-    setting.set_credits_first(value=True)
-    assert setting.credits_first() is True
-    assert route.choose(ready, NOW + 601) == route.Choice(route.CREDITS)  # no limit active: credits anyway
-    marks.mark_exhausted(ready, NOW + 900, "x")
-    assert route.choose(ready, NOW + 601) == route.Choice(route.PLAN)  # exhausted: back on the plan
-    marks.clear_exhausted(ready)
-    setting.set_enabled(value=False)
-    assert route.choose(ready, NOW + 601) == route.Choice(route.PLAN)  # fallback off: the plan
-    setting.set_enabled(value=True)
-    monkeypatch.delenv("TODOIMPL_SDK_PYTHON")
-    assert route.choose(ready, NOW + 601) == route.Choice(route.PLAN)  # no SDK venv: the plan
-    path = setting.settings_path()
-    path.write_text('{"credits_first": "yes"}')
-    assert setting.credits_first() is False  # garbage means the default, off

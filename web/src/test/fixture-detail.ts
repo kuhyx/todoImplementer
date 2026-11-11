@@ -2,6 +2,7 @@
 import type { LiveEvent, TaskDetail, Usage } from "@/lib/schemas";
 import type { TaskCard } from "@/lib/schemas-common";
 
+import { makeCredits } from "./fixture-credits.ts";
 import { makeFree } from "./fixture-free.ts";
 import { NOW } from "./fixtures.ts";
 
@@ -113,7 +114,7 @@ export function makeUsage(): Usage {
     five_hour: { resets_at: NOW + 8100, status: "allowed", utilization: 0.42 },
     free: makeFree(),
     generated_at: NOW,
-    limit: { active: false, credits: { enabled: true, state: "ready", text: "Free API credits take over while the plan limit is active." }, until: null },
+    limit: { active: false, credits: makeCredits(), until: null },
     overage: { status: "rejected", using: false },
     seven_day: { resets_at: NOW + 3 * 86_400, status: "allowed_warning", utilization: 0.77 },
   };

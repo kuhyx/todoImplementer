@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from todoimpl.board.types import Credits
 from todoimpl.http.app import AppServer
 
 FIXTURES = Path(__file__).resolve().parent.parent / "fixtures"
@@ -125,7 +126,7 @@ class FakeBackend:
 
     def set_credits_fallback(self, *, enabled: bool) -> dict[str, Any]:
         self.calls.append(("set_credits_fallback", str(enabled)))
-        return {"enabled": enabled, "state": "ready" if enabled else "off", "text": "fake"}
+        return Credits(enabled=enabled, state="ready" if enabled else "off", text="fake").to_dict()
 
     def go(self, id8: str) -> None:
         self._record("go", id8)

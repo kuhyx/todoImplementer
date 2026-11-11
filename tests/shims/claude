@@ -83,6 +83,7 @@ def run(step: dict, sid: str, cwd: Path) -> int | None:
             "type": "result", "subtype": "success", "is_error": step.get("is_error", False), "result": step["text"],
             "session_id": sid, "total_cost_usd": step.get("cost", 0.01), "num_turns": 1,
             "permission_denials": step.get("denials", []),
+            "modelUsage": step.get("model_usage", {"fake-model": {"costUSD": step.get("cost", 0.01)}}),
         })
     elif kind == "limit":
         info = {"status": step.get("status", "rejected"), "resetsAt": step["resets_at"], "rateLimitType": "five_hour",

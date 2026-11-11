@@ -56,6 +56,8 @@ class TurnResult:
     finished: bool = False
     limit: LimitInfo | None = None
     denials: list[Denial] = field(default_factory=list)
+    model_usage: dict[str, Any] = field(default_factory=dict)  # the result event's `modelUsage`
+    live_usd: float = 0.0  # a credit turn's cost so far, estimated from its usage (list price)
 
 
 def parse_tag(text: str) -> str | None:
@@ -198,6 +200,8 @@ class StreamParser:
         res.text = text if isinstance(text, str) else ""
         cost = obj.get("total_cost_usd")
         res.cost_usd = float(cost) if isinstance(cost, int | float) else 0.0
+        usage = obj.get("modelUsage")
+        res.model_usage = usage if isinstance(usage, dict) else {}
         turns = obj.get("num_turns")
         res.num_turns = turns if isinstance(turns, int) else 0
         res.is_error = obj.get("is_error") is True

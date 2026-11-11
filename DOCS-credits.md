@@ -7,8 +7,8 @@ Key lifecycle: `DOCS-apikey.md`. Code: `server/todoimpl/credits/`, `runner/credi
 
 ## Routes
 
-A turn takes one route, chosen when it actually starts (`credits.route.choose`): plan while no limit is active;
-credits while the plan limit (`limit-until`) is active and the fallback is ready; otherwise it waits for the limit
+A turn takes one route, chosen when it actually starts (`credits.route.choose`): credits while the fallback is `ready`
+and the weekly pace has room (below); otherwise the plan, or, when the plan is limited too (`limit-until`), a wait
 (`paused_limit`). Any role continues on either route turn by turn: the session id, the cost and the run state are
 shared, so a plan session resumes on credits and back. `state.extra.route`, `sessions[role].route`, the
 `<stem>.route` file and `<stem>.result.json` record the route; the card shows a "free credits" badge and the feed
@@ -20,10 +20,64 @@ settings.json`, `$TODOIMPL_SETTINGS`; toggled on the board through `POST /api/se
 never a network call in a request or the queue) and the credits are not exhausted. The server words the state
 (`off`, `ready`, `exhausted`, `unavailable`) in `limit.credits`; the page only shows it.
 
-Credits first (kuhy, 2026-11-11, weekly plan at 75 %): `"credits_first": true` in `settings.json` sends every new turn
-to the credits while the fallback is `ready`, with or without a plan limit (T1989). Default off, edited in the file (no
-endpoint). Credits not ready (exhausted, key or SDK missing, fallback off) means the plan, never a wait; the exhausted
-mark then lasts its 30 min instead of being cleared at once. Turns already running finish on their route.
+## Pacing: the grant is spread over the period, the cap is hard
+
+The grant is about $200 a month (the promotional grant of 2026-11-10 lasts to 2026-12-13). Settings in
+`settings.json`, edited in the file (no endpoint): `credits_monthly_usd` (default 190: the $200 grant minus a $10
+margin, because billing lags and week 4 must never push the balance negative again), `credits_month_start_day`
+(default 10, 1 to 28: the period starts on the grant day at 00:00 local and lasts to the next), `credits_cost_factor`
+(default 1.0). Week = `min(4, days since the period start // 7 + 1)`; cap = `week x monthly / 4` (days 22 on are
+week 4 = the whole grant). A new turn takes the credits only while `spent + 2 x running credit turns < cap`;
+past that it takes the plan, and if the plan is limited it waits for the limit: the cap is never spent past, not
+even as a limit fallback. Turns already running finish on their route. The old `credits_first` setting is gone:
+pacing is always on (the key in an old file is ignored). A real billing error still marks the credits exhausted
+(below), and the mark is kept to its end even with no plan limit, so no credit retry follows every dispatch.
+
+The cost is an estimate of the Console bill. The ledger's per-turn cost agreed with it within 1 % on 2026-11-11
+(November: $107.12 ledger against $107.78 billed), so `credits_cost_factor` is 1.0; a first reading of 0.47 came
+from summing cumulative session totals twice and was dropped. Since the 10th the ledger says about $4.40 against
+$3.02 billed (a turn at the grant boundary bills the old grant): the cap errs on the safe side. The strip marks the
+figures with "≈".
+
+Zero debt: three brakes, in the order a turn meets them.
+
+1. Start gate (`route.claim`, locked with the card's count of running credit turns): a start needs
+   `spent + exposure < cap`, where each running credit turn counts for the larger of its live cost and a $2 reserve.
+   Within $20 of the cap (`pacing.NEAR_CAP_USD`) at most one credit turn runs; a second goes to the plan (or waits).
+   Many credit turns once ran at once while the grant ran out and billing lagged: that is the failure this stops.
+2. Hard stop (`runner/creditguard.py`, the credit twin of the overage guard): the follower of every credit turn adds
+   up its cost as assistant events arrive (`credits/meter.py`) and calls `route.watch`. When `spent + the live cost of
+   all running credit turns >= cap`, every running credit turn is stopped at once (`handle.stop`), `cap_hit` is set,
+   and `pipeline.turn` goes on in the same stage with the continue note on the plan route, resuming the same session
+   (or pauses for the plan limit if there is one). The stopped turn has no result event, so its ledger line carries the
+   usage estimate as its cost. Latency: the follower polls the stream every 50 ms (`adopt.POLL`) and the check runs in
+   the event's own parse, so the stop fires within about 50 ms of the line plus the kill (about 4 ms measured between
+   the stream write and the exit record in the fake harness). It is event-driven: a turn inside one very long model
+   message shows no cost until that message's event arrives.
+3. The $10 margin on the grant and the cap itself: week 4 may spend 190 of 200.
+
+The live estimate prices the usage of each assistant message at Sonnet list prices (input and cache tokens exact,
+output the larger of the reported count and a size estimate of the blocks). Against 77 real credit turns it ran about
+twice the SDK's own totals (median 2.1; 5 of 77 below 1.0, the worst at 0.31): the safe side for a brake, and the
+start gate plus the $10 margin cover the rare turn it undercounts.
+
+`limit.credits` (`contracts/common.schema.json`, computed by the server, the page only shows it) carries
+`route` (what a new turn takes now, null = waits), `period_start`, `week`, `monthly_usd`, `cap_usd`,
+`spent_period_usd`, `credit_turns_period`, `remaining_usd`, `over_cap`, `running_credit_turns` and `cost_factor`.
+The usage strip shows one bar of spent against the monthly grant, a tick at each weekly cap with the current one lit,
+`≈$spent / $cap` and `≈$remaining`; names only in the tooltip (textgate).
+
+## The ledger
+
+`<run root>/credits-ledger.jsonl` (`credits/ledger.py`): one line per finished turn of either route,
+`{stem, task, role, route, session_id, cumulative_usd, delta_usd, ended_at}`, appended through `atomic.append_line`
+(`DOCS-resilience.md`). A result event's `total_cost_usd` is cumulative per session and a session mixes routes, so a
+turn's own cost is its total minus the session's previous total (`ledger.delta`; a smaller positive total means the
+counter restarted and counts whole). A turn with no result event (killed) is a turn at cost 0: the next turn of its
+session pays the difference. When the file is missing the server rebuilds it once at start from the streams
+(`ledger.load`, also children of an umbrella); recording a stem twice (a crash replay, a stream the backfill
+saw) changes nothing. The summary is in memory: no request reads a stream. `result.json` of every turn now also
+keeps the stream's `total_cost_usd` (null without a result event) and `model_usage` (T1990).
 
 ## Credit turns
 

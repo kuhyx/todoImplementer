@@ -1,6 +1,7 @@
 import type { Board, Usage } from "@/lib/schemas";
 
 /** 5 h / 7 d plan windows, today's dollars, running count and any active limit. All numbers come from /api/usage and /api/board. */
+import { renderCreditsPace } from "@/components/credits-pace";
 import { renderCreditsToggle } from "@/components/credits-toggle";
 import { renderFree } from "@/components/free-strip";
 import { icon } from "@/components/icons";
@@ -85,6 +86,7 @@ export function renderUsage(usage: null | Usage, board: Board | null, error: nul
     keyBanner(board),
     overageAlert(board),
     board !== null && renderCreditsToggle(board.limit.credits, onCredits),
+    board !== null && renderCreditsPace(board.limit.credits),
     limitNote(board, now),
   );
 }

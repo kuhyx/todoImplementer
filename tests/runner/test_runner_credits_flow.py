@@ -5,7 +5,7 @@ from collections.abc import Callable
 from datetime import date
 
 import pytest
-from creditfakes import enable_credits
+from creditfakes import enable_credits, reach_cap
 from phonefakes import READY, SERIAL, fake_adb, phone_turn
 from runnerfakes import Env
 from schedfakes import CARD, IMPL, LIVE_OK, PLAN, boot, lift_limit, reply, state, wait, wait_stage
@@ -42,6 +42,7 @@ def test_t1850_a_limited_run_goes_on_free_credits_and_back_on_the_plan(
 
 def test_plan_turns_never_see_the_api_key(world: Env, monkeypatch: pytest.MonkeyPatch) -> None:
     enable_credits(monkeypatch)
+    reach_cap(world.root)  # past the weekly cap the plan takes the turns
     monkeypatch.setenv("ANTHROPIC_API_KEY", "must-not-reach-the-plan")
     sched, _ = boot(world, PLAN, IMPL, LIVE_OK, done_check="true")
     try:
@@ -108,7 +109,7 @@ def test_t1852_credits_running_out_pauses_until_the_plan_resets_without_a_retry_
         st = wait_stage(world, sched, "gate")
         assert [c["via_sdk"] for c in world.calls()] == [True, False, False, False]
         assert st.extra["route"] == "plan"
-        assert not marks.exhausted(world.root, time.time())
+        assert marks.exhausted(world.root, time.time())  # kept to its end: no credit retry on every dispatch
     finally:
         sched.close()
 
@@ -138,15 +139,16 @@ def test_t1853_overage_on_the_plan_kills_the_turn_alerts_and_pauses(world: Env) 
         sched.close()
 
 
-def test_overage_with_free_credits_ready_goes_on_in_credits(
+def test_overage_on_the_plan_past_the_cap_pauses_instead_of_spending_credits(
     world: Env, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     enable_credits(monkeypatch)
+    reach_cap(world.root)  # the plan runs the turns only because the credits are at their cap
     sched, _ = boot(world, overage_turn(world), PLAN, IMPL, LIVE_OK, done_check="true")
     try:
         sched.start(CARD)
-        wait_stage(world, sched, "gate")
-        assert [c["via_sdk"] for c in world.calls()] == [False, True, True, True]
+        wait_stage(world, sched, "paused_limit")
+        assert [c["via_sdk"] for c in world.calls()] == [False]
         assert marks.active_alert(world.root, time.time()) is not None
     finally:
         sched.close()
@@ -189,11 +191,10 @@ def test_a_turn_adopted_after_a_restart_keeps_its_route(world: Env, monkeypatch:
         sched2.close()
 
 
-def test_t1989_credits_first_runs_every_turn_on_credits_with_no_limit(
+def test_t1989_paced_credits_run_every_turn_with_no_limit_below_the_cap(
     world: Env, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     enable_credits(monkeypatch)
-    setting.set_credits_first(value=True)
     sched, _ = boot(world, PLAN, IMPL, LIVE_OK, done_check="true")
     try:
         sched.start(CARD)
@@ -205,11 +206,10 @@ def test_t1989_credits_first_runs_every_turn_on_credits_with_no_limit(
         sched.close()
 
 
-def test_t1989_credits_first_falls_back_to_the_plan_when_credits_run_out(
+def test_t1989_paced_credits_fall_back_to_the_plan_when_they_run_out(
     world: Env, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     enable_credits(monkeypatch)
-    setting.set_credits_first(value=True)
     out = reply("API Error: 400 Credit balance is too low", is_error=True)
     sched, _ = boot(world, out, PLAN, IMPL, LIVE_OK, done_check="true")
     try:
@@ -218,5 +218,24 @@ def test_t1989_credits_first_falls_back_to_the_plan_when_credits_run_out(
         assert [c["via_sdk"] for c in world.calls()] == [True, False, False, False]
         assert st.extra["route"] == "plan"
         assert marks.exhausted(world.root, time.time())  # kept: no credit retry on every dispatch
+    finally:
+        sched.close()
+
+
+def test_t1989_the_cap_is_hard_a_limited_run_waits_instead_of_spending_past_it(
+    world: Env, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    enable_credits(monkeypatch)
+    reach_cap(world.root)
+    limit_on(world)
+    sched, _ = boot(world, PLAN, IMPL, LIVE_OK, done_check="true")
+    try:
+        sched.start(CARD)
+        time.sleep(0.8)  # the plan is limited and the credits are past the cap: nothing starts
+        assert world.calls() == []
+        lift_limit(world, sched)
+        st = wait_stage(world, sched, "gate")
+        assert [c["via_sdk"] for c in world.calls()] == [False, False, False]
+        assert st.extra["route"] == "plan"
     finally:
         sched.close()

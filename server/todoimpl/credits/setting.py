@@ -9,7 +9,6 @@ from pathlib import Path
 from todoimpl import atomic
 
 KEY = "credits_fallback"
-FIRST_KEY = "credits_first"
 
 
 def settings_path() -> Path:
@@ -38,12 +37,36 @@ def set_enabled(*, value: bool) -> None:
     atomic.write_text(path, json.dumps({**_read(), KEY: value}, indent=2) + "\n")
 
 
-def credits_first() -> bool:
-    """Return True when new turns use the free credits even with no plan limit; default off."""
-    value = _read().get(FIRST_KEY)
-    return value if isinstance(value, bool) else False
+MONTHLY_KEY = "credits_monthly_usd"
+START_DAY_KEY = "credits_month_start_day"
+MONTHLY_USD = 190.0  # the $200 grant of 2026-11-10 minus a $10 margin: billing lags, so spend overshoots
+START_DAY = 10  # the grant came on the 10th; the period starts on the grant day, not the 1st
+MAX_START_DAY = 28  # every month has this day
 
 
-def set_credits_first(*, value: bool) -> None:
-    """Store the credits-first setting atomically, keeping any other key of the file."""
-    atomic.write_text(settings_path(), json.dumps({**_read(), FIRST_KEY: value}, indent=2) + "\n")
+def monthly_usd() -> float:
+    """Return the monthly grant to pace; a missing, non-numeric or non-positive value means the default."""
+    value = _read().get(MONTHLY_KEY)
+    if isinstance(value, bool) or not isinstance(value, int | float) or value <= 0:
+        return MONTHLY_USD
+    return float(value)
+
+
+def start_day() -> int:
+    """Return the day of the month the grant period starts (1 to 28); anything else means the default."""
+    value = _read().get(START_DAY_KEY)
+    if isinstance(value, bool) or not isinstance(value, int) or not 1 <= value <= MAX_START_DAY:
+        return START_DAY
+    return value
+
+
+COST_FACTOR_KEY = "credits_cost_factor"
+COST_FACTOR = 1.0  # Console billing over the ledger's SDK cost: $107.78 / $107.12 for November 2026
+
+
+def cost_factor() -> float:
+    """Return the factor from the ledger's SDK cost to the billed cost; a bad value means the default."""
+    value = _read().get(COST_FACTOR_KEY)
+    if isinstance(value, bool) or not isinstance(value, int | float) or value <= 0:
+        return COST_FACTOR
+    return float(value)

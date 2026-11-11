@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from todoimpl.board.state import run_root
+from todoimpl.credits import ledger
 from todoimpl.http.main import REPO, git_build_id
 from todoimpl.repotask import legacy
 from todoimpl.runner.autocheck import AutoCloser
@@ -54,6 +55,7 @@ def build_backend(
     """
     root = root or run_root()
     client = client or TodoClient.from_env()
+    ledger.load(root)  # rebuilds the credit ledger from the streams once, if it is missing
     cache = TaskCache(board_fetch(client, root))
     if refresh:
         # Before the Scheduler: its recovery drives resolve card ids through this cache at once.

@@ -196,7 +196,9 @@ class Driver:
         env = TurnEnv(ctx.run_dir, worktree.turn_dir(st, self.item.repo), ctx.publish, ctx.register, ctx.now)
         try:
             who = (env, st, role, with_grant(st, build_for, role), (ctx.run_dir,))
-            res = run_turn(*who, choice.route, plan.model, "high" if stage == "fix" else plan.effort)
+            if (claimed := route.claim(ctx.root, ctx.now(), ctx.run_dir.name)).route is None:
+                raise LimitHitError(claimed.until or ctx.now())  # another card took the last of the pace
+            res = run_turn(*who, claimed.route, plan.model, "high" if stage == "fix" else plan.effort)
         except KilledError as exc:  # the host died again and again: wait and retry before Needs you
             self.save()
             failure = retry.failure(st, now=ctx.now(), stage=stage, reason=exc.text, tail="", killed=True)
@@ -206,6 +208,11 @@ class Driver:
             phone.after_turn(st, ctx.run_dir, res)
         self.save()
         self._check_turn(res)
+        if (
+            st.extra.pop("cap_hit", None) and not res.finished
+        ):  # the credit cap stopped the turn: go on at once, on the plan
+            st.extra["r_continue"] = True
+            return self.turn(role, stage, failure_tail=failure_tail, prompt=prompt)
         if gate(self, res, stage) or auto_grant(self, res, stage):
             return self.turn(role, stage, failure_tail=failure_tail, prompt=prompt)
         return self._finished(res, role, stage)

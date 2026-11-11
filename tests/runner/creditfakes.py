@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import os
 import sys
+import time
 from datetime import date
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from todoimpl.apikey import cache
 from todoimpl.apikey.keystatus import KeyStatus
+from todoimpl.credits import ledger
 
 if TYPE_CHECKING:
     import pytest
@@ -29,3 +31,11 @@ def enable_credits(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("TODOIMPL_SDK_PYTHON", sys.executable)
     monkeypatch.setenv("PYTHONPATH", str(SHIMS))
     cache.put(KeyStatus("ok", date(2099, 1, 1), "fine"))
+
+
+def reach_cap(root: Path) -> None:
+    """Put a million dollars of credit spend in the ledger just now: every pacing cap is passed."""
+    ledger.record(
+        root, task="old00000-0", stem="implement-1.000", role="implement", route="credits",
+        session_id=None, cumulative=1e6, ended_at=time.time(),
+    )  # fmt: skip

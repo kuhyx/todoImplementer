@@ -175,3 +175,63 @@
 .credits-error {
   color: var(--danger);
 }
+
+.credits-pace {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-label);
+  --tone: var(--success);
+}
+
+.credits-pace[data-tone="warn"] {
+  --tone: var(--warning);
+}
+
+.credits-pace[data-tone="danger"] {
+  --tone: var(--danger);
+}
+
+.credits-pace svg {
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: var(--tone);
+  stroke-width: 2;
+}
+
+.c-bar {
+  position: relative;
+  display: block;
+  width: clamp(6rem, 14vw, 12rem);
+  height: var(--space-2);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--space-1);
+}
+
+.c-fill {
+  display: block;
+  width: var(--fill, 0);
+  height: 100%;
+  background: var(--tone);
+}
+
+/* One tick per weekly cap, at its share of the grant; the current week's cap is lit and taller. */
+.c-tick {
+  position: absolute;
+  top: calc(var(--space-1) * -1);
+  bottom: calc(var(--space-1) * -1);
+  left: var(--at);
+  width: 1px;
+  background: var(--border);
+}
+
+.c-tick[data-current="true"] {
+  width: 2px;
+  background: var(--text);
+}
+
+.c-left {
+  color: var(--text-muted);
+}

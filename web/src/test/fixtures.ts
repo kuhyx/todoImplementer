@@ -6,6 +6,7 @@
 import type { Board } from "@/lib/schemas";
 import type { TaskCard } from "@/lib/schemas-common";
 
+import { makeCredits } from "./fixture-credits.ts";
 import { preset } from "./fixture-presets.ts";
 
 export const NOW = 1_793_000_000;
@@ -113,7 +114,7 @@ export function makeBoard(cards: TaskCard[] = makeCards()): Board {
     build: "abc1234",
     columns: ids.map((id) => ({ count: cards.filter((card) => card.column === id).length, id, label: LABELS[id] })),
     generated_at: NOW,
-    limit: { active: false, credits: { enabled: true, state: "ready", text: "Free API credits take over while the plan limit is active." }, until: null },
+    limit: { active: false, credits: makeCredits(), until: null },
     repos,
     slots: { used: cards.filter((card) => card.status === "working").length },
     tasks: cards,

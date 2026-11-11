@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import Protocol
 
@@ -41,15 +41,26 @@ def is_manual(title: str) -> bool:
 
 @dataclass(frozen=True)
 class Credits:
-    """The free-credits fallback as the server words it (mirrors common.schema.json credits)."""
+    """The paced free credits as the server words them (mirrors credits.schema.json)."""
 
     enabled: bool = False
     state: str = "off"
     text: str = "Free API credits fallback is off: runs wait for the plan limit."
+    route: str | None = None
+    period_start: float = 0.0
+    week: int = 1
+    monthly_usd: float = 0.0
+    cap_usd: float = 0.0
+    spent_period_usd: float = 0.0
+    credit_turns_period: int = 0
+    remaining_usd: float = 0.0
+    over_cap: bool = False
+    running_credit_turns: int = 0
+    cost_factor: float = 1.0
 
     def to_dict(self) -> dict[str, object]:
         """Return the JSON object of the contract."""
-        return {"enabled": self.enabled, "state": self.state, "text": self.text}
+        return asdict(self)
 
 
 @dataclass(frozen=True)
@@ -63,7 +74,7 @@ class Limit:
     @property
     def holds(self) -> bool:
         """True when the limit keeps turns from starting: active and the free credits cannot take over."""
-        return self.active and self.credits.state != "ready"
+        return self.active and (self.credits.state != "ready" or self.credits.over_cap)
 
     def to_dict(self) -> dict[str, object]:
         """Return the JSON object of the contract."""

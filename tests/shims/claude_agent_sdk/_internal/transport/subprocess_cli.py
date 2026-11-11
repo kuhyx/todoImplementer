@@ -31,11 +31,12 @@ class SubprocessCLITransport:
         if opt.resume:
             argv += ["--resume", opt.resume]
         env = {**os.environ, "FAKE_VIA_SDK": "1"}
-        done = subprocess.run(  # noqa: ASYNC221 - a test fake: blocking is fine
-            argv, cwd=opt.cwd, env=env, capture_output=True, text=True, check=False
-        )
-        for line in done.stdout.splitlines():
-            yield json.loads(line)
-        if done.returncode:
-            msg = f"Command failed with exit code {done.returncode}"
+        with subprocess.Popen(  # noqa: ASYNC220 - a test fake: blocking is fine; lines stream as the fake prints them
+            argv, cwd=opt.cwd, env=env, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True
+        ) as proc:
+            assert proc.stdout is not None  # PIPE was asked for
+            for line in proc.stdout:
+                yield json.loads(line)
+        if proc.returncode:
+            msg = f"Command failed with exit code {proc.returncode}"
             raise RuntimeError(msg)

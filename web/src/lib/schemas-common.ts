@@ -102,11 +102,22 @@ export const lesson = z.strictObject({
   state: z.enum(["drafted", "approved", "rejected"]),
 });
 
-/** The free API credits fallback, worded by the server (common.schema.json $defs/credits). */
+/** The paced free API credits, worded and computed by the server (credits.schema.json $defs/credits). */
 export const credits = z.strictObject({
+  cap_usd: usd,
+  cost_factor: z.number().positive(),
+  credit_turns_period: z.number().int().nonnegative(),
   enabled: z.boolean(),
+  monthly_usd: usd,
+  over_cap: z.boolean(),
+  period_start: epoch,
+  remaining_usd: usd,
+  route: z.enum(["plan", "credits"]).nullable(),
+  running_credit_turns: z.number().int().nonnegative(),
+  spent_period_usd: usd,
   state: z.enum(["off", "ready", "exhausted", "unavailable"]),
   text: z.string().min(1),
+  week: z.number().int().min(1).max(4),
 });
 
 export const limit = z.strictObject({
