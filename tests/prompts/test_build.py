@@ -50,7 +50,9 @@ def test_t1862_work_stages_grant_landing_instead_of_forbidding_it(stage: str, ct
     assert "push any tags" in text
     assert "never edit or commit in kuhy's own checkout" in text
     assert "git -C ~/src/<other> worktree add /run/ab12cd34/wt-<name> -b todo/<item id> origin/main" in text
-    assert "systemd-run --user --collect" in text
+    assert "systemd-run --user --collect --slice=todoimpl.slice" in text
+    assert "queue on one machine-wide build lock" in text
+    assert "never kill a waiting build" in text
     assert "capped.sh" in text
     assert "Ask kuhy only for" in text
 

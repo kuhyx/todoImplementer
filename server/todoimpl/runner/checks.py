@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import IO, TYPE_CHECKING, Any
 
-from . import checks_guard
+from . import buildlock, checks_guard
 from .claude import kill_tree
 
 if TYPE_CHECKING:
@@ -113,26 +113,28 @@ def run_capped(  # noqa: PLR0913 - guard is keyword-only
     """`capped.sh bash -c command` in its own process group; None when it timed out (the tree is killed).
 
     `guard` is a run dir: the group is recorded there while it runs, so a later server can stop it (T1889).
+    It first waits for the machine-wide build lock (buildlock.py), outside the timeout.
     """
-    proc = subprocess.Popen(  # noqa: S603 - argv list; the command is the note's own (trusted) done_check
-        [capped(), "bash", "-c", command],
-        cwd=cwd,
-        env=clean_env(env),
-        stdin=subprocess.DEVNULL,
-        stdout=out,
-        stderr=subprocess.STDOUT,
-        start_new_session=True,
-    )
-    if guard is not None:
-        checks_guard.remember(guard, proc.pid)
-    try:
-        return proc.wait(timeout=timeout)
-    except subprocess.TimeoutExpired:
-        kill_tree(proc, grace=1.0)
-        return None
-    finally:
+    with buildlock.held(guard.name if guard else "board", command, out):  # its wait is not timed
+        proc = subprocess.Popen(  # noqa: S603 - argv list; the command is the note's own (trusted) done_check
+            [capped(), "bash", "-c", command],
+            cwd=cwd,
+            env=clean_env({**(env or {}), buildlock.HELD_VAR: "1"}),
+            stdin=subprocess.DEVNULL,
+            stdout=out,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
         if guard is not None:
-            checks_guard.forget(guard, proc.pid)
+            checks_guard.remember(guard, proc.pid)
+        try:
+            return proc.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            kill_tree(proc, grace=1.0)
+            return None
+        finally:
+            if guard is not None:
+                checks_guard.forget(guard, proc.pid)
 
 
 def run_check(  # noqa: PLR0913, PLR0917 - one knob (env) more than the lint allows

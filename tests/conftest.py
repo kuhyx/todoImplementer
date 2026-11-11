@@ -71,3 +71,11 @@ def _network_is_up(monkeypatch: pytest.MonkeyPatch) -> None:
 def _quick_deploy_poll(monkeypatch: pytest.MonkeyPatch) -> None:
     """Every ship waits for a deploy host: look for its record every 20 ms, not every second."""
     monkeypatch.setattr("todoimpl.runner.deploy.POLL", 0.02)
+
+
+@pytest.fixture(autouse=True)
+def _no_real_build_lock(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep the build lock, its shims and env files in a temp dir; no test starts out holding the lock."""
+    monkeypatch.setenv("TODOIMPL_BUILD_ROOT", str(tmp_path_factory.mktemp("build-lock")))
+    monkeypatch.delenv("TODOIMPL_BUILD_LOCK_HELD", raising=False)
+    monkeypatch.delenv("TODOIMPL_BUILD_CARD", raising=False)

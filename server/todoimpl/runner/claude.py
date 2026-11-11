@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from . import policy
+from . import buildlock, policy
 
 ROLE_MODELS = {
     "spec": "sonnet",
@@ -96,11 +96,13 @@ def options(  # noqa: PLR0913, PLR0917 - one set of turn options, built in one p
     deny = (DENY_ALWAYS if pol.deny is None else pol.deny) + (DENY_READONLY if role in READONLY_ROLES else ())
     # Each turn is a new process: one owner per card keeps its phone test slot across turns. The plan route
     # never carries the API key (it would take precedence over the plan's login); the credit route adds it.
-    env = {k: v for k, v in os.environ.items() if k != KEY_VAR}
+    # Builds queue on one machine-wide lock (buildlock.py); a turn never starts out holding it.
+    env = {k: v for k, v in os.environ.items() if k not in {KEY_VAR, buildlock.HELD_VAR}}
     env |= {
         "CLAUDE_AUTO_CONTINUE": "0",
         BG_WAIT_VAR: "0",
         "PHONE_LEASE_OWNER": f"todoimpl:{worktree.parent.name}",
+        **buildlock.turn_env(worktree.parent.name),
     }
     dirs = (str(worktree), *map(str, extra_dirs), *pol.add_dirs)
     hooks = policy.HOOKS_OFF if pol.disable_hooks else None

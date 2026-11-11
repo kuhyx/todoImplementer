@@ -31,7 +31,8 @@ _MARKERS: tuple[tuple[str, Kind], ...] = (
 # Driver hints from the e2e-ground-truth skill, section 4. Never kuhy's live display :0.
 HINTS: dict[Kind, str] = {
     Kind.WEB: (
-        "Serve it with `systemd-run --user --collect --unit <name> <dev cmd>`. Drive it with headless "
+        "Serve it with `systemd-run --user --collect --slice=todoimpl.slice --unit <name> <dev cmd>`. "
+        "Drive it with headless "
         "`/usr/bin/chromium --headless=new --disable-extensions --mute-audio`, own `--user-data-dir`, "
         "`--remote-debugging-port=9333`, explicit `--window-size`; click, type, read the DOM and "
         "screenshot over CDP."
@@ -48,12 +49,13 @@ HINTS: dict[Kind, str] = {
         "`scripts/autodrive*.sh` under `capped.sh timeout 300 xvfb-run -a` with `--audio-driver Dummy`."
     ),
     Kind.PYTHON: (
-        "Run the real CLI, or start the server with `systemd-run --user --collect --unit <name> <cmd>` "
+        "Run the real CLI, or start the server with "
+        "`systemd-run --user --collect --slice=todoimpl.slice --unit <name> <cmd>` "
         "(never `setsid`, never under capped.sh) and `curl` its real port. Re-check the unit after 60 s."
     ),
     Kind.SHELL: (
         "Run the script itself against a scratch dir; show its real stdout and exit code. Services: "
-        "`systemd-run --user --collect` then `curl` or read the unit's journal."
+        "`systemd-run --user --collect --slice=todoimpl.slice` then `curl` or read the unit's journal."
     ),
     Kind.UNKNOWN: (
         "No known driver: find the real entrypoint, run it, and observe its output or window "

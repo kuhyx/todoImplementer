@@ -17,8 +17,9 @@ GRANT = (
     "Never write test or probe notes into kuhy's real todo app (its MCP, the `todo` CLI, its data): a "
     "check that needs notes uses a fake MCP or a scratch data dir under {run_dir}; abandon any you "
     "leaked before `D:`. "
-    "Long jobs run via "
-    "`systemd-run --user --collect`; wait for them, no 60 s limit applies. Ask kuhy only for a `Q:` question "
+    "Long jobs run via `systemd-run --user --collect --slice=todoimpl.slice`; wait for them, no 60 s limit "
+    "applies. Builds (make, flutter, gradle, pnpm, pytest, cargo, ...) queue on one machine-wide build lock, "
+    "so a wait is normal: never kill a waiting build to retry. Ask kuhy only for a `Q:` question "
     "round, a check only he can see, hear or touch (phone, audio, screen), or a physical tap; never for "
     "permission."
 )
