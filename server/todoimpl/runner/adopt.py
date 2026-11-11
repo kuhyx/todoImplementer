@@ -11,7 +11,7 @@ from __future__ import annotations
 import time
 from typing import TYPE_CHECKING
 
-from . import launch, orphans
+from . import idle, launch, orphans
 from .files import EXIT_SUFFIX, STREAM_SUFFIX, read_json, sibling, write_json
 
 if TYPE_CHECKING:
@@ -24,6 +24,7 @@ if TYPE_CHECKING:
 POLL = 0.05  # a change shows within 100 ms
 START_GRACE = 30.0  # a launched host that has not recorded itself by then never started
 FED_SUFFIX = ".fed"
+IDLE_AFTER_RESULT = 600.0  # a turn silent this long after its result, with no shell running, is ended (T1991)
 
 
 class Detached(BaseException):
@@ -105,22 +106,25 @@ class _Feed:
         self._emit(partial, show=True)
 
 
-def follow(
+def follow(  # noqa: PLR0913, PLR0917 - the turn's files, parser, feed and its two ways out
     run_dir: Path,
     rec: orphans.Record,
     parser: StreamParser,
     activity: Callable[[str, str, str | None], None],
     detach: threading.Event,
+    stop: Callable[[], None] | None = None,
 ) -> int | None:
     """Feed the turn's stream to `parser` until it is over; return claude's exit code, None if it was lost.
 
     Complete lines only (a partial one waits for the rest); lines below the `.fed` offset are parsed silently.
+    `stop` ends a turn idle after its result (`idle.should_stop`); its exit record then closes it.
     """
     stem = str(rec.stem)
     stream, over = sibling(run_dir, stem, STREAM_SUFFIX), sibling(run_dir, stem, EXIT_SUFFIX)
     feed = _Feed(parser, activity, sibling(run_dir, stem, FED_SUFFIX))
     pos = 0
     buf = b""
+    quiet_since = time.monotonic()
     while True:
         if detach.is_set():
             raise Detached
@@ -130,10 +134,20 @@ def follow(
         *lines, buf = (buf + chunk).split(b"\n")
         feed.lines(lines)
         if chunk:
+            quiet_since = time.monotonic()
             continue
         if ended:
             feed.last(buf)
             return exit_code(run_dir, stem)
         if not host_alive(run_dir, rec) and not over.exists():
             return None
+        if stop is not None and idle.should_stop(
+            finished=parser.result.finished,
+            silent_for=time.monotonic() - quiet_since,
+            limit=IDLE_AFTER_RESULT,
+            claude_pid=(orphans.read(run_dir) or rec).pid,
+        ):
+            activity("system", "turn idle after its result: ended, the next turn resumes it", None)
+            stop()
+            stop = None  # once; the exit record follows
         time.sleep(POLL)

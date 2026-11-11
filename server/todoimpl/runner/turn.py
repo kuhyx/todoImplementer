@@ -162,7 +162,7 @@ def _consume(env: TurnEnv, state: RunState, rec: orphans.Record) -> TurnResult |
             env.now,
         )
     try:
-        code = adopt.follow(env.run_dir, rec, parser, env.activity, handle.detach)
+        code = adopt.follow(env.run_dir, rec, parser, env.activity, handle.detach, handle.stop)
     finally:
         env.register(None)
     if code is None:
