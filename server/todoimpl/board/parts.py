@@ -2,12 +2,17 @@
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, Any
+
+from .types import is_manual
 
 if TYPE_CHECKING:
     from .state import RunState
     from .types import TaskLike
 
+_NEEDS = re.compile(r"(?m)^\s*Needs:\s*(.+?)\s*$")
+NO_ASK = "yours: the note has no Needs: line saying what"
 TICKS = "parts_ticks"  # overlay of the run dir's parts-done.json: {"done": [...], "progress": {key: {...}}}
 
 
@@ -48,3 +53,11 @@ def parts_of(task: TaskLike, run: RunState | None, *, working: bool) -> list[dic
             state = "todo"
         out.append({"id": part.key, "title": part.title, "state": state, "steps": progress.get(part.key)})
     return out
+
+
+def manual_ask(task: TaskLike) -> str:
+    """Return the card line for human work: the `Needs:` lines of its manual note or human parts (T1951)."""
+    bodies = [task.body] if is_manual(task.title) else []
+    bodies += [part.body for part in getattr(task, "parts", ()) if part.human]
+    asks = dict.fromkeys(m.group(1) for body in bodies for m in _NEEDS.finditer(body or ""))
+    return "yours: " + " · ".join(asks) if asks else NO_ASK

@@ -40,7 +40,8 @@ export function renderNeeds(detail: TaskDetail, isQuiet = false): HTMLElement | 
     h("strong", { text: humanize(needs.kind) }),
     h("p", { text: needs.text }),
     needs.command !== undefined && h("code", { attrs: { "data-fix-command": "" }, class: "fix-command", text: needs.command }),
-    detail.error !== null && h("p", { class: "needs-error", text: detail.error }),
+    // A failed run's need text is usually its error verbatim (T1950): say it once.
+    detail.error !== null && detail.error !== needs.text && h("p", { class: "needs-error", text: detail.error }),
   );
 }
 

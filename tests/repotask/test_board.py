@@ -6,7 +6,7 @@ from typing import Any
 
 from contract_lib import validate
 from todoimpl.board.card import Context, build_card
-from todoimpl.board.parts import TICKS, parts_of
+from todoimpl.board.parts import NO_ASK, TICKS, parts_of
 from todoimpl.board.state import RunState
 from todoimpl.repotask.model import Part
 from todoimpl.service.cards import CardTask
@@ -130,3 +130,25 @@ def test_t1925_a_card_waiting_on_its_repos_run_shows_only_the_lock_not_a_stage_l
         build_card(card_of(part("aaaa1111-0")), run("plan"), Context())["current"]
         == "waiting to continue plan"
     )
+
+
+def test_t1951_a_manual_card_with_a_repo_says_what_kuhy_must_do() -> None:
+    body = "Convert Home to a grid.\nNeeds: kuhy `! textgate approve` for the tile captions\n"
+    ask = Part(
+        "bbbb2222-0", "bbbb2222", 0, "MANUAL WORK REQUIRED: fit", body, "medium", None, human=True, held=False
+    )
+    bare = Part(
+        "cccc3333-0",
+        "cccc3333",
+        0,
+        "MANUAL WORK REQUIRED: x",
+        "no ask",
+        "medium",
+        None,
+        human=True,
+        held=False,
+    )
+    assert build_card(card_of(ask), None, Context())["current"] == (
+        "yours: kuhy `! textgate approve` for the tile captions"
+    )
+    assert build_card(card_of(bare), None, Context())["current"] == NO_ASK

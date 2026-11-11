@@ -131,3 +131,14 @@ describe("live stream", () => {
   });
 });
 
+
+describe("needs box", () => {
+  it("[T1950] says a failed run's reason once when the run error repeats it", async () => {
+    const reason = "5 of 30 children need you: kuhyx/punchme";
+    const c = { ...card("needs_you"), actions: [], needs: { category: "action", effort: 4, kind: "run_failed", text: reason }, stage: "failed" } as ReturnType<typeof card>;
+    env.stub = stubFetch({ [`GET /api/task/${c.id}`]: () => ({ ...makeDetail(c), error: reason }) });
+    env.drawer.open(c.id);
+    await settle(0);
+    expect(q(".needs").textContent.split(reason)).toHaveLength(2);
+  });
+});

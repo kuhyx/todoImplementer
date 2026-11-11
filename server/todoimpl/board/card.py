@@ -12,7 +12,7 @@ from todoimpl.umbrella.note import is_umbrella
 from .actions import actions
 from .badges import tier_badges
 from .needs import needs
-from .parts import human_only, is_repo_task, parts_of
+from .parts import human_only, is_repo_task, manual_ask, parts_of
 from .status import Status, column, compute
 from .types import Limit, fmt_when, is_manual
 from .umbrella import card_view
@@ -139,6 +139,8 @@ def build_card(task: TaskLike, run: RunState | None, ctx: Context) -> dict[str, 
         "auto_start": run.auto_start if run is not None else None,
         "auto": str(entry["reason"]) if entry is not None else None,
     }
+    if status == Status.YOURS and (is_manual(task.title) or human_only(task)):
+        card["current"] = manual_ask(task)  # what kuhy must do, never "no repo" on a card that has one
     if (umbrella := card_view(task, run)) is not None:
         card["umbrella"] = umbrella
     if (parts := parts_of(task, run, working=status == Status.WORKING)) is not None:
