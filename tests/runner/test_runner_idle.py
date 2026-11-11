@@ -51,7 +51,8 @@ def test_t1991_a_running_shell_below_claude_counts_as_a_build_in_progress(tmp_pa
     assert idle._read(tmp_path / "gone") == ""
     assert not idle.shell_running(None)
     assert not idle.shell_running(2**22 + 12345)  # no such process
-    shell = subprocess.Popen(["bash", "-c", "sleep 5"])
+    # `; :` keeps bash alive: a lone command is exec-replaced and no shell is left
+    shell = subprocess.Popen(["bash", "-c", "sleep 5; :"])
     try:
         deadline = time.monotonic() + 5
         while not idle.shell_running(os.getpid()) and time.monotonic() < deadline:
