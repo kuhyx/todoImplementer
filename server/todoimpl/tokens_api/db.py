@@ -16,7 +16,7 @@ from datetime import date, datetime, timedelta
 from typing import Any
 from urllib.parse import parse_qs
 
-from todoimpl.tokens_api import paths
+from todoimpl.tokens_api import model_group, paths
 
 STORE = "data/token-dashboard/tokens.sqlite"
 DEFAULT_DAYS = 30
@@ -77,9 +77,11 @@ def store_path() -> str:
 def connect() -> sqlite3.Connection | None:
     """Open the store read-only, or ``None`` when it has not been built."""
     try:
-        return sqlite3.connect(f"file:{store_path()}?mode=ro", uri=True)
+        conn = sqlite3.connect(f"file:{store_path()}?mode=ro", uri=True)
     except sqlite3.OperationalError:
         return None
+    model_group.register(conn)
+    return conn
 
 
 def _first(query: dict[str, list[str]], name: str) -> str:

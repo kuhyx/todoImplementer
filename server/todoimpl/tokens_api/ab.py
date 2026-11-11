@@ -44,7 +44,7 @@ _ROWS = (
     "SELECT arm, usd, duration_s, redo, followup, error, correction, tag"
     " FROM ab_rows WHERE"
     " (? = '' OR cwd = ? OR cwd LIKE ? || '/%')"
-    " AND (? = '' OR model = ?)"
+    " AND (? = '' OR model_group(model) = ?)"
     " AND (? = -1 OR is_sub = ?)"
 )
 _COLUMNS = (

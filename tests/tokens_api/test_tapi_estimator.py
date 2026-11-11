@@ -69,7 +69,7 @@ def test_tiles_summarise_the_misses(store: Path) -> None:
     [
         ("scope=main", {"s1": (2, ""), "s2": (1, "under"), "s3": (1, "over")}),
         ("scope=sub", {"s1": (1, "")}),
-        ("model=claude-sonnet-5-5", {"s1": (1, "")}),
+        ("model=Sonnet", {"s1": (1, "")}),
         ("cwd=/home/tester/src", {"s1": (3, "over"), "s3": (1, "over")}),
         ("from=2026-09-29", {"s2": (1, "under")}),
     ],

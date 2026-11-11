@@ -87,7 +87,7 @@ def test_a_reply_without_detail_has_no_split(store: Path) -> None:
         ("", 1260),
         ("from=2026-09-28&to=2026-09-28", 1250),
         ("cwd=/home/tester/src", 1250),
-        ("model=claude-sonnet-5-5", 50),
+        ("model=Sonnet", 50),
         ("scope=main", 1210),
         ("scope=sub", 50),
     ],

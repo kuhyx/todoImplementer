@@ -111,7 +111,7 @@ def test_daily_cost_and_totals(store: Path) -> None:
     [
         ("cwd=/home/tester/src", 9, 300),
         ("cwd=/home/tester", 9, 350),
-        ("model=claude-sonnet-5-5", 5, 0),
+        ("model=Sonnet", 5, 0),
         ("scope=main", 4, 350),
         ("scope=sub", 5, 0),
         ("from=2026-09-29&to=2026-09-29", 0, 50),

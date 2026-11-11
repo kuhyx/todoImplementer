@@ -72,7 +72,7 @@ def test_sessions_started_from_home(store: Path) -> None:
     ("query", "sessions", "home"),
     [
         ("cwd=/home/tester/src", 2, 0),
-        ("model=claude-sonnet-5-5", 1, 0),
+        ("model=Sonnet", 1, 0),
         ("scope=main", 3, 1),
         ("scope=sub", 1, 0),
         ("from=2026-09-29&to=2026-09-29", 1, 1),

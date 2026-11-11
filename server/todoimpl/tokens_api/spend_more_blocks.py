@@ -25,7 +25,7 @@ HOUR_S = 3600
 _TURNS = (
     "SELECT ts, day, usd FROM turns WHERE"
     " ts BETWEEN ? AND ? AND (? = '' OR cwd = ? OR cwd LIKE ? || '/%')"
-    " AND (? = '' OR model = ?) AND (? = -1 OR is_sub = ?)"
+    " AND (? = '' OR model_group(model) = ?) AND (? = -1 OR is_sub = ?)"
     " ORDER BY ts"
 )
 

@@ -34,25 +34,25 @@ CAPTION = (
 _MONTHS = (
     "SELECT substr(day, 1, 7), SUM(usd), COUNT(*) FROM turns WHERE"
     " ts BETWEEN ? AND ? AND (? = '' OR cwd = ? OR cwd LIKE ? || '/%')"
-    " AND (? = '' OR model = ?) AND (? = -1 OR is_sub = ?)"
+    " AND (? = '' OR model_group(model) = ?) AND (? = -1 OR is_sub = ?)"
     " GROUP BY 1 ORDER BY 1 DESC"
 )
 DAILY_SPEND = (
     "SELECT day, SUM(usd) FROM turns WHERE"
     " ts BETWEEN ? AND ? AND (? = '' OR cwd = ? OR cwd LIKE ? || '/%')"
-    " AND (? = '' OR model = ?) AND (? = -1 OR is_sub = ?)"
+    " AND (? = '' OR model_group(model) = ?) AND (? = -1 OR is_sub = ?)"
     " GROUP BY day ORDER BY 1"
 )
 _BY_MODEL = (
-    "SELECT model, SUM(usd), COUNT(*) FROM turns WHERE"
+    "SELECT model_group(model), SUM(usd), COUNT(*) FROM turns WHERE"
     " ts BETWEEN ? AND ? AND (? = '' OR cwd = ? OR cwd LIKE ? || '/%')"
-    " AND (? = '' OR model = ?) AND (? = -1 OR is_sub = ?)"
-    " GROUP BY model ORDER BY SUM(usd) DESC"
+    " AND (? = '' OR model_group(model) = ?) AND (? = -1 OR is_sub = ?)"
+    " GROUP BY model_group(model) ORDER BY SUM(usd) DESC"
 )
 _BY_CWD = (
     "SELECT cwd, SUM(usd), COUNT(*) FROM turns WHERE"
     " ts BETWEEN ? AND ? AND (? = '' OR cwd = ? OR cwd LIKE ? || '/%')"
-    " AND (? = '' OR model = ?) AND (? = -1 OR is_sub = ?)"
+    " AND (? = '' OR model_group(model) = ?) AND (? = -1 OR is_sub = ?)"
     " GROUP BY cwd ORDER BY SUM(usd) DESC"
 )
 _HEATMAP = (
@@ -60,14 +60,14 @@ _HEATMAP = (
     " CAST(strftime('%H', ts, 'unixepoch', 'localtime') AS INT),"
     " SUM(usd), COUNT(*) FROM turns WHERE"
     " ts BETWEEN ? AND ? AND (? = '' OR cwd = ? OR cwd LIKE ? || '/%')"
-    " AND (? = '' OR model = ?) AND (? = -1 OR is_sub = ?)"
+    " AND (? = '' OR model_group(model) = ?) AND (? = -1 OR is_sub = ?)"
     " GROUP BY 1, 2"
 )
 _RATE_LIMITS = (
     "SELECT day, SUM(count) FROM marks WHERE kind = 'api_error'"
     " AND name LIKE '%limit%' AND"
     " ts BETWEEN ? AND ? AND (? = '' OR cwd = ? OR cwd LIKE ? || '/%')"
-    " AND (? = '' OR model = ?) AND (? = -1 OR is_sub = ?)"
+    " AND (? = '' OR model_group(model) = ?) AND (? = -1 OR is_sub = ?)"
     " GROUP BY day ORDER BY MIN(ts)"
 )
 

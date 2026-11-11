@@ -66,7 +66,7 @@ def test_cumulative_keeps_the_last_three_months(store: Path) -> None:
 def test_spend_by_model_and_by_cwd(store: Path) -> None:
     payload = _spend()
     models = [(r["model"], r["usd"]) for r in payload["by_model"]]
-    assert models == [("claude-opus-5-5", 7.5), ("claude-sonnet-5-5", 3.0)]
+    assert models == [("Opus", 7.5), ("Sonnet", 3.0)]
     assert payload["by_model"][0]["share"] == pytest.approx(7.5 / 10.5)
     cwds = [(r["cwd"], r["usd"]) for r in payload["by_cwd"]]
     assert cwds == [("/home/tester/src/a", 6.5), ("/home/tester", 4.0)]
@@ -110,7 +110,7 @@ def test_rate_limit_errors_per_day(store: Path) -> None:
     ("query", "usd", "errors"),
     [
         ("cwd=/home/tester/src", 6.5, 3),
-        ("model=claude-sonnet-5-5", 3.0, 0),
+        ("model=Sonnet", 3.0, 0),
         ("scope=main", 7.5, 3),
         ("scope=sub", 3.0, 0),
         ("from=2026-09-29&to=2026-09-29", 4.0, 0),

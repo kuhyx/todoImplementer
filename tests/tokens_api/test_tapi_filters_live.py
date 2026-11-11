@@ -68,7 +68,7 @@ def test_efficiency_counts_each_sessions_filtered_spend(store: Path) -> None:
 def test_efficiency_scope_and_model_change_the_spend(store: Path) -> None:
     main = _panel("efficiency", "scope=main")["done"][0]
     assert main["usd_per_done"] == pytest.approx(3.0)
-    sonnet = _panel("efficiency", "model=claude-sonnet-5-5")
+    sonnet = _panel("efficiency", "model=Sonnet")
     assert sonnet["done"][0]["usd_per_done"] == pytest.approx(3.0)
     assert sonnet["done"][0]["untagged"] == 0
     assert _panel("efficiency", "cwd=/nowhere")["done"] == []

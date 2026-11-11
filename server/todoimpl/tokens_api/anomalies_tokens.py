@@ -41,14 +41,14 @@ CAPTION = (
 _SESSIONS = (
     "SELECT main_key, MIN(day), SUM(usd), COUNT(*) FROM turns WHERE"
     " ts BETWEEN ? AND ? AND (? = '' OR cwd = ? OR cwd LIKE ? || '/%')"
-    " AND (? = '' OR model = ?) AND (? = -1 OR is_sub = ?)"
+    " AND (? = '' OR model_group(model) = ?) AND (? = -1 OR is_sub = ?)"
     " GROUP BY main_key HAVING SUM(usd) > ? ORDER BY SUM(usd) DESC"
 )
 _FAMILIES = (
     "SELECT main_key, family, COUNT(*), SUM(create_usd + carry_usd)"
     " FROM calls AS c WHERE"
     " ts BETWEEN ? AND ? AND (? = '' OR cwd = ? OR cwd LIKE ? || '/%')"
-    " AND (? = '' OR model = ?) AND (? = -1 OR is_sub = ?)"
+    " AND (? = '' OR model_group(model) = ?) AND (? = -1 OR is_sub = ?)"
     " GROUP BY main_key, family"
 )
 _SUMMARY = "SELECT key, title, cwd FROM session_summary"

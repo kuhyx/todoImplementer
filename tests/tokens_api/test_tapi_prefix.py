@@ -107,7 +107,7 @@ def test_prune_timeline_has_deltas_vs_the_previous_point(store: Path) -> None:
     ("query", "calls"),
     [
         ("cwd=/home/tester/src", 3),
-        ("model=claude-sonnet-5-5", 1),
+        ("model=Sonnet", 1),
         ("scope=main", 3),
         ("scope=sub", 1),
         ("from=2026-09-29&to=2026-09-29", 1 * 30 * fx.DAY / (fx.DAY - 1)),

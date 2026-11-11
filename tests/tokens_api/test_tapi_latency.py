@@ -64,8 +64,8 @@ def test_model_latency_per_day_and_model(store: Path) -> None:
         10.0,
     )
     models = {m["model"]: m for m in payload["models"]}
-    assert models["claude-opus-5-5"]["p50"] == 4.0
-    assert models[SONNET]["calls"] == 1
+    assert models["Opus"]["p50"] == 4.0
+    assert models["Sonnet"]["calls"] == 1
     assert "first record" in payload["caption"]
 
 
@@ -99,7 +99,7 @@ def test_think_time_between_reply_and_next_prompt(store: Path) -> None:
         ("", 4, 3),
         ("from=2026-09-28&to=2026-09-28", 3, 2),
         ("cwd=/home/tester/src", 3, 2),
-        ("model=claude-sonnet-5-5", 1, 0),
+        ("model=Sonnet", 1, 0),
         ("scope=main", 3, 3),
         ("scope=sub", 1, 0),
     ],

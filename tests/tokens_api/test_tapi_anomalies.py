@@ -114,7 +114,7 @@ def test_loops_use_the_tools_rule(store: Path) -> None:
     ("query", "spikes", "vcs"),
     [
         ("cwd=/home/tester/src", 1, 2),
-        ("model=claude-sonnet-5-5", 0, 1),
+        ("model=Sonnet", 0, 1),
         ("scope=main", 2, 2),
         ("scope=sub", 0, 1),
     ],

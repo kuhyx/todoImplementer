@@ -43,7 +43,7 @@ CAPTION = (
 _SESSIONS = (
     "SELECT main_key, SUM(usd) FROM turns WHERE"
     " ts BETWEEN ? AND ? AND (? = '' OR cwd = ? OR cwd LIKE ? || '/%')"
-    " AND (? = '' OR model = ?) AND (? = -1 OR is_sub = ?)"
+    " AND (? = '' OR model_group(model) = ?) AND (? = -1 OR is_sub = ?)"
     " GROUP BY main_key ORDER BY SUM(usd) DESC"
 )
 _PROMPTS = "SELECT key, idx, ts, text FROM prompts ORDER BY key, idx"

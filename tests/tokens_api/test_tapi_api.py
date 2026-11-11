@@ -37,7 +37,7 @@ def test_index_lists_panels_options_and_coverage(store: Path) -> None:
     # The core panels, in order; later groups register themselves after them.
     core = ["overview", "sessions", "efficiency", "ab", "levers", "context"]
     assert names[: len(core)] == core
-    assert payload["options"]["models"] == ["claude-opus-5-5", "claude-sonnet-5-5"]
+    assert payload["options"]["models"] == ["Opus", "Sonnet"]
     coverage = payload["coverage"]
     assert coverage["any_from"] == "2026-03-11"
     assert coverage["aggregate_from"] == "2026-07-01"
@@ -62,7 +62,7 @@ def test_overview_window_uses_the_record_span(store: Path) -> None:
     ("query", "usd"),
     [
         ("cwd=/home/tester/src/a", 6.0),
-        ("model=claude-sonnet-5-5", 3.0),
+        ("model=Sonnet", 3.0),
         ("scope=main", 7.0),
         ("scope=sub", 3.0),
         ("from=2026-09-29&to=2026-09-29", 4.0),

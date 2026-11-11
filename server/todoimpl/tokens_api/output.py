@@ -35,25 +35,25 @@ _SPLIT = (
     "SELECT day, SUM(out_think), SUM(out_text), SUM(out_tool) FROM turn_detail"
     " WHERE"
     " ts BETWEEN ? AND ? AND (? = '' OR cwd = ? OR cwd LIKE ? || '/%')"
-    " AND (? = '' OR model = ?) AND (? = -1 OR is_sub = ?)"
+    " AND (? = '' OR model_group(model) = ?) AND (? = -1 OR is_sub = ?)"
     " GROUP BY day"
 )
 _TURNS = (
     "SELECT day, model, SUM(output), SUM(usd) FROM turns WHERE"
     " ts BETWEEN ? AND ? AND (? = '' OR cwd = ? OR cwd LIKE ? || '/%')"
-    " AND (? = '' OR model = ?) AND (? = -1 OR is_sub = ?)"
+    " AND (? = '' OR model_group(model) = ?) AND (? = -1 OR is_sub = ?)"
     " GROUP BY day, model"
 )
 _LONGEST = (
     "SELECT ts, key, model, output, usd FROM turns WHERE"
     " ts BETWEEN ? AND ? AND (? = '' OR cwd = ? OR cwd LIKE ? || '/%')"
-    " AND (? = '' OR model = ?) AND (? = -1 OR is_sub = ?)"
+    " AND (? = '' OR model_group(model) = ?) AND (? = -1 OR is_sub = ?)"
     " ORDER BY output DESC LIMIT ?"
 )
 _LONGEST_SPLIT = (
     "SELECT key, ts, out_think, out_text, out_tool FROM turn_detail WHERE"
     " ts BETWEEN ? AND ? AND (? = '' OR cwd = ? OR cwd LIKE ? || '/%')"
-    " AND (? = '' OR model = ?) AND (? = -1 OR is_sub = ?)"
+    " AND (? = '' OR model_group(model) = ?) AND (? = -1 OR is_sub = ?)"
     " ORDER BY out_think + out_text + out_tool DESC LIMIT ?"
 )
 

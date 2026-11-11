@@ -12,6 +12,7 @@ from collections import defaultdict
 from typing import TYPE_CHECKING, Any
 
 from todoimpl.tokens_api import db
+from todoimpl.tokens_api.model_group import regroup
 from todoimpl.tokens_api.registry import panel
 
 if TYPE_CHECKING:
@@ -44,7 +45,7 @@ _LIST = (
     " usd_sub, calls, prompts, subagents, models, final_tag FROM session_summary"
     " WHERE first_ts BETWEEN ? AND ?"
     " AND (? = '' OR cwd = ? OR cwd LIKE ? || '/%')"
-    " AND (? = '' OR models LIKE '%\"' || ? || '\"%')"
+    " AND (? = '' OR has_model_group(models, ?))"
     " AND (? != 'sub' OR subagents > 0)"
     " ORDER BY CASE ? WHEN 'main' THEN usd_main WHEN 'sub' THEN usd_sub"
     " ELSE usd END DESC LIMIT ?"
@@ -59,7 +60,7 @@ _ONE = (
 def _session(row: tuple[Any, ...]) -> dict[str, Any]:
     """Return a summary row as a dict, models decoded."""
     out = dict(zip(_COLUMNS, row, strict=True))
-    out["models"] = json.loads(out["models"] or "{}")
+    out["models"] = regroup(list(json.loads(out["models"] or "{}").items()))
     return out
 
 

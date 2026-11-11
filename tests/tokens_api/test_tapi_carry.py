@@ -104,7 +104,7 @@ def test_daily_and_totals_split_results_from_other_context(store: Path) -> None:
     ("query", "count"),
     [
         ("cwd=/home/tester/src", 10),
-        ("model=claude-sonnet-5-5", 1),
+        ("model=Sonnet", 1),
         ("scope=main", 10),
         ("scope=sub", 1),
     ],

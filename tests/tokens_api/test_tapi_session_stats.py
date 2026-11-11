@@ -77,7 +77,7 @@ def test_daily_sessions_and_concurrency(store: Path) -> None:
 def test_position_counts_before_the_filter(store: Path) -> None:
     rows = {r["bucket"]: r for r in _stats("cwd=/home/tester/src")["position"]}
     assert rows["2-5"]["calls"] == 1
-    sonnet = {r["bucket"]: r["calls"] for r in _stats("model=claude-sonnet-5-5")["position"] if r["calls"]}
+    sonnet = {r["bucket"]: r["calls"] for r in _stats("model=Sonnet")["position"] if r["calls"]}
     assert sonnet == {"1": 1}
 
 
@@ -85,7 +85,7 @@ def test_position_counts_before_the_filter(store: Path) -> None:
     ("query", "sessions"),
     [
         ("cwd=/home/tester/src", 2),
-        ("model=claude-sonnet-5-5", 1),
+        ("model=Sonnet", 1),
         ("scope=main", 3),
         ("scope=sub", 1),
         ("from=2026-09-29&to=2026-09-29", 1),

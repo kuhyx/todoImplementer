@@ -17,6 +17,7 @@ from collections import defaultdict
 from typing import TYPE_CHECKING, Any
 
 from todoimpl.tokens_api.context_growth_stats import bucket, percentiles
+from todoimpl.tokens_api.model_group import group_of
 from todoimpl.tokens_api.registry import panel
 
 if TYPE_CHECKING:
@@ -40,17 +41,17 @@ CAPTION = (
 _LATENCY = (
     "SELECT day, model, latency_s FROM turn_detail WHERE latency_s > 0 AND"
     " ts BETWEEN ? AND ? AND (? = '' OR cwd = ? OR cwd LIKE ? || '/%')"
-    " AND (? = '' OR model = ?) AND (? = -1 OR is_sub = ?)"
+    " AND (? = '' OR model_group(model) = ?) AND (? = -1 OR is_sub = ?)"
 )
 _TOOLS = (
     "SELECT name, end_ts - ts FROM calls WHERE end_ts >= ts AND"
     " ts BETWEEN ? AND ? AND (? = '' OR cwd = ? OR cwd LIKE ? || '/%')"
-    " AND (? = '' OR model = ?) AND (? = -1 OR is_sub = ?)"
+    " AND (? = '' OR model_group(model) = ?) AND (? = -1 OR is_sub = ?)"
 )
 _REPLIES = (
     "SELECT key, prompt_idx, MAX(ts) FROM turns WHERE is_sub = 0 AND"
     " ts BETWEEN ? AND ? AND (? = '' OR cwd = ? OR cwd LIKE ? || '/%')"
-    " AND (? = '' OR model = ?) AND (? = -1 OR is_sub = ?)"
+    " AND (? = '' OR model_group(model) = ?) AND (? = -1 OR is_sub = ?)"
     " GROUP BY key, prompt_idx"
 )
 _PROMPTS = "SELECT key, idx, ts FROM prompts"
@@ -87,7 +88,7 @@ def build(conn: sqlite3.Connection, filters: Filters) -> dict[str, Any]:
     """Model latency per day and model, tool time per tool, user think time."""
     latency = conn.execute(_LATENCY, filters.params()).fetchall()
     daily = _grouped([(day, s) for day, _, s in latency], "day", QS)
-    models = _grouped([(model, s) for _, model, s in latency], "model", QS)
+    models = _grouped([(group_of(model), s) for _, model, s in latency], "model", QS)
     tool_times = conn.execute(_TOOLS, filters.params()).fetchall()
     tools = _grouped(tool_times, "name", (0.5, 0.95))
     gaps = _think(conn, filters)

@@ -121,7 +121,7 @@ def test_compactions_are_estimated(store: Path) -> None:
         ("", 1037),
         ("from=2026-09-28&to=2026-09-28", 1007),
         ("cwd=/home/tester/src", 1007),
-        ("model=claude-sonnet-5-5", 7),
+        ("model=Sonnet", 7),
         ("scope=main", 1030),
         ("scope=sub", 7),
     ],

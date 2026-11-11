@@ -36,7 +36,7 @@ _MARKS = (
     "SELECT kind, SUM(count) FROM marks WHERE kind IN ('hook_run', 'hook_context')"
     " AND detail LIKE ? AND"
     " ts BETWEEN ? AND ? AND (? = '' OR cwd = ? OR cwd LIKE ? || '/%')"
-    " AND (? = '' OR model = ?) AND (? = -1 OR is_sub = ?)"
+    " AND (? = '' OR model_group(model) = ?) AND (? = -1 OR is_sub = ?)"
     " GROUP BY kind"
 )
 

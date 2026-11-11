@@ -102,7 +102,7 @@ def test_grouped_by_type_model_and_description(store: Path) -> None:
     assert by_type["(unlinked)"]["leverage"] is None
     assert payload["by_type"][0]["label"] == "Explore"
     by_model = _by(payload["by_model"], "label")
-    assert by_model["claude-opus-5-5"]["agents"] == 2
+    assert by_model["Opus"]["agents"] == 2
     desc = _by(payload["by_description"], "label")["Build y"]
     assert (desc["active_s"], desc["returned_tokens"]) == (80, 100)
     assert "returned" in payload["caption"]
@@ -165,7 +165,7 @@ def test_routing_reads_the_ab_log_in_range(store: Path, sysroot: Path) -> None:
     ("query", "keys", "returned", "worktree"),
     [
         ("cwd=/home/tester/src", 2, 300, 1),
-        (f"model={SONNET}", 1, 200, 0),
+        ("model=Sonnet", 1, 200, 0),
         ("scope=main", 0, 0, 0),
         ("scope=sub", 3, 300, 1),
         ("from=2026-09-29&to=2026-09-29", 1, 0, 0),

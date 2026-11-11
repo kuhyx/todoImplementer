@@ -14,6 +14,7 @@ from collections import defaultdict
 from typing import TYPE_CHECKING, Any
 
 from todoimpl.tokens_api.db import ratio
+from todoimpl.tokens_api.model_group import group_of
 from todoimpl.tokens_api.registry import panel
 from todoimpl.tokens_api.subagents_routing import routing
 
@@ -42,7 +43,7 @@ _AGENTS = (
     " COUNT(*) AS n, SUM(input + cache_read + cache_write + output) AS tok"
     " FROM turns AS spent WHERE"
     " ts BETWEEN ? AND ? AND (? = '' OR cwd = ? OR cwd LIKE ? || '/%')"
-    " AND (? = '' OR model = ?) AND (? = -1 OR is_sub = ?)"
+    " AND (? = '' OR model_group(model) = ?) AND (? = -1 OR is_sub = ?)"
     " AND is_sub = 1 GROUP BY key)"
     " SELECT t.key, l.agent_type, COALESCE(l.model, t.model), l.description,"
     " t.usd, t.n, t.tok, l.wall_s, l.active_s"
@@ -53,7 +54,7 @@ _SPAWNS = (
     " c.result_tokens FROM (SELECT key, main_key, ts, day, target, result_tokens"
     " FROM calls WHERE name IN ('Agent', 'Task') AND"
     " ts BETWEEN ? AND ? AND (? = '' OR cwd = ? OR cwd LIKE ? || '/%')"
-    " AND (? = '' OR model = ?) AND (? = -1 OR is_sub = ?)"
+    " AND (? = '' OR model_group(model) = ?) AND (? = -1 OR is_sub = ?)"
     ") AS c LEFT JOIN agent_calls AS a ON a.key = c.key AND a.ts = c.ts"
 )
 _GROUPS = {"by_type": 0, "by_model": 1, "by_description": 2}
@@ -64,7 +65,7 @@ def _agent_row(row: tuple[Any, ...], returned: int) -> dict[str, Any]:
     key, kind, model, desc, usd, calls, spent, wall, active = row
     return {
         "key": key,
-        "groups": (kind or UNLINKED, model, desc or UNLINKED),
+        "groups": (kind or UNLINKED, group_of(model), desc or UNLINKED),
         "agents": 1,
         "usd": usd,
         "calls": calls,

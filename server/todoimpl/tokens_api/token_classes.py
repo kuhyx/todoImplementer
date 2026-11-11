@@ -42,13 +42,13 @@ _TURNS = (
     "SELECT day, model, SUM(input), SUM(cache_write), SUM(cache_read),"
     " SUM(output), SUM(usd) FROM turns WHERE"
     " ts BETWEEN ? AND ? AND (? = '' OR cwd = ? OR cwd LIKE ? || '/%')"
-    " AND (? = '' OR model = ?) AND (? = -1 OR is_sub = ?)"
+    " AND (? = '' OR model_group(model) = ?) AND (? = -1 OR is_sub = ?)"
     " GROUP BY day, model"
 )
 _SPLIT = (
     "SELECT day, model, SUM(cw_5m), SUM(cw_1h) FROM turn_detail WHERE"
     " ts BETWEEN ? AND ? AND (? = '' OR cwd = ? OR cwd LIKE ? || '/%')"
-    " AND (? = '' OR model = ?) AND (? = -1 OR is_sub = ?)"
+    " AND (? = '' OR model_group(model) = ?) AND (? = -1 OR is_sub = ?)"
     " GROUP BY day, model"
 )
 

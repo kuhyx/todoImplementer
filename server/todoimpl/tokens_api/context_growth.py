@@ -43,7 +43,7 @@ CAPTION = (
 _CALLS = (
     "SELECT key, main_key, context, usd FROM turns WHERE"
     " ts BETWEEN ? AND ? AND (? = '' OR cwd = ? OR cwd LIKE ? || '/%')"
-    " AND (? = '' OR model = ?) AND (? = -1 OR is_sub = ?)"
+    " AND (? = '' OR model_group(model) = ?) AND (? = -1 OR is_sub = ?)"
     " ORDER BY key, ts"
 )
 _TITLES = "SELECT key, title FROM session_summary"

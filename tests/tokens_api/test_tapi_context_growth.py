@@ -98,7 +98,7 @@ def test_handoffs_from_writes_prompts_and_marks(store: Path) -> None:
     [
         ("from=2026-09-28&to=2026-09-28", 6, 3),
         ("cwd=/home/tester/src", 6, 3),
-        ("model=claude-sonnet-5-5", 1, 0),
+        ("model=Sonnet", 1, 0),
         ("scope=main", 6, 3),
         ("scope=sub", 1, 0),
     ],

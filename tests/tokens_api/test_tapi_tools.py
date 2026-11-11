@@ -135,7 +135,7 @@ def test_batching_rate_per_day(store: Path) -> None:
     ("query", "count", "events"),
     [
         ("cwd=/home/tester/src", 8, False),
-        ("model=claude-sonnet-5-5", 1, False),
+        ("model=Sonnet", 1, False),
         ("scope=main", 8, False),
         ("scope=sub", 1, False),
         ("from=2026-09-29&to=2026-09-29", 1, True),

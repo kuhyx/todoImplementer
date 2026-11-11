@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING, Any
 from urllib.parse import parse_qs, unquote
 
 from todoimpl import tokens_api
-from todoimpl.tokens_api import ab, context, db, items, schema, sessions, tables
+from todoimpl.tokens_api import ab, context, db, items, model_group, schema, sessions, tables
 from todoimpl.tokens_api.registry import PANELS, listing
 
 if TYPE_CHECKING:
@@ -84,7 +84,10 @@ def _index(conn: sqlite3.Connection) -> dict[str, Any]:
         "panels": listing(),
         "options": {
             "cwds": [r[0] for r in cwds],
-            "models": [r[0] for r in models if not r[0].startswith("<")],
+            "models": sorted(
+                {model_group.group_of(r[0]) for r in models if not r[0].startswith("<")},
+                key=model_group.sort_key,
+            ),
         },
         "coverage": _coverage(conn),
         "ab_banner": ab.banner(conn),

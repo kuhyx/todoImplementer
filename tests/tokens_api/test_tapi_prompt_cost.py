@@ -80,7 +80,7 @@ def test_totals(store: Path) -> None:
     [
         ("scope=main", [("s2", 0), ("s1", 0), ("s1", 1), ("s1", 2)]),
         ("scope=sub", [("s1", 0)]),
-        ("model=claude-sonnet-5-5", [("s1", 0), ("s1", 1), ("s1", 2)]),
+        ("model=Sonnet", [("s1", 0), ("s1", 1), ("s1", 2)]),
         ("cwd=/home/tester/src", [("s1", 0), ("s1", 1), ("s1", 2)]),
         ("from=2026-09-29", [("s2", 0)]),
     ],
