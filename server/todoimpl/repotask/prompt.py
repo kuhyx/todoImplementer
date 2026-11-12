@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from todoimpl.asks.view import decided
+
 from .tick import command
 
 if TYPE_CHECKING:
@@ -24,6 +26,12 @@ def addendum(item: Item, run_dir: Path) -> str:
             "order, one after the other:"
         ),
         *(f"{n}. [{part.key}] {part.title}" for n, part in enumerate(work, 1)),
+    ]
+    lines += [
+        f"[{p.key}] is yours now: kuhy made its MANUAL WORK REQUIRED decisions. Build exactly these, "
+        "even where the note recommended otherwise: " + "; ".join(decided(p.body, run_dir))
+        for p in work
+        if p.manual
     ]
     human = [part for part in item.parts if part.human]
     held = [part for part in item.parts if part.held]

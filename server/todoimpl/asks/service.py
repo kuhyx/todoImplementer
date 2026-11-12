@@ -85,6 +85,7 @@ class AskService:
         data = store.load(directory)
         data["items"][ask_id] = {**record, "at": self._clock()}
         store.save(directory, data)
+        self.cache.poke()  # the last answer may hand a MANUAL part to Claude: rebuild the cards now (T1994)
 
     def answer(self, id8: str, ask_id: str, option: str) -> None:
         """Click an option of a choice."""

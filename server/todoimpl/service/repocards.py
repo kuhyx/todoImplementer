@@ -7,9 +7,12 @@ a repo become ONE card whose id is `ids.repo_card_id(repo)`. A part an older per
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from todoimpl.asks import view as asks_view
+from todoimpl.board.state import run_dir
 from todoimpl.board.types import is_manual
 from todoimpl.repotask.ids import norm, repo_card_id, repo_human_id
 from todoimpl.repotask.legacy import Older
@@ -20,12 +23,24 @@ from todoimpl.umbrella.note import is_umbrella, scan_size
 from .cards import CardTask, card_id, card_tasks
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from pathlib import Path
 
     from todoimpl.todo_mcp.model import Task
 
 PRIORITIES = ("high", "medium", "low")
 MIDDLE = 1
+Released = Callable[[str, str], bool]  # (human card id, part text) -> kuhy answered every ask in it
+
+
+def _never(_card: str, _body: str) -> bool:
+    return False
+
+
+def released_in(root: Path | None) -> Released:
+    """Return the check that reads the human card's saved answers under `root` (none without a root)."""
+    if root is None:
+        return _never
+    return lambda card, body: asks_view.released(body, run_dir(root, card))
 
 
 @dataclass(frozen=True)
@@ -47,16 +62,18 @@ def _order(entry: _Entry) -> tuple[int, int, int, int, str, int]:
     return (_rank(part.priority), *size, part.note_id, part.index)
 
 
-def _entries(note: Task, older: Callable[[str], Older]) -> list[_Entry]:
+def _entries(note: Task, older: Callable[[str], Older], released: Released) -> list[_Entry]:
     found = []
+    hid = repo_human_id(note.repo or "")
     for item in split_items(note):
         if item.status == "done":
             continue
         key = card_id(item.note_id, item.index)
-        human = is_manual(item.title)
+        manual = is_manual(item.title)
+        human = manual and not released(hid, item.body)  # answered asks hand the part to Claude (T1994)
         before = Older() if human else older(key)  # human work is never the board's
         part = Part(key, item.note_id, item.index, item.title, item.body, note.priority, item.done_check,
-                    human, before.held, before.note)  # fmt: skip
+                    human, before.held, before.note, manual=manual)  # fmt: skip
         found.append(_Entry(note, item, part))
     return found
 
@@ -77,8 +94,8 @@ def _repo_card(repo: str, entries: list[_Entry], cid: str) -> CardTask:
     parts = [entry.part for entry in entries]
     work = [part for part in parts if part.actionable]
     title = repo.rpartition("/")[2] or repo
-    if not work:  # only human work (or parts held by older runs) is open: the card reads as that work
-        title = next(part.title for part in parts if part.human)
+    if not work or all(part.manual for part in parts):  # the human card reads as that work
+        title = next(part.title for part in parts if part.manual)
     top = min((part.priority for part in work or parts), key=_rank)
     by = "claude" if all(entry.task.created_by == "claude" for entry in entries) else "kuhy"
     body, check = _body(work), _check(work)
@@ -88,7 +105,9 @@ def _repo_card(repo: str, entries: list[_Entry], cid: str) -> CardTask:
     return CardTask(cid, title, body, repo, status, top, check, item, by)
 
 
-def group_cards(notes: list[Task], older: Callable[[str], Older]) -> list[CardTask]:
+def group_cards(
+    notes: list[Task], older: Callable[[str], Older], released: Released = _never
+) -> list[CardTask]:
     """Return the board's cards: one per repo, the held parts' own cards, and the notes that never group."""
     cards: list[CardTask] = []
     repos: dict[str, list[_Entry]] = {}
@@ -99,13 +118,13 @@ def group_cards(notes: list[Task], older: Callable[[str], Older]) -> list[CardTa
             continue
         key = norm(note.repo)
         names.setdefault(key, note.repo)
-        repos.setdefault(key, []).extend(_entries(note, older))
+        repos.setdefault(key, []).extend(_entries(note, older, released))
     for key, entries in repos.items():
         entries.sort(key=_order)
         cards += [CardTask.of(entry.task, entry.item) for entry in entries if entry.part.held]
         # Claude's parts ship and go to Done; the human parts wait in Backlog on a card of their own (T1980)
-        work = [entry for entry in entries if not entry.part.human]  # held parts still show on it
-        human = [entry for entry in entries if entry.part.human]
+        work = [entry for entry in entries if not entry.part.manual]  # held parts still show on it
+        human = [entry for entry in entries if entry.part.manual]  # released ones too: one card, one Start
         if any(not entry.part.held for entry in work):
             cards.append(_repo_card(names[key], work, repo_card_id(names[key])))
         if human:

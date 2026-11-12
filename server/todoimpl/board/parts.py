@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, Any
 from .types import is_manual
 
 if TYPE_CHECKING:
+    from todoimpl.repotask.model import Part
+
     from .state import RunState
     from .types import TaskLike
 
@@ -21,10 +23,13 @@ def is_repo_task(task: TaskLike) -> bool:
     return bool(getattr(task, "parts", ()))
 
 
-def human_only(task: TaskLike) -> bool:
-    """Say whether a repo task has no part for Claude (all are human work or held by an older run)."""
-    parts = getattr(task, "parts", ())
-    return bool(parts) and not any(part.actionable for part in parts)
+def kuhys(title: str, parts: tuple[Part, ...] | list[Part] = ()) -> bool:
+    """Say whether the work is kuhy's: a manual note, or a repo task with no part for Claude.
+
+    A repo task's title is its first manual part's on the human card; its parts decide, since a part whose
+    asks kuhy answered is Claude's again (T1994).
+    """
+    return not any(part.actionable for part in parts) if parts else is_manual(title)
 
 
 def parts_of(task: TaskLike, run: RunState | None, *, working: bool) -> list[dict[str, Any]] | None:

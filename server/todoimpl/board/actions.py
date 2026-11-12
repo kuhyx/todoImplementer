@@ -10,9 +10,9 @@ from typing import TYPE_CHECKING
 from todoimpl.umbrella.note import is_umbrella
 
 from .needs import needs
-from .parts import human_only
+from .parts import kuhys
 from .status import Status
-from .types import MANUAL_REASON, fmt_when, is_manual
+from .types import MANUAL_REASON, fmt_when
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -139,7 +139,7 @@ def _primary(  # noqa: PLR0911 - one branch per status keeps the table readable
 ) -> list[Action]:
     """Return the status-specific buttons (start, spec, ship, cancel)."""
     cancel = Action("cancel", "Cancel", confirm=True)
-    if status == Status.YOURS and (is_manual(task.title) or human_only(task)):
+    if status == Status.YOURS and kuhys(task.title, getattr(task, "parts", ())):
         return [Action("start", "Start", enabled=False, reason=MANUAL_REASON)]
     if status in (Status.BACKLOG, Status.CANCELLED):
         label = "Restart" if status == Status.CANCELLED else "Start"

@@ -40,6 +40,9 @@ class Cache:
     def snapshot(self) -> Snap:
         return Snap(self.tasks)
 
+    def poke(self) -> None:
+        self.pokes = getattr(self, "pokes", 0) + 1
+
 
 @dataclass
 class Sched:

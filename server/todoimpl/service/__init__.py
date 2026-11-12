@@ -18,7 +18,7 @@ from .backend import ServiceBackend
 from .cache import TaskCache
 from .cards import CardTask
 from .closed import ClosedNotes
-from .repocards import group_cards
+from .repocards import group_cards, released_in
 from .scheduling import SchedulerLike
 from .view import ItemView
 
@@ -35,7 +35,7 @@ def board_fetch(client: TodoClient, root: Path) -> Callable[[], list[CardTask]]:
     def fetch() -> list[CardTask]:
         notes = client.list_tasks(full=True)
         notes += registry.notes(client, root, {n.id[:8] for n in notes})  # repo-less umbrellas
-        cards = group_cards(notes, lambda card: legacy.older(root, card))
+        cards = group_cards(notes, lambda card: legacy.older(root, card), released_in(root))
         return cards + closed.cards({note.id[:8] for note in notes}, {card.id for card in cards})
 
     return fetch

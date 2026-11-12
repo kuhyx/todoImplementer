@@ -12,7 +12,7 @@ from todoimpl.todo_mcp.model import Task, TodoError
 from todoimpl.umbrella.note import is_umbrella
 
 from .cards import CardTask, card_tasks
-from .repocards import group_cards
+from .repocards import group_cards, released_in
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -56,7 +56,9 @@ class ItemView:
         """Rebuild a repo task from its notes, read now: the parts it has left."""
         notes = self._client.list_tasks(repo=found.repo, full=True)
         root = self._root
-        cards = group_cards(notes, lambda key: legacy.older(root, key) if root is not None else Older())
+        cards = group_cards(
+            notes, lambda key: legacy.older(root, key) if root is not None else Older(), released_in(root)
+        )
         for task in cards:
             if task.id == found.id:
                 return task

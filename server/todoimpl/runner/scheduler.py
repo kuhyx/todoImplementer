@@ -6,8 +6,9 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from todoimpl.board import state as store
+from todoimpl.board.parts import kuhys
 from todoimpl.board.state import RunState, clip_body
-from todoimpl.board.types import MANUAL_REASON, is_manual
+from todoimpl.board.types import MANUAL_REASON
 from todoimpl.repotask.start import prepare
 from todoimpl.todo_mcp.model import TodoError
 
@@ -89,7 +90,7 @@ class Scheduler(PhoneEngine):
         except TodoError as exc:
             msg = str(exc)
             raise RunnerError(msg, "not_found") from exc
-        if is_manual(item.title):
+        if kuhys(item.title, item.parts):
             raise RunnerError(MANUAL_REASON, "disabled")
         with self._cv:
             st = store.load(self.root / card)

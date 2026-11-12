@@ -63,3 +63,17 @@ def items(
         return []
     data = store.load(directory)
     return [_item(a, data["items"].get(a.id), directory.parent, data["seen"].get(a.id)) for a in asks]
+
+
+def released(body: str, directory: Path) -> bool:
+    """Return True when the text has an ask block and kuhy resolved every ask in it (T1994)."""
+    asks = parse_asks(body)
+    data = store.load(directory)
+    return bool(asks) and not any(is_open(data["items"].get(a.id)) for a in asks)
+
+
+def decided(body: str, directory: Path) -> list[str]:
+    """Return `<title>: <answer>` for every answered choice of the text, in block order."""
+    data = store.load(directory)
+    answers = ((a, data["items"].get(a.id) or {}) for a in parse_asks(body) if a.type == "choice")
+    return [f"{a.title}: {rec['answer']}" for a, rec in answers if not is_open(rec) and "answer" in rec]

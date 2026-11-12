@@ -10,7 +10,9 @@ class Part:
     """One open section (or one whole section-less note) of a repo.
 
     `key` is the section's own card id `<note id8>-<index>`: the id an older per-section run used, so the
-    run dir of such a run still names its part. `human` = a MANUAL WORK REQUIRED part the run skips.
+    run dir of such a run still names its part. `manual` = a MANUAL WORK REQUIRED part: it sits on the repo's
+    human card (`-1`). `human` = a manual part the run skips; once kuhy answered every ask of it the part is
+    released (`manual` and not `human`): still on the human card, but Claude's work (T1994).
     `held` = an older per-section run is still working on it and keeps its own card; `prior` names the
     work an older run that already ended left behind.
     """
@@ -25,6 +27,7 @@ class Part:
     human: bool
     held: bool
     prior: str = ""  # where an older run that ended left its work (reuse it), else empty
+    manual: bool = False
 
     @property
     def actionable(self) -> bool:

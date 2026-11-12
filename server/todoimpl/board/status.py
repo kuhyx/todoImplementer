@@ -11,8 +11,7 @@ from typing import TYPE_CHECKING
 
 from todoimpl.umbrella.note import is_umbrella
 
-from .parts import human_only
-from .types import is_manual
+from .parts import kuhys
 
 if TYPE_CHECKING:
     from .state import RunState
@@ -83,10 +82,8 @@ def compute(  # noqa: PLR0911 - one return per rule of the spec table
         return Status.DONE
     if task.status == "abandoned" or (run is not None and run.stage == "cancelled"):
         return Status.CANCELLED
-    if (
-        is_manual(task.title)
-        or human_only(task)
-        or (run is None and task.repo is None and not is_umbrella(task.body))
+    if kuhys(task.title, getattr(task, "parts", ())) or (
+        run is None and task.repo is None and not is_umbrella(task.body)
     ):
         return Status.YOURS
     if run is None:

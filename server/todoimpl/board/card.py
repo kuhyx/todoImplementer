@@ -12,9 +12,9 @@ from todoimpl.umbrella.note import is_umbrella
 from .actions import actions
 from .badges import tier_badges
 from .needs import needs
-from .parts import human_only, is_repo_task, manual_ask, parts_of
+from .parts import is_repo_task, kuhys, manual_ask, parts_of
 from .status import Status, column, compute
-from .types import Limit, fmt_when, is_manual
+from .types import Limit, fmt_when
 from .umbrella import card_view
 
 if TYPE_CHECKING:
@@ -86,7 +86,7 @@ def partial_of(run: RunState | None) -> dict[str, Any] | None:
 
 def _assignee(task: TaskLike, run: RunState | None) -> str:
     """Return the human for a manual note or no repo, else the run's assignee (Claude by default)."""
-    if is_manual(task.title) or human_only(task):
+    if kuhys(task.title, getattr(task, "parts", ())):
         return "human"
     if run is not None:
         return run.assignee
@@ -139,7 +139,7 @@ def build_card(task: TaskLike, run: RunState | None, ctx: Context) -> dict[str, 
         "auto_start": run.auto_start if run is not None else None,
         "auto": str(entry["reason"]) if entry is not None else None,
     }
-    if status == Status.YOURS and (is_manual(task.title) or human_only(task)):
+    if status == Status.YOURS and kuhys(task.title, getattr(task, "parts", ())):
         card["current"] = manual_ask(task)  # what kuhy must do, never "no repo" on a card that has one
     if (umbrella := card_view(task, run)) is not None:
         card["umbrella"] = umbrella
