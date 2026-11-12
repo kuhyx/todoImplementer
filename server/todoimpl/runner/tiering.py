@@ -42,7 +42,7 @@ def plan_turn(d: Driver, role: str) -> Turn:
     if role != IMPLEMENT:
         return Turn()
     if "tier" not in st.extra:
-        st.extra["tier"] = "cheap" if tier.is_cheap(d.item.title, d.item.body) else "normal"
+        st.extra["tier"] = "cheap" if tier.is_cheap(d.item.title, d.item.body, d.item.parts) else "normal"
     if not _cheap(d):
         return Turn()
     if st.extra.get("escalated"):

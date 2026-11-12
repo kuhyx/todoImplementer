@@ -15,8 +15,15 @@ sorts; the card payload has no `created_by`.
 ## The cheap tier: Opus manager, free models, higher effort last
 
 A card is tier `cheap` when its section text (the item body) has a line `Tier: cheap` (case-insensitive) or its
-title contains `text-free (textgate-rework)`. The tier is decided once, at the run's first implement-role turn, and
-stored in `state.extra.tier` (`cheap` | `normal`); before a run the card derives it from the note.
+title contains `text-free (textgate-rework)`. A repo card (`DOCS-repotask.md`) is titled after the repo, so the title
+of any part the run works counts too (T1999): one cheap part makes the card cheap, as a `Tier:` line in any part did.
+The scope is kuhy's, not a default: he asked for free models on the textgate reworks (note 4f77d502, 2026-11-10) and
+set Opus medium as the default model (`DOCS-turns.md`); every other card stays `normal`. Measured 2026-11-12: cheap
+cards averaged $26 against $14 for normal ones (n = 9 and 62), so widening the tier would not cut spend.
+The tier is decided once per cycle, at the first implement-role turn, and
+stored in `state.extra.tier` (`cheap` | `normal`); before a run the card derives it from the note. A new repo-card
+cycle (`repotask/cycle.py`) clears `tier`, `free_models`, `escalated` and `escalate_reason` (T1999): the card id outlives
+its cycles and the parts change.
 
 For a cheap run the **implement role** (the implement and fix stages, one session; the live check is its own
 Sonnet role since T1896) runs on

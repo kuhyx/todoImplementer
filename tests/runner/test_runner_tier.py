@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 from runnerfakes import Env
 from tierfakes import Free, worktree_of
+from todoimpl.repotask.model import Part
 from todoimpl.runner import freegate, tier
 
 
@@ -24,6 +25,24 @@ from todoimpl.runner import freegate, tier
 )
 def test_is_cheap(title: str, body: str, cheap: bool) -> None:
     assert tier.is_cheap(title, body) is cheap
+
+
+def _part(title: str, *, human: bool = False, held: bool = False) -> Part:
+    return Part("abcd1234-0", "abcd1234", 0, title, "", "medium", None, human, held)
+
+
+@pytest.mark.parametrize(
+    ("parts", "cheap"),
+    [
+        ([_part("Make demo text-free (textgate-rework)")], True),
+        ([_part("Fix it"), _part("Make demo text-free (textgate-rework)")], True),
+        ([_part("Fix it")], False),
+        ([_part("Make demo text-free (textgate-rework)", human=True)], False),  # kuhy's part, not the run's
+        ([_part("Make demo text-free (textgate-rework)", held=True)], False),  # an older run's part
+    ],
+)
+def test_t1999_is_cheap_reads_the_work_parts_of_a_repo_card(parts: list[Part], cheap: bool) -> None:
+    assert tier.is_cheap("demo", "### Part abcd1234-0: x", parts) is cheap
 
 
 def test_escalation_line() -> None:

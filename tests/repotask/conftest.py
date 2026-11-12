@@ -15,6 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from fake_todo_mcp import FakeTodoMcp
 from repofakes import Rig, build_rig
 from runnerfakes import Env, make_env
+from tierfakes import Free
 from todoimpl.runner import retry
 
 
@@ -40,6 +41,15 @@ def world(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Env:
     monkeypatch.setenv("TODOIMPL_SRC", str(built.src))
     monkeypatch.setenv("TODOIMPL_UMBRELLAS", str(tmp_path / "umbrellas.txt"))
     return built
+
+
+@pytest.fixture
+def free(world: Env, monkeypatch: pytest.MonkeyPatch) -> Iterator[Free]:
+    """Free models reachable: a public repo and a gateway that answers (flip `public` / `up`)."""
+    outside = Free(world)
+    monkeypatch.setenv("TODOIMPL_FREE_GATEWAY", outside.url)
+    yield outside
+    outside.stop()
 
 
 @pytest.fixture

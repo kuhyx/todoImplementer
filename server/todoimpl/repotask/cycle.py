@@ -23,5 +23,6 @@ def new_cycle(st: RunState, run_dir: Path) -> None:
     files.reset(run_dir)
     for name in FILES:
         (run_dir / name).unlink(missing_ok=True)
-    for key in ("spec_ok", "partial", "followup_id"):
+    # The tier is decided from the cycle's parts; a card id outlives its cycles (T1999).
+    for key in ("spec_ok", "partial", "followup_id", "tier", "free_models", "escalated", "escalate_reason"):
         st.extra.pop(key, None)

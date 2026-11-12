@@ -3,6 +3,11 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from todoimpl.repotask.model import Part
 
 CHEAP_LINE = re.compile(r"^[ \t]*tier:[ \t]*cheap[ \t]*$", re.IGNORECASE | re.MULTILINE)
 CHEAP_TITLE = re.compile(r"text-free\s*\(textgate-rework\)", re.IGNORECASE)
@@ -14,9 +19,15 @@ MANAGER_EFFORT = "medium"
 ESCALATED_EFFORT = "high"  # escalation = more thought on the same model
 
 
-def is_cheap(title: str, body: str) -> bool:
-    """Say whether a note runs on the cheap tier: a `Tier: cheap` line, or the text-free rework title."""
-    return CHEAP_LINE.search(body) is not None or CHEAP_TITLE.search(title) is not None
+def is_cheap(title: str, body: str, parts: Iterable[Part] = ()) -> bool:
+    """Say whether a note runs on the cheap tier: a `Tier: cheap` line, or the text-free rework title.
+
+    A repo card's title is the repo name; the rework title lives in its parts (T1999), so the title of
+    any part the run works counts like the card title. One cheap part makes the card cheap, as a
+    `Tier: cheap` line in any part's text already did.
+    """
+    titles = (title, *(part.title for part in parts if part.actionable))
+    return CHEAP_LINE.search(body) is not None or any(CHEAP_TITLE.search(t) for t in titles)
 
 
 def escalation(text: str) -> str | None:

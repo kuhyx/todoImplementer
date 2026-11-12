@@ -14,6 +14,9 @@ if TYPE_CHECKING:
 def tier_badges(task: TaskLike, run: RunState | None) -> dict[str, bool]:
     """Cheap from the run's record (else from the note), free only while not escalated."""
     extra = run.extra if run is not None else {}
-    cheap = extra["tier"] == "cheap" if "tier" in extra else is_cheap(task.title, task.body)
+    if "tier" in extra:
+        cheap = extra["tier"] == "cheap"
+    else:
+        cheap = is_cheap(task.title, task.body, getattr(task, "parts", ()))
     escalated = bool(extra.get("escalated"))
     return {"cheap": cheap, "free": bool(extra.get("free_models")) and not escalated, "escalated": escalated}
