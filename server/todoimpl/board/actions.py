@@ -220,7 +220,8 @@ def _session(run: RunState, status: Status, block: str | None) -> list[Action]:
         if run.closing:
             reason: str | None = NO_NOTES
         elif not run.session_id:
-            reason = "no Claude session yet"
+            # a card that rests on kuhy may take a note before its first session: the send restarts it (T2001)
+            reason = None if status == Status.NEEDS_YOU else "no Claude session yet"
         elif status == Status.WORKING:
             reason = None
         elif status in (Status.QUEUED, Status.SHIPPING):

@@ -19,7 +19,7 @@
 | Start | card -> Start (POST `/api/task/<id>/start`) | card leaves Backlog; at most 3 run at once, the rest are queued |
 | Spec Q&A | card in Needs you with `❓ Qn` cards -> answer -> Spec OK | answers reach the session, Plan starts |
 | Live feed | open a card drawer (GET `/api/live?id=<id>`, SSE) | first frame is a stage snapshot, then activity/stage/cost events |
-| Send to Claude | drawer -> text box -> Send (POST `.../send`) | text is the next turn of the same session |
+| Send to Claude | drawer -> text box -> Send (POST `.../send`) | text is the next turn of the same session; on a Needs-you card with no session yet it restarts the run with the text as kuhy's note |
 | Resume command | drawer -> "copy resume command" | `cd <worktree> && claude --resume <id>` on the clipboard |
 | Plan + live check | automatic after Start | `plan.md` and `live_check.md` in the run dir; checks tail in `/api/task/<id>` |
 | Gate | card in Ready to ship -> drawer | plan, diff, live-check report, checks tail; Ship and Send offered |
