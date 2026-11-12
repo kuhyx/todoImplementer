@@ -12,6 +12,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from .cards import CardTask
+    from .runtitles import RunTitles
 
 log = logging.getLogger("todoimpl.service")
 INTERVAL = 4.0
@@ -42,6 +43,7 @@ class TaskCache:
         self._interval = interval
         self._clock = clock
         self._snap = Snapshot()
+        self.run_titles: RunTitles | None = None  # names of run dirs no card shows (set by build_backend)
         self._lock = threading.Lock()
         self._stop = threading.Event()
         self._wake = threading.Event()

@@ -19,6 +19,7 @@ from .cache import TaskCache
 from .cards import CardTask
 from .closed import ClosedNotes
 from .repocards import group_cards, released_in
+from .runtitles import RunTitles, card_titles
 from .scheduling import SchedulerLike
 from .view import ItemView
 
@@ -28,15 +29,23 @@ if TYPE_CHECKING:
 __all__ = ["CardTask", "ItemView", "ServiceBackend", "TaskCache", "board_fetch", "build_backend"]
 
 
-def board_fetch(client: TodoClient, root: Path) -> Callable[[], list[CardTask]]:
-    """Return the cache's fetch: one card per repo (its open parts), the other notes' cards, the Done ones."""
+def board_fetch(
+    client: TodoClient, root: Path, run_titles: RunTitles | None = None
+) -> Callable[[], list[CardTask]]:
+    """Return the cache's fetch: one card per repo (its open parts), the other notes' cards, the Done ones.
+
+    `run_titles` learns, on each fetch, the names of run dirs that no card or part shows (/api/usage).
+    """
     closed = ClosedNotes(client, root)
 
     def fetch() -> list[CardTask]:
         notes = client.list_tasks(full=True)
         notes += registry.notes(client, root, {n.id[:8] for n in notes})  # repo-less umbrellas
         cards = group_cards(notes, lambda card: legacy.older(root, card), released_in(root))
-        return cards + closed.cards({note.id[:8] for note in notes}, {card.id for card in cards})
+        cards += closed.cards({note.id[:8] for note in notes}, {card.id for card in cards})
+        if run_titles is not None:
+            run_titles.update(card_titles(cards))
+        return cards
 
     return fetch
 
@@ -56,7 +65,9 @@ def build_backend(
     root = root or run_root()
     client = client or TodoClient.from_env()
     ledger.load(root)  # rebuilds the credit ledger from the streams once, if it is missing
-    cache = TaskCache(board_fetch(client, root))
+    run_titles = RunTitles(client, root)
+    cache = TaskCache(board_fetch(client, root, run_titles))
+    cache.run_titles = run_titles
     if refresh:
         # Before the Scheduler: its recovery drives resolve card ids through this cache at once.
         cache.refresh()

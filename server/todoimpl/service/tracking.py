@@ -16,6 +16,8 @@ from todoimpl.umbrella.store import RECORD, children_root
 from todoimpl.umbrella.view import rows as child_rows
 from todoimpl.usage import usage_summary
 
+from .runtitles import card_titles
+
 if TYPE_CHECKING:
     from .backend import ServiceBackend
 
@@ -29,7 +31,8 @@ def issues(backend: ServiceBackend, id8: str) -> str | None:
 
 def usage(backend: ServiceBackend) -> dict[str, Any]:
     """Return GET /api/usage: plan windows, cost, autonomy and the cached free-model gateway reading."""
-    titles = {t.id: t.title for t in backend.cache.snapshot().tasks}
+    known = backend.cache.run_titles.titles() if backend.cache.run_titles else {}
+    titles = {**known, **card_titles(backend.cache.snapshot().tasks)}
     found = usage_summary(backend.root, backend._clock(), titles)  # noqa: SLF001
     if backend.gateway is not None:  # a cached reading: no request waits on the gateway
         found["free"] = backend.gateway.view()
