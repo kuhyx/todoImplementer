@@ -6,6 +6,7 @@ import pytest
 from repofakes import PLAN, Rig
 from todoimpl.asks.service import AskService
 from todoimpl.repotask.ids import repo_human_id
+from todoimpl.runner.files import write_json
 from todoimpl.runner.scheduler import RunnerError
 
 BODY = """Encrypt it
@@ -45,3 +46,18 @@ def test_t1994_a_manual_part_with_every_ask_answered_can_be_started(rig: Rig) ->
     prompt = str(rig.world.calls()[0])
     assert "Key source: password" in prompt
     assert "tutor client: in scope" in prompt
+
+
+def test_t1995_an_answered_part_with_an_older_run_stays_on_the_human_card(rig: Rig) -> None:
+    repo = rig.repo()
+    note = rig.note(repo, "MANUAL WORK REQUIRED: encrypt payloads", BODY)
+    write_json(rig.run_dir(f"{note}-0") / "state.json", {"x": 1})  # an older run that counts as in flight
+    hid = repo_human_id(repo)
+    asks = AskService(rig.cache, rig.sched, rig.world.root)
+    asks.take_recommended(hid)
+    rig.cache.refresh()
+    ids = [c["id"] for c in rig.backend.board()["tasks"]]
+    assert f"{note}-0" not in ids  # not split off onto a card whose answers file is empty
+    card = rig.card(repo, human=True)
+    assert [p["state"] for p in card["parts"]] == ["todo"]
+    assert _start(card)["enabled"] is True

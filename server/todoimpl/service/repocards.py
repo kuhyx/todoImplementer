@@ -71,7 +71,9 @@ def _entries(note: Task, older: Callable[[str], Older], released: Released) -> l
         key = card_id(item.note_id, item.index)
         manual = is_manual(item.title)
         human = manual and not released(hid, item.body)  # answered asks hand the part to Claude (T1994)
-        before = Older() if human else older(key)  # human work is never the board's
+        # A manual part never splits off as held: it stays on the human card that keeps its answers (T1995);
+        # once released it only learns where an older run left work.
+        before = (Older() if human else Older(note=older(key).note)) if manual else older(key)
         part = Part(key, item.note_id, item.index, item.title, item.body, note.priority, item.done_check,
                     human, before.held, before.note, manual=manual)  # fmt: skip
         found.append(_Entry(note, item, part))
