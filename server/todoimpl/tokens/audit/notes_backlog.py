@@ -13,6 +13,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from todoimpl.tokens.audit import filecache
+
 STATUSES = ("todo", "inProgress", "done", "abandoned")
 TERMINAL = frozenset({"done", "abandoned"})
 _MARKER = re.compile(r"^<!--\s*@note\s+(.*?)\s*-->[ \t]*$", re.MULTILINE)
@@ -110,6 +112,16 @@ def merge_devices(devices: dict[str, Any]) -> dict[str, tuple[int, str]]:
 
 
 def _dump_statuses(path: Path) -> dict[str, tuple[int, str]]:
+    """Return the merged note statuses of one dump, cached per file (T1997)."""
+    hit = filecache.load("dump", path)
+    if hit is not None:
+        return {note_id: (int(value), str(hlc)) for note_id, (value, hlc) in hit.items()}
+    merged = _read_dump(path)
+    filecache.store("dump", path, merged)
+    return merged
+
+
+def _read_dump(path: Path) -> dict[str, tuple[int, str]]:
     try:
         data = json.loads(gzip.decompress(path.read_bytes()))
     except OSError, ValueError, EOFError:

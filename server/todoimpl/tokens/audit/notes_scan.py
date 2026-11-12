@@ -7,10 +7,10 @@ are never evidence (a session that reads BACKLOG.md names dozens of ids).
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from todoimpl.tokens.audit import parse, records
+from todoimpl.tokens.audit import filecache, parse, records
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -129,13 +129,24 @@ def scan(path: Path, *, main: bool = True) -> Facts:
     return facts
 
 
+def scan_cached(path: Path, *, main: bool = True) -> Facts:
+    """:func:`scan` served from the file cache while the transcript is unchanged."""
+    kind = "facts" if main else "facts-sub"
+    hit = filecache.load(kind, path)
+    if hit is not None:
+        return Facts(session_id=path.stem, path=path, **hit)
+    facts = scan(path, main=main)
+    filecache.store(kind, path, {k: v for k, v in asdict(facts).items() if k not in ("session_id", "path")})
+    return facts
+
+
 def scan_root(root: Path) -> dict[str, Facts]:
     """Facts per main session; subagent creations fold into their parent."""
-    found = {p.stem: scan(p) for p in sorted(root.glob("*/*.jsonl"))}
+    found = {p.stem: scan_cached(p) for p in sorted(root.glob("*/*.jsonl"))}
     for sub in sorted(root.glob("*/*/subagents/agent-*.jsonl")):
         parent = found.get(sub.parent.parent.name)
         if parent is None:
             continue
-        for rel, stamp in scan(sub, main=False).creates.items():
+        for rel, stamp in scan_cached(sub, main=False).creates.items():
             parent.creates[rel] = min(stamp, parent.creates.get(rel, stamp))
     return found

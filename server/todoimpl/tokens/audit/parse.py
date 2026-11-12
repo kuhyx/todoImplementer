@@ -27,7 +27,7 @@ from todoimpl.tokens.audit import discover, records, turns
 from todoimpl.tokens.audit.model import IMAGE_SUFFIXES, Session, ToolCall, Turn
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Iterable, Iterator
     from pathlib import Path
 
 # Divisor turning rendered characters into an approximate token count. Four is
@@ -89,20 +89,26 @@ def _result_tokens(block: dict[str, Any], *, is_image: bool = False) -> int:
 def iter_events(
     path: Path,
     window: records.Window | None = None,
+    bounds: records.Bounds | None = None,
 ) -> Iterator[tuple[str, object]]:
     """Yield ``("turn", Turn)`` and ``("tool", ToolCall)`` in transcript order.
 
     Emitting a single ordered stream — rather than two lists — is what lets
     :mod:`imagecost` count how many turns each image survived for. Turns are
     one per API message (see :mod:`records`), and only records inside
-    ``window`` are emitted.
+    ``window`` are emitted. ``bounds``, when given, sees every record first, so
+    it ends up describing the whole file whatever the window cut away.
     """
     pending: dict[str, dict[str, Any]] = {}
     merger = records.TurnMerger()
     with path.open(encoding="utf-8", errors="replace") as handle:
         for line in handle:
             record = _load_line(line)
-            if record is None or not records.in_window(record, window):
+            if record is None:
+                continue
+            if bounds is not None:
+                bounds.see(record)
+            if not records.in_window(record, window):
                 continue
             pairs: list[tuple[str, object]] = []
             for block in _blocks(record):
@@ -177,8 +183,8 @@ def _looks_like_image(path: str | None) -> bool:
     return dot != -1 and path[dot:].lower() in IMAGE_SUFFIXES
 
 
-def load_session(path: Path, window: records.Window | None = None) -> Session:
-    """Read one transcript file into a :class:`Session`.
+def new_session(path: Path) -> Session:
+    """Return an empty :class:`Session` for one transcript, labelled but unread.
 
     A subagent transcript (``<session>/subagents/agent-*.jsonl``) is tagged
     with its parent session id and the ``agentType``/``description`` the
@@ -193,12 +199,22 @@ def load_session(path: Path, window: records.Window | None = None) -> Session:
         session.description = str(
             meta.get("description") or discover.first_prompt(path) or f"(no label) {path.stem}"
         )
-    for kind, event in iter_events(path, window):
+    return session
+
+
+def fill(session: Session, events: Iterable[tuple[str, object]]) -> Session:
+    """Append an event stream's turns and tool calls to a session."""
+    for kind, event in events:
         if kind == "turn" and isinstance(event, Turn):
             session.turns.append(event)
         elif isinstance(event, ToolCall):
             session.tools.append(event)
     return session
+
+
+def load_session(path: Path, window: records.Window | None = None) -> Session:
+    """Read one transcript file into a :class:`Session`."""
+    return fill(new_session(path), iter_events(path, window))
 
 
 # Public names for the record primitives, shared with token_dashboard's walker

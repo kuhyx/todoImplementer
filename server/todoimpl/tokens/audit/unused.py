@@ -15,6 +15,8 @@ from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
+from todoimpl.tokens.audit import filecache
+
 TRANSCRIPT_ROOT = Path.home() / ".claude" / "projects"
 SECONDS_PER_DAY = 86400
 SHORT_WINDOW_DAYS = 7
@@ -37,6 +39,21 @@ class Usage:
         return self.short_calls == 0 and self.long_calls == 0
 
 
+def _file_counts(path: Path, pattern: re.Pattern[str]) -> dict[str, int]:
+    """Count matches of *pattern* in one transcript, cached per file (T1997).
+
+    Read as bytes: the patterns match ASCII only, so decoding 7 GB of text
+    first (the old cost) found nothing extra.
+    """
+    hit = filecache.load("calls", path, pattern.pattern)
+    if hit is not None:
+        return {str(k): int(v) for k, v in hit.items()}
+    raw = re.compile(pattern.pattern.encode())
+    counts = Counter(m.decode(errors="replace") for m in raw.findall(path.read_bytes()))
+    filecache.store("calls", path, counts, pattern.pattern)
+    return dict(counts)
+
+
 def _scan(pattern: re.Pattern[str], since: float) -> Counter[str]:
     """Count regex matches across transcripts modified after *since*."""
     found: Counter[str] = Counter()
@@ -44,10 +61,9 @@ def _scan(pattern: re.Pattern[str], since: float) -> Counter[str]:
         try:
             if path.stat().st_mtime < since:
                 continue
-            text = path.read_text(errors="replace")
+            found.update(_file_counts(path, pattern))
         except OSError:
             continue
-        found.update(pattern.findall(text))
     return found
 
 

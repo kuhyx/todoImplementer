@@ -88,14 +88,20 @@ def _dice(left: frozenset[str], right: frozenset[str]) -> float:
     return 2 * len(left & right) / total if total else 0.0
 
 
+@functools.cache
+def _first_line_tokens(prompt: str) -> frozenset[str]:
+    """Tokens of the prompt's first line, computed once per prompt (not per note)."""
+    stripped = prompt.strip()
+    return tokens(stripped.splitlines()[0] if stripped else "")
+
+
 def score(prompt: str, note: Note) -> float:
     """Body overlap, or the prompt's first line against the note title."""
     body = _dice(tokens(prompt), tokens(note.body))
     title = tokens(note.title)
     if len(title) < MIN_TOKENS:
         return body
-    first_line = prompt.strip().splitlines()[0] if prompt.strip() else ""
-    return max(body, _dice(tokens(first_line), title))
+    return max(body, _dice(_first_line_tokens(prompt), title))
 
 
 def resolve(token: str, ids: Iterable[str]) -> str | None:

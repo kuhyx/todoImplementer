@@ -6,11 +6,12 @@ Files already loaded whole by the audit are reused instead of re-parsed.
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from todoimpl.tokens import prices
-from todoimpl.tokens.audit import parse
+from todoimpl.tokens.audit import filecache, parse
 from todoimpl.tokens.audit.model import TOKEN_KINDS
 
 if TYPE_CHECKING:
@@ -45,6 +46,17 @@ def files_of(main: Path) -> list[Path]:
     return [main, *sorted(main.with_suffix("").glob("subagents/agent-*.jsonl"))]
 
 
+def file_spend(path: Path, book: PriceBook) -> Spend:
+    """Whole-file spend of one transcript, cached per file and price book (T1997)."""
+    stamp = hashlib.sha1(repr(book).encode(), usedforsecurity=False).hexdigest()
+    hit = filecache.load("spend", path, stamp)
+    if hit is not None:
+        return Spend(*hit)
+    spend = of_session(parse.load_session(path), book)
+    filecache.store("spend", path, [spend.usd, spend.tokens], stamp)
+    return spend
+
+
 def lifetime(
     mains: dict[str, Path],
     wanted: set[str],
@@ -57,6 +69,6 @@ def lifetime(
         total = Spend()
         for path in files_of(mains[sid]):
             hit = reuse.get(str(path))
-            total += hit if hit is not None else of_session(parse.load_session(path), book)
+            total += hit if hit is not None else file_spend(path, book)
         out[sid] = total
     return out

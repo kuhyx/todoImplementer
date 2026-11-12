@@ -51,6 +51,32 @@ def in_window(record: dict[str, Any], window: Window | None) -> bool:
     return stamp is None or window[0] <= stamp <= window[1]
 
 
+class Bounds:
+    """Earliest and latest record timestamp seen in a file, window filter aside.
+
+    A file whose bounds sit inside a window is unaffected by that window, so
+    its parsed result is valid for any window containing those bounds (the
+    session cache keys on exactly that). ``None`` means no dated record.
+    """
+
+    def __init__(self) -> None:
+        """Start empty."""
+        self.low: float | None = None
+        self.high: float | None = None
+
+    def see(self, record: dict[str, Any]) -> None:
+        """Widen the bounds by one record's timestamp."""
+        stamp = timestamp(record)
+        if stamp is None:
+            return
+        self.low = stamp if self.low is None else min(self.low, stamp)
+        self.high = stamp if self.high is None else max(self.high, stamp)
+
+    def inside(self, window: Window) -> bool:
+        """Whether every dated record falls in ``window`` (undated ones always do)."""
+        return (self.low is None or window[0] <= self.low) and (self.high is None or self.high <= window[1])
+
+
 def cache_split(usage: dict[str, Any]) -> dict[str, int]:
     """Extract the 1h / 5m cache-write split from a raw usage block.
 

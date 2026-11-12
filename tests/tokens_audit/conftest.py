@@ -19,6 +19,9 @@ def _isolated_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     claude = home / ".claude"
     claude.mkdir(parents=True)
     monkeypatch.setenv("HOME", str(home))
+    # The audit cache lives under HOME unless one of these points elsewhere.
+    monkeypatch.delenv("XDG_CACHE_HOME", raising=False)
+    monkeypatch.delenv("TODOIMPL_HOME", raising=False)
     monkeypatch.setattr(history, "REPORT_DIR", claude / "token-report")
     monkeypatch.setattr(report, "REPORT_DIR", claude / "token-report")
     monkeypatch.setattr(cli, "TRANSCRIPT_ROOT", claude / "projects")

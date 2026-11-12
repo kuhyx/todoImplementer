@@ -21,12 +21,12 @@ from todoimpl.tokens.audit import (
     attribute,
     breakdown,
     discover,
+    filecache,
     history,
-    imagecost,
     notes,
-    parse,
     report,
     review,
+    session_cache,
 )
 
 if TYPE_CHECKING:
@@ -102,13 +102,10 @@ def _collect(root: Path, since: float, until: float) -> list[Session]:
     sessions: list[Session] = []
     window = (since, until)
     for path in discover.find_transcripts(root, since):
-        session = parse.load_session(path, window)
-        if not session.turns:
-            continue
-        # Re-walk the file for image cost: it needs the interleaved event order
-        # that load_session flattens into separate lists.
-        imagecost.annotate(session, parse.iter_events(path, window))
-        sessions.append(session)
+        session = session_cache.load(path, window)
+        if session.turns:
+            sessions.append(session)
+    filecache.prune()
     return sessions
 
 

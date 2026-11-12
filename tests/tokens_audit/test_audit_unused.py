@@ -54,7 +54,7 @@ def test_scan_skips_unreadable(transcripts: Path, monkeypatch: pytest.MonkeyPatc
         msg = "nope"
         raise OSError(msg)
 
-    monkeypatch.setattr(Path, "read_text", boom)
+    monkeypatch.setattr(Path, "read_bytes", boom)
     assert unused._scan(unused._MCP_CALL, 0) == {}
 
 
