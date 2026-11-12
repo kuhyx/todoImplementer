@@ -11,7 +11,7 @@ from todoimpl.asks.view import items as ask_items
 from todoimpl.runner.parsing import parse_questions
 
 from .card import Context, build_card
-from .repos import repo_path
+from .repos import is_clone_of, repo_path
 from .umbrella import detail
 
 if TYPE_CHECKING:
@@ -39,8 +39,9 @@ def repo_checker(src_root: Path | None = None) -> Callable[[str | None], str | N
         if not repo:
             return None
         path = Path(repo).expanduser()
-        path = path if path.is_absolute() else repo_path(repo, src_root)
-        if (path / ".git").exists():
+        found = path.is_absolute()
+        path = path if found else repo_path(repo, src_root)
+        if (path / ".git").exists() if found else is_clone_of(path, repo):
             return None
         home = str(Path.home())
         text = str(path)

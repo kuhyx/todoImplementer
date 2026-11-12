@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from todoimpl.board.repos import repo_path
+from todoimpl.board.repos import OWNER, is_clone_of, repo_path
 from todoimpl.prompts.standing import REBASE_NOTE
 
 from . import orphans
@@ -18,7 +18,6 @@ from .files import NeedsYouError, worktree_path
 if TYPE_CHECKING:
     from todoimpl.board.state import RunState
 
-OWNER = "kuhyx"
 # Machine-local files a repo's gate needs but git ignores (tunedeck: chaquopy.buildPython lives in
 # android/local.properties). A named list, not a glob: nothing else leaves the main clone.
 MACHINE_LOCAL = ("local.properties", "android/local.properties")
@@ -77,11 +76,8 @@ def repo_dir(repo: str | None) -> Path:
         msg = "The note has no repo: set kuhyx/<name> on it, or do it yourself"
         raise NeedsYouError(msg, "handed_to_you")
     owner, _, name = repo.rpartition("/")
-    if owner not in ("", OWNER):
-        msg = f"Repo {repo} is not a {OWNER}/ repo; only ~/src clones of those run here"
-        raise NeedsYouError(msg, "run_failed")
-    path = repo_path(f"{OWNER}/{name}")  # the owner lets it find a clone in a differently named directory
-    if not (path / ".git").exists():
+    path = repo_path(f"{owner or OWNER}/{name}")  # the owner finds a clone in a differently named directory
+    if not is_clone_of(path, repo):
         msg = f"Repo {repo} is not cloned at {path}: clone it there, then start again"
         raise NeedsYouError(msg, "handed_to_you")
     return path

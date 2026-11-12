@@ -16,13 +16,27 @@ def test_repo_dir_maps_kuhyx_names_to_src(world: Env, monkeypatch: pytest.Monkey
     assert missing.value.kind == "handed_to_you"
 
 
-def test_repo_dir_refuses_no_repo_and_foreign_owners(world: Env) -> None:
+def test_repo_dir_refuses_no_repo(world: Env) -> None:
     with pytest.raises(NeedsYouError, match="no repo") as none:
         worktree.repo_dir(None)
     assert none.value.kind == "handed_to_you"
-    with pytest.raises(NeedsYouError, match="not a kuhyx/ repo") as foreign:
-        worktree.repo_dir("someone/demo")
-    assert foreign.value.kind == "run_failed"
+
+
+def test_t2000_foreign_owner_runs_in_a_clone_whose_origin_matches(world: Env) -> None:
+    repo = make_repo(world, "cleanup-plate")
+    with pytest.raises(NeedsYouError, match="not cloned at") as other:  # origin is not Sepci0/cleanup-plate
+        worktree.repo_dir("Sepci0/cleanup-plate")
+    assert other.value.kind == "handed_to_you"
+    sh(repo, "git", "remote", "set-url", "origin", "https://github.com/Sepci0/cleanup-plate")
+    assert worktree.repo_dir("Sepci0/cleanup-plate") == repo
+    with pytest.raises(NeedsYouError, match="not cloned at"):  # same name, another owner
+        worktree.repo_dir("someone/cleanup-plate")
+
+
+def test_t2000_foreign_owner_finds_a_clone_in_a_differently_named_directory(world: Env) -> None:
+    repo = make_repo(world, "plate-dir")
+    sh(repo, "git", "remote", "set-url", "origin", "git@github.com:Sepci0/cleanup-plate.git")
+    assert worktree.repo_dir("Sepci0/cleanup-plate") == repo
 
 
 def test_add_creates_reuses_and_removes_a_worktree(world: Env) -> None:

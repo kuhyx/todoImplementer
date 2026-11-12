@@ -91,3 +91,15 @@ def test_t1839_a_directory_with_another_origin_loses_to_the_matching_clone(tmp_p
         '[remote "origin"]\n\turl = https://github.com/kuhyx/todo-app.git\n', encoding="utf-8"
     )
     assert repo_path("kuhyx/todo-app", tmp_path) == wrong
+
+
+def test_t2000_a_foreign_owner_needs_a_clone_with_its_origin(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("TODOIMPL_SRC", str(tmp_path))
+    make_clone(tmp_path, "cleanup-plate", "https://github.com/kuhyx/cleanup-plate")  # another owner
+    assert repo_checker()("Sepci0/cleanup-plate") == str(tmp_path / "cleanup-plate")
+    assert repo_checker()("kuhyx/cleanup-plate") is None
+    real = make_clone(tmp_path, "plate", "https://github.com/Sepci0/cleanup-plate")
+    assert repo_checker()("Sepci0/cleanup-plate") is None
+    assert repo_dir("Sepci0/cleanup-plate") == real

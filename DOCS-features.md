@@ -47,3 +47,5 @@
 Full run: `step 1`, `step 2`, `step 3`, `step 4` (repeat while exit 3), `step 5`, `step 6`. On failure a step prints
 `FAIL F1 step <i>/6: <what was expected, what was seen>; artefacts: <path>; work dir <path>` and exits 1; the
 work dir stays so the run can be inspected (`step 6` removes it).
+
+A note's repo `owner/name` runs in `~/src/<name>` or the `~/src` checkout whose origin is that repo. A `kuhyx/` repo or bare name needs only the clone; any other owner needs the origin to match (`board/repos.py` `is_clone_of`).

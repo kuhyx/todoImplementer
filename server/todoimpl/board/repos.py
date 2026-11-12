@@ -6,6 +6,7 @@ import os
 import re
 from pathlib import Path
 
+OWNER = "kuhyx"  # this owner (or a bare name) runs from `<src>/<name>` whatever its origin
 _FOUND: dict[tuple[Path, str], Path] = {}  # (src root, repo) -> clone found by origin URL
 _ORIGIN = re.compile(r'\[remote "origin"\][^\[]*?^\s*url\s*=\s*(\S+)', re.MULTILINE)
 
@@ -57,3 +58,13 @@ def repo_path(repo: str, src_root: Path | None = None) -> Path:
     if direct.exists() and (origin is None or _origin_matches(direct, repo)):
         return direct
     return _scan(base, repo) or direct
+
+
+def is_clone_of(path: Path, repo: str) -> bool:
+    """Say whether `path` is a git clone that `repo` may run in.
+
+    A kuhyx/ repo or a bare name needs only the clone (T202); a foreign owner needs its origin to be that
+    `owner/name`, so a same-named clone of another repo never takes its place (T2000).
+    """
+    owner = repo.rpartition("/")[0]
+    return (path / ".git").exists() and (owner in ("", OWNER) or _origin_matches(path, repo))
