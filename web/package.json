@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "astro dev",
+    "icons": "node dev/make-icons.ts",
     "build": "astro check && astro build",
     "preview": "astro preview",
     "mock": "node dev/mock-server.ts",
@@ -18,6 +19,7 @@
   },
   "dependencies": {
     "@kuhyx/web-ui": "github:kuhyx/utils#web_ui-v0.5.0&path:/web_ui",
+    "uqr": "0.1.3",
     "zod": "4.6.7"
   },
   "devDependencies": {
@@ -28,7 +30,7 @@
     "@types/node": "26.6.6",
     "@vitest/coverage-v8": "5.1.0",
     "ajv": "8.20.0",
-    "astro": "7.4.8",
+    "astro": "7.4.11",
     "eslint": "10.14.0",
     "jsdom": "31.0.0",
     "typescript": "6.0.3",

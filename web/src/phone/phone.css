@@ -1,0 +1,233 @@
+/* Phone tools (pair + install buttons) and the pairing modal. Shared by all three pages, so it depends on tokens.css only. */
+
+.phone-tools {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+/* 44 px is the tap-target floor on every pointer, not just coarse ones. */
+.phone-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.phone-btn:hover {
+  border-color: var(--text-muted);
+}
+
+.phone-btn:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.phone-btn svg {
+  width: 1.25rem;
+  height: 1.25rem;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.phone-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: max(var(--space-3), env(safe-area-inset-top)) max(var(--space-3), env(safe-area-inset-right)) max(var(--space-3), env(safe-area-inset-bottom))
+    max(var(--space-3), env(safe-area-inset-left));
+  background: rgb(0 0 0 / 0.6);
+}
+
+.phone-card {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  max-width: 100%;
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.phone-card > .phone-btn {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+}
+
+.phone-stage {
+  display: grid;
+  place-items: center;
+  width: min(64vmin, 18rem);
+  aspect-ratio: 1;
+}
+
+/* Scanners need dark modules on a light field in either colour scheme, so these two are the palette's fixed pair, not --bg/--text. */
+.phone-qr {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-sm);
+}
+
+.qr-bg {
+  fill: #eceae9;
+}
+
+.qr-fg {
+  fill: #211d1b;
+}
+
+.phone-ring {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--space-6);
+  height: var(--space-6);
+}
+
+.phone-ring svg {
+  position: absolute;
+  inset: 0;
+  transform: rotate(-90deg);
+}
+
+.phone-ring circle {
+  fill: none;
+  stroke-width: 4;
+}
+
+.ring-track {
+  stroke: var(--border);
+}
+
+.ring-arc {
+  stroke: var(--accent);
+  stroke-linecap: round;
+}
+
+.ring-digits {
+  font-size: var(--text-label);
+  font-variant-numeric: tabular-nums;
+}
+
+.phone-spin {
+  width: var(--space-5);
+  height: var(--space-5);
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: phone-spin calc(var(--duration-slow) * 3) linear infinite;
+}
+
+@keyframes phone-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.phone-warn {
+  width: var(--space-6);
+  height: var(--space-6);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/* Touch: every tap target is at least 44 px on a coarse pointer. Last in each page's CSS so it beats the pages' own sizes. */
+@media (pointer: coarse) {
+  .icon-btn,
+  .btn.icon-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .usage-link,
+  a.brand,
+  .ut-sort,
+  .sort-btn,
+  .title-btn,
+  button.chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  summary {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  /* The row checkboxes have no label to tap, so the box itself is the target: a 44 px hit area drawing a 24 px box and tick. */
+  sessions-app .select-cell {
+    padding-inline: 0;
+    width: 44px;
+  }
+
+  sessions-app input[type="checkbox"] {
+    position: relative;
+    display: block;
+    width: 44px;
+    height: 44px;
+    margin: 0;
+    padding: 0;
+    appearance: none;
+    background: none;
+    border: 0;
+    border-radius: 0;
+    cursor: pointer;
+  }
+
+  sessions-app input[type="checkbox"]::before {
+    position: absolute;
+    inset: 10px;
+    content: "";
+    background: var(--surface-2);
+    border: 2px solid var(--text-muted);
+    border-radius: var(--radius-sm);
+  }
+
+  sessions-app input[type="checkbox"]:checked::before {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  sessions-app input[type="checkbox"]:checked::after {
+    position: absolute;
+    top: 14px;
+    left: 18px;
+    width: 6px;
+    height: 12px;
+    content: "";
+    border: solid var(--on-fill);
+    border-width: 0 3px 3px 0;
+    transform: rotate(45deg);
+  }
+
+  sessions-app input[type="checkbox"]:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -2px;
+  }
+
+  usage-app input:not([type="checkbox"], [type="radio"]),
+  usage-app select {
+    min-height: 44px;
+  }
+}

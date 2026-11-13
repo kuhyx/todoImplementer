@@ -14,6 +14,7 @@ import { errorText, getJson } from "@/lib/http";
 import { poll } from "@/lib/poller";
 import { routes } from "@/lib/routes";
 import { type Board, board as boardSchema, type Usage, usage as usageSchema } from "@/lib/schemas";
+import { createPhoneTools, type PhoneTools } from "@/phone/phone-tools";
 import { defineTrack, TiTrack } from "@/track/track";
 
 export const BOARD_POLL_MS = 3000;
@@ -26,6 +27,7 @@ export class TiApp extends HTMLElement {
   #boardHost = h("main", { attrs: { "aria-live": "off" }, class: "board-host" }, loader(`Loading the board from ${routes.board}…`));
   readonly #drawer = new TiDrawer();
   readonly #newTask = new TiNewTask();
+  #phone: null | PhoneTools = null;
   readonly #track = new TiTrack();
   #signature = "";
   #state: ViewState = DEFAULT_STATE;
@@ -37,7 +39,8 @@ export class TiApp extends HTMLElement {
   });
   #usage: null | Usage = null;
   #usageError: null | string = null;
-  #usageHost = h("header", { class: "usage-host" });
+  readonly #usageBody = h("div", { class: "usage-body" });
+  readonly #usageHost = h("header", { class: "usage-host" });
 
   readonly #onHash = (): void => {
     this.#state = parseHash(location.hash);
@@ -108,7 +111,7 @@ export class TiApp extends HTMLElement {
   #paintUsage(): void {
     const stale = this.#staleReason();
     this.#boardHost.toggleAttribute("data-stale", stale !== null);
-    this.#usageHost.replaceChildren(renderUsage(this.#usage, this.#board, stale ?? this.#usageError, pageBuild(), nowSeconds(), () => void this.#loadBoard()));
+    this.#usageBody.replaceChildren(renderUsage(this.#usage, this.#board, stale ?? this.#usageError, pageBuild(), nowSeconds(), () => void this.#loadBoard()));
   }
 
   #paintBoard(isForced: boolean): void {
@@ -153,6 +156,8 @@ export class TiApp extends HTMLElement {
     this.#track.addEventListener("track-close", () => {
       this.#setState({ ...this.#state, umbrella: null }, "push");
     });
+    this.#phone = createPhoneTools();
+    this.#usageHost.replaceChildren(this.#usageBody, this.#phone.el);
     this.append(this.#usageHost, this.#toolbar.el, document.createElement("ti-merges"), this.#boardHost, this.#track, this.#drawer);
     this.#syncView();
     this.#paintUsage();
@@ -163,6 +168,8 @@ export class TiApp extends HTMLElement {
 
   disconnectedCallback(): void {
     removeEventListener("hashchange", this.#onHash);
+    this.#phone?.dispose();
+    this.#phone = null;
     for (const stop of this.#stops) stop();
     this.#stops = [];
   }

@@ -5,7 +5,8 @@ from __future__ import annotations
 import hmac
 import secrets
 
-DEFAULT_ORIGINS = ("http://127.0.0.1:8786", "https://agents.kuhy.duckdns.org")
+PUBLIC_ORIGIN = "https://agents.kuhy.duckdns.org"
+DEFAULT_ORIGINS = ("http://127.0.0.1:8786", PUBLIC_ORIGIN)
 
 
 def new_token() -> str:

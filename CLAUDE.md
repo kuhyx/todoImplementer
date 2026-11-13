@@ -9,6 +9,7 @@ Merging similar tasks (Haiku suggestions, one-click merge, umbrella notes, CLI):
 Manual Claude Code sessions page (status tags, resume, mark, delete, guard, phone): `DOCS-sessions.md`.
 One card, one run per repo (parts, ticks, per-repo lock, section-run transition, note migration CLI): `DOCS-repotask.md`.
 Asks as buttons in the note (`ask` block: choice, command, screenshot, risk rule, 24 h auto-adopt, sweep): `DOCS-asks.md`.
+Phone over mobile data (Host-based device gate, pairing QR, cookie, device store, exemptions): `DOCS-phone.md`.
 
 ## Commands
 

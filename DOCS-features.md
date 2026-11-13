@@ -31,6 +31,8 @@
 | Lessons | gate rejection -> drafted lesson -> Approve | lesson written into the named skill via `skill_lesson.py` |
 | Usage | header (GET `/api/usage`) | per-task cost, plan limit state, reset time |
 | Manual sessions | terminal icon link in the header -> `/sessions` (GET `/api/sessions`, POST `/api/sessions/<resume\|mark\|delete>`) | hand-started Claude Code sessions not done yet, grouped by status tag (headless runs hidden); resume opens terminator (a copy button on a phone), mark done writes `~/.claude/session-status.json`, delete moves to `~/.claude/projects-trash`; POSTs need Origin + CSRF (`DOCS-sessions.md`) |
+| Pair a phone | QR icon in the header, shown only on the PC (page carries `<meta name="todoimpl-local" content="1">`) -> POST `/api/pair` | modal with the QR of a one-time link, a countdown ring with the seconds left, a fresh code when it expires; Esc, backdrop or the X closes it; a failed mint shows a warning glyph (its title is the error, tap retries) |
+| Install app | install icon in the header, shown only when Chrome fires `beforeinstallprompt` and the page is not standalone | tap shows Chrome's install dialog; the icon goes away after `appinstalled`; `/manifest.webmanifest` + `/icons/*.png`, no service worker |
 | Build id | GET `/version` | `{build, version}`; the page reloads when `build` changes |
 | CSRF | every POST | needs same-origin `Origin` + `X-Todoimpl-Token` (the single `todoimpl-csrf` meta tag of `/`) |
 

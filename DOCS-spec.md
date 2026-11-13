@@ -40,8 +40,8 @@ they mean. Lessons from the predecessor are in `DOCS-lessons.md`.
   naming exactly what it needs (needs kind `handed_to_you`).
 - **Q11** Done = open the page, see every open note grouped by repo, start at least 3, they run in parallel worktrees with live
   feeds, each reaches Ready to ship with plan + a live-check report + green checks; Ship pushes and closes.
-- **Q12/Q15** Public without VPN: Google sign-in for one account via oauth2-proxy beside the Caddy container
-  (`forward_auth`); the server binds 127.0.0.1, checks Origin and a CSRF token on every POST; Caddy rate limit.
+- **Q12/Q15** Public without VPN: per-device cookie from a pairing QR (no OAuth client; `DOCS-phone.md`);
+  the server binds 127.0.0.1, checks Origin and a CSRF token on every POST; Caddy rate limit.
   Secrets in `~/.config/todoImplementer/` mode 0600. A handoff script covers the OAuth client (no API exists).
 - **Q13** Full control from a phone; layout works at 390x844.
 - **Q14** The public host is `agents.kuhy.duckdns.org`.
@@ -152,8 +152,8 @@ succeeded after it, and only terminal denials of a turn that did not end on `D:`
 
 ## Endpoints
 
-GET `/version`, `/api/board`, `/api/task/<item-id>`, `/api/usage`, `/api/live?id=<item-id>` (SSE); POST
-`/api/task/<item-id>/{start,spec-answers,spec-ok,send,ship,close,cancel,lesson-approve,go,rerun}`, `/api/settings/credits-fallback`. Shapes: `version`, `board`,
+GET `/version`, `/pair`, `/api/board`, `/api/task/<item-id>`, `/api/usage`, `/api/live?id=<item-id>` (SSE); POST
+`/api/task/<item-id>/{start,spec-answers,spec-ok,send,ship,close,cancel,lesson-approve,go,rerun}`, `/api/settings/credits-fallback`, `/api/pair`. Shapes: `version`, `pair`, `board`,
 `task`, `usage`, `live`, `requests` (one def per POST), `response` (all POSTs). Cross-file refs use each schema's
 `$id` (`https://todoimplementer.local/contracts/<file>`); load every file into one registry
 (`scripts/contract_lib.py` in Python, `ajv.addSchema` in web). POSTs need `X-Todoimpl-Token` and a same-origin

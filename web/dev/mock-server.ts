@@ -8,6 +8,7 @@ import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { extname, join, normalize } from "node:path";
+import { text } from "node:stream/consumers";
 
 import { ASK_IDS, askCards, askDetail, FREE_ID, freeDetail } from "#fixtures/fixture-ask";
 import { makeCredits } from "#fixtures/fixture-credits";
@@ -15,13 +16,14 @@ import { makeDetail, makeUsage } from "#fixtures/fixture-detail";
 import { preset } from "#fixtures/fixture-presets";
 import { makeBoard, makeCards, NOW } from "#fixtures/fixtures";
 
+import { pairBody, PHONE_TYPES, sessionsBody, stampLocal, usageFixture } from "./mock-phone.ts";
 import { TRACK_ID, trackBody, umbrellaCard, workerLog } from "./mock-track.ts";
 
 const PORT = Number(process.env.PORT ?? 4399);
 const BUILD = process.env.MOCK_BUILD ?? "mock0001";
 const DIST = process.env.MOCK_DIST ?? join(import.meta.dirname, "..", "dist");
 const TOKEN = randomUUID();
-const TYPES: Record<string, string> = { ".css": "text/css", ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".svg": "image/svg+xml" };
+const TYPES: Record<string, string> = { ".css": "text/css", ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".svg": "image/svg+xml", ...PHONE_TYPES };
 const TIME_KEYS = new Set(["at", "ended", "generated_at", "last", "reset_at", "resets_at", "resumes_at", "started", "ts", "until", "updated"]);
 const offset = Math.floor(Date.now() / 1000) - NOW;
 const cards = [...makeCards(), ...askCards()].map((card) => (card.status === "working" && card.repo === "gatelock" ? { ...card, route: "credits" as const } : card));
@@ -81,6 +83,25 @@ async function setCredits(request: IncomingMessage, res: ServerResponse): Promis
   json(res, { credits: creditsNow(), ok: true });
 }
 
+/** The phone work's routes: POST /api/pair, and the sessions and usage pages' data. False for any other path. */
+async function hasServedPhone(request: IncomingMessage, res: ServerResponse, path: string): Promise<boolean> {
+  if (path === "/api/pair" && request.method === "POST") await pair(request, res);
+  else if (path === "/api/sessions") json(res, sessionsBody());
+  else if (path.startsWith("/api/tokens")) {
+    const body = await usageFixture(path);
+    json(res, body ?? {}, body === null ? 404 : 200);
+  } else return false;
+  return true;
+}
+
+/** POST /api/pair: same token and origin rules as every POST; answers the contracts/pair.schema.json shape. */
+async function pair(request: IncomingMessage, res: ServerResponse): Promise<void> {
+  await text(request);
+  const origin = request.headers.origin;
+  const isForbidden = request.headers["x-todoimpl-token"] !== TOKEN || (origin !== undefined && origin !== `http://${request.headers.host ?? ""}`);
+  json(res, isForbidden ? { ok: false } : pairBody(), isForbidden ? 403 : 200);
+}
+
 async function post(request: IncomingMessage, res: ServerResponse, id: string, action: string): Promise<void> {
   const chunks: Buffer[] = [];
   for await (const chunk of request) chunks.push(chunk as Buffer);
@@ -114,11 +135,12 @@ function live(request: IncomingMessage, res: ServerResponse, id: string): void {
 }
 
 async function serveStatic(res: ServerResponse, path: string): Promise<void> {
-  const file = normalize(path === "/" ? "/index.html" : path).replace(/^(\.\.[\/\\])+/v, "");
+  const clean = normalize(path === "/" ? "/index.html" : path).replace(/^(\.\.[\/\\])+/v, "");
+  const file = extname(clean) === "" ? `${clean}/index.html` : clean;
   try {
     let data = await readFile(join(DIST, file));
-    if (file === "/index.html") {
-      data = Buffer.from(data.toString("utf8").replace("__TODOIMPL_CSRF__", () => TOKEN).replace("__TODOIMPL_BUILD__", () => BUILD));
+    if (extname(file) === ".html") {
+      data = Buffer.from(stampLocal(data.toString("utf8")).replace("__TODOIMPL_CSRF__", () => TOKEN).replace("__TODOIMPL_BUILD__", () => BUILD));
     }
     res.writeHead(200, { "Content-Security-Policy": "default-src 'self'; style-src 'self'; script-src 'self'", "Content-Type": TYPES[extname(file)] ?? "application/octet-stream" });
     res.end(data);
@@ -158,6 +180,7 @@ async function route(request: IncomingMessage, res: ServerResponse): Promise<voi
   if (path === "/api/board") { const board = makeBoard(cards); json(res, { ...board, build: BUILD, limit: { ...board.limit, credits: creditsNow() } }); return; }
   if (path === "/api/settings/credits-fallback" && request.method === "POST") { await setCredits(request, res); return; }
   if (path === "/api/usage") { json(res, makeUsage()); return; }
+  if (await hasServedPhone(request, res, path)) return;
   if (path === "/api/live") { live(request, res, parameters.get("id") ?? ""); return; }
   if (hasServedUmbrella(res, path)) return;
   if (api !== "api" || kind !== "task" || id === undefined) {

@@ -85,3 +85,9 @@ def _no_real_build_lock(tmp_path_factory: pytest.TempPathFactory, monkeypatch: p
 def _no_real_todo_images(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch) -> None:
     """Point the todo images root at a missing temp dir: kuhy's real dufs folder is never read or written."""
     monkeypatch.setenv("TODOIMPL_IMAGES_ROOT", str(tmp_path_factory.mktemp("todo-images") / "missing"))
+
+
+@pytest.fixture(autouse=True)
+def _no_real_devices_file(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Point the paired-device list at a temp file: kuhy's real devices.json is never read or written."""
+    monkeypatch.setenv("TODOIMPL_DEVICES", str(tmp_path_factory.mktemp("devices") / "devices.json"))

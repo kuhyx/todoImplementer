@@ -33,7 +33,8 @@ a {
 .head {
   display: flex;
   align-items: center;
-  padding: var(--space-2) var(--space-3);
+  padding: max(var(--space-2), env(safe-area-inset-top)) max(var(--space-3), env(safe-area-inset-right)) var(--space-2)
+    max(var(--space-3), env(safe-area-inset-left));
   border-bottom: 1px solid var(--border);
 }
 

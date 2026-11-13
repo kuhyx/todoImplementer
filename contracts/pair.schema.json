@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://todoimplementer.local/contracts/pair.schema.json",
+  "title": "POST /api/pair",
+  "description": "Local only. A one-time pairing link (valid 300 s) the PC page shows as a QR code; the phone opens it.",
+  "type": "object",
+  "properties": {
+    "url": {
+      "type": "string",
+      "pattern": "^https?://[^/]+/pair\\?c=[A-Za-z0-9_-]{22,}$",
+      "description": "<public origin>/pair?c=<code>; opening it sets the per-device cookie."
+    },
+    "expires_at": {"type": "integer", "minimum": 1, "description": "Epoch seconds after which the code is dead."}
+  },
+  "required": ["url", "expires_at"],
+  "additionalProperties": false
+}

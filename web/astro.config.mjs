@@ -11,6 +11,12 @@ export default defineConfig({
   vite: {
     build: { assetsInlineLimit: 0 },
     resolve: { alias: { "@": fileURLToPath(new URL("src", import.meta.url)) } },
-    server: { proxy: { "/api": "http://127.0.0.1:8786", "/version": "http://127.0.0.1:8786" } },
+    // changeOrigin: the server treats any Host other than its own loopback address as a public request (device gate).
+    server: {
+      proxy: {
+        "/api": { changeOrigin: true, target: "http://127.0.0.1:8786" },
+        "/version": { changeOrigin: true, target: "http://127.0.0.1:8786" },
+      },
+    },
   },
 });

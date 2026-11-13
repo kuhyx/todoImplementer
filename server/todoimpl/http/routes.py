@@ -97,8 +97,8 @@ class Router:
             return None
         return lambda: json_reply(api.suggestions())
 
-    def get(self, target: str, last_event_id: str | None = None) -> Reply | SseReply:
-        """Answer a GET: API route, SSE feed or static file."""
+    def get(self, target: str, last_event_id: str | None = None, *, local: bool = False) -> Reply | SseReply:
+        """Answer a GET: API route, SSE feed or static file; `local` is the gate's verdict on the Host."""
         parts = urlsplit(target)
         path = parts.path
         if path == "/api/live":
@@ -110,7 +110,7 @@ class Router:
             return _guard(lambda: self._tokens(path, parts.query))
         if (reply := self._task_route(path)) is not None:
             return reply
-        if not path.startswith("/api/") and (static := self.site.serve(path)) is not None:
+        if not path.startswith("/api/") and (static := self.site.serve(path, local=local)) is not None:
             return static
         return error_reply("not_found", "no such route")
 

@@ -9,6 +9,7 @@ import { csrfToken } from "@/lib/boot";
 import { h } from "@/lib/dom";
 import { errorText } from "@/lib/http";
 import { poll } from "@/lib/poller";
+import { createPhoneTools, type PhoneTools } from "@/phone/phone-tools";
 import { bulkBar, type Perform } from "@/sessions/actions";
 import { loadSessions, postSessions } from "@/sessions/api";
 import { label } from "@/sessions/labels";
@@ -35,6 +36,7 @@ export class SessionsApp extends HTMLElement {
   #items: Item[] = [];
   readonly #host = h("main", { attrs: { "aria-live": "polite" }, class: "main" });
   #open = new Set<string>();
+  #phone: PhoneTools | undefined;
   #outcomes = new Map<string, Outcome>();
   #query: Query = EMPTY_QUERY;
   #selected = new Set<string>();
@@ -188,7 +190,8 @@ export class SessionsApp extends HTMLElement {
     this.#query = readQuery(globalThis.location.hash);
     const back = h("a", { attrs: { "aria-label": "todoImplementer", href: "/", title: "todoImplementer" }, class: "icon-btn btn back" });
     back.append(icon("back"));
-    this.replaceChildren(h("header", { class: "head" }, back), this.#toolbar.el, this.#host);
+    this.#phone = createPhoneTools();
+    this.replaceChildren(h("header", { class: "head" }, back, this.#phone.el), this.#toolbar.el, this.#host);
     globalThis.addEventListener("hashchange", this.#onHash);
     this.#host.addEventListener("focusout", () => { setTimeout(this.#applyHeld, 0); });
     this.#host.addEventListener(DISARM, this.#applyHeld);
@@ -199,6 +202,7 @@ export class SessionsApp extends HTMLElement {
   disconnectedCallback(): void {
     globalThis.removeEventListener("hashchange", this.#onHash);
     this.#stop?.();
+    this.#phone?.dispose();
   }
 }
 

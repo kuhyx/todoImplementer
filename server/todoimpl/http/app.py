@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from .auth import DEFAULT_ORIGINS, new_token
+from .device_gate import Admission, Gate
 from .reply import Reply
 from .routes import Router, SseReply
 from .sse import stream
@@ -30,6 +31,7 @@ class AppServer(ThreadingHTTPServer):
 
     daemon_threads = True
     router: Router
+    gate: Gate
     heartbeat: float = 15.0  # seconds between SSE keepalives; tests shorten it
 
 
@@ -55,15 +57,43 @@ class Handler(BaseHTTPRequestHandler):
             log.debug("client went away during %s %s", self.command, self.path)
             self.close_connection = True
 
+    def _admit(self) -> Admission | None:
+        """Gate the request; a refused one is answered here and gives None."""
+        hosts = self.headers.get_all("Host", [])
+        verdict = self.server.gate.admit(self.command, self.path, hosts, self.headers.get_all("Cookie", []))
+        if isinstance(verdict, Admission):
+            return verdict
+        self._send(verdict)
+        return None
+
     def _get(self) -> None:
-        reply = self.server.router.get(self.path, self.headers.get("Last-Event-ID"))
+        if (access := self._admit()) is None:
+            return
+        gate = self.server.gate
+        if gate.serves("GET", self.path):
+            self._send(gate.redeem(self.path, (self.headers.get("User-Agent") or "")))
+            return
+        reply = self.server.router.get(self.path, self.headers.get("Last-Event-ID"), local=access.local)
         if isinstance(reply, SseReply):
             self._sse(reply)
         else:
-            self._send(reply)
+            self._send(gate.renew(reply, access))
 
     def _post(self) -> None:
-        reply = self.server.router.post(
+        if (access := self._admit()) is None:
+            return
+        router = self.server.router
+        if self.server.gate.serves("POST", self.path):
+            reply = self.server.gate.mint(
+                access,
+                self.headers.get("Origin"),
+                self.headers.get("X-Todoimpl-Token"),
+                expected=router.token,
+                origins=router.origins,
+            )
+            self._send(reply)
+            return
+        reply = router.post(
             self.path,
             self.headers.get("Origin"),
             self.headers.get("X-Todoimpl-Token"),
@@ -132,5 +162,6 @@ def make_server(
     server = AppServer((host, port), Handler)
     token = new_token()
     origins = (*DEFAULT_ORIGINS, f"http://127.0.0.1:{server.server_address[1]}")
+    server.gate = Gate.create(server.server_address[1])
     server.router = Router(backend, StaticSite(dist, token, build), token=token, origins=origins, build=build)
     return server

@@ -3,6 +3,7 @@ import type { Context } from "@/usage/context";
 import type { TokensIndex } from "@/usage/schemas";
 
 import { h } from "@/lib/dom";
+import { createPhoneTools, type PhoneTools } from "@/phone/phone-tools";
 import { loadIndex } from "@/usage/api";
 import { hashContext } from "@/usage/context";
 import { filterBar } from "@/usage/filter-bar";
@@ -48,6 +49,7 @@ export class UsageApp extends HTMLElement {
   private readonly nav = h("nav", { attrs: { "aria-label": label.views }, class: "tabs" });
   private readonly filters = h("div", { class: "filters-host" });
   private index: TokensIndex | undefined;
+  private phone: PhoneTools | undefined;
   private timer: ReturnType<typeof setInterval> | undefined;
 
   readonly show = (): void => {
@@ -94,8 +96,9 @@ export class UsageApp extends HTMLElement {
   }
 
   connectedCallback(): void {
+    this.phone = createPhoneTools();
     this.replaceChildren(
-      h("header", { class: "head" }, h("a", { attrs: { href: "/" }, class: "brand", text: label.brand }), h("h1", { text: label.title }), this.nav),
+      h("header", { class: "head" }, h("a", { attrs: { href: "/" }, class: "brand", text: label.brand }), h("h1", { text: label.title }), this.nav, this.phone.el),
       this.filters,
       this.main,
     );
@@ -107,6 +110,7 @@ export class UsageApp extends HTMLElement {
   disconnectedCallback(): void {
     globalThis.removeEventListener("hashchange", this.show);
     clearInterval(this.timer);
+    this.phone?.dispose();
     this.abort.abort();
   }
 }

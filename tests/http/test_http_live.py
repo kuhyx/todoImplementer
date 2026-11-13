@@ -13,7 +13,9 @@ from httpfakes import Live, call
 def read_sse(live: Live, path: str, headers: dict[str, str] | None = None) -> tuple[str, str]:
     with socket.create_connection(("127.0.0.1", live.port), timeout=5) as sock:
         extra = "".join(f"{k}: {v}\r\n" for k, v in (headers or {}).items())
-        sock.sendall(f"GET {path} HTTP/1.1\r\nHost: x\r\nConnection: close\r\n{extra}\r\n".encode())
+        sock.sendall(
+            f"GET {path} HTTP/1.1\r\nHost: 127.0.0.1:{live.port}\r\nConnection: close\r\n{extra}\r\n".encode()
+        )
         data = b""
         while chunk := sock.recv(4096):
             data += chunk
@@ -67,7 +69,9 @@ def test_live_ignores_a_garbage_last_event_id(live: Live, value: str) -> None:
 def test_live_client_hangup_is_swallowed(live: Live) -> None:
     live.backend.events = [{"type": "cost", "cost_usd": 1.0}] * 200
     sock = socket.create_connection(("127.0.0.1", live.port), timeout=5)
-    sock.sendall(f"GET /api/live?id={live.backend.task_id} HTTP/1.1\r\nHost: x\r\n\r\n".encode())
+    sock.sendall(
+        f"GET /api/live?id={live.backend.task_id} HTTP/1.1\r\nHost: 127.0.0.1:{live.port}\r\n\r\n".encode()
+    )
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, b"\x01\x00\x00\x00\x00\x00\x00\x00")
     sock.close()
     time.sleep(0.2)
@@ -77,7 +81,7 @@ def test_live_client_hangup_is_swallowed(live: Live) -> None:
 def test_client_reset_during_plain_response_is_swallowed(live: Live) -> None:
     sock = socket.create_connection(("127.0.0.1", live.port), timeout=5)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, b"\x01\x00\x00\x00\x00\x00\x00\x00")
-    sock.sendall(b"GET /api/board HTTP/1.1\r\nHost: x\r\n\r\n")
+    sock.sendall(f"GET /api/board HTTP/1.1\r\nHost: 127.0.0.1:{live.port}\r\n\r\n".encode())
     sock.close()
     time.sleep(0.2)
     assert call(live.port, "GET", "/version").status == 200
