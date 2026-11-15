@@ -10,10 +10,16 @@ FAKES = REPO / "tests" / "fixtures" / "fakecov"
 CHUNKS = "a b c"
 
 
+def make_env() -> dict[str, str]:
+    """Fake pytest/coverage first on PATH; a board build-lock shim on PATH runs `make` at once (T2002)."""
+    env = {**os.environ, "PATH": f"{FAKES}:{os.environ['PATH']}", "FAKECOV_CHUNKS": "3", "MAKEFLAGS": ""}
+    return {**env, "TODOIMPL_BUILD_LOCK_HELD": "1"}
+
+
 def make_test(cwd: Path) -> subprocess.Popen[str]:
     """Start the real `test` recipe in cwd with fake pytest/coverage and no capped.sh (UV is plain `env`)."""
     shutil.copy(REPO / "Makefile", cwd / "Makefile")  # its sub-makes read ./Makefile
-    env = {**os.environ, "PATH": f"{FAKES}:{os.environ['PATH']}", "FAKECOV_CHUNKS": "3", "MAKEFLAGS": ""}
+    env = make_env()
     argv = ["make", "-s", "-C", str(cwd), "test", f"CHUNKS={CHUNKS}", "UV=env"]
     return subprocess.Popen(argv, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 
@@ -32,3 +38,8 @@ def test_a_run_leaves_no_coverage_data_in_the_worktree(tmp_path: Path) -> None:
     out = run.communicate(timeout=30)[0]
     assert run.returncode == 0, out
     assert sorted(p.name for p in tmp_path.iterdir()) == ["Makefile"]
+
+
+def test_t2002_the_fake_make_runs_never_wait_on_the_board_build_lock() -> None:
+    # Board gate run: the inner `make` went through the build-lock shim and waited 30 s on another card.
+    assert make_env()["TODOIMPL_BUILD_LOCK_HELD"] == "1"
