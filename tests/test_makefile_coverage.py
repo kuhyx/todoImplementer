@@ -11,7 +11,7 @@ CHUNKS = "a b c"
 
 
 def make_env() -> dict[str, str]:
-    """Fake pytest/coverage first on PATH; a board build-lock shim on PATH runs `make` at once (T2002)."""
+    """Fake pytest/coverage first on PATH; a board build-lock shim on PATH runs `make` at once (T2003)."""
     env = {**os.environ, "PATH": f"{FAKES}:{os.environ['PATH']}", "FAKECOV_CHUNKS": "3", "MAKEFLAGS": ""}
     return {**env, "TODOIMPL_BUILD_LOCK_HELD": "1"}
 
@@ -40,6 +40,6 @@ def test_a_run_leaves_no_coverage_data_in_the_worktree(tmp_path: Path) -> None:
     assert sorted(p.name for p in tmp_path.iterdir()) == ["Makefile"]
 
 
-def test_t2002_the_fake_make_runs_never_wait_on_the_board_build_lock() -> None:
+def test_t2003_the_fake_make_runs_never_wait_on_the_board_build_lock() -> None:
     # Board gate run: the inner `make` went through the build-lock shim and waited 30 s on another card.
     assert make_env()["TODOIMPL_BUILD_LOCK_HELD"] == "1"
