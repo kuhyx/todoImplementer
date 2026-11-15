@@ -48,7 +48,7 @@ def test_t1892_a_plan_turn_runs_on_the_model_it_wanted(world: Env) -> None:
         sched.close()
 
 
-def test_t2003_credit_turns_run_on_opus_by_default_and_hold_no_role_back(
+def test_t2004_credit_turns_run_on_opus_by_default_and_hold_no_role_back(
     world: Env, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     enable_credits(monkeypatch)
