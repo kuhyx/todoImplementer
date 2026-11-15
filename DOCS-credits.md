@@ -26,8 +26,10 @@ The grant is about $200 a month (the promotional grant of 2026-11-10 lasts to 20
 `settings.json`, edited in the file (no endpoint): `credits_monthly_usd` (default 190: the $200 grant minus a $10
 margin, because billing lags and week 4 must never push the balance negative again), `credits_month_start_day`
 (default 10, 1 to 28: the period starts on the grant day at 00:00 local and lasts to the next), `credits_cost_factor`
-(default 1.0). Week = `min(4, days since the period start // 7 + 1)`; cap = `week x monthly / 4` (days 22 on are
-week 4 = the whole grant). A new turn takes the credits only while the spend plus the exposure of the running credit
+(default 1.0). Week = 1 + the plan's weekly resets since the period start, at most 4 (T2002: the credit week
+follows the Max plan's seven-day window; the reset instants are `seven_day.resets_at` minus or plus whole weeks, read from the stored usage probe,
+no network); without a probe or its seven-day window: `min(4, days since the period start // 7 + 1)`. Cap =
+`week x monthly / 4` (week 4 = the whole grant, never more). A new turn takes the credits only while the spend plus the exposure of the running credit
 turns is below the cap (the brakes below give the exposure); past that it takes the plan, and if the plan is limited it waits for the limit: the cap is never spent past, not
 even as a limit fallback. Turns already running finish on their route. The old `credits_first` setting is gone:
 pacing is always on (the key in an old file is ignored). A real billing error still marks the credits exhausted

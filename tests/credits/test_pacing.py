@@ -3,9 +3,14 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 import pytest
 from todoimpl.credits import pacing, setting
+from todoimpl.usage import oauth
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def at(year: int, month: int, day: int, hour: int = 12) -> float:
@@ -71,3 +76,40 @@ def test_settings_read_the_file_and_fall_back_on_garbage() -> None:
     ):
         path.write_text(bad)
         assert (setting.monthly_usd(), setting.start_day()) == (190.0, 10)
+
+
+def _plan_resets(root: Path, resets_at: float | None) -> None:
+    """Store a usage probe whose seven-day window resets at `resets_at` (None: no such window)."""
+    window = None if resets_at is None else oauth.Window(0.01, resets_at)
+    oauth.save(root, oauth.Probe(at(2026, 11, 15), None, window))
+
+
+def _start_on_the_10th(root: Path) -> None:
+    path = setting.settings_path()
+    path.write_text('{"credits_monthly_usd": 190, "credits_month_start_day": 10, "credits_cost_factor": 1}')
+
+
+def test_t2002_credit_week_steps_when_the_plan_weekly_limit_resets(root: Path) -> None:
+    _start_on_the_10th(root)
+    _plan_resets(root, at(2026, 11, 20, 10))  # so the plan's week turned over on Nov 13 at 10:00
+    before, after = at(2026, 11, 13, 9), at(2026, 11, 13, 11)
+    assert (pacing.pace(root, before).week, pacing.pace(root, before).cap_usd) == (1, 47.5)
+    now = pacing.pace(root, at(2026, 11, 15))
+    assert (now.week, now.cap_usd, pacing.pace(root, after).week) == (2, 95.0, 2)
+    assert pacing.pace(root, at(2026, 11, 20, 11)).week == 3
+    assert pacing.pace(root, at(2026, 12, 9)).week == 4  # never past 4, and the grant never exceeds monthly
+
+
+def test_credit_week_counts_resets_from_a_stale_probe_too(root: Path) -> None:
+    _start_on_the_10th(root)
+    _plan_resets(root, at(2026, 11, 13, 10))  # the stored reset has passed: next ones follow every 7 days
+    assert pacing.pace(root, at(2026, 11, 15)).week == 2
+    assert pacing.pace(root, at(2026, 11, 20, 11)).week == 3
+
+
+def test_credit_week_falls_back_to_day_count_without_a_plan_reset(root: Path) -> None:
+    _start_on_the_10th(root)
+    assert pacing.pace(root, at(2026, 11, 15)).week == 1  # no stored probe
+    _plan_resets(root, None)
+    assert pacing.pace(root, at(2026, 11, 15)).week == 1  # probe without a seven-day window
+    assert pacing.pace(root, at(2026, 11, 17)).week == 2

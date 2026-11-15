@@ -1,15 +1,20 @@
 """Pace the monthly credit grant by week: the cap rises by a quarter of the grant each week of the period.
 
-The period runs from the latest start day (local midnight) to the next. Week = days since its start divided by
-seven plus one, never past 4, so days 22 and later are week 4 and the whole grant is free to spend. Pure maths
-on epochs and local wall-clock time; the spend itself comes from `ledger`.
+The period runs from the latest start day (local midnight) to the next. Week = 1 + the plan's weekly resets
+since its start, never past 4, so the whole grant is free to spend from week 4 on. The resets come from
+the stored usage probe (`usage.oauth.load`, no network): reset instants fall every seven days from
+`seven_day.resets_at`. Without a probe or its seven-day window the week is the days since the start divided by
+seven plus one. Pure maths on epochs and local wall-clock time; the spend itself comes from `ledger`.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+from math import floor
 from typing import TYPE_CHECKING
+
+from todoimpl.usage import oauth
 
 from . import ledger, live, setting
 
@@ -20,6 +25,7 @@ WEEKS = 4
 RESERVE_USD = 2.0  # assumed cost of a credit turn that has started and not yet ended
 NEAR_CAP_USD = 20.0  # within this of the cap at most one credit turn runs at a time
 DAYS_PER_WEEK = 7
+WEEK_SECONDS = DAYS_PER_WEEK * 86400  # plan resets are absolute instants, so no wall-clock days here
 
 
 @dataclass(frozen=True)
@@ -68,8 +74,15 @@ def period_start(now: float, start_day: int) -> float:
     return datetime(year, month, start_day).timestamp()  # noqa: DTZ001 - local midnight
 
 
-def week_of(now: float, start: float) -> int:
-    """Return the week (1 to 4) `now` falls in for a period that began at `start`."""
+def week_of(now: float, start: float, plan_reset: float | None = None) -> int:
+    """Return the week (1 to 4) `now` falls in for a period that began at `start`.
+
+    With `plan_reset` (any reset epoch of the plan's seven-day window, past or future) the week is one
+    plus the plan resets in (start, now]; without it, the days since `start` divided by seven plus one.
+    """
+    if plan_reset is not None:
+        resets = floor((now - plan_reset) / WEEK_SECONDS) - floor((start - plan_reset) / WEEK_SECONDS)
+        return min(WEEKS, resets + 1)
     days = (datetime.fromtimestamp(now) - datetime.fromtimestamp(start)).days  # noqa: DTZ006
     return min(WEEKS, days // DAYS_PER_WEEK + 1)
 
@@ -87,7 +100,9 @@ def pace(root: Path, now: float) -> Pace:
     """
     monthly = setting.monthly_usd()
     start = period_start(now, setting.start_day())
-    week = week_of(now, start)
+    probe = oauth.load(root)
+    window = None if probe is None else probe.seven_day
+    week = week_of(now, start, None if window is None else window.resets_at)
     factor = setting.cost_factor()
     live_costs = [c * factor for c in live.costs(root)]
     return Pace(
