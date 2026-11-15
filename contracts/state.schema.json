@@ -40,7 +40,7 @@
     "escalate_reason": {"type": "string", "description": "Why it escalated, at most 300 characters."},
     "credit_downgrade": {
       "type": "object",
-      "description": "Roles whose latest turn ran on a smaller model than they want because the credits route runs every role on sonnet (kuhy, 2026-11-08): role -> wanted and ran. Absent when none.",
+      "description": "Roles whose latest turn ran on a smaller model than they want because the credits route runs every role on the `credits_model` setting (default Opus 5.5): role -> wanted and ran. Absent when none.",
       "additionalProperties": {
         "type": "object",
         "properties": {"wanted": {"type": "string"}, "ran": {"type": "string"}},

@@ -14,7 +14,7 @@ the prompt, not twice), so it never resumes the Opus transcript and pays no cach
 whenever the implementer worked since (entering from `implement`); the checklist redo, the phone nudge and an `R:`
 continue resume it. A resumed session already holds plan.md: its prompt names the path, a new one inlines the text
 (`Situation` `resume`, `runner/prompting.py`). `result.json` records `model`, `wanted_model` and `effort`; when the
-credits route runs a role on Sonnet that wanted more (kuhy's rule, 2026-11-08) the feed says so and
+credits route runs a role on a lesser model than it wanted (every credit turn runs the `credits_model` setting, default Opus 5.5; a Sonnet role on Opus is no hold) the feed says so and
 `state.extra.credit_downgrade[role]` holds `{wanted, ran}`.
 
 A turn has a wall-clock limit: `$TODOIMPL_TURN_TIMEOUT` seconds (default 4 h, above a manager round with coaching).
@@ -26,7 +26,7 @@ A server-side API error (5xx, overloaded) is retried at most `retry.MAX_API_RETR
 follow-up note (`retry.later` is uncapped; DOCS-resilience, DOCS-spec Q4). A bare `API Error` or `timed out` is no
 longer transient: it takes the crash path (3 tries, then Needs you).
 
-Not changed on purpose: Sonnet for spec and plan (`tokens/ab.py` compares subagent arms only and holds no data for these board roles); every role on credits is Sonnet (kuhy, 2026-11-08).
+Not changed on purpose: Sonnet for spec and plan (`tokens/ab.py` compares subagent arms only and holds no data for these board roles); every role on credits runs the `credits_model` setting (Opus 5.5 since 2026-11-15; Sonnet before, kuhy 2026-11-08).
 
 ## One build at a time
 

@@ -1,4 +1,4 @@
-"""The credit route: one turn through the Claude Agent SDK on the free API credits, model sonnet.
+"""The credit route: one turn through the Claude Agent SDK on the free API credits, model `credits_model`.
 
 Anthropic covers the Agent SDK (not the `claude` CLI) with the Max plan's API credits, so a credit turn is
 `<sdk venv python> -m todoimpl.runner.sdkturn <spec>` under the same turn host as a plan turn. The spec
@@ -12,7 +12,7 @@ import os
 from typing import TYPE_CHECKING
 
 from todoimpl.apikey import read_key
-from todoimpl.credits import sdk
+from todoimpl.credits import sdk, setting
 
 from . import claude
 from .files import NeedsYouError
@@ -21,9 +21,18 @@ from .launch import SERVER_DIR
 if TYPE_CHECKING:
     from pathlib import Path
 
-MODEL = "sonnet"  # every role on credits (decision of kuhy, 2026-11-08)
+RANK = {"opus": 2, "sonnet": 1}  # model families, dearer first; anything else (haiku, unknown) ranks 0
 SETTING_SOURCES = ("user", "project", "local")  # kuhy's full setup, as the CLI loads it
 MODULE = "todoimpl.runner.sdkturn"
+
+
+def _rank(model: str) -> int:
+    return next((rank for family, rank in RANK.items() if family in model.lower()), 0)
+
+
+def downgraded(wanted: str, ran: str) -> bool:
+    """Return True when a role ran on a lesser model family than it wanted (a Sonnet role on Opus is not)."""
+    return _rank(ran) < _rank(wanted)
 
 
 def build(  # noqa: PLR0913, PLR0917 - same signature as claude.build
@@ -33,7 +42,7 @@ def build(  # noqa: PLR0913, PLR0917 - same signature as claude.build
     resume: str | None = None,
     extra_dirs: tuple[Path, ...] = (),
     allow: tuple[str, ...] = (),
-    model: str | None = None,  # noqa: ARG001 - credit turns are always MODEL; the parameter keeps one signature
+    model: str | None = None,  # noqa: ARG001 - a credit turn always runs the `credits_model` setting
     effort: str | None = None,
 ) -> claude.Invocation:
     """Build a credit turn; NeedsYouError when the SDK venv or the key vanished since routing."""
@@ -41,7 +50,7 @@ def build(  # noqa: PLR0913, PLR0917 - same signature as claude.build
     if python is None or key is None:
         msg = f"free API credits cannot run: {sdk.MISSING if python is None else 'no usable API key'}"
         raise NeedsYouError(msg)
-    opt = claude.options(role, prompt, worktree, resume, extra_dirs, allow, MODEL, effort)
+    opt = claude.options(role, prompt, worktree, resume, extra_dirs, allow, setting.model(), effort)
     spec = {
         "prompt": opt.prompt, "model": opt.model, "cwd": str(opt.cwd), "add_dirs": list(opt.add_dirs),
         "permission_mode": opt.permission_mode, "resume": opt.resume, "settings": opt.settings,

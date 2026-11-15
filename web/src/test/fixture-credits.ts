@@ -15,7 +15,7 @@ export function makeCredits(over: Partial<Credits> = {}): Credits {
     running_credit_turns: 1,
     spent_period_usd: 40,
     state: "ready",
-    text: "Turns run on free API credits, paced by week (model sonnet).",
+    text: "Turns run on free API credits, paced by week (model claude-opus-5-5).",
     week: 2,
     ...over,
   };

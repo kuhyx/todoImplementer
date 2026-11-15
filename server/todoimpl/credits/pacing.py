@@ -16,13 +16,13 @@ from typing import TYPE_CHECKING
 
 from todoimpl.usage import oauth
 
-from . import ledger, live, setting
+from . import ledger, live, prices, setting
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 WEEKS = 4
-RESERVE_USD = 2.0  # assumed cost of a credit turn that has started and not yet ended
+# A started credit turn that has not ended counts for at least `prices.reserve(model)` ($2 Sonnet, $4 Opus).
 NEAR_CAP_USD = 20.0  # within this of the cap at most one credit turn runs at a time
 DAYS_PER_WEEK = 7
 WEEK_SECONDS = DAYS_PER_WEEK * 86400  # plan resets are absolute instants, so no wall-clock days here
@@ -105,8 +105,9 @@ def pace(root: Path, now: float) -> Pace:
     week = week_of(now, start, None if window is None else window.resets_at)
     factor = setting.cost_factor()
     live_costs = [c * factor for c in live.costs(root)]
+    reserve = prices.reserve(setting.model())
     return Pace(
         start, week, monthly, cap_usd(week, monthly), ledger.spent(root, start) * factor,
         ledger.turns(root, start), len(live_costs), factor, sum(live_costs),
-        sum(max(c, RESERVE_USD) for c in live_costs),
+        sum(max(c, reserve) for c in live_costs),
     )  # fmt: skip

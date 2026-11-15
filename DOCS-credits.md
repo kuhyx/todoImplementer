@@ -26,7 +26,7 @@ The grant is about $200 a month (the promotional grant of 2026-11-10 lasts to 20
 `settings.json`, edited in the file (no endpoint): `credits_monthly_usd` (default 190: the $200 grant minus a $10
 margin, because billing lags and week 4 must never push the balance negative again), `credits_month_start_day`
 (default 10, 1 to 28: the period starts on the grant day at 00:00 local and lasts to the next), `credits_cost_factor`
-(default 1.0). Week = 1 + the plan's weekly resets since the period start, at most 4 (T2002: the credit week
+(default 1.0), `credits_model` (default `claude-opus-5-5`: the model credit turns run on). Week = 1 + the plan's weekly resets since the period start, at most 4 (T2002: the credit week
 follows the Max plan's seven-day window; the reset instants are `seven_day.resets_at` minus or plus whole weeks, read from the stored usage probe,
 no network); without a probe or its seven-day window: `min(4, days since the period start // 7 + 1)`. Cap =
 `week x monthly / 4` (week 4 = the whole grant, never more). A new turn takes the credits only while the spend plus the exposure of the running credit
@@ -44,7 +44,7 @@ figures with "≈".
 Zero debt: three brakes, in the order a turn meets them.
 
 1. Start gate (`route.claim`, locked with the card's count of running credit turns): a start needs
-   `spent + exposure < cap`, where each running credit turn counts for the larger of its live cost and a $2 reserve.
+   `spent + exposure < cap`, where each running credit turn counts for the larger of its live cost and its reserve ($4 on Opus, $2 on Sonnet; below).
    Within $20 of the cap (`pacing.NEAR_CAP_USD`) at most one credit turn runs; a second goes to the plan (or waits).
    Many credit turns once ran at once while the grant ran out and billing lagged: that is the failure this stops.
 2. Hard stop (`runner/creditguard.py`, the credit twin of the overage guard): the follower of every credit turn adds
@@ -58,10 +58,17 @@ Zero debt: three brakes, in the order a turn meets them.
    message shows no cost until that message's event arrives.
 3. The $10 margin on the grant and the cap itself: week 4 may spend 190 of 200.
 
-The live estimate prices the usage of each assistant message at Sonnet list prices (input and cache tokens exact,
-output the larger of the reported count and a size estimate of the blocks). Against 77 real credit turns it ran about
-twice the SDK's own totals (median 2.1; 5 of 77 below 1.0, the worst at 0.31): the safe side for a brake, and the
-start gate plus the $10 margin cover the rare turn it undercounts.
+The live estimate prices the usage of each assistant message at the list prices of the model that message names
+(`credits/prices.py`; a message with no model takes the `credits_model` setting, an unknown model the dearest
+rates, so the stop never fires late): Opus 5.5 at $4 in, $20 out, $0.20 cache read, $5 cache write per million
+tokens (claude-api skill models table, cached 2026-11-03); Sonnet kept at the $3 / $15 / $0.30 / $3.75 it was
+calibrated at, above Sonnet 5.5's list $2 / $10, so Sonnet turns stay overcounted. Input and cache tokens exact,
+output the larger of the reported count and a size estimate of the blocks. Against 77 real Sonnet credit turns it
+ran about twice the SDK's own totals (median 2.1; 5 of 77 below 1.0, the worst at 0.31): the safe side for a brake,
+and the start gate plus the $10 margin cover the rare turn it undercounts. The reserve of a running turn (brake 1)
+follows the model: $2 on Sonnet, $4 on Opus (Opus 5.5 lists at twice Sonnet 5.5 per output token; the 1920-turn
+ledger had median $0.34, p90 $3.06, p99 $15 on Sonnet, so the reserve is a floor and the hard stop is the guard).
+A turn still running when the setting changes finishes on its model and is priced by it.
 
 `limit.credits` (`contracts/common.schema.json`, computed by the server, the page only shows it) carries
 `route` (what a new turn takes now, null = waits), `period_start`, `week`, `monthly_usd`, `cap_usd`,
@@ -85,7 +92,8 @@ keeps the stream's `total_cost_usd` (null without a result event) and `model_usa
 
 `<sdk venv python> -m todoimpl.runner.sdkturn <spec>` runs under the same turn host, unit and adoption machinery
 as a plan turn. The spec comes from the same `claude.options` as the plan argv (cwd, add_dirs, permission mode,
-allow/deny tools, resume, hooks-off settings, env), plus model `sonnet` for every role (the feed and `state.extra.credit_downgrade` say when a role wanted more), `effort`, setting sources
+allow/deny tools, resume, hooks-off settings, env), plus the model of the `credits_model` setting for every role (default `claude-opus-5-5`, since 2026-11-15; before
+that `sonnet`; the feed and `state.extra.credit_downgrade` say when a role ran on a lesser family than it wanted), `effort`, setting sources
 user/project/local and the Claude Code system prompt. A transport subclass prints the CLI's raw stream-json events,
 so `*.stream.jsonl` has the shape every parser expects. The plan env never has `ANTHROPIC_API_KEY` (it would beat
 the plan login); the credit env carries it from the 0600 invoke file the host deletes at once. The SDK is pinned

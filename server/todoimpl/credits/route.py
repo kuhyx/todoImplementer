@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 
 PLAN = "plan"
 CREDITS = "credits"
-READY_TEXT = "Turns run on free API credits, paced by week (model sonnet)."
+READY_TEXT = "Turns run on free API credits, paced by week (model {model})."
 CAPPED_TEXT = "Free API credits are at this week's cap."
 OFF_TEXT = "Free API credits fallback is off: runs wait for the plan limit."
 EXHAUSTED_TEXT = "Free API credits exhausted: runs wait until the plan limit resets."
@@ -33,6 +33,11 @@ class Choice:
     until: float | None = None
 
 
+def ready_text() -> str:
+    """Return the `ready` text with the model credit turns run on (the setting)."""
+    return READY_TEXT.format(model=setting.model())
+
+
 def state_of(root: Path, now: float) -> tuple[str, str]:
     """Return (state, text) of the fallback for the contract's `credits` object."""
     if not setting.enabled():
@@ -44,7 +49,7 @@ def state_of(root: Path, now: float) -> tuple[str, str]:
         return "unavailable", f"Free API credits unavailable: {why}."
     if marks.exhausted(root, now):
         return "exhausted", EXHAUSTED_TEXT
-    return "ready", READY_TEXT
+    return "ready", ready_text()
 
 
 def view(root: Path, now: float) -> dict[str, Any]:

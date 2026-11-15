@@ -70,3 +70,15 @@ def cost_factor() -> float:
     if isinstance(value, bool) or not isinstance(value, int | float) or value <= 0:
         return COST_FACTOR
     return float(value)
+
+
+MODEL_KEY = "credits_model"
+MODEL = "claude-opus-5-5"  # kuhy, 2026-11-15: credit turns run on Opus 5.5 (before: sonnet, 2026-11-08)
+
+
+def model() -> str:
+    """Return the model credit turns run on; a missing, non-string or blank value means the default."""
+    value = _read().get(MODEL_KEY)
+    if not isinstance(value, str) or len(value.split()) != 1:  # one word: an id or an alias
+        return MODEL
+    return value.strip()

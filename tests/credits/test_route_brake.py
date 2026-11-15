@@ -31,17 +31,29 @@ def test_the_ledger_cost_is_scaled_to_the_billed_cost_by_the_factor(root: Path) 
         assert setting.cost_factor() == 1.0
 
 
-def test_each_running_credit_turn_reserves_two_dollars_of_the_cap(root: Path) -> None:
+def test_each_running_credit_turn_reserves_four_dollars_of_the_cap_on_opus(root: Path) -> None:
     spend(root, 78.0, WEEK2 - 3600)  # not within $20 of the cap: only the reserve counts
+    for n in range(5):
+        live.begin(root, f"card{n:04d}-0")
+    assert route.choose(root, WEEK2).route == route.CREDITS  # 78 + 5 x 4 < 100
+    live.begin(root, "card0005-0")  # 78 + 6 x 4 >= 100: no credit turn may start
+    assert route.choose(root, WEEK2).route == route.PLAN
+    view = route.view(root, WEEK2)
+    assert (view["running_credit_turns"], view["over_cap"], view["spent_period_usd"]) == (6, True, 78.0)
+    live.end(root, "card0005-0")
+    assert route.choose(root, WEEK2).route == route.CREDITS
+
+
+def test_each_running_credit_turn_reserves_two_dollars_of_the_cap_on_sonnet(root: Path) -> None:
+    setting.settings_path().write_text(
+        '{"credits_monthly_usd": 200, "credits_month_start_day": 1, "credits_model": "sonnet"}'
+    )
+    spend(root, 78.0, WEEK2 - 3600)
     for n in range(10):
         live.begin(root, f"card{n:04d}-0")
     assert route.choose(root, WEEK2).route == route.CREDITS  # 78 + 10 x 2 < 100
-    live.begin(root, "card0010-0")  # 78 + 11 x 2 >= 100: no credit turn may start
+    live.begin(root, "card0010-0")  # 78 + 11 x 2 >= 100
     assert route.choose(root, WEEK2).route == route.PLAN
-    view = route.view(root, WEEK2)
-    assert (view["running_credit_turns"], view["over_cap"], view["spent_period_usd"]) == (11, True, 78.0)
-    live.end(root, "card0010-0")
-    assert route.choose(root, WEEK2).route == route.CREDITS
 
 
 def test_a_running_turn_that_cost_more_than_the_reserve_counts_what_it_cost(root: Path) -> None:

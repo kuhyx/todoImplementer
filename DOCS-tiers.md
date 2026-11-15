@@ -28,7 +28,7 @@ its cycles and the parts change.
 For a cheap run the **implement role** (the implement and fix stages, one session; the live check is its own
 Sonnet role since T1896) runs on
 `opus` at `--effort medium` (kuhy, 2026-11-10: the manager is Opus, not Sonnet; `runner/tier.py` `MANAGER_*`). The
-credit route (`credit.py`) is sonnet for every role and passes the effort to the SDK.
+credit route (`credit.py`) runs the `credits_model` setting (default `claude-opus-5-5`) for every role and passes the effort to the SDK.
 
 1. **Free models, only when allowed.** Before each implement or fix turn the server asks `freegate.check`: the
    `claude-free` and `free-llm-check-dir` tools exist, `free-llm-check-dir <worktree>` approves (public repo only:

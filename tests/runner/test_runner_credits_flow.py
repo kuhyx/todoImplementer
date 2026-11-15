@@ -32,7 +32,7 @@ def test_t1850_a_limited_run_goes_on_free_credits_and_back_on_the_plan(
         st = wait_stage(world, sched, "gate")
         calls = world.calls()
         assert [c["via_sdk"] for c in calls] == [True, True, True]
-        assert all(c["model"] == "sonnet" and c["api_key"] for c in calls)  # even implement: sonnet
+        assert all(c["model"] == "claude-opus-5-5" and c["api_key"] for c in calls)  # the credits model
         assert all(c["phone_owner"] == f"todoimpl:{CARD}" for c in calls)
         assert st.extra["route"] == "credits"
         assert {v["route"] for v in st.sessions.values()} == {"credits"}

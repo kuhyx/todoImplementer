@@ -12,7 +12,10 @@ from todoimpl.credits.meter import Meter
 def assistant(
     msg: str, *, usage: dict[str, Any] | None = None, content: list[Any] | None = None
 ) -> dict[str, Any]:
-    return {"type": "assistant", "message": {"id": msg, "usage": usage or {}, "content": content or []}}
+    return {
+        "type": "assistant",
+        "message": {"id": msg, "model": "claude-sonnet-5-5", "usage": usage or {}, "content": content or []},
+    }  # these tests pin the Sonnet rates; test_models.py covers the other models
 
 
 def test_an_empty_meter_costs_nothing_and_ignores_other_events() -> None:

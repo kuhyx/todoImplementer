@@ -35,7 +35,7 @@ def test_credit_invocation_mirrors_the_plan_options_and_carries_the_key(
     assert cred.route == "credits"
     assert cred.argv[:3] == (sys.executable, "-m", "todoimpl.runner.sdkturn")
     spec = json.loads(cred.argv[3])
-    assert spec["model"] == "sonnet"  # every role on credits; the plan keeps its per-role model
+    assert spec["model"] == "claude-opus-5-5"  # the credits_model default, for every role
     assert plan.argv[plan.argv.index("--model") + 1] == "opus"
     assert spec["resume"] == "sess-1"
     assert spec["cwd"] == str(wt)

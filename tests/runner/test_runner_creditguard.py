@@ -26,9 +26,9 @@ def guard(tmp_path: Path) -> CreditGuard:
 
 
 def test_it_keeps_the_live_cost_and_the_result_carries_it(guard: CreditGuard, tmp_path: Path) -> None:
-    assert guard.feed(assistant("m1", 1_000_000)) == []  # $15: far under any cap
-    assert guard.result.live_usd == pytest.approx(15.0)
-    assert live.costs(tmp_path) == [pytest.approx(15.0)]
+    assert guard.feed(assistant("m1", 1_000_000)) == []  # $20 at the default Opus rates: far under any cap
+    assert guard.result.live_usd == pytest.approx(20.0)
+    assert live.costs(tmp_path) == [pytest.approx(20.0)]
 
 
 def test_other_lines_do_not_move_the_cost(guard: CreditGuard, tmp_path: Path) -> None:
