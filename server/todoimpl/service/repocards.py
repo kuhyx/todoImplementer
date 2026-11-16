@@ -89,7 +89,8 @@ def _check(parts: list[Part]) -> str | None:
     checks = list(dict.fromkeys(p.done_check for p in parts if p.done_check))
     if len(checks) <= 1:
         return checks[0] if checks else None
-    return " && ".join(f"({c})" for c in checks)
+    # Spaces inside the parens: a check that is itself `( ... )` would otherwise form `((`, bash arithmetic.
+    return " && ".join(f"( {c} )" for c in checks)
 
 
 def _repo_card(repo: str, entries: list[_Entry], cid: str) -> CardTask:

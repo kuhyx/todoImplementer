@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import subprocess
 from typing import TYPE_CHECKING
 
 from todoimpl.repotask.ids import norm, repo_card_id, repo_human_id
@@ -156,7 +157,7 @@ def test_done_checks_are_chained_and_the_status_follows_the_notes() -> None:
         note("bbbb2222", "kuhyx/r", "## c\ndone_check: make a"),
     ]
     (card,) = group_cards(notes, NEVER)
-    assert card.done_check == "(make a) && (make b)"
+    assert card.done_check == "( make a ) && ( make b )"
     assert card.status == "in progress"
     (single,) = group_cards([note("cccc3333", "kuhyx/s", "## a\ndone_check: make a\n\n## b\ny")], NEVER)
     assert single.done_check == "make a"
@@ -171,3 +172,11 @@ def test_section_cards_expand_a_repo_card_back_into_its_open_sections() -> None:
     assert sorted(card.id for card in sections) == ["aaaa1111-0", "aaaa1111-1", "uuuu0001-0"]
     free = next(card for card in sections if card.id == "aaaa1111-1")
     assert (free.item.note_id, free.item.index, free.title, free.body) == ("aaaa1111", 1, "free", "y")
+
+
+def test_chained_subshell_checks_stay_valid_bash() -> None:
+    """A check that is itself a subshell must not merge into bash's `((` arithmetic."""
+    body = "## a\ndone_check: ( true )\n\n## b\ndone_check: ( cd / && true )"
+    (card,) = group_cards([note("eeee5555", "kuhyx/u", body)], NEVER)
+    assert card.done_check is not None
+    assert subprocess.run(["bash", "-c", card.done_check], check=False).returncode == 0
