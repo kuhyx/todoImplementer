@@ -4,13 +4,15 @@ from __future__ import annotations
 
 import json
 import threading
+import time
 import urllib.error
 import urllib.request
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from itertools import count
 from typing import Any
 
-from todoimpl.todo_mcp.model import TodoError
+from todoimpl.runner.retry import delay
+from todoimpl.todo_mcp.model import TodoError, UnreachableError
 
 PROTOCOL = "2025-03-26"
 _OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
@@ -19,9 +21,16 @@ _NOT_FOUND = 404
 
 
 class Transport:
-    """One MCP session over HTTP; thread-safe, re-initialises once if the session vanishes."""
+    """One MCP session over HTTP; thread-safe, re-initialises once if the session vanishes.
 
-    def __init__(self, url: str, token: str, timeout: float = 20.0) -> None:
+    Single-flight and backoff (T2005): one request is on the wire at a time; a timeout or connection error
+    closes a gate for `retry.delay(failures)` (1, 2, 5, 10, 30 min), and calls inside it fail at once
+    with `UnreachableError` and open no socket. A reply that gets through resets the ladder.
+    """
+
+    def __init__(
+        self, url: str, token: str, timeout: float = 20.0, clock: Callable[[], float] = time.monotonic
+    ) -> None:
         """Remember the endpoint; nothing is sent until the first call."""
         self.url = url
         self._token = token
@@ -30,6 +39,11 @@ class Transport:
         self._ready = False
         self._ids = count(1)
         self._lock = threading.Lock()
+        self._io = threading.Lock()  # one request on the wire at a time
+        self._clock = clock
+        self._failures = 0
+        self._retry_at = 0.0
+        self._cause = ""
 
     def __repr__(self) -> str:
         """Show the url only, never the token."""
@@ -93,6 +107,12 @@ class Transport:
         return result
 
     def _post(self, body: dict[str, Any]) -> tuple[int, dict[str, str], str]:
+        with self._io:
+            if self._failures and self._clock() < self._retry_at:
+                raise UnreachableError(self._cause)  # inside the backoff: no socket
+            return self._send(body)
+
+    def _send(self, body: dict[str, Any]) -> tuple[int, dict[str, str], str]:
         headers = {
             "Content-Type": "application/json",
             "Accept": "application/json, text/event-stream",
@@ -103,18 +123,33 @@ class Transport:
         request = urllib.request.Request(self.url, json.dumps(body).encode(), headers)  # noqa: S310
         try:
             with _OPENER.open(request, timeout=self._timeout) as resp:
-                return resp.status, _lower(resp.headers.items()), resp.read().decode()
+                result = resp.status, _lower(resp.headers.items()), resp.read().decode()
         except urllib.error.HTTPError as err:
             status, headers_in = err.code, _lower(err.headers.items())
             err.close()
-        except OSError as err:
-            msg = f"cannot reach MCP server at {self.url}: {err}"
-            raise TodoError(msg) from err
+        except OSError as err:  # includes URLError and timeouts; the `with` above closed any response
+            timed_out = isinstance(err, TimeoutError) or isinstance(
+                getattr(err, "reason", None), TimeoutError
+            )
+            cause = "timeout" if timed_out else f"cannot reach MCP server at {self.url}: {err}"
+            raise self._fail(cause) from err
+        else:
+            self._failures = 0
+            return result
         if status == _NOT_FOUND and self._session is not None:
             return status, headers_in, ""
+        if self._failures:  # an error from a server that was just not answering is not a verdict on the token
+            raise self._fail("HTTP " + str(status) + " after timeouts")
         hint = " (token rejected)" if status in _AUTH_CODES else ""
         msg = f"MCP server answered HTTP {status}{hint}"
         raise TodoError(msg)
+
+    def _fail(self, cause: str) -> UnreachableError:
+        """Close the gate for the next rung of the ladder and build the honest error."""
+        self._cause = f"todo MCP not answering ({cause})"
+        self._retry_at = self._clock() + delay(self._failures)
+        self._failures += 1
+        return UnreachableError(self._cause)
 
 
 class _SessionGoneError(Exception):

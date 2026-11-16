@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Mapping
+import time
+from collections.abc import Callable, Mapping
 from pathlib import Path
 
 from todoimpl.todo_mcp.items import Item, mark_done, sections, split_items
@@ -22,9 +23,11 @@ _UPDATE_FIELDS = frozenset({"title", "body", "done_check", "priority", "status",
 class TodoClient:
     """Every non-success raises ``TodoError``; notes without a repo are invisible to list/search."""
 
-    def __init__(self, url: str, token: str, timeout: float = 20.0) -> None:  # noqa: D107
+    def __init__(  # noqa: D107
+        self, url: str, token: str, timeout: float = 20.0, clock: Callable[[], float] = time.monotonic
+    ) -> None:
         self.url = url
-        self._transport = Transport(url, token, timeout)
+        self._transport = Transport(url, token, timeout, clock)
 
     def __repr__(self) -> str:  # noqa: D105
         return f"TodoClient({self.url!r})"

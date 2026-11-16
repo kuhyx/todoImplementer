@@ -21,6 +21,9 @@ API::
         fake.expire_sessions()                  # forget sessions: next request gets HTTP 404
         fake.fail_method("tools/call", 500)     # every request of that JSON-RPC method answers 500
         fake.fail_method("tools/call", None)    # ...until cleared
+        fake.hang()                             # accept connections, read the request, never answer...
+        fake.release()                          # ...until released (a wedged server)
+        fake.connections                        # TCP connections accepted so far
 
 Constructor flags: ``token``, ``sse`` (reply as ``text/event-stream`` with a keep-alive comment and
 a notification event before the answer, like a streaming server; default plain JSON), ``session``
@@ -60,6 +63,9 @@ class FakeTodoMcp:
         self._forced_raw: list[tuple[bytes, str]] = []
         self._method_failures: dict[str, int] = {}
         self._lock = threading.Lock()
+        self._released = threading.Event()
+        self._released.set()
+        self.connections = 0
         self._server: ThreadingHTTPServer | None = None
         self.url = ""
 
@@ -91,6 +97,14 @@ class FakeTodoMcp:
         else:
             self._method_failures[method] = status
 
+    def hang(self) -> None:
+        """Read each request but never answer it, like a wedged server, until ``release``."""
+        self._released.clear()
+
+    def release(self) -> None:
+        """End a ``hang``: held requests are dropped unanswered, later ones are served."""
+        self._released.set()
+
     def expire_sessions(self) -> None:
         """Forget every session id, as after a server restart."""
         self.sessions.clear()
@@ -106,7 +120,13 @@ class FakeTodoMcp:
             def log_message(self, *_args: Any) -> None:
                 """Keep test output quiet."""
 
-        self._server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        class Counting(ThreadingHTTPServer):
+            def get_request(self) -> Any:
+                conn = super().get_request()
+                fake.connections += 1
+                return conn
+
+        self._server = Counting(("127.0.0.1", 0), Handler)
         self.url = f"http://127.0.0.1:{self._server.server_address[1]}/mcp"
         thread = threading.Thread(
             target=self._server.serve_forever,
@@ -118,6 +138,7 @@ class FakeTodoMcp:
 
     def stop(self) -> None:
         """Shut the server down."""
+        self._released.set()
         if self._server is not None:
             self._server.shutdown()
             self._server.server_close()
@@ -134,6 +155,9 @@ class FakeTodoMcp:
     def _handle(self, req: BaseHTTPRequestHandler) -> None:
         length = int(req.headers.get("Content-Length") or 0)
         raw = req.rfile.read(length)
+        if not self._released.is_set():
+            self._released.wait(30)
+            return
         with self._lock:
             status, ctype, body, extra = self._respond(dict(req.headers.items()), raw)
         try:

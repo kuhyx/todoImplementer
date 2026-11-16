@@ -41,6 +41,7 @@ TRANSIENT = re.compile(
     r"|unable to connect"
     r"|connection (?:error|reset|refused|closed|lost)"
     r"|cannot reach MCP"
+    r"|todo MCP not answering"
     r"|(?:status|http|error|code)\D{0,12}\b5\d\d\b",
     re.IGNORECASE,
 )

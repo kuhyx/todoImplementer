@@ -8,6 +8,8 @@ import time
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING
 
+from todoimpl.todo_mcp.model import UnreachableError
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -45,6 +47,7 @@ class TaskCache:
         self._snap = Snapshot()
         self.run_titles: RunTitles | None = None  # names of run dirs no card shows (set by build_backend)
         self._lock = threading.Lock()
+        self._flight = threading.Lock()  # held while a fetch runs (single-flight)
         self._stop = threading.Event()
         self._wake = threading.Event()
         self._thread: threading.Thread | None = None
@@ -55,13 +58,27 @@ class TaskCache:
             return self._snap
 
     def refresh(self) -> Snapshot:
-        """Fetch now; a failure keeps the old cards but records why, it never reads as an empty board."""
+        """Fetch now; a failure keeps the old cards but records why, it never reads as an empty board.
+
+        Single-flight (T2005): while a fetch runs, a second refresh returns the current snapshot and
+        opens no connection.
+        """
+        if not self._flight.acquire(blocking=False):
+            return self.snapshot()
+        try:
+            return self._refresh()
+        finally:
+            self._flight.release()
+
+    def _refresh(self) -> Snapshot:
         try:
             fresh = Snapshot(tuple(self._fetch()), None, self._clock(), loaded=True)
         except Exception as exc:  # noqa: BLE001 - the loop must survive anything; the message reaches the page
             log.warning("todo refresh failed: %s", exc)
+            # An outage reads as itself, not as "TodoError: <whatever the sick server last said>".
+            text = str(exc) if isinstance(exc, UnreachableError) else f"{type(exc).__name__}: {exc}"
             with self._lock:
-                fresh = replace(self._snap, error=f"{type(exc).__name__}: {exc}", at=self._clock())
+                fresh = replace(self._snap, error=text, at=self._clock())
         with self._lock:
             self._snap = fresh
         return fresh

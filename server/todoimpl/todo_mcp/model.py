@@ -9,6 +9,15 @@ class TodoError(Exception):
     """Any non-success from the todo MCP server; never means "no tasks"."""
 
 
+class UnreachableError(TodoError):
+    """The todo MCP did not answer (timeout, refused, or errors while it was already failing); retry later."""
+
+
+def upstream_text(text: str) -> str:
+    """Prefix a todo failure with its source, unless it already names the todo MCP ("not answering")."""
+    return text if text.startswith("todo MCP") else f"todo MCP: {text}"
+
+
 @dataclass(frozen=True)
 class Task:
     """One todo-app note; ``id`` is the 8-char prefix, status is ``todo|in progress|done|abandoned``.

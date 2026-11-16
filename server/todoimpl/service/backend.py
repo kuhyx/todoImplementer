@@ -21,7 +21,7 @@ from todoimpl.lessons import LessonError, approve, draft_lesson, latest_lesson, 
 from todoimpl.repotask.files import overlay as ticks_overlay
 from todoimpl.runner import autocheck
 from todoimpl.runner.scheduler import RunnerError
-from todoimpl.todo_mcp.model import TodoError
+from todoimpl.todo_mcp.model import TodoError, upstream_text
 from todoimpl.umbrella.view import overlay_for
 from todoimpl.usage import limit_state
 from todoimpl.usage.interventions import record
@@ -123,13 +123,13 @@ class ServiceBackend:
         """GET /api/board."""
         snap = self.cache.snapshot()
         if snap.error and not snap.loaded:  # no board ever existed: nothing honest to show but the error
-            raise BackendError(UPSTREAM, f"todo MCP: {snap.error}")
+            raise BackendError(UPSTREAM, upstream_text(snap.error))
         tasks = snap.tasks
         runs = load_runs(self.root, [t.id for t in tasks])
         extended = {key: self._with_extras(run) for key, run in runs.items()}
         board = build_board(tasks, extended, self._context(), self.build)  # type: ignore[arg-type]
         if snap.error:  # stale cards plus a banner, never an empty board that looks healthy
-            board["error"] = {"code": UPSTREAM, "message": f"todo MCP: {snap.error}"}
+            board["error"] = {"code": UPSTREAM, "message": upstream_text(snap.error)}
         if (alert := marks.active_alert(self.root, self._clock())) is not None:
             board["alert"] = alert
         latest = self.key_monitor.latest() if self.key_monitor else None
@@ -184,7 +184,7 @@ class ServiceBackend:
         except LessonError as exc:
             raise BackendError(CONFLICT, str(exc)) from exc
         except TodoError as exc:
-            raise BackendError(UPSTREAM, f"todo MCP: {exc}") from exc
+            raise BackendError(UPSTREAM, upstream_text(str(exc))) from exc
         self.cache.poke()
 
     def _click(self, id8: str, kind: str, call: Callable[[], object]) -> None:

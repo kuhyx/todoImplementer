@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from todoimpl.http.backend import BackendError
 from todoimpl.service.cards import card_tasks
-from todoimpl.todo_mcp.model import TodoError
+from todoimpl.todo_mcp.model import TodoError, upstream_text
 
 from . import images
 
@@ -53,8 +53,7 @@ class NewTaskService:
             body = "\n\n".join([task.body, *(f"![]({link})" for link in links)]).strip()
             note = self._client.add_task(task.repo, task.title, body)
         except TodoError as exc:
-            msg = f"todo MCP: {exc}"
-            raise BackendError(UPSTREAM, msg) from exc
+            raise BackendError(UPSTREAM, upstream_text(str(exc))) from exc
         self._cache.refresh()  # Start looks the card up in the cache: a poke would answer before it is there
         note8 = note.id[:8]
         card = next((c.id for c in self._cache.snapshot().tasks if _holds(c, note8, task.title)), None)
