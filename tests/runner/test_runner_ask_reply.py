@@ -6,6 +6,7 @@ from types import SimpleNamespace
 from typing import Any
 
 import pytest
+from contract_lib import validate
 from runnerfakes import Env
 from schedfakes import CARD, IMPL, LIVE_OK, PLAN, boot, reply, state, wait_stage
 from todoimpl.board.needs import needs
@@ -32,6 +33,7 @@ KUHY_ONLY = [
     "Tap Allow on the phone, then say when it is done",
     "Click Ship on the card when the screenshot looks right",
     "Look at the screen and tell me whether the button is visible",
+    "Add your GitHub token to the repo secrets, then rerun the checks",
     "",
 ]
 BLOCK = "A: pick one\n\n```ask\nchoice c1: Layout | wide | *narrow | risk=reversible\n```"
@@ -113,6 +115,8 @@ def test_t2006_the_tunedeck_ask_resumes_the_session_and_the_card_goes_on(world: 
         assert "(runner) Granted:" in calls[2]["prompt"]
         assert "do it yourself" in calls[2]["prompt"].lower()
         assert st.extra[grant.RUN_KEY] == 1
+        validate("state", st.to_dict())
+        assert "never in ~/src/<repo>" in calls[2]["prompt"]
     finally:
         sched.close()
 

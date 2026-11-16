@@ -180,9 +180,15 @@ def _heal(repo: str | None, tail: str, *, healed: bool) -> bool:
         checkout = repo_dir(repo)
     except NeedsYouError:
         return False
-    files = [] if healed else deployheal.heal(checkout)
-    if not files and not healed:
-        return True
+    files: list[str] = []
+    if not healed:
+        try:
+            files = deployheal.heal(checkout)
+        except NeedsYouError:  # git failed there (a lock of kuhy's own git): wait, as for his edits
+            files = deployheal.listed(tail)
+        else:
+            if not files:
+                return True
     raise DirtyCheckoutError(PREFIX, checkout, files or deployheal.listed(tail))
 
 

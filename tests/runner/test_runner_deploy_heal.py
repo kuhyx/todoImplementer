@@ -8,7 +8,7 @@ import pytest
 from runnerfakes import Env, FakeClient, executable, make_repo, sh, task
 from schedfakes import CARD, IMPL, LIVE_OK, PLAN, state, wait_stage
 from todoimpl.board.needs import needs
-from todoimpl.runner import deploy, shipfix, worktree
+from todoimpl.runner import deploy, deployheal, shipfix, worktree
 from todoimpl.runner.checks import CheckResult
 from todoimpl.runner.deployheal import DirtyCheckoutError
 from todoimpl.runner.files import NeedsYouError
@@ -71,6 +71,23 @@ def test_t2007_a_different_edit_of_kuhy_is_never_touched_and_nothing_else_is_res
     assert (checkout / FRESH).read_text(encoding="utf-8") == "fresh\n"
 
 
+@pytest.mark.parametrize(("name", "incoming"), [(TRACKED, "new\n"), (FRESH, "fresh\n")])
+def test_t2007_a_staged_edit_of_kuhy_survives_when_the_tree_holds_the_incoming_content(
+    world: Env, name: str, incoming: str
+) -> None:
+    wt, run_dir, checkout = _incoming(world)
+    (checkout / name).write_text("mine\n", encoding="utf-8")
+    _stage(checkout, name)  # his staged edit is in neither HEAD nor origin
+    (checkout / name).write_text(
+        incoming, encoding="utf-8"
+    )  # while the tree already equals the incoming file
+    with pytest.raises(DirtyCheckoutError) as stop:
+        _deploy(wt, run_dir, checkout)
+    assert stop.value.files == [name]
+    assert sh(checkout, "git", "show", f":{name}") == "mine\n"
+    assert (checkout / name).read_text(encoding="utf-8") == incoming
+
+
 def test_t2007_a_blocked_pull_with_nothing_to_restore_names_the_files_git_lists(world: Env) -> None:
     wt, run_dir, checkout = _incoming(world)
     sh(checkout, "git", "mv", TRACKED, "moved.txt")  # kuhy's rename: the incoming change meets a deleted file
@@ -78,6 +95,22 @@ def test_t2007_a_blocked_pull_with_nothing_to_restore_names_the_files_git_lists(
         _deploy(wt, run_dir, checkout)
     assert stop.value.files == [TRACKED]
     assert (checkout / "moved.txt").is_file()
+
+
+def test_t2007_a_git_failure_while_healing_waits_instead_of_parking_on_a_bare_error(
+    world: Env, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    wt, run_dir, checkout = _incoming(world)
+    (checkout / FRESH).write_text("mine\n", encoding="utf-8")
+
+    def locked(_checkout: Path) -> list[str]:
+        raise NeedsYouError("fatal: Unable to create '.git/index.lock': File exists.")
+
+    monkeypatch.setattr(deployheal, "heal", locked)
+    with pytest.raises(DirtyCheckoutError) as stop:
+        _deploy(wt, run_dir, checkout)
+    assert stop.value.files == [FRESH]
+    assert stop.value.text.startswith("pushed, not deployed: ")
 
 
 def test_t2007_without_a_checkout_the_blocked_pull_is_a_plain_failure(world: Env) -> None:

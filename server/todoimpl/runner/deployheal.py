@@ -78,11 +78,29 @@ def _dirty(checkout: Path) -> list[tuple[str, str]]:
     return rows
 
 
-def _same_as_incoming(checkout: Path, ref: str, path: str) -> bool:
-    """Return True when the working file is byte for byte what `ref` holds at `path` (git's own filters)."""
-    want = git(checkout, "rev-parse", "--verify", "--quiet", f"{ref}:{path}", check=False)
-    have = git(checkout, "hash-object", "--", path, check=False)
-    return want.returncode == 0 and have.returncode == 0 and want.stdout.strip() == have.stdout.strip()
+def _blob(checkout: Path, spec: str) -> str | None:
+    """Return the blob id behind `<ref>:<path>` (or `:<path>` for the index), None when there is none."""
+    found = git(checkout, "rev-parse", "--verify", "--quiet", spec, check=False)
+    return found.stdout.strip() if found.returncode == 0 else None
+
+
+def _only_incoming(checkout: Path, ref: str, path: str) -> bool:
+    """Return True when discarding `path` loses nothing of kuhy's.
+
+    The tree holds the incoming content, and the index holds nothing of his: no entry for an untracked file,
+    else HEAD's blob or the incoming one.
+    """
+    want, head, staged = (
+        _blob(checkout, f"{ref}:{path}"),
+        _blob(checkout, f"HEAD:{path}"),
+        _blob(checkout, f":{path}"),
+    )
+    have = git(
+        checkout, "hash-object", "--", path, check=False
+    )  # git's own filters, as the pull would see it
+    if want is None or have.returncode != 0 or have.stdout.strip() != want:
+        return False
+    return head is None if staged is None else staged in (head, want)
 
 
 def _discard(checkout: Path, status: str, path: str) -> None:
@@ -105,7 +123,7 @@ def heal(checkout: Path) -> list[str]:
     ref = _incoming(checkout)
     incoming = set(git(checkout, "diff", "--name-only", "-z", "HEAD", ref, check=False).stdout.split("\0"))
     blocking = [(status, path) for status, path in _dirty(checkout) if path in incoming]
-    differ = [path for _, path in blocking if not _same_as_incoming(checkout, ref, path)]
+    differ = [path for _, path in blocking if not _only_incoming(checkout, ref, path)]
     if differ:
         return sorted(differ)
     for status, path in blocking:

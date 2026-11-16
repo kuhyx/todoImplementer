@@ -27,9 +27,9 @@ Sessions need the session policy (`~/.config/todoImplementer/session-policy.json
 A turn that ends on `A:` whose concrete ask (`board/ask.py`) is permission (OK me, approve, permission, may I, whether
 to commit|push|merge, press Retry, send a `LONG:`, write ... by hand, run ... yourself, after the server commits,
 off-limits ...) or any ask for something Claude can run itself (a command, a deploy such as `deploy-todoimpl`, a restart,
-sudo, a push, a write under ~; T2006) resumes the same session with a fixed `(runner) Granted: do it yourself ... run it,
+sudo, a push, a write under ~ outside ~/src/<repo>; T2006) resumes the same session with a fixed `(runner) Granted: do it yourself ... run it,
 then rerun the card's checks` note and a feed line `auto-granted, the session resumes: <ask>`. Never granted: asks only
-kuhy can answer (phone, Pixel, plug, tap, screen, screenshot, audio, a Ship click, a password or login, a decision such
+kuhy can answer (phone, Pixel, plug, tap, screen, screenshot, audio, a Ship click, a password, login, token or secret, a decision such
 as "which ..." or "do you want ...") and a reply with an `ask` block holding a `choice` or `screenshot`. Bounds: once per
 stage (`extra["ask_grants"]`, cleared when a turn ends on anything but `A:`) and twice per run (`extra["ask_grant_total"]`,
 cleared by Start, Retry and a note from kuhy). The count is saved before the granted turn starts, so a restart cannot
@@ -90,8 +90,9 @@ the "session already pushed" path) and before the note closes, Ship runs the rep
 - **Deploy into kuhy's checkout (T2007).** A deploy that starts with `git -C ~/src/<repo> pull --ff-only` fails when
   that checkout has uncommitted edits at paths the push changed (git: "would be overwritten by merge", tracked or
   untracked). `runner/deployheal.py` reads that text from the failed record only. If every blocking file already equals
-  the incoming content (a session wrote the same change there), it restores them (tracked: back to HEAD, staged too;
-  untracked: removed) and deploys again at once. Otherwise it touches nothing: the run rests in `paused_retry` ("deploy
+  the incoming content (a session wrote the same change there) and the index holds nothing of kuhy's (a staged edit of
+  his counts as his), it restores them (tracked: back to HEAD; untracked: removed) and deploys again at once. A git
+  failure while healing (his own git holds a lock) waits the same way. Otherwise it touches nothing: the run rests in `paused_retry` ("deploy
   waits: edits in ~/src/<repo> block the pull (<file>)") on the backoff ladder, 12 waits (`shipfix.MAX_DEPLOY_WAITS`,
   counter `retries`), and the resumed Ship only redeploys (`pushed.json`). After the 12th it ends in Needs you naming the
   files: "commit or discard them, then Retry". "waiting for build lock held by ..." in such a tail is the first log line

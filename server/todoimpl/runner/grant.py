@@ -20,7 +20,8 @@ if TYPE_CHECKING:
 
 GRANTED = (
     "(runner) Granted: do it yourself, you have kuhy's standing permission (sudo, commit, push from your "
-    "worktree, tags, deploy, restart, installers, scripts, writes under ~, long runs via systemd-run). "
+    "worktree, tags, deploy, restart, installers, scripts, writes under ~ but never in ~/src/<repo>, long "
+    "runs via systemd-run). "
     "Run it now, then rerun the card's checks and carry on. Answer `A:` again only for what needs kuhy's own "
     "hands (phone, audio, screen) or a decision."
 )
@@ -40,7 +41,7 @@ PERMISSION_ASK = re.compile(
 HUMAN_ONLY = re.compile(
     r"\b(?:phone|pixel|adb|plug(?:ged)?(?: it)? in|unplug|tap|touch|screen|screenshot|visual(?:ly)?|audio"
     r"|sound|listen|hear|speakers?|headphones?|(?:click|press) (?:the )?ship|ship (?:click|button)"
-    r"|passwords?|passcode|captcha|2fa|otp|log ?in|sign ?in)\b",
+    r"|passwords?|passcode|captcha|2fa|otp|log ?in|sign ?in|tokens?|secrets?|credentials?|api keys?)\b",
     re.IGNORECASE,
 )
 DECISION = re.compile(
