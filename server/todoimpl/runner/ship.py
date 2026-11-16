@@ -36,6 +36,15 @@ class CommitRefusedError(NeedsYouError):
         self.output = output
 
 
+class RedAfterRebaseError(NeedsYouError):
+    """The checks are red on the rebased tree; `output` briefs the session's fix turn (T2008)."""
+
+    def __init__(self, text: str, tail: str) -> None:  # noqa: D107
+        super().__init__(text, "checks_failed")
+        ask = "Fix them yourself: commit, rebase, push, deploy (you have permission)."
+        self.output = f"{tail[-1800:]}\n\n{text}. {ask}"
+
+
 class Closer(Protocol):
     """The part of the service's ItemView a run needs: closing a card and adding the live-check follow-up."""
 
@@ -127,10 +136,10 @@ def _rebase(plan: ShipPlan, ref: str) -> None:
 def _verified(plan: ShipPlan, ref: str, *, changed: bool) -> list[CheckResult]:
     """Rerun the checks on the rebased tree, then the repo's pre-push gate (it leaves the hook's receipt)."""
     results, _ = run_all(plan.checks, plan.worktree, plan.run_dir, plan.timeout)
-    red = [r.name for r in results if not r.passed]
-    if red:
-        msg = f"Checks went red after the rebase on {ref}: {', '.join(red)}"
-        raise NeedsYouError(msg, "checks_failed")
+    if red := [r for r in results if not r.passed]:
+        msg = f"Checks went red after the rebase on {ref}: {', '.join(r.name for r in red)}"
+        tail = "\n\n".join(f"== {r.name}: {r.command} (exit {r.exit_code})\n{r.tail}" for r in red)
+        raise RedAfterRebaseError(msg, tail)
     card = f"{plan.item.note_id}-{plan.item.index}"
     return results + (gate.run(plan.worktree, plan.run_dir, card) if changed else [])
 

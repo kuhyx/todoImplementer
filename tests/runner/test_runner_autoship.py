@@ -80,15 +80,17 @@ def test_auto_ship_with_no_diff_closes_once_and_pushes_nothing(world: Env) -> No
         sched.close()
 
 
-def test_auto_ship_red_recheck_fails_and_send_reopens_implement(world: Env) -> None:
+def test_auto_ship_red_recheck_after_two_fix_turns_fails_and_send_reopens_implement(world: Env) -> None:
     count = world.tmp / "runs"
-    # The second run of the check (the recheck after the rebase) is red, every other run is green.
+    # Runs 2 to 4 of the check (Ship's rechecks after the rebase) are red, every other run is green (T2008).
     # Leading `:` so the check reads as a command and not as a sentence (it is not run otherwise).
-    check = f': ; n=$(cat {count} 2>/dev/null || echo 0); echo $((n+1)) > {count}; [ "$n" -ne 1 ]'
-    sched, client = boot(world, PLAN, IMPL, LIVE_OK, done_check=check)
+    bump = f"n=$(cat {count} 2>/dev/null || echo 0); echo $((n+1)) > {count}"
+    check = f': ; {bump}; [ "$n" -lt 1 ] || [ "$n" -gt 3 ]'
+    fix = reply("tried a fix\n\nD: done")
+    sched, client = boot(world, PLAN, IMPL, LIVE_OK, fix, fix, done_check=check)
     try:
         sched.start(CARD, auto_ship=True)
-        st = wait_stage(world, sched, "failed")
+        st = wait_stage(world, sched, "failed", turns=3)
         assert st.error is not None
         assert "red after the rebase" in st.error
         assert st.extra["failed_stage"] == "shipping"
@@ -101,8 +103,8 @@ def test_auto_ship_red_recheck_fails_and_send_reopens_implement(world: Env) -> N
         world.script("abcd1234", *LIVE_OK)
         sched.send(CARD, "the recheck flaked, try again")
         st = wait_stage(world, sched, "shipped")
-        assert "Implement stage." in world.calls()[3]["prompt"]
-        assert world.calls()[3]["resume"] == session
+        assert "Implement stage." in world.calls()[5]["prompt"]
+        assert world.calls()[5]["resume"] == session
         assert st.auto_ship
         assert len(client.closed) == 1
     finally:

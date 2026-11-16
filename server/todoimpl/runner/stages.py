@@ -11,13 +11,14 @@ from todoimpl.umbrella import bounce
 from todoimpl.umbrella.note import is_umbrella
 from todoimpl.umbrella.run import run as run_umbrella
 
-from . import phone, tiering
+from . import phone, shipfix, tiering
 from .checks import SENTENCE_NOTE, discover, record, run_all
 from .closing import closing_stage
+from .deployheal import DirtyCheckoutError
 from .files import NeedsYouError, write_json
 from .live import rejudge, settle
 from .parsing import parse_criteria, parse_live, parse_questions, parse_self_check
-from .ship import CommitRefusedError, ShipPlan, ship
+from .ship import CommitRefusedError, RedAfterRebaseError, ShipPlan, ship
 from .worktree import base_ref, repo_dir
 
 if TYPE_CHECKING:
@@ -203,12 +204,15 @@ def _shipping(d: Driver) -> str | None:
     )  # fmt: skip
     try:
         st.ship = ship(plan, d.ctx.client, d.ctx.now, allow_empty=st.auto_ship)
-    except CommitRefusedError as refused:
+    except (CommitRefusedError, RedAfterRebaseError) as refused:  # the session fixes it first (T1226, T2008)
         fixes = int(st.extra.get("ship_fixes", 0))
         if fixes >= MAX_SHIP_FIXES:
             raise
+        d.activity(f"ship refused, the session fixes it ({fixes + 1}/{MAX_SHIP_FIXES}): {refused.text[:100]}")
         st.extra.update(ship_fixes=fixes + 1, failure_tail=refused.output, reship=True)
         return "implement"
+    except DirtyCheckoutError as blocked:  # kuhy's edits block the deploy's pull: wait, never touch them
+        shipfix.wait_for_edits(st, blocked, d.ctx.now())
     sha = st.ship["commit"]
     if sha:
         st.head_sha = sha

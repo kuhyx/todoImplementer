@@ -19,12 +19,13 @@ import time
 from dataclasses import asdict
 from typing import TYPE_CHECKING, Any
 
-from . import launch
+from . import deployheal, launch
 from .checks import CheckResult, clean_env
+from .deployheal import DirtyCheckoutError
 from .deployhost import DEPLOY_DIR, EXIT_FILE
 from .files import NeedsYouError, read_json, write_json
 from .gate import UNIT_ENV
-from .worktree import git
+from .worktree import git, repo_dir
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -169,21 +170,43 @@ def _record(run_dir: Path, commit: str, command: str, card: str, wt: Path) -> di
         time.sleep(POLL)
 
 
+def _heal(repo: str | None, tail: str, *, healed: bool) -> bool:
+    """Say whether to deploy once more: kuhy's blocking edits equalled the incoming files and are restored.
+
+    Raises DirtyCheckoutError when his own edits block the pull (the checkout is left as it is); False when
+    there is no checkout to look at (T2007).
+    """
+    try:
+        checkout = repo_dir(repo)
+    except NeedsYouError:
+        return False
+    files = [] if healed else deployheal.heal(checkout)
+    if not files and not healed:
+        return True
+    raise DirtyCheckoutError(PREFIX, checkout, files or deployheal.listed(tail))
+
+
 def run(wt: Path, run_dir: Path, card: str, repo: str | None, command: str | None = None) -> CheckResult:
     """Deploy HEAD with `command` (default: the one CLAUDE.md declares); return the passing result.
 
     Raises "pushed, not deployed" when nothing is declared, the deploy fails or times out, or never reports.
+    A pull that git stops on kuhy's edits in his checkout is `DirtyCheckoutError` (see `deployheal`).
     """
     command = command or command_of(wt, repo)
     commit = git(wt, "rev-parse", "HEAD").stdout.strip()
-    done = _record(run_dir, commit, command, card, wt)
-    git(
-        wt, "reset", "--hard", "--quiet", "HEAD", check=False
-    )  # what the deploy left in the tree is not work:
-    git(wt, "clean", "-fdq", check=False)  # a later squash (`add --all`) must not push it
-    result = CheckResult("deploy", command, done["exit"], str(done["tail"]), str(done["log"]))
-    if not result.passed:
+    healed = False
+    while True:
+        done = _record(run_dir, commit, command, card, wt)
+        git(
+            wt, "reset", "--hard", "--quiet", "HEAD", check=False
+        )  # what the deploy left in the tree is not work:
+        git(wt, "clean", "-fdq", check=False)  # a later squash (`add --all`) must not push it
+        result = CheckResult("deploy", command, done["exit"], str(done["tail"]), str(done["log"]))
+        if result.passed:
+            return result
+        if deployheal.blocked(result.tail) and _heal(repo, result.tail, healed=healed):
+            healed = True
+            continue
         why = "timed out" if result.exit_code is None else f"exit {result.exit_code}"
         msg = f"{PREFIX}: deploy failed ({why}): {result.tail[-TAIL:]}"
         raise NeedsYouError(msg, "run_failed")
-    return result

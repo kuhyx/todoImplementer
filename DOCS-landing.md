@@ -24,12 +24,17 @@ Sessions need the session policy (`~/.config/todoImplementer/session-policy.json
 
 ## Backstop (`runner/grant.py`, T1863)
 
-A turn that ends on `A:` whose concrete ask (`board/ask.py`) matches the permission regex (OK me, approve,
-permission, may I, whether to commit|push|merge, press Retry, send a `LONG:`, write ... by hand, run ... yourself,
-after the server commits, off-limits ...) resumes the same session once per stage with a fixed `(runner) Granted:`
-note and a feed line `auto-granted, the session resumes: <ask>`. The counter is `extra["ask_grants"]`; it clears when
-a turn ends on anything but `A:` and on Start/Retry. A second permission ask parks the card as before. Not used in the
-spec and plan stages, nor while a phone wait is set. No LLM.
+A turn that ends on `A:` whose concrete ask (`board/ask.py`) is permission (OK me, approve, permission, may I, whether
+to commit|push|merge, press Retry, send a `LONG:`, write ... by hand, run ... yourself, after the server commits,
+off-limits ...) or any ask for something Claude can run itself (a command, a deploy such as `deploy-todoimpl`, a restart,
+sudo, a push, a write under ~; T2006) resumes the same session with a fixed `(runner) Granted: do it yourself ... run it,
+then rerun the card's checks` note and a feed line `auto-granted, the session resumes: <ask>`. Never granted: asks only
+kuhy can answer (phone, Pixel, plug, tap, screen, screenshot, audio, a Ship click, a password or login, a decision such
+as "which ..." or "do you want ...") and a reply with an `ask` block holding a `choice` or `screenshot`. Bounds: once per
+stage (`extra["ask_grants"]`, cleared when a turn ends on anything but `A:`) and twice per run (`extra["ask_grant_total"]`,
+cleared by Start, Retry and a note from kuhy). The count is saved before the granted turn starts, so a restart cannot
+grant the same ask twice. A further ask parks the card as before. Not used in the spec and plan stages, nor while a
+phone wait is set. No LLM. The standing grant tells sessions the same: never end on `A:` for what you can run.
 
 ## Rebase on every drive (`runner/worktree.py`, T1864)
 
@@ -82,6 +87,19 @@ the "session already pushed" path) and before the note closes, Ship runs the rep
   aborted first. At most 2 automatic resumes per click (`ship_resumes`, reset by Ship and Retry); then the run fails
   "Ship was interrupted by a restart N times in a row ..." and Retry goes straight back to `shipping`, as does Retry on
   the older form of that failure. An umbrella child is resumed the same way.
+- **Deploy into kuhy's checkout (T2007).** A deploy that starts with `git -C ~/src/<repo> pull --ff-only` fails when
+  that checkout has uncommitted edits at paths the push changed (git: "would be overwritten by merge", tracked or
+  untracked). `runner/deployheal.py` reads that text from the failed record only. If every blocking file already equals
+  the incoming content (a session wrote the same change there), it restores them (tracked: back to HEAD, staged too;
+  untracked: removed) and deploys again at once. Otherwise it touches nothing: the run rests in `paused_retry` ("deploy
+  waits: edits in ~/src/<repo> block the pull (<file>)") on the backoff ladder, 12 waits (`shipfix.MAX_DEPLOY_WAITS`,
+  counter `retries`), and the resumed Ship only redeploys (`pushed.json`). After the 12th it ends in Needs you naming the
+  files: "commit or discard them, then Retry". "waiting for build lock held by ..." in such a tail is the first log line
+  of any queued check (`buildlock.held`, outside the timeout), not a cause.
+- **Checks red after the rebase (T2008).** Ship's re-run of the checks on the rebased tree used to end in Needs you.
+  Now the session gets a fix turn (red tails, "fix them yourself: commit, rebase, push, deploy"), same bounce and counter
+  (`ship_fixes`, 2) as a refused commit; the third time is Needs you. `ask_grants` could not bound it: a finished turn
+  clears it.
 - **Umbrella card.** Children that are pushed but not deployed are listed apart from children that need kuhy:
   `3 of 7 children need you: a (why); b. 4 pushed, not deployed: c (declares no deploy: command in CLAUDE.md); ...`.
 - **Self-healing.** The implement prompt (`prompts/standing.py`, `DEPLOY`) tells a session to add the line when the repo
