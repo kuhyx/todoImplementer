@@ -11,20 +11,22 @@ from collections.abc import Callable, Iterable
 from itertools import count
 from typing import Any
 
-from todoimpl.runner.retry import delay
 from todoimpl.todo_mcp.model import TodoError, UnreachableError
 
 PROTOCOL = "2025-03-26"
 _OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
 _AUTH_CODES = (401, 403)
 _NOT_FOUND = 404
+# A local service: a short ladder (seconds, capped at the last rung) so the board is fresh again soon
+# after the todo app returns. Single-flight already keeps sockets from piling up. Not `retry.delay`.
+LADDER = (1.0, 2.0, 5.0, 10.0, 30.0)
 
 
 class Transport:
     """One MCP session over HTTP; thread-safe, re-initialises once if the session vanishes.
 
     Single-flight and backoff (T2005): one request is on the wire at a time; a timeout or connection error
-    closes a gate for `retry.delay(failures)` (1, 2, 5, 10, 30 min), and calls inside it fail at once
+    closes a gate for the next rung of `LADDER` (1, 2, 5, 10, 30 s), and calls inside it fail at once
     with `UnreachableError` and open no socket. A reply that gets through resets the ladder.
     """
 
@@ -147,7 +149,7 @@ class Transport:
     def _fail(self, cause: str) -> UnreachableError:
         """Close the gate for the next rung of the ladder and build the honest error."""
         self._cause = f"todo MCP not answering ({cause})"
-        self._retry_at = self._clock() + delay(self._failures)
+        self._retry_at = self._clock() + LADDER[min(self._failures, len(LADDER) - 1)]
         self._failures += 1
         return UnreachableError(self._cause)
 

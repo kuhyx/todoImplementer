@@ -85,25 +85,25 @@ def test_t2005_backs_off_on_the_ladder_then_recovers(fake: FakeTodoMcp) -> None:
     clock = Clock()
     client = TodoClient(fake.url, fake.token, TIMEOUT, clock=clock)
     fake.hang()
-    assert _poll(client) == NOT_ANSWERING  # failure 1: next try in 60 s
+    assert _poll(client) == NOT_ANSWERING  # failure 1: next try in 1 s
     fake.release()
-    clock.now += 59
+    clock.now += 0.5
     assert _poll(client) == NOT_ANSWERING
     assert fake.connections == 1  # the gate answered, no socket
     fake.hang()
-    clock.now += 2
-    assert _poll(client) == NOT_ANSWERING  # failure 2: next try in 120 s
+    clock.now += 1
+    assert _poll(client) == NOT_ANSWERING  # failure 2: next try in 2 s
     assert fake.connections == 2
-    clock.now += 61
+    clock.now += 1.5
     assert _poll(client) == NOT_ANSWERING
     assert fake.connections == 2
     fake.release()
-    clock.now += 60
+    clock.now += 1
     assert _poll(client) is None  # answers again: the ladder resets
     fake.hang()
     clock.now += 1
     assert _poll(client) == NOT_ANSWERING
-    clock.now += 61
+    clock.now += 31
     fake.release()
     assert _poll(client) is None
 
@@ -114,7 +114,7 @@ def test_t2005_a_403_after_timeouts_is_not_a_token_verdict(fake: FakeTodoMcp) ->
     fake.hang()
     assert _poll(client) == NOT_ANSWERING
     fake.release()
-    clock.now += 61
+    clock.now += 31
     fake.fail_next(403)
     assert _poll(client) == "todo MCP not answering (HTTP 403 after timeouts)"
 
@@ -131,9 +131,46 @@ def test_server_errors_during_an_outage_back_off_too(fake: FakeTodoMcp, status: 
     fake.hang()
     _poll(client)
     fake.release()
-    clock.now += 61
+    clock.now += 31
     fake.fail_next(status)
     assert _poll(client) == f"todo MCP not answering (HTTP {status} after timeouts)"
     seen = fake.connections
     assert _poll(client) == f"todo MCP not answering (HTTP {status} after timeouts)"
     assert fake.connections == seen
+
+
+def test_t2005_board_is_fresh_within_30s_of_the_todo_app_coming_back(fake: FakeTodoMcp) -> None:
+    clock = Clock()
+    client = TodoClient(fake.url, fake.token, TIMEOUT, clock=clock)
+
+    def fetch() -> list[CardTask]:
+        client.list_tasks()
+        return []
+
+    cache = TaskCache(fetch, clock=clock)
+    fake.hang()
+    for _ in range(12):  # a long outage: every ladder window ends in one probe that times out
+        clock.now += 31
+        assert cache.refresh().error == NOT_ANSWERING
+    fake.release()
+    for _ in range(30):  # polls inside the window open no socket
+        clock.now += 1
+        if cache.refresh().error is None:
+            break
+    assert fake.methods.count("initialize") == 1  # one probe, then the handshake went through
+    assert cache.snapshot().error is None
+
+
+def test_t2005_each_window_ends_with_exactly_one_probe(fake: FakeTodoMcp) -> None:
+    clock = Clock()
+    client = TodoClient(fake.url, fake.token, TIMEOUT, clock=clock)
+    fake.hang()
+    _poll(client)
+    for wait in (1, 2, 5, 10, 30, 30, 30):
+        seen = fake.connections
+        clock.now += wait - 0.5
+        assert _poll(client) == NOT_ANSWERING
+        assert fake.connections == seen  # still inside the window
+        clock.now += 0.5
+        assert _poll(client) == NOT_ANSWERING
+        assert fake.connections == seen + 1  # the one probe
