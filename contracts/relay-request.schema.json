@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://todoimplementer.local/contracts/relay-request.schema.json",
+  "title": "Relay request: the opened unit at todoimpl/v1-e2e/requests/{rid}/req",
+  "description": "What the phone or desktop app PUTs (sealed) to ask the PC worker for something. kind is the strict allowlist (DOCS-native-app-relay.md, 'Kinds'); anything else is refused before the backend is called. Every body is fixed per kind by the allOf below; the args reuse the HTTP request bodies of requests.schema.json, merge.schema.json and sessions.schema.json.",
+  "type": "object",
+  "properties": {
+    "kind": {"$ref": "#/$defs/kind"},
+    "dev": {"$ref": "#/$defs/dev"},
+    "created": {"type": "integer", "minimum": 0, "description": "Server timestamp (ms) written by RTDB from {'.sv':'timestamp'}; the only clear field of the unit."},
+    "sent_at": {"type": "integer", "minimum": 0, "description": "Client clock (ms) of the first press; retries keep it. Older than 24 h: refused as expired."},
+    "body": {"type": "object"}
+  },
+  "required": ["kind", "dev", "sent_at", "body"],
+  "additionalProperties": false,
+  "allOf": [
+    {"if": {"properties": {"kind": {"const": "task_start"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/card_args", "properties": {"args": {"$ref": "https://todoimplementer.local/contracts/requests.schema.json#/$defs/start"}}}}}},
+    {"if": {"properties": {"kind": {"const": "task_spec_answers"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/card_args", "properties": {"args": {"$ref": "https://todoimplementer.local/contracts/requests.schema.json#/$defs/spec_answers"}}}}}},
+    {"if": {"properties": {"kind": {"const": "task_spec_ok"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/card_args", "properties": {"args": {"$ref": "https://todoimplementer.local/contracts/requests.schema.json#/$defs/spec_ok"}}}}}},
+    {"if": {"properties": {"kind": {"const": "task_send"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/card_args", "properties": {"args": {"$ref": "https://todoimplementer.local/contracts/requests.schema.json#/$defs/send"}}}}}},
+    {"if": {"properties": {"kind": {"const": "task_ship"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/card_args", "properties": {"args": {"$ref": "https://todoimplementer.local/contracts/requests.schema.json#/$defs/ship"}}}}}},
+    {"if": {"properties": {"kind": {"const": "task_close"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/card_args", "properties": {"args": {"$ref": "https://todoimplementer.local/contracts/requests.schema.json#/$defs/close"}}}}}},
+    {"if": {"properties": {"kind": {"const": "task_cancel"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/card_args", "properties": {"args": {"$ref": "https://todoimplementer.local/contracts/requests.schema.json#/$defs/cancel"}}}}}},
+    {"if": {"properties": {"kind": {"const": "task_lesson_approve"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/card_args", "properties": {"args": {"$ref": "https://todoimplementer.local/contracts/requests.schema.json#/$defs/lesson_approve"}}}}}},
+    {"if": {"properties": {"kind": {"const": "task_go"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/card_args", "properties": {"args": {"$ref": "https://todoimplementer.local/contracts/requests.schema.json#/$defs/go"}}}}}},
+    {"if": {"properties": {"kind": {"const": "task_rerun"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/card_args", "properties": {"args": {"$ref": "https://todoimplementer.local/contracts/requests.schema.json#/$defs/rerun"}}}}}},
+    {"if": {"properties": {"kind": {"const": "ask_answer"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/card_args", "properties": {"args": {"$ref": "https://todoimplementer.local/contracts/requests.schema.json#/$defs/ask_answer"}}}}}},
+    {"if": {"properties": {"kind": {"const": "ask_take_recommended"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/card_args", "properties": {"args": {"$ref": "https://todoimplementer.local/contracts/requests.schema.json#/$defs/ask_take_recommended"}}}}}},
+    {"if": {"properties": {"kind": {"const": "ask_run"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/card_args", "properties": {"args": {"$ref": "https://todoimplementer.local/contracts/requests.schema.json#/$defs/ask_run"}}}}}},
+    {"if": {"properties": {"kind": {"const": "ask_undo"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/card_args", "properties": {"args": {"$ref": "https://todoimplementer.local/contracts/requests.schema.json#/$defs/ask_undo"}}}}}},
+    {"if": {"properties": {"kind": {"const": "ask_approve"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/card_args", "properties": {"args": {"$ref": "https://todoimplementer.local/contracts/requests.schema.json#/$defs/ask_approve"}}}}}},
+    {"if": {"properties": {"kind": {"const": "ask_reject"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/card_args", "properties": {"args": {"$ref": "https://todoimplementer.local/contracts/requests.schema.json#/$defs/ask_reject"}}}}}},
+    {"if": {"properties": {"kind": {"enum": ["merge_merge", "merge_dismiss"]}}}, "then": {"properties": {"body": {"$ref": "#/$defs/merge_body"}}}},
+    {"if": {"properties": {"kind": {"const": "new_task"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/args_only_new_task"}}}},
+    {"if": {"properties": {"kind": {"const": "credits_fallback"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/args_only_credits"}}}},
+    {"if": {"properties": {"kind": {"const": "session_resume"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/args_only_resume"}}}},
+    {"if": {"properties": {"kind": {"const": "session_mark"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/args_only_mark"}}}},
+    {"if": {"properties": {"kind": {"const": "session_delete"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/args_only_delete"}}}},
+    {"if": {"properties": {"kind": {"enum": ["task_detail", "task_issues", "umbrella"]}}}, "then": {"properties": {"body": {"$ref": "#/$defs/card_only"}}}},
+    {"if": {"properties": {"kind": {"const": "task_shot"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/shot_body"}}}},
+    {"if": {"properties": {"kind": {"const": "umbrella_log"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/umbrella_log_body"}}}},
+    {"if": {"properties": {"kind": {"const": "tokens"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/tokens_body"}}}},
+    {"if": {"properties": {"kind": {"const": "live_watch"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/watch_body"}}}},
+    {"if": {"properties": {"kind": {"enum": ["snapshot_refresh", "notify_test"]}}}, "then": {"properties": {"body": {"$ref": "#/$defs/empty"}}}}
+  ],
+  "$defs": {
+    "kind": {
+      "enum": [
+        "task_start", "task_spec_answers", "task_spec_ok", "task_send", "task_ship", "task_close", "task_cancel",
+        "task_lesson_approve", "task_go", "task_rerun",
+        "ask_answer", "ask_take_recommended", "ask_run", "ask_undo", "ask_approve", "ask_reject",
+        "new_task", "credits_fallback", "merge_merge", "merge_dismiss",
+        "session_resume", "session_mark", "session_delete",
+        "task_detail", "task_issues", "task_shot", "umbrella", "umbrella_log", "tokens",
+        "live_watch", "snapshot_refresh", "notify_test"
+      ],
+      "description": "The allowlist. Write kinds (lane act) mirror every POST route except /api/pair; read kinds (lane read) mirror the GET routes no snapshot node covers."
+    },
+    "dev": {"type": "string", "pattern": "^[0-9a-f-]{36}$", "description": "Per-install uuid of the client."},
+    "rid": {"type": "string", "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$", "description": "ULID; the request key."},
+    "item_id": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/item_id"},
+    "empty": {"type": "object", "additionalProperties": false},
+    "card_args": {
+      "type": "object",
+      "description": "POST /api/task/<card>/<action> and .../ask/<verb>: args is that route's body; the per-kind allOf entry pins it to the requests.schema.json $def of the same name.",
+      "properties": {"card": {"$ref": "#/$defs/item_id"}, "args": {"type": "object"}},
+      "required": ["card", "args"],
+      "additionalProperties": false
+    },
+    "merge_body": {
+      "type": "object",
+      "properties": {"group": {"$ref": "https://todoimplementer.local/contracts/merge.schema.json#/$defs/group_id"}, "args": {"$ref": "#/$defs/empty"}},
+      "required": ["group", "args"],
+      "additionalProperties": false
+    },
+    "args_only_new_task": {"$ref": "#/$defs/args_wrapper", "properties": {"args": {"$ref": "https://todoimplementer.local/contracts/requests.schema.json#/$defs/new_task"}}},
+    "args_only_credits": {"$ref": "#/$defs/args_wrapper", "properties": {"args": {"$ref": "https://todoimplementer.local/contracts/requests.schema.json#/$defs/credits_fallback"}}},
+    "args_only_resume": {"$ref": "#/$defs/args_wrapper", "properties": {"args": {"$ref": "https://todoimplementer.local/contracts/sessions.schema.json#/$defs/resume_body"}}},
+    "args_only_mark": {"$ref": "#/$defs/args_wrapper", "properties": {"args": {"$ref": "https://todoimplementer.local/contracts/sessions.schema.json#/$defs/mark_body"}}},
+    "args_only_delete": {"$ref": "#/$defs/args_wrapper", "properties": {"args": {"$ref": "https://todoimplementer.local/contracts/sessions.schema.json#/$defs/delete_body"}}},
+    "args_wrapper": {"type": "object", "required": ["args"], "properties": {"args": true}, "additionalProperties": false},
+    "card_only": {
+      "type": "object",
+      "properties": {"card": {"$ref": "#/$defs/item_id"}},
+      "required": ["card"],
+      "additionalProperties": false
+    },
+    "shot_body": {
+      "type": "object",
+      "description": "GET /api/task/<card>/shot/<name>; the server's SHOT_NAME rule (no dot segments) still applies.",
+      "properties": {"card": {"$ref": "#/$defs/item_id"}, "name": {"type": "string", "pattern": "^[A-Za-z0-9_./-]+\\.png$", "maxLength": 200}},
+      "required": ["card", "name"],
+      "additionalProperties": false
+    },
+    "umbrella_log_body": {
+      "type": "object",
+      "properties": {"card": {"$ref": "#/$defs/item_id"}, "log": {"type": "string", "pattern": "^[^/]{1,64}$"}},
+      "required": ["card", "log"],
+      "additionalProperties": false
+    },
+    "tokens_body": {
+      "type": "object",
+      "description": "GET /api/tokens[/<path>]?<query>: path is the part after /api/tokens; its first segment must be one the tokens router knows.",
+      "properties": {
+        "path": {"type": "string", "pattern": "^(|/(panel|session|items|ab|context-file|schema)(/[^?#]{0,200})?)$"},
+        "query": {"type": "string", "maxLength": 2000}
+      },
+      "required": ["path", "query"],
+      "additionalProperties": false
+    },
+    "watch_body": {
+      "type": "object",
+      "description": "Mirror one card's live feed to live/{card} while card is non-null; the watch lapses 120 s after the last renewal.",
+      "properties": {"card": {"anyOf": [{"$ref": "#/$defs/item_id"}, {"type": "null"}]}},
+      "required": ["card"],
+      "additionalProperties": false
+    }
+  }
+}

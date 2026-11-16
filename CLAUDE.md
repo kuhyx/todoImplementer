@@ -10,6 +10,8 @@ Manual Claude Code sessions page (status tags, resume, mark, delete, guard, phon
 One card, one run per repo (parts, ticks, per-repo lock, section-run transition, note migration CLI): `DOCS-repotask.md`.
 Asks as buttons in the note (`ask` block: choice, command, screenshot, risk rule, 24 h auto-adopt, sweep): `DOCS-asks.md`.
 Phone over mobile data (Host-based device gate, pairing QR, cookie, device store, exemptions): `DOCS-phone.md`.
+Native Flutter app (phone + PC, Firebase RTDB relay, FCM pings, Astro retirement): `DOCS-native-app.md`; relay kinds,
+nodes and guards: `DOCS-native-app-relay.md`.
 
 ## Commands
 
@@ -43,7 +45,8 @@ Phone over mobile data (Host-based device gate, pairing QR, cookie, device store
 - **No company identifiers.** `scripts/check_private.py` scans files, paths and the commit message against
   `~/.config/todoImplementer/private-denylist.txt` (outside the repo, mode 0600). Never copy code from the predecessor.
 - Markdown: only `README.md`, `CLAUDE*.md`, `DOCS*.md`. Tasks live in the todo app, never in a TODO file.
-- Python 3.15.2 (newest stable, enforced by the freshness gate), stdlib only at runtime, uv, exact pins, newest stable. Web: Astro + TypeScript, pnpm only.
+- Python 3.15.2 (newest stable, enforced by the freshness gate), uv, exact pins, newest stable. Runtime deps: stdlib,
+  plus `httpx`, `crdt-sync` and `rtdb_relay` for the relay worker (kuhy, 2026-11-16; `DOCS-native-app.md`). Web: Astro + TypeScript, pnpm only.
 
 ## Boundaries
 

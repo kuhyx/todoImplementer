@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://todoimplementer.local/contracts/relay-result.schema.json",
+  "title": "Relay result: the opened unit at todoimpl/v1-e2e/requests/{rid}/result",
+  "description": "Written once by the worker after the request is served. ok:true carries data, which is exactly the JSON body the matching HTTP route answers with HTTP 200 (minus its own ok key); ok:false carries a code. at stays clear for GC.",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "ok": {"const": true},
+        "at": {"type": "integer", "minimum": 0},
+        "for": {"$ref": "https://todoimplementer.local/contracts/relay-request.schema.json#/$defs/kind"},
+        "data": {"$ref": "#/$defs/data"}
+      },
+      "required": ["ok", "at", "for", "data"],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "ok": {"const": false},
+        "at": {"type": "integer", "minimum": 0},
+        "for": {"anyOf": [{"$ref": "https://todoimplementer.local/contracts/relay-request.schema.json#/$defs/kind"}, {"type": "null"}], "description": "null when the request did not open or named no known kind."},
+        "code": {"$ref": "#/$defs/code"},
+        "error": {"type": "string", "minLength": 1, "description": "For the log and the copy-errors action; the app draws the code as a glyph (textgate)."},
+        "retry": {"type": "boolean", "description": "true only for codes a resend can fix: internal, upstream_unavailable, gave_up, rate_limited."}
+      },
+      "required": ["ok", "at", "for", "code", "error", "retry"],
+      "additionalProperties": false
+    }
+  ],
+  "$defs": {
+    "code": {
+      "enum": [
+        "bad_request", "forbidden", "not_found", "disabled", "conflict", "internal", "upstream_unavailable",
+        "unknown_kind", "unsealed", "expired", "rate_limited", "too_large", "stale_client", "gave_up"
+      ],
+      "description": "The first seven are the HTTP codes (common.schema.json#/$defs/error), same meaning. Relay-only: unknown_kind (not in the allowlist), unsealed (no _e2e blob, or it did not open), expired (sent_at older than 24 h), rate_limited (over 30 act requests a minute), too_large (data over 4 MB, e.g. a screenshot), stale_client (app older than meta.min_client), gave_up (3 claim attempts)."
+    },
+    "data": {
+      "description": "Per-kind shape. Action kinds: {task: task_card} as the HTTP action reply. Read kinds: the GET body. task_shot: {png_b64}. live_watch, snapshot_refresh, notify_test: {}.",
+      "anyOf": [
+        {"$ref": "#/$defs/action_data"},
+        {"$ref": "https://todoimplementer.local/contracts/task.schema.json"},
+        {"$ref": "https://todoimplementer.local/contracts/sessions.schema.json#/$defs/result"},
+        {"$ref": "https://todoimplementer.local/contracts/merge.schema.json#/$defs/response"},
+        {"$ref": "#/$defs/shot_data"},
+        {"type": "object", "description": "credits_fallback, umbrella, umbrella_log, task_issues, tokens: the route's own body (umbrella.schema.json, tokens-*.schema.json)."}
+      ]
+    },
+    "action_data": {
+      "type": "object",
+      "properties": {"task": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/task_card"}},
+      "required": ["task"],
+      "additionalProperties": false
+    },
+    "shot_data": {
+      "type": "object",
+      "properties": {"png_b64": {"type": "string", "minLength": 1, "maxLength": 5592408, "pattern": "^[A-Za-z0-9+/]+={0,2}$"}},
+      "required": ["png_b64"],
+      "additionalProperties": false
+    }
+  }
+}

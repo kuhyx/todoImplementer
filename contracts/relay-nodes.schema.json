@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://todoimplementer.local/contracts/relay-nodes.schema.json",
+  "title": "Relay tree todoimpl/v1-e2e: snapshot, presence, watch, live and ping nodes",
+  "description": "Every node except requests/* (relay-request/relay-result). Each $def is the OPENED unit; on the wire a unit is {_e2e: blob, <clear keys>} (DOCS-native-app-relay.md, 'Sealing'). The root describes the tree for documentation and fixture tests.",
+  "type": "object",
+  "properties": {
+    "meta": {"$ref": "#/$defs/meta"},
+    "rev": {"$ref": "#/$defs/rev"},
+    "snap": {
+      "type": "object",
+      "properties": {
+        "board": {"$ref": "https://todoimplementer.local/contracts/board.schema.json"},
+        "usage": {"$ref": "https://todoimplementer.local/contracts/usage.schema.json"},
+        "sessions": {"$ref": "https://todoimplementer.local/contracts/sessions.schema.json"},
+        "merges": {"$ref": "https://todoimplementer.local/contracts/merge.schema.json"}
+      },
+      "additionalProperties": false
+    },
+    "presence": {
+      "type": "object",
+      "properties": {
+        "workers": {"type": "object", "additionalProperties": {"$ref": "#/$defs/worker"}},
+        "clients": {"type": "object", "additionalProperties": {"$ref": "#/$defs/client"}}
+      },
+      "additionalProperties": false
+    },
+    "watch": {"type": "object", "additionalProperties": {"$ref": "#/$defs/watch"}},
+    "live": {"type": "object", "additionalProperties": {"type": "object", "additionalProperties": {"$ref": "https://todoimplementer.local/contracts/live.schema.json"}}}
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "meta": {
+      "type": "object",
+      "description": "Clear. min_client: app build numbers below it get stale_client and show the update glyph.",
+      "properties": {"min_client": {"type": "integer", "minimum": 1}, "schema": {"const": 1}},
+      "required": ["min_client", "schema"],
+      "additionalProperties": false
+    },
+    "rev": {
+      "type": "object",
+      "description": "Clear counters, bumped after the matching snap node is written; a client listens to rev only and GETs a snap node when its counter moves.",
+      "properties": {
+        "board": {"type": "integer", "minimum": 0},
+        "usage": {"type": "integer", "minimum": 0},
+        "sessions": {"type": "integer", "minimum": 0},
+        "merges": {"type": "integer", "minimum": 0}
+      },
+      "required": ["board", "usage", "sessions", "merges"],
+      "additionalProperties": false
+    },
+    "worker": {
+      "type": "object",
+      "description": "PUT every 30 s; beat stays clear. Replaces GET /version: version and build are the live server's.",
+      "properties": {
+        "host": {"type": "string", "minLength": 1},
+        "pid": {"type": "integer", "minimum": 1},
+        "version": {"type": "string", "minLength": 1},
+        "build": {"type": "string", "minLength": 1},
+        "started": {"type": "integer", "minimum": 0},
+        "beat": {"type": "integer", "minimum": 0},
+        "lanes": {
+          "type": "object",
+          "properties": {
+            "act": {"anyOf": [{"$ref": "https://todoimplementer.local/contracts/relay-request.schema.json#/$defs/rid"}, {"type": "null"}]},
+            "read": {"type": "integer", "minimum": 0, "description": "Read requests in flight."}
+          },
+          "required": ["act", "read"],
+          "additionalProperties": false
+        },
+        "skew_ms": {"type": "integer"}
+      },
+      "required": ["host", "pid", "version", "build", "started", "beat", "lanes", "skew_ms"],
+      "additionalProperties": false
+    },
+    "client": {
+      "type": "object",
+      "description": "PUT by the app on start and every foreground resume; seen stays clear. fcm is the FCM registration token the worker pings (null: notifications off or not granted).",
+      "properties": {
+        "platform": {"enum": ["android", "web"]},
+        "app": {"type": "string", "minLength": 1},
+        "build": {"type": "integer", "minimum": 1},
+        "seen": {"type": "integer", "minimum": 0},
+        "fcm": {"anyOf": [{"type": "string", "minLength": 20, "maxLength": 4096}, {"type": "null"}]}
+      },
+      "required": ["platform", "app", "build", "seen", "fcm"],
+      "additionalProperties": false
+    },
+    "watch": {
+      "type": "object",
+      "description": "watch/{dev}, written by the worker on live_watch: which card's live feed it mirrors for that client, until when.",
+      "properties": {
+        "card": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/item_id"},
+        "until": {"type": "integer", "minimum": 0}
+      },
+      "required": ["card", "until"],
+      "additionalProperties": false
+    },
+    "ping": {
+      "type": "object",
+      "description": "FCM data-only message (never a notification payload, never sealed: it holds counts only, no titles, no ids). The app draws icon + count, no text, on channel attention_v1.",
+      "properties": {
+        "v": {"const": "1"},
+        "needs_you": {"type": "string", "pattern": "^[0-9]{1,4}$"},
+        "ready": {"type": "string", "pattern": "^[0-9]{1,4}$"},
+        "failed": {"type": "string", "pattern": "^[0-9]{1,4}$"},
+        "at": {"type": "string", "pattern": "^[0-9]{13}$"}
+      },
+      "required": ["v", "needs_you", "ready", "failed", "at"],
+      "additionalProperties": false
+    }
+  }
+}
