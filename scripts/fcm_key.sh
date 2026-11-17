@@ -44,7 +44,8 @@ fetch() {
     who="$(account)" || true
     [[ -n "$who" ]] || die "firebase CLI is not logged in (run: firebase login)"
     stamp="$(mktemp)"
-    trap 'rm -f "$stamp"' RETURN
+    # A RETURN trap stays set after fetch returns; clear it so main's return never sees the out-of-scope local.
+    trap 'rm -f "$stamp"; trap - RETURN' RETURN
     setsid xdg-open \
         "https://console.firebase.google.com/project/${PROJECT}/settings/serviceaccounts/adminsdk?authuser=${who}" \
         >/dev/null 2>&1 &
