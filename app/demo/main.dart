@@ -42,6 +42,34 @@ class _DemoRelay implements BoardRelay {
     }
     return const RelayOk({});
   }
+
+  @override
+  Stream<List<MergeSuggestion>> merges() => Stream.value(
+    mergesOf({
+      'suggestions': [
+        {
+          'id': 'abcdefabcdef',
+          'title': 'Cache on disk for both readers',
+          'reason': 'same cache',
+          'members': [
+            {'id': 'card1-0', 'title': 'one', 'repo': 'kuhyx/demo-app'},
+            {'id': 'card2-0', 'title': 'two', 'repo': 'kuhyx/demo-app'},
+          ],
+          'actions': [
+            {'id': 'merge', 'label': 'm', 'enabled': true, 'reason': null},
+            {'id': 'dismiss', 'label': 'd', 'enabled': true, 'reason': null},
+          ],
+        },
+      ],
+    }),
+  );
+
+  @override
+  Stream<List<Json>> liveFeed(String card) => Stream.value(const [
+    {'type': 'stage', 'stage': 'implement'},
+    {'type': 'activity', 'kind': 'tool', 'tool': 'Bash', 'text': 'make test'},
+    {'type': 'activity', 'kind': 'text', 'text': 'All green.'},
+  ]);
 }
 
 Json _action(String id, {bool enabled = true, bool confirm = false}) => {
@@ -132,9 +160,13 @@ final Json _board = {
       route: 'credits',
     ),
     for (var i = 0; i < 8; i++)
-      _card(10 + i, 'backlog', 'backlog', _titles[i], actions: [
-        _action('start'),
-      ]),
+      _card(
+        10 + i,
+        'backlog',
+        'backlog',
+        _titles[i],
+        actions: [_action('start')],
+      ),
     _card(
       30,
       'running',
