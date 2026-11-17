@@ -26,6 +26,8 @@ jobs:
           flutter-version: 3.47.9
           channel: stable
       - run: flutter pub get
+      # lib/config/firebase_local.dart is gitignored; empty values are enough to analyze and test.
+      - run: dart run tool/write_firebase_config.dart --placeholder
       - run: flutter analyze --fatal-infos --fatal-warnings
       - run: flutter test --coverage
       - name: Enforce 100% line coverage
@@ -109,6 +111,24 @@ jobs:
           ls -l "$ks"
 
       - run: flutter pub get
+
+      # The release needs the real Firebase identifiers (fail closed: never ship a "not configured" APK).
+      - name: Write the Firebase config
+        env:
+          FIREBASE_JSON: ${{ secrets.TODOIMPL_FIREBASE_JSON }}
+        run: |
+          set -euo pipefail
+          if [ -z "$FIREBASE_JSON" ]; then
+            echo "::error::TODOIMPL_FIREBASE_JSON is not set; refusing to publish."
+            exit 1
+          fi
+          umask 077
+          mkdir -p "$HOME/.config/crdt-sync"
+          printf '%s' "$FIREBASE_JSON" > "$HOME/.config/crdt-sync/firebase.json"
+          dart run tool/write_firebase_config.dart
+          if grep -q "''" lib/config/firebase_local.dart; then
+            echo "::error::an empty Firebase identifier (webClientId?)"; exit 1
+          fi
 
       - name: Build signed APK
         run: |
