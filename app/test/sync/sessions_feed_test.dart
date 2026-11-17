@@ -14,7 +14,7 @@ import '../support/session_fakes.dart';
 void main() {
   test('the feed reads snap/sessions now and on every rev move', () async {
     final tree = <String, Object?>{};
-    final moves = StreamController<int>();
+    final moves = StreamController<int>.broadcast();
     final client = RtdbClient(
       layout: kTodoImplLayout,
       databaseUrl: 'https://db.example',
@@ -31,7 +31,7 @@ void main() {
     final got = <String>[];
     final sub = rtdbSessionsFeed(
       client: client,
-      moves: () => moves.stream,
+      moves: moves.stream,
     )().listen((l) => got.add(l.sessions.map((s) => s.title).join()));
     await pumpEventQueue();
     tree[path] = null; // a gap: nothing published yet reads as no list
@@ -46,7 +46,7 @@ void main() {
     tree[path] = null;
     final empty = await rtdbSessionsFeed(
       client: client,
-      moves: () => const Stream<int>.empty(),
+      moves: const Stream<int>.empty(),
     )().toList();
     expect(empty, isEmpty);
   });

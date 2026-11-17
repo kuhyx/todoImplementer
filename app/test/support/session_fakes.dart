@@ -1,5 +1,9 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_test/flutter_test.dart';
+
 import 'package:todo_implementer/model/json.dart';
 import 'package:todo_implementer/model/sessions.dart';
 import 'package:todo_implementer/sync/sessions_feed.dart';
@@ -62,4 +66,19 @@ class FakeSessionsFeed {
   /// Publishes [sessions].
   void push(List<Json> sessions) =>
       out.add(SessionList.fromJson(listJson(sessions)));
+}
+
+/// Records every clipboard write of [tester]; the last text is `.value`.
+ValueNotifier<String?> mockClipboard(WidgetTester tester) {
+  final copied = ValueNotifier<String?>(null);
+  tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+    SystemChannels.platform,
+    (call) async {
+      if (call.method == 'Clipboard.setData') {
+        copied.value = (call.arguments as Map)['text'] as String;
+      }
+      return null;
+    },
+  );
+  return copied;
 }

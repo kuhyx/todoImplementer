@@ -13,10 +13,11 @@ import 'package:todo_implementer/sync/layout.dart';
 typedef SessionsFeed = Stream<SessionList> Function();
 
 /// The feed over RTDB: [client] reads the sealed node, [moves] is
-/// `RevWatcher.changesOf('sessions')`.
+/// `RevWatcher.changesOf('sessions')` (a broadcast stream: each listen of
+/// the feed re-listens it).
 SessionsFeed rtdbSessionsFeed({
   required RtdbClient client,
-  required Stream<int> Function() moves,
+  required Stream<int> moves,
 }) => () async* {
   Future<SessionList?> fetch() async {
     final node = await client.get(fullPath('snap/sessions'));
@@ -25,7 +26,7 @@ SessionsFeed rtdbSessionsFeed({
 
   final first = await fetch();
   if (first != null) yield first;
-  await for (final _ in moves()) {
+  await for (final _ in moves) {
     final next = await fetch();
     if (next != null) yield next;
   }

@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:todo_implementer/model/json.dart';
 import 'package:todo_implementer/sync/board_relay.dart';
@@ -36,6 +35,13 @@ Future<(FakeRelay, FakeSessionsFeed)> _pump(
   pixel6a(tester, keyboard: keyboard);
   if (desktop) tester.view.physicalSize = const Size(2400, 1600);
   final relay = FakeRelay();
+  for (final verb in ['resume', 'mark', 'delete']) {
+    relay.outcomes['session_$verb'] = const RelayOk({
+      'ok': true,
+      'refused': false,
+      'summary': 'ok',
+    });
+  }
   final feed = FakeSessionsFeed();
   await tester.pumpWidget(
     MaterialApp(
@@ -140,6 +146,7 @@ void main() {
   testWidgets('sheet: details, copy, mark, hold-to-delete, refusal', (
     tester,
   ) async {
+    final copied = mockClipboard(tester);
     final (relay, feed) = await _pump(tester);
     feed.push(_rows());
     await tester.pumpAndSettle();
@@ -148,16 +155,13 @@ void main() {
     expect(find.byKey(const Key('session-resume')), findsNothing); // phone
     await tester.tap(find.byKey(const Key('session-copy')));
     await tester.pumpAndSettle();
-    final copied = await Clipboard.getData('text/plain');
-    expect(copied?.text, contains('--resume $_a'));
+    expect(copied.value, contains('--resume $_a'));
     await tester.tap(find.byKey(const Key('session-mark')));
     await tester.pumpAndSettle();
-    expect(relay.sent[0], (
-      'session_mark',
-      {
-        'args': {'id': _a, 'mark': 'done'},
-      },
-    ));
+    expect(relay.sent[0].$1, 'session_mark');
+    expect(relay.sent[0].$2, {
+      'args': {'id': _a, 'mark': 'done'},
+    });
     expect(relay.sent[1].$1, 'snapshot_refresh');
     expect(find.byKey(const Key('session-outcome')), findsOneWidget);
     // A tap on delete only buzzes; the long press sends.
@@ -176,10 +180,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('sessions-failure')), findsOneWidget);
     await tester.tap(find.byKey(const Key('sessions-copy-errors')));
-    expect(
-      (await Clipboard.getData('text/plain'))?.text,
-      'written in the last 10 minutes',
-    );
+    expect(copied.value, 'written in the last 10 minutes');
   });
 
   testWidgets('sheet: unmark a hand mark, resume on a desktop', (tester) async {

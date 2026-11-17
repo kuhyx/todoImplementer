@@ -12,8 +12,10 @@ import 'package:todo_implementer/shell/shell.dart';
 import 'package:todo_implementer/sync/layout.dart';
 import 'package:todo_implementer/sync/services.dart';
 import 'package:todo_implementer/ui/board/board_page.dart';
+import 'package:todo_implementer/ui/sessions/sessions_page.dart';
 
 import '../support/fakes.dart';
+import '../support/session_fakes.dart';
 
 const _config = FirebaseConfig(
   apiKey: 'k',
@@ -77,11 +79,13 @@ AppServices _services({
   FirebaseConfig config = _config,
   _Auth? auth,
   _Gate? gate,
+  bool sessions = false,
 }) => AppServices(
   config: config,
   auth: auth ?? _Auth(),
   gate: gate ?? _Gate(),
   relay: FakeRelay(),
+  sessions: sessions ? FakeSessionsFeed().feed : null,
 );
 
 Future<void> _pump(WidgetTester tester, AppServices s) async {
@@ -123,6 +127,23 @@ void main() {
     await _settle(tester);
     expect(find.byType(Shell), findsOneWidget);
     expect(find.byType(BoardPage), findsOneWidget);
+  });
+
+  testWidgets('the sessions tab opens the sessions page when wired', (
+    tester,
+  ) async {
+    pixel6a(tester);
+    await tester.pumpWidget(
+      TodoImplementerApp(
+        services: Future.value(
+          _services(auth: _Auth()..session = true, sessions: true),
+        ),
+      ),
+    );
+    await _settle(tester);
+    await tester.tap(find.byKey(const ValueKey('nav-sessions')));
+    await _settle(tester);
+    expect(find.byType(SessionsPage), findsOneWidget);
   });
 
   testWidgets('a locked key shows the lock until a retry opens it', (

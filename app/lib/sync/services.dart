@@ -66,7 +66,7 @@ class AppServices {
       ),
       sessions: rtdbSessionsFeed(
         client: client,
-        moves: () => rev.changesOf('sessions'),
+        moves: rev.changesOf('sessions'),
       ),
     );
   }

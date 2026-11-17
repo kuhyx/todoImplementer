@@ -68,7 +68,7 @@ def _query(value: object) -> bool:
 
 
 def normalized(req: dict[str, Any]) -> dict[str, Any]:
-    """Undo RTDB's pruning: a missing body or args reads as {}, live_watch's card and session_mark's mark as null."""
+    """Undo RTDB's pruning: missing body/args read as {}; live_watch's card, session_mark's mark as null."""
     body = req.get("body", {})
     if isinstance(body, dict) and "args" in _shape(str(req.get("kind")))[0] and "args" not in body:
         body = {**body, "args": {}}

@@ -27,6 +27,8 @@ void main() {
     expect(s.gate.locked, isTrue);
     expect((s.relay as RtdbBoardRelay).dev, 'd1');
     expect(s.auth.config, config);
+    expect(s.sessions, isNotNull);
+    expect((s.relay as RtdbBoardRelay).moves(), isA<Stream<int>>());
     expect(FirebaseConfig.compiled, isA<FirebaseConfig>());
   });
 }
