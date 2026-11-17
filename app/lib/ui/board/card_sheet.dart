@@ -24,8 +24,12 @@ class CardSheet extends StatefulWidget {
     required this.card,
     required this.relay,
     required this.onError,
+    this.onDetail,
     super.key,
   });
+
+  /// Opens the card's full drawer page.
+  final VoidCallback? onDetail;
 
   /// The card.
   final TaskCard card;
@@ -128,7 +132,22 @@ class _CardSheetState extends State<CardSheet> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(card.title, style: Theme.of(context).textTheme.titleMedium),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    card.title,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                if (widget.onDetail case final open?)
+                  IconButton(
+                    key: const Key('open-detail'),
+                    icon: const Icon(Icons.open_in_full, semanticLabel: 'Open'),
+                    onPressed: open,
+                  ),
+              ],
+            ),
             if (card.repo case final repo?) Text(repo, style: muted),
             if (card.current.isNotEmpty) Text(card.current),
             if (needs != null)

@@ -91,8 +91,12 @@ class Toolbar extends StatelessWidget {
     required this.board,
     required this.state,
     required this.onChanged,
+    this.onNewTask,
     super.key,
   });
+
+  /// Opens the new-task sheet.
+  final VoidCallback? onNewTask;
 
   /// The board (for the repo list).
   final Board board;
@@ -140,6 +144,12 @@ class Toolbar extends StatelessWidget {
             PopupMenuItem(value: s, child: Icon(sortIcon(s))),
         ],
       ),
+      if (onNewTask case final add?)
+        IconButton(
+          key: const Key('new-task'),
+          icon: const Icon(Icons.add_task, semanticLabel: 'Add'),
+          onPressed: add,
+        ),
     ],
   );
 }

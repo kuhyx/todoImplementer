@@ -11,10 +11,13 @@ import 'package:flutter/services.dart';
 import 'package:todo_implementer/model/board.dart';
 import 'package:todo_implementer/model/board_view.dart';
 import 'package:todo_implementer/sync/board_relay.dart';
+import 'package:todo_implementer/ui/board/board_grid.dart';
 import 'package:todo_implementer/ui/board/board_header.dart';
 import 'package:todo_implementer/ui/board/card_sheet.dart';
-import 'package:todo_implementer/ui/board/card_tile.dart';
+import 'package:todo_implementer/ui/board/detail_page.dart';
 import 'package:todo_implementer/ui/board/glyphs.dart';
+import 'package:todo_implementer/ui/board/merge_strip.dart';
+import 'package:todo_implementer/ui/board/new_task_sheet.dart';
 
 /// Board page fed by [relay].
 class BoardPage extends StatefulWidget {
@@ -48,13 +51,41 @@ class _BoardPageState extends State<BoardPage> {
     ClipboardData(text: _errors.map((e) => '${e.code}: ${e.error}').join('\n')),
   );
 
+  void _detail(BuildContext sheet, TaskCard card) {
+    Navigator.of(sheet).pop();
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) =>
+            DetailPage(card: card.id, relay: widget.relay, onError: _record),
+      ),
+    );
+  }
+
   void _open(TaskCard card) => unawaited(
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      builder: (_) =>
-          CardSheet(card: card, relay: widget.relay, onError: _record),
+      builder: (sheet) => CardSheet(
+        card: card,
+        relay: widget.relay,
+        onError: _record,
+        onDetail: () => _detail(sheet, card),
+      ),
+    ),
+  );
+
+  void _newTask(Board board) => unawaited(
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => NewTaskSheet(
+        repos: board.repos,
+        relay: widget.relay,
+        onError: _record,
+        repo: _state.repo.isEmpty || _state.repo == yours ? null : _state.repo,
+      ),
     ),
   );
 
@@ -94,10 +125,12 @@ class _BoardPageState extends State<BoardPage> {
                 color: AppPalette.danger,
                 semanticLabel: last.error,
               ),
+            MergeStrip(relay: widget.relay, onError: _record),
             Toolbar(
               board: board,
               state: _state,
               onChanged: (s) => setState(() => _state = s),
+              onNewTask: () => _newTask(board),
             ),
             ColumnTabs(
               view: view,
@@ -115,16 +148,10 @@ class _BoardPageState extends State<BoardPage> {
                         color: AppPalette.lineDark,
                       ),
                     )
-                  : FitGrid(
+                  : BoardGrid(
                       key: ValueKey('grid-$active'),
-                      itemCount: cards.length,
-                      columns: MediaQuery.sizeOf(context).width < 600 ? 2 : 4,
-                      minSquare: 0.6,
-                      itemBuilder: (_, i) => CardTile(
-                        key: ValueKey('card-${cards[i].id}'),
-                        card: cards[i],
-                        onOpen: () => _open(cards[i]),
-                      ),
+                      groups: groupCards(cards, _state.sort),
+                      onOpen: _open,
                     ),
             ),
           ],

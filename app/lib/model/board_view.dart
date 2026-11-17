@@ -193,3 +193,40 @@ List<(String, int)> repoOptions(Board board) {
     for (final r in board.repos) (r, count(r)),
   ];
 }
+
+/// One repo group of a column; [repo] null is Yours, [flat] is the
+/// unlabelled Least-effort list across repos.
+@immutable
+class CardGroup {
+  /// Creates the group.
+  const new(this.repo, this.cards, {this.flat = false});
+
+  /// `owner/name`, or null for notes without a repo.
+  final String? repo;
+
+  /// Its cards, sorted.
+  final List<TaskCard> cards;
+
+  /// No heading: the Least-effort order mixes repos.
+  final bool flat;
+}
+
+/// The web board's grouping: Least effort is one flat list; every other
+/// sort groups by repo, repos alphabetical, Yours last.
+List<CardGroup> groupCards(List<TaskCard> cards, BoardSort sort) {
+  if (cards.isEmpty) return const [];
+  if (sort == BoardSort.effort) {
+    return [CardGroup(null, sortCards(cards, sort), flat: true)];
+  }
+  final byRepo = <String?, List<TaskCard>>{};
+  for (final c in cards) {
+    (byRepo[c.repo] ??= []).add(c);
+  }
+  final keys = byRepo.keys.toList()
+    ..sort((a, b) {
+      if (a == null) return 1;
+      if (b == null) return -1;
+      return a.compareTo(b);
+    });
+  return [for (final k in keys) CardGroup(k, sortCards(byRepo[k]!, sort))];
+}

@@ -109,7 +109,40 @@ class FakeRelay implements BoardRelay {
     await gate?.future;
     return outcomes[kind] ?? const RelayOk({});
   }
+
+  /// The merges stream.
+  final mergesOut = StreamController<List<MergeSuggestion>>.broadcast();
+
+  @override
+  Stream<List<MergeSuggestion>> merges() => mergesOut.stream;
+
+  /// Live feeds handed out, per card.
+  final Map<String, StreamController<List<Json>>> feeds = {};
+
+  @override
+  Stream<List<Json>> liveFeed(String card) =>
+      (feeds[card] = StreamController<List<Json>>.broadcast()).stream;
 }
+
+/// One merge suggestion JSON.
+Json mergeJson(String id, {bool mergeEnabled = true}) => {
+  'id': id,
+  'title': 'Combined $id',
+  'reason': 'alike',
+  'members': [
+    {'id': 'a1', 'title': 'One', 'repo': 'kuhyx/demo'},
+    {'id': 'b2', 'title': 'Two', 'repo': 'kuhyx/demo'},
+  ],
+  'actions': [
+    {
+      'id': 'merge',
+      'label': 'Merge',
+      'enabled': mergeEnabled,
+      'reason': mergeEnabled ? null : 'a member runs',
+    },
+    {'id': 'dismiss', 'label': 'Dismiss', 'enabled': true, 'reason': null},
+  ],
+};
 
 /// Pixel 6a geometry in physical px (build-mobile-app R7).
 void pixel6a(WidgetTester tester, {double keyboard = 0}) {

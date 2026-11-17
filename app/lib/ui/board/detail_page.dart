@@ -1,0 +1,170 @@
+/// The card drawer as a full page: `task_detail` loaded over the relay and
+/// split into icon tabs (overview with needs, asks, lesson and umbrella;
+/// live feed; plan; diff; checks; live check; issues for an umbrella).
+/// An ask answer reloads the detail so the server's new state shows.
+library;
+
+import 'dart:async';
+
+import 'package:design_system/design_system.dart';
+import 'package:flutter/material.dart';
+import 'package:todo_implementer/model/detail.dart';
+import 'package:todo_implementer/sync/board_relay.dart';
+import 'package:todo_implementer/ui/board/asks_view.dart';
+import 'package:todo_implementer/ui/board/detail_tabs.dart';
+import 'package:todo_implementer/ui/board/glyphs.dart';
+import 'package:todo_implementer/ui/board/live_feed.dart';
+import 'package:todo_implementer/ui/board/umbrella_view.dart';
+
+/// The drawer page of [card].
+class DetailPage extends StatefulWidget {
+  /// Creates the page.
+  const new({
+    required this.card,
+    required this.relay,
+    required this.onError,
+    super.key,
+  });
+
+  /// Card id.
+  final String card;
+
+  /// The link to the PC.
+  final BoardRelay relay;
+
+  /// Records a refusal for the copy-errors action.
+  final void Function(RelayFailed failure) onError;
+
+  @override
+  State<DetailPage> createState() => _DetailPageState();
+}
+
+class _DetailPageState extends State<DetailPage> {
+  TaskDetail? _detail;
+  RelayFailed? _failure;
+  late final ShotLoad _shots = shotLoader(widget.relay, widget.card);
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_load());
+  }
+
+  Future<void> _load() async {
+    final out = await widget.relay.send('task_detail', {'card': widget.card});
+    if (!mounted) return;
+    setState(() {
+      if (out is RelayOk) {
+        _detail = TaskDetail.fromJson(out.data);
+      } else if (out is RelayFailed) {
+        widget.onError(out);
+        _failure = out;
+      }
+    });
+  }
+
+  Future<void> _ask(String kind, Map<String, dynamic> args) async {
+    final out = await widget.relay.send(kind, {
+      'card': widget.card,
+      'args': args,
+    });
+    if (out is RelayFailed) {
+      widget.onError(out);
+      if (mounted) setState(() => _failure = out);
+      return;
+    }
+    await _load();
+  }
+
+  Widget _overview(TaskDetail d) {
+    final needs = d.card.needs;
+    final lesson = d.lesson;
+    final umbrella = d.umbrella;
+    return ListView(
+      key: const Key('overview'),
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      children: [
+        Text(d.card.title, style: Theme.of(context).textTheme.titleMedium),
+        if (d.card.repo case final repo?)
+          Text(repo, style: const TextStyle(color: AppPalette.mutedOnDark)),
+        if (d.card.current.isNotEmpty) Text(d.card.current),
+        if (needs != null)
+          ListTile(
+            leading: Icon(needsIcon(needs.category), color: AppPalette.warning),
+            title: SelectableText(needs.text),
+            subtitle: needs.command == null
+                ? null
+                : SelectableText(
+                    needs.command!,
+                    style: const TextStyle(fontFamily: 'monospace'),
+                  ),
+          ),
+        if (d.error case final e? when e != needs?.text)
+          ListTile(
+            key: const Key('detail-error'),
+            leading: const Icon(Icons.error, color: AppPalette.danger),
+            title: SelectableText(e),
+          ),
+        if (d.asks.isNotEmpty)
+          AsksView(asks: d.asks, onSend: _ask, loadShot: _shots),
+        if (lesson != null)
+          ListTile(
+            key: const Key('lesson'),
+            leading: const Icon(Icons.school_outlined),
+            title: Text(lesson.rule),
+            subtitle: Text('${lesson.mistake}\n${lesson.evidence}'),
+          ),
+        if (umbrella != null) UmbrellaView(detail: umbrella),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final d = _detail;
+    final failure = _failure;
+    final tabs = <(IconData, Widget Function(TaskDetail))>[
+      (Icons.info_outline, _overview),
+      (Icons.stream, (_) => LiveFeed(relay: widget.relay, card: widget.card)),
+      (Icons.map_outlined, planTab),
+      (Icons.difference_outlined, diffTab),
+      (Icons.fact_check_outlined, checksTab),
+      (Icons.photo_library_outlined, (d) => liveCheckTab(d, _shots)),
+      if (d?.umbrella != null)
+        (
+          Icons.bug_report_outlined,
+          (_) => IssuesTab(relay: widget.relay, card: widget.card),
+        ),
+    ];
+    return DefaultTabController(
+      length: tabs.length,
+      child: Scaffold(
+        appBar: AppBar(
+          actions: [
+            if (failure != null)
+              Icon(
+                codeIcon(failure.code),
+                key: const Key('detail-failure'),
+                color: AppPalette.danger,
+                semanticLabel: failure.error,
+              ),
+            IconButton(
+              key: const Key('detail-reload'),
+              icon: const Icon(Icons.refresh, semanticLabel: 'Reload'),
+              onPressed: _load,
+            ),
+          ],
+          bottom: TabBar(
+            isScrollable: true,
+            tabs: [for (final (icon, _) in tabs) Tab(icon: Icon(icon))],
+          ),
+        ),
+        body: d == null
+            ? const Center(
+                child: CircularProgressIndicator(semanticsLabel: 'detail'),
+              )
+            : TabBarView(children: [for (final (_, build) in tabs) build(d)]),
+      ),
+    );
+  }
+}

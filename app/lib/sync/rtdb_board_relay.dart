@@ -17,6 +17,23 @@ typedef RequestWatch = Stream<Object?> Function(String rid);
 /// Emits when `rev/board` moves (production: `RevWatcher.changesOf`).
 typedef BoardMoves = Stream<int> Function();
 
+/// Emits when `rev/<key>` moves.
+typedef RevMoves = Stream<int> Function(String key);
+
+/// Streams the events of one full path (production: `RtdbStream.listen`).
+typedef NodeListen = Stream<RtdbEvent> Function(String path);
+
+Stream<int> _still(String _) => const Stream.empty();
+
+Stream<RtdbEvent> _quiet(String _) => const Stream.empty();
+
+/// The live events under a streamed `live/{card}` tree, in key order.
+List<Json> feedOf(Object? tree) {
+  if (tree is! Map) return const [];
+  final keys = tree.keys.whereType<String>().toList()..sort();
+  return [for (final k in keys) ?(tree[k] is Json ? tree[k] as Json : null)];
+}
+
 /// Board relay over Firebase RTDB.
 class RtdbBoardRelay implements BoardRelay {
   /// Creates the relay for this install's device [dev].
@@ -25,8 +42,12 @@ class RtdbBoardRelay implements BoardRelay {
     required this.dev,
     required this.watch,
     required this.moves,
+    RevMoves? revOf,
+    NodeListen? listen,
     DateTime Function()? clock,
-  }) : _clock = clock ?? DateTime.now;
+  }) : revOf = revOf ?? _still,
+       listen = listen ?? _quiet,
+       _clock = clock ?? DateTime.now;
 
   /// Wires the relay to one shared stream, as the app runs it.
   factory live({
@@ -41,6 +62,8 @@ class RtdbBoardRelay implements BoardRelay {
       dev: dev,
       watch: hub.watch,
       moves: () => rev.changesOf('board'),
+      revOf: rev.changesOf,
+      listen: stream.listen,
     );
   }
 
@@ -55,6 +78,12 @@ class RtdbBoardRelay implements BoardRelay {
 
   /// Board change signal.
   final BoardMoves moves;
+
+  /// Change signal of any `rev/<key>` (merges).
+  final RevMoves revOf;
+
+  /// Streams one node (the live feed).
+  final NodeListen listen;
 
   final DateTime Function() _clock;
 
@@ -74,6 +103,42 @@ class RtdbBoardRelay implements BoardRelay {
       final next = await _fetch();
       if (next != null) yield next;
     }
+  }
+
+  Future<List<MergeSuggestion>> _fetchMerges() async {
+    final node = await client.get(fullPath('snap/merges'));
+    return node is Json ? mergesOf(node) : const [];
+  }
+
+  @override
+  Stream<List<MergeSuggestion>> merges() async* {
+    yield await _fetchMerges();
+    await for (final _ in revOf('merges')) {
+      yield await _fetchMerges();
+    }
+  }
+
+  @override
+  Stream<List<Json>> liveFeed(String card) {
+    StreamSubscription<RtdbEvent>? sub;
+    Object? tree;
+    late final StreamController<List<Json>> out;
+    out = StreamController<List<Json>>(
+      onListen: () {
+        unawaited(send('live_watch', {'card': card}));
+        sub = listen(fullPath('live/$card')).listen((event) {
+          if (event is! RtdbPut && event is! RtdbPatch) return;
+          tree = applyEvent(tree, event);
+          out.add(feedOf(tree));
+        });
+      },
+      onCancel: () async {
+        await sub?.cancel();
+        // RTDB drops the null: the worker reads a missing card as release.
+        unawaited(send('live_watch', {'card': null}));
+      },
+    );
+    return out.stream;
   }
 
   @override

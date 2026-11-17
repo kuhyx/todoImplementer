@@ -7,6 +7,9 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:todo_implementer/model/board.dart';
 import 'package:todo_implementer/model/json.dart';
+import 'package:todo_implementer/model/merges.dart';
+
+export 'package:todo_implementer/model/merges.dart';
 
 /// The answer to one request (`contracts/relay-result.schema.json`).
 @immutable
@@ -58,6 +61,13 @@ abstract interface class BoardRelay {
 
   /// Sends one request of [kind] with [body] and waits for its result.
   Future<RelayOutcome> send(String kind, Json body);
+
+  /// Every new `snap/merges` the worker publishes.
+  Stream<List<MergeSuggestion>> merges();
+
+  /// [card]'s live feed (`live/{card}`), oldest first, while listened to:
+  /// listening sends `live_watch`, cancelling releases it.
+  Stream<List<Json>> liveFeed(String card);
 }
 
 const _crockford = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
