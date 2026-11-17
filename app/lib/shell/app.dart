@@ -1,5 +1,6 @@
 import 'package:design_system/design_system.dart';
 import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart' as mui show DefaultMaterialLocalizations;
 import 'package:todo_implementer/shell/shell.dart';
 import 'package:todo_implementer/sync/services.dart';
 import 'package:todo_implementer/ui/gate.dart';
@@ -20,6 +21,14 @@ class TodoImplementerApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: buildDarkTheme(),
+      // crdt_sync_flutter's dialogs (passphrase) are material_ui widgets: they
+      // look up material_ui's MaterialLocalizations, which flutter/material's
+      // MaterialApp does not provide. Without this the lock button throws.
+      localizationsDelegates: const [
+        mui.DefaultMaterialLocalizations.delegate,
+        DefaultMaterialLocalizations.delegate,
+        DefaultWidgetsLocalizations.delegate,
+      ],
       home: services == null
           ? const Shell()
           : FutureBuilder<AppServices>(

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:crdt_sync/crdt_sync.dart' show InMemoryCredentialStore;
+import 'package:crdt_sync_flutter/crdt_sync_flutter.dart' show E2ePassphraseButton;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -97,6 +98,7 @@ Future<void> _pump(WidgetTester tester, AppServices s) async {
 }
 
 void main() {
+  _passphraseTests();
   testWidgets('an unconfigured build shows the config cue', (tester) async {
     await _pump(
       tester,
@@ -183,4 +185,20 @@ Future<void> _settle(WidgetTester tester) async {
   for (var i = 0; i < 5; i++) {
     await tester.pump();
   }
+}
+
+void _passphraseTests() {
+  testWidgets('[T2042] the lock opens the passphrase dialog under a pl locale', (
+    tester,
+  ) async {
+    tester.platformDispatcher.localesTestValue = const [Locale('pl', 'PL')];
+    addTearDown(tester.platformDispatcher.clearLocalesTestValue);
+    final gate = _Gate()..answers.add(false);
+    await _pump(tester, _services(auth: _Auth()..session = true, gate: gate));
+    await tester.tap(find.byType(E2ePassphraseButton));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    // The dialog is a material_ui widget; its field is a widgets-layer EditableText.
+    expect(find.byType(EditableText), findsOneWidget);
+  });
 }
