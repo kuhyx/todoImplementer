@@ -16,6 +16,7 @@ import 'package:todo_implementer/ui/sessions/sessions_page.dart';
 
 import '../support/fakes.dart';
 import '../support/session_fakes.dart';
+import '../support/usage_fakes.dart';
 
 const _config = FirebaseConfig(
   apiKey: 'k',
@@ -86,6 +87,7 @@ AppServices _services({
   gate: gate ?? _Gate(),
   relay: FakeRelay(),
   sessions: sessions ? FakeSessionsFeed().feed : null,
+  usage: FakeUsageRelay(),
 );
 
 Future<void> _pump(WidgetTester tester, AppServices s) async {

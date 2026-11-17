@@ -13,7 +13,9 @@ Future<FakeUsageRelay> _pump(WidgetTester tester) async {
   await tester.pumpWidget(
     MaterialApp(
       theme: buildDarkTheme(),
-      home: Scaffold(body: SafeArea(child: UsagePage(relay: relay))),
+      home: Scaffold(
+        body: SafeArea(child: UsagePage(relay: relay)),
+      ),
     ),
   );
   await tester.pumpAndSettle();

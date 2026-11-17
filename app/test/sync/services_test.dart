@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:todo_implementer/config/firebase_config.dart';
 import 'package:todo_implementer/sync/rtdb_board_relay.dart';
+import 'package:todo_implementer/sync/usage_relay.dart';
 import 'package:todo_implementer/sync/services.dart';
 
 void main() {
@@ -26,6 +27,13 @@ void main() {
     expect(s.config.isComplete, isTrue);
     expect(s.gate.locked, isTrue);
     expect((s.relay as RtdbBoardRelay).dev, 'd1');
+    expect((s.relay as RtdbBoardRelay).moves(), isA<Stream<int>>());
+    final usage = s.usage! as RtdbUsageRelay;
+    expect(usage.moves(), isA<Stream<int>>());
+    await expectLater(
+      usage.read().timeout(const Duration(seconds: 5)),
+      throwsA(anything),
+    );
     expect(s.auth.config, config);
     expect(s.sessions, isNotNull);
     expect((s.relay as RtdbBoardRelay).moves(), isA<Stream<int>>());

@@ -58,25 +58,22 @@ List<Widget Function()> paginate(
       continue;
     }
     flush();
-    switch (b) {
-      case TableBlock():
-        final rows = rowsOf(b);
-        final n = per(rowHeight, tableHeader);
-        for (var i = 0; i == 0 || i * n < rows.length; i++) {
-          final slice = rows.skip(i * n).take(n).toList();
-          final page = i;
-          pages.add(() => table(b, slice, page));
-        }
-      case ListBlock():
-        final n = per(rowHeight, 0);
-        for (var i = 0; i == 0 || i * n < b.entries.length; i++) {
-          final slice = b.entries.skip(i * n).take(n).toList();
-          pages.add(() => list(b, slice));
-        }
-      case ContentBlock():
-        pages.add(() => ContentView(b));
-      case TilesBlock() || BannerBlock() || ChartBlock():
-        break; // stacked above
+    if (b is TableBlock) {
+      final rows = rowsOf(b);
+      final n = per(rowHeight, tableHeader);
+      for (var i = 0; i == 0 || i * n < rows.length; i++) {
+        final slice = rows.skip(i * n).take(n).toList();
+        final page = i;
+        pages.add(() => table(b, slice, page));
+      }
+    } else if (b is ListBlock) {
+      final n = per(rowHeight, 0);
+      for (var i = 0; i == 0 || i * n < b.entries.length; i++) {
+        final slice = b.entries.skip(i * n).take(n).toList();
+        pages.add(() => list(b, slice));
+      }
+    } else if (b is ContentBlock) {
+      pages.add(() => ContentView(b));
     }
   }
   flush();
