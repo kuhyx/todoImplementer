@@ -6,7 +6,8 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 from errfakes import kartka_entry, shim
-from loopfakes import KEY, World
+from loopfakes import CARD, KEY, World
+from todoimpl.board.state import RunState, run_dir, save
 from todoimpl.errors import ledger
 from todoimpl.runner.files import NeedsYouError
 
@@ -115,3 +116,24 @@ def test_a_fixed_build_is_unknown_when_the_repo_is_not_cloned(
     ledger.mark_shipped(world.rig.root, [KEY], "abc123", 2_000_000_000.0)
     world.tick()
     assert world.ledger()[KEY]["fixed_build"] == 0
+
+
+def test_t2027_the_done_card_of_a_shipped_cycle_is_not_a_ticket(world: World) -> None:
+    # The Done card keeps the text of what shipped, signature line included (ClosedNotes).
+    world.entries(kartka_entry())
+    world.reason = None
+    world.tick()
+    (added,) = world.tools("add_task")
+    shipped = RunState(
+        task_id=CARD, stage="shipped", repo="kuhyx/kartka", note_body=added["body"], extra={"repotask": True}
+    )
+    save(run_dir(world.rig.root, CARD), shipped)
+    world.fake.store.notes.clear()  # the part is closed: no open note is left, only the Done card
+    world.rig.backend.cache.refresh()
+    assert any(c.status == "done" and KEY in c.body for c in world.rig.backend.cache.snapshot().tasks)
+    world.reason = "weekly"
+    world.tick()
+    assert world.starts() == []  # a Done card is never started
+    assert world.ledger()[KEY]["missing"] == 1  # and its text does not keep the ticket alive
+    world.tick()
+    assert len(world.tools("add_task")) == 2

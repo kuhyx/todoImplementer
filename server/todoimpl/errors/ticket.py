@@ -85,8 +85,13 @@ def _version(record: AppError) -> str:
 
 
 def find(cards: Iterable[CardTask], key: str) -> Found | None:
-    """Return the open part that carries `key`, looking at every part of every card."""
+    """Return the open part that carries `key`, looking at every part of every open card.
+
+    A Done card keeps the text of what it shipped (`ClosedNotes`): it is no ticket, so it never matches.
+    """
     for card in cards:
+        if card.status in ("done", "abandoned"):
+            continue
         held = [(p.note_id, p.title, p.body) for p in card.parts] or [
             (card.item.note_id, card.title, card.body)
         ]

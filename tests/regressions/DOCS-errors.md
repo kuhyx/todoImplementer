@@ -12,9 +12,9 @@ One row per bug, ids global and never reused. The row's test is named `test_t<N>
 | T2014 | A card at work, failed or at its gate was started again, and a shipped cycle with parts left never began its next cycle | tests/errors/test_loop.py |
 | T2015 | A part the session never ticked was started again forever: at most three starts per ticket | tests/errors/test_loop.py |
 | T2016 | The count in the ticket was rewritten on every tick (note spam): only a changed count writes the `Seen:` line | tests/errors/test_loop.py |
-| T2017 | A shipped fix was never reported to its source: the resolve hook runs after Ship, a failing hook is retried, `fixed_build` is the build of the pushed commit | tests/errors/test_loop.py |
-| T2018 | A report from a build older than the fixed one reopened a fixed error; one from the fixed build or newer did not | tests/errors/test_loop.py |
-| T2019 | With no build ids in the source, an old event the phone sent late reopened a fixed error: only an event after the install counts | tests/errors/test_loop.py |
+| T2017 | A shipped fix was never reported to its source: the resolve hook runs after Ship, a failing hook is retried, `fixed_build` is the build of the pushed commit | tests/errors/test_loop_fixed.py |
+| T2018 | A report from a build older than the fixed one reopened a fixed error; one from the fixed build or newer did not | tests/errors/test_loop_fixed.py |
+| T2019 | With no build ids in the source, an old event the phone sent late reopened a fixed error: only an event after the install counts | tests/errors/test_loop_fixed.py |
 | T2020 | An error fix waited at Ready to ship for kuhy's click (it had no `done_check`), or a card of kuhy's own was shipped by an error run | tests/runner/test_runner_ship_appfix.py |
 | T2021 | A fix pushed while the phone was away read as an ordinary failed deploy that needs kuhy | tests/runner/test_runner_ship_appfix.py |
 | T2022 | The phone connecting did not finish the update: the deploy reran only on kuhy's Retry, and a deploy that kept failing looped forever | tests/runner/test_runner_ship_appfix.py |
@@ -22,3 +22,4 @@ One row per bug, ids global and never reused. The row's test is named `test_t<N>
 | T2024 | A card holding app-error tickets looked like any other card | tests/board/test_board_appfix.py |
 | T2025 | Which parts an error run may ship alone was undefined: kuhy's own ticked part rides along and waits at the gate | tests/errors/test_marks.py |
 | T2026 | An error run asked kuhy questions instead of answering them itself (bounce, grant) | tests/errors/test_marks.py |
+| T2027 | The Done card of a shipped cycle keeps the signature line of what it shipped and counted as the open ticket: a regression got no new ticket and the loop tried to start a Done card | tests/errors/test_loop_fixed.py |
