@@ -98,7 +98,9 @@ describe("overage alert banner", () => {
 
   it("renders nothing when absent and the Zod mirror agrees with the contract", () => {
     expect(renderUsage(null, makeBoard(), null, null, NOW).querySelector(".alert-banner")).toBeNull();
-    for (const value of [{ ...makeBoard(), alert }, { ...makeBoard(), alert: { ...alert, kind: "other" } }]) {
+    const relay = { ...alert, kind: "relay" as const, text: "Phone relay is off: no crdt-sync password" };
+    expect(renderUsage(null, { ...makeBoard(), alert: relay }, null, null, NOW).querySelector(".alert-banner")?.getAttribute("data-kind")).toBe("relay");
+    for (const value of [{ ...makeBoard(), alert }, { ...makeBoard(), alert: relay }, { ...makeBoard(), alert: { ...alert, kind: "other" } }]) {
       expect(boardSchema.safeParse(value).success).toBe(contractValidator("board")(value));
     }
   });

@@ -60,7 +60,7 @@ function keyBanner(board: Board | null): HTMLElement | null {
   });
 }
 
-/** Red banner while the overage guard's alert is on; the server words it (`alert.text`). */
+/** Red banner while an alert is on (overage guard, or the phone relay failing closed); the server words it. */
 function overageAlert(board: Board | null): HTMLElement | null {
   const alert = board?.alert;
   return alert ? h("p", { attrs: { "data-kind": alert.kind, role: "alert" }, class: "banner alert-banner", text: alert.text }) : null;

@@ -65,18 +65,18 @@ def test_relay_request_rejects(instance: dict[str, Any]) -> None:
 
 
 def test_relay_result_ok_and_error() -> None:
-    validate("relay-result", {"ok": True, "at": 1, "for": "task_go", "data": {"task": fixture("card")}})
-    validate("relay-result", {"ok": True, "at": 1, "for": "task_shot", "data": {"png_b64": "iVBORw0KGgo="}})
+    validate("relay-result", {"ok": True, "at": 1, "kind": "task_go", "data": {"task": fixture("card")}})
+    validate("relay-result", {"ok": True, "at": 1, "kind": "task_shot", "data": {"png_b64": "iVBORw0KGgo="}})
     error = {
         "ok": False,
         "at": 1,
-        "for": None,
+        "kind": "",
         "code": "unsealed",
         "error": "request did not open",
         "retry": False,
     }
     validate("relay-result", error)
-    for bad in ({**error, "code": "nope"}, {**error, "retry": None}, {"ok": True, "at": 1, "for": "task_go"}):
+    for bad in ({**error, "code": "nope"}, {**error, "retry": None}, {"ok": True, "at": 1, "data": {}}):
         with pytest.raises(ValidationError):
             validate("relay-result", bad)
 

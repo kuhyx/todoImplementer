@@ -2,17 +2,17 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://todoimplementer.local/contracts/relay-result.schema.json",
   "title": "Relay result: the opened unit at todoimpl/v1-e2e/requests/{rid}/result",
-  "description": "Written once by the worker after the request is served. ok:true carries data, which is exactly the JSON body the matching HTTP route answers with HTTP 200 (minus its own ok key); ok:false carries a code. at stays clear for GC.",
+  "description": "Written once by the worker after the request is served (rtdb_relay's result node: kind names the request's kind). ok:true carries data, which is exactly the JSON body the matching HTTP route answers with HTTP 200 (minus its own ok key); RTDB keeps no empty object, so an empty data arrives missing. ok:false carries a code. at stays clear for GC.",
   "oneOf": [
     {
       "type": "object",
       "properties": {
         "ok": {"const": true},
         "at": {"type": "integer", "minimum": 0},
-        "for": {"$ref": "https://todoimplementer.local/contracts/relay-request.schema.json#/$defs/kind"},
+        "kind": {"$ref": "https://todoimplementer.local/contracts/relay-request.schema.json#/$defs/kind"},
         "data": {"$ref": "#/$defs/data"}
       },
-      "required": ["ok", "at", "for", "data"],
+      "required": ["ok", "at", "kind"],
       "additionalProperties": false
     },
     {
@@ -20,12 +20,12 @@
       "properties": {
         "ok": {"const": false},
         "at": {"type": "integer", "minimum": 0},
-        "for": {"anyOf": [{"$ref": "https://todoimplementer.local/contracts/relay-request.schema.json#/$defs/kind"}, {"type": "null"}], "description": "null when the request did not open or named no known kind."},
+        "kind": {"type": "string", "description": "The request's kind as sent (also an unknown one, refused as unknown_kind); empty when the request did not open."},
         "code": {"$ref": "#/$defs/code"},
         "error": {"type": "string", "minLength": 1, "description": "For the log and the copy-errors action; the app draws the code as a glyph (textgate)."},
         "retry": {"type": "boolean", "description": "true only for codes a resend can fix: internal, upstream_unavailable, gave_up, rate_limited."}
       },
-      "required": ["ok", "at", "for", "code", "error", "retry"],
+      "required": ["ok", "at", "kind", "code", "error", "retry"],
       "additionalProperties": false
     }
   ],

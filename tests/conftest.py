@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 from todoimpl.apikey import cache
+from todoimpl.relay.status import STATUS
 
 
 @pytest.fixture(autouse=True)
@@ -97,3 +98,10 @@ def _no_real_devices_file(tmp_path_factory: pytest.TempPathFactory, monkeypatch:
 def _no_real_error_state(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch) -> None:
     """Point the app-error state root at an empty temp dir: kartka's real state.json is never read."""
     monkeypatch.setenv("TODOIMPL_ERROR_STATE_ROOT", str(tmp_path_factory.mktemp("error-state")))
+
+
+@pytest.fixture(autouse=True)
+def _no_real_relay(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Never start the phone relay against the real Firebase; each test starts with a healthy relay."""
+    monkeypatch.delenv("TODOIMPL_RELAY", raising=False)
+    STATUS.ok()

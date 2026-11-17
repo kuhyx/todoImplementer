@@ -13,7 +13,7 @@ import { umbrellaDetail } from "@/lib/schemas-umbrella";
 const keyState = z.enum(["ok", "expiring", "expired", "invalid", "missing", "check_failed"]);
 
 export const board = z.strictObject({
-  alert: z.strictObject({ kind: z.literal("overage"), text: z.string().min(1), until: epoch }).optional(),
+  alert: z.strictObject({ kind: z.enum(["overage", "relay"]), text: z.string().min(1), until: epoch }).optional(),
   api_key: z
     .strictObject({
       expires: z.iso.date().nullable(),

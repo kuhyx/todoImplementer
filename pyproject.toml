@@ -4,7 +4,13 @@ version = "0.1.0"
 license = "MIT"
 description = "Board that plans, implements, reviews and ships todo-app notes with Claude Code sessions."
 requires-python = ">=3.15"
-dependencies = []
+# Runtime deps only for the phone relay (DOCS-native-app-relay.md): crdt-sync (Firebase session, sealing),
+# rtdb-relay (the shared request relay) and httpx (RTDB REST + SSE). Everything else stays stdlib.
+dependencies = [
+    "crdt-sync @ git+https://github.com/kuhyx/utils@crdt-sync-v0.11.1#subdirectory=crdt-sync",
+    "httpx==0.28.1",
+    "rtdb-relay @ git+https://github.com/kuhyx/utils@rtdb-relay-v0.1.1#subdirectory=rtdb_relay",
+]
 
 [dependency-groups]
 dev = [
@@ -39,6 +45,11 @@ skip_covered = true
 strict = true
 python_version = "3.15"
 mypy_path = ["server", "scripts", "tests/shims", "deploy", "mcp"]
+
+# crdt-sync ships no py.typed; its names are Any here (rtdb_relay, which wraps it, is typed).
+[[tool.mypy.overrides]]
+module = ["crdt_sync", "crdt_sync.*"]
+ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 110

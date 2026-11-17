@@ -6,6 +6,16 @@ Schemas: `contracts/relay-request.schema.json`, `relay-result.schema.json`, `rel
 The pattern is the tutor's (`~/src/tutor/DOCS-contract.md` sections 3-5 and 12); where this file is silent, the
 tutor's rules apply.
 
+## Running it (code: `server/todoimpl/relay/`)
+
+The worker is a thread beside the HTTP server, started by `serve()` only when `TODOIMPL_RELAY=1` (tests never set
+it; the systemd unit needs `Environment=TODOIMPL_RELAY=1`). It needs crdt-sync's `~/.config/crdt-sync/firebase.json`,
+this app's own Firebase session `~/.config/todoImplementer/firebase_auth.json` (seed it once with crdt-sync's
+`python3 -m tool.seed_session --client-id ... --client-secret ... --app todoImplementer`) and the passphrase in
+`~/.config/crdt-sync/password`. Missing any of them, it serves nothing, the board banner (`alert` kind `relay`)
+names the cause, and it retries after 5 s, 15 s, then every 60 s. Snap nodes are polled: board every 1 s,
+sessions 5 s, usage and merges 10 s. The FCM pinger plugs into `Publisher(on_board=...)` and `notify_test`.
+
 ## Layout (root `todoimpl/v1-e2e`)
 
 | Node | Writer | Content |
@@ -35,7 +45,10 @@ Every unit is `{"_e2e": <blob>, <clear keys>}`: crdt-sync's `E2eCipher` (XChaCha
 JSON, key = Argon2id of the shared crdt-sync password, AAD = the unit's full path. A blob cannot be moved to
 another path or rid. Clear: `meta`, `e2e`, `rev`, `requests/*/claim`, `created` in `req`, `at` in `result`,
 `beat` in worker presence, `seen` in client presence. Units: everything else. Unlike the tutor, **no legacy
-plaintext unit is accepted anywhere**: this root never had one.
+plaintext unit is accepted anywhere**: this root never had one. RTDB stores no empty object, so a `req` whose `body`
+(or `args`) was `{}` arrives without it, and `live_watch` `{card: null}` arrives as `{}`; the worker reads
+the missing key as `{}` (as `null` for that card). For the same reason a result or snap node arrives without its
+`null` values and empty lists and objects; the app reads a missing key as that empty value.
 
 ## Kinds
 
@@ -73,8 +86,8 @@ A watch lasts 120 s; the app renews it every 60 s while the drawer is open and s
 
 ## Results and errors
 
-`data` is the JSON body the HTTP route answers with on 200, without its `ok` key. A refusal is
-`{ok: false, at, for, code, error, retry}`. The HTTP codes keep their meaning (`disabled` carries the action's
+A result is `{ok: true, at, kind, data}`; `data` is the JSON body the HTTP route answers with on 200, without its
+`ok` key (a PNG is `{png_b64}`, a text body `{text}`). A refusal is `{ok: false, at, kind, code, error, retry}`. The HTTP codes keep their meaning (`disabled` carries the action's
 reason). Relay-only codes: `unknown_kind`, `unsealed`, `expired`, `rate_limited`, `too_large`, `stale_client`,
 `gave_up`. The app draws each code as a glyph (textgate); `error` is for the log and the copy-errors action.
 

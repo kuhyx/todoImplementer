@@ -110,6 +110,8 @@ def test_serve_without_on_ready_closes_the_server(monkeypatch: pytest.MonkeyPatc
     events: list[str] = []
 
     class Stub:
+        router = None  # serve() hands it to the relay, which stays off in tests
+
         def serve_forever(self) -> None:
             events.append("served")
 
@@ -125,6 +127,8 @@ def test_serve_defaults_the_build_to_git(monkeypatch: pytest.MonkeyPatch) -> Non
     seen: dict[str, Any] = {}
 
     class Stub:
+        router = None  # serve() hands it to the relay, which stays off in tests
+
         def serve_forever(self) -> None:
             return None
 

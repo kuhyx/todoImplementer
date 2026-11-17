@@ -6,6 +6,7 @@ import json
 from typing import TYPE_CHECKING, Any
 
 from todoimpl import atomic
+from todoimpl.relay.status import STATUS
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -47,9 +48,13 @@ def raise_alert(root: Path, text: str, until: float) -> None:
 
 
 def active_alert(root: Path, now: float) -> dict[str, Any] | None:
-    """Return the board's `alert` object while its `until` lies ahead, else None."""
+    """Return the board's `alert`: the overage alert while its `until` lies ahead, else the relay's cause.
+
+    None when neither holds. The overage alert wins: it is about money. A relay that fails closed shows its
+    cause (relay/status.py).
+    """
     found = _read(root / ALERT_FILE)
     until, text = found.get("until"), found.get("text")
     if isinstance(until, int | float) and until > now and isinstance(text, str) and text:
         return {"kind": "overage", "text": text, "until": float(until)}
-    return None
+    return STATUS.alert(now)

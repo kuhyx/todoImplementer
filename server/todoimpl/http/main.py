@@ -5,10 +5,14 @@ from __future__ import annotations
 import argparse
 import contextlib
 import importlib
+import os
 import subprocess
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
+
+from todoimpl.board.state import run_root
+from todoimpl.relay import worker as relay
 
 from .app import DEFAULT_DIST, make_server
 
@@ -44,7 +48,9 @@ def serve(
     build: str | None = None,
 ) -> None:
     """Bind and serve until shutdown() is called on the server (or the process is stopped)."""
-    server = make_server(backend, host, port, dist=dist, build=build or git_build_id(REPO))
+    build = build or git_build_id(REPO)
+    server = make_server(backend, host, port, dist=dist, build=build)
+    relay.start(server.router, build=build, root=run_root(), env=os.environ)  # off unless TODOIMPL_RELAY=1
     try:
         server.serve_forever()
     finally:
