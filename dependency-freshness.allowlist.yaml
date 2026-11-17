@@ -1,0 +1,16 @@
+# Dependencies held below latest stable in this repo, and why. Adds to the
+# fleet-wide ~/src/utils/dependency-freshness.allowlist.yaml.
+
+exceptions:
+  - ecosystem: gittag
+    package: design_system
+    pinned: "0.3.1"
+    latest_known: "0.4.0"
+    reason: >-
+      design_system 0.4.0 returns material_ui's ThemeData (Flutter 3.50's
+      replacement for package:flutter/material.dart). The app (app/) is on
+      Flutter 3.47.9 like the tutor app, whose rtdb_relay it shares; taking
+      it means migrating every screen to material_ui and Flutter 3.50 in one
+      go, the same migration the tutor app holds for.
+    blocked_by: "migration:flutter-3.50-material_ui"
+    expires: "2026-12-17"

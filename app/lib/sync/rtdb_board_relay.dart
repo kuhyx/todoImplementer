@@ -1,0 +1,104 @@
+/// The real [BoardRelay]: sealed REST reads of `snap/board`, the `rev`
+/// counter as the change signal, and requests through the shared `requests`
+/// listen (DOCS-native-app-relay.md, "Publishing" and "Kinds").
+library;
+
+import 'dart:async';
+
+import 'package:rtdb_relay/rtdb_relay.dart';
+import 'package:todo_implementer/model/board.dart';
+import 'package:todo_implementer/model/json.dart';
+import 'package:todo_implementer/sync/board_relay.dart';
+import 'package:todo_implementer/sync/layout.dart';
+
+/// Follows `requests/<rid>` (production: `RequestHub.watch`).
+typedef RequestWatch = Stream<Object?> Function(String rid);
+
+/// Emits when `rev/board` moves (production: `RevWatcher.changesOf`).
+typedef BoardMoves = Stream<int> Function();
+
+/// Board relay over Firebase RTDB.
+class RtdbBoardRelay implements BoardRelay {
+  /// Creates the relay for this install's device [dev].
+  new({
+    required this.client,
+    required this.dev,
+    required this.watch,
+    required this.moves,
+    DateTime Function()? clock,
+  }) : _clock = clock ?? DateTime.now;
+
+  /// Wires the relay to one shared stream, as the app runs it.
+  factory live({
+    required RtdbClient client,
+    required RtdbStream stream,
+    required String dev,
+  }) {
+    final hub = RequestHub(stream, fullPath('requests'));
+    final rev = RevWatcher(stream, fullPath('rev'), yieldTo: hub.inFlight);
+    return RtdbBoardRelay(
+      client: client,
+      dev: dev,
+      watch: hub.watch,
+      moves: () => rev.changesOf('board'),
+    );
+  }
+
+  /// REST client (seals and opens).
+  final RtdbClient client;
+
+  /// This install's device id.
+  final String dev;
+
+  /// Request follower.
+  final RequestWatch watch;
+
+  /// Board change signal.
+  final BoardMoves moves;
+
+  final DateTime Function() _clock;
+
+  Future<Board?> _fetch() async {
+    final node = await client.get(fullPath('snap/board'));
+    return node is Json ? Board.fromJson(node) : null;
+  }
+
+  @override
+  Stream<Board> boards() async* {
+    // First start: ask the worker to republish every node, then show what
+    // is there now; later boards arrive with each `rev/board` move.
+    unawaited(send('snapshot_refresh', const {}));
+    final first = await _fetch();
+    if (first != null) yield first;
+    await for (final _ in moves()) {
+      final next = await _fetch();
+      if (next != null) yield next;
+    }
+  }
+
+  @override
+  Future<RelayOutcome> send(String kind, Json body) async {
+    final now = _clock();
+    final rid = ulid(now: now);
+    final result = Completer<Json>();
+    final sub = watch(rid).listen((node) {
+      final r = node is Json ? objOr(node, 'result') : null;
+      if (r != null && !result.isCompleted) result.complete(r);
+    });
+    try {
+      await client.put(fullPath('requests/$rid/req'), {
+        'kind': kind,
+        'dev': dev,
+        'created': {'.sv': 'timestamp'},
+        'sent_at': now.millisecondsSinceEpoch,
+        'body': body,
+      });
+      return outcomeOf(await result.future);
+    } on Object catch (error) {
+      // `on Object`: transport Errors and Exceptions both reach the user.
+      return RelayFailed(code: 'offline', error: '$error', retry: true);
+    } finally {
+      await sub.cancel();
+    }
+  }
+}

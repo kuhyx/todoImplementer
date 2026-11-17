@@ -9,6 +9,19 @@ environment:
 # Exact pins everywhere (newest stable); carets only for the SDK-coupled
 # carve-outs the freshness rules allow.
 dependencies:
+  # Firebase session (Google ID token -> refresh token -> ID token) and the
+  # keystore-backed credential store.
+  crdt_sync:
+    git:
+      url: https://github.com/kuhyx/utils
+      ref: crdt_sync_dart-v0.14.1
+      path: crdt_sync_dart
+  # The crdt-sync password in the OS keystore and the text-free lock button.
+  crdt_sync_flutter:
+    git:
+      url: https://github.com/kuhyx/utils
+      ref: crdt_sync_flutter-v0.8.2
+      path: crdt_sync_flutter
   # The shared palette, spacing and type scale. No local theme to drift from.
   design_system:
     git:
@@ -17,6 +30,23 @@ dependencies:
       path: design_system
   flutter:
     sdk: flutter
+  # One-tap Google ID token via the framework AccountManager chooser (FOSS).
+  google_account_token:
+    git:
+      url: https://github.com/kuhyx/utils
+      ref: google_account_token-v0.1.0
+      path: google_account_token
+  http: 1.6.0
+  # The relay client: RTDB REST/SSE, e2e sealing, request hub, rev watcher,
+  # passphrase gate, session (shared with the tutor app).
+  rtdb_relay:
+    git:
+      url: https://github.com/kuhyx/utils
+      ref: rtdb-relay-v0.2.0
+      path: rtdb_relay/dart
+  # This install's device id.
+  shared_preferences: 2.5.6
+  uuid: 4.6.0
 
 dev_dependencies:
   flutter_launcher_icons: 0.14.4

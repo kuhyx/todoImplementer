@@ -26,10 +26,14 @@ const shellPages = <ShellPage>[
 
 /// Three-page shell: icon-only navigation bar over an empty page body.
 ///
-/// The pages fill in with P4/P5; until then each body is its page glyph.
+/// The board page plugs in through [board]; sessions and usage are still
+/// their page glyph until P4b/P4c.
 class Shell extends StatefulWidget {
-  /// Creates the shell.
-  const new({super.key});
+  /// Creates the shell; [board] is the board page body (null: its glyph).
+  const new({this.board, super.key});
+
+  /// The board page, once the relay is ready.
+  final Widget? board;
 
   @override
   State<Shell> createState() => _ShellState();
@@ -43,14 +47,18 @@ class _ShellState extends State<Shell> {
     final page = shellPages[_index];
     return Scaffold(
       body: SafeArea(
-        child: Center(
+        child: KeyedSubtree(
           key: ValueKey(page.key),
-          child: Icon(
-            page.icon,
-            size: AppSpacing.xxl * 2,
-            color: AppPalette.mutedOnDark,
-            semanticLabel: page.semantics,
-          ),
+          child: page.key == 'board' && widget.board != null
+              ? widget.board!
+              : Center(
+                  child: Icon(
+                    page.icon,
+                    size: AppSpacing.xxl * 2,
+                    color: AppPalette.mutedOnDark,
+                    semanticLabel: page.semantics,
+                  ),
+                ),
         ),
       ),
       bottomNavigationBar: NavigationBar(

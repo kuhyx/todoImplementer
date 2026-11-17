@@ -1,0 +1,99 @@
+/// A card's offered actions and its Needs-you record
+/// (`common.schema.json#/$defs/action` and `#/$defs/needs`).
+library;
+
+import 'package:flutter/foundation.dart';
+import 'package:todo_implementer/model/json.dart';
+
+/// A button the card offers (`common.schema.json#/$defs/action`).
+@immutable
+class CardAction {
+  /// Creates an action.
+  const new({
+    required this.id,
+    required this.label,
+    required this.enabled,
+    this.reason,
+    this.confirm = false,
+    this.value,
+    this.option,
+  });
+
+  /// Parses one action.
+  factory fromJson(Json j) {
+    final o = objOr(j, 'option');
+    return CardAction(
+      id: str(j, 'id'),
+      label: str(j, 'label'),
+      enabled: flag(j, 'enabled'),
+      reason: strOr(j, 'reason'),
+      confirm: flag(j, 'confirm'),
+      value: strOr(j, 'value'),
+      option: o == null ? null : CardAction.fromJson(o),
+    );
+  }
+
+  /// Action id (`start`, `ship`, `copy-resume`, ...).
+  final String id;
+
+  /// The server's label: spoken only (textgate), never painted.
+  final String label;
+
+  /// False: drawn disabled with [reason].
+  final bool enabled;
+
+  /// Why it is disabled.
+  final String? reason;
+
+  /// Ask "sure?" first (ship, cancel).
+  final bool confirm;
+
+  /// copy-resume / copy-fix: the text to copy.
+  final String? value;
+
+  /// start only: the auto_ship checkbox.
+  final CardAction? option;
+
+  /// Screen-reader text: the label, plus the reason when disabled.
+  String get spoken => [label, if (!enabled) ?reason].join(': ');
+
+  /// True for actions done on the device (clipboard), not on the PC.
+  bool get local => id == 'copy-resume' || id == 'copy-fix';
+}
+
+/// Why a card is in Needs you.
+@immutable
+class Needs {
+  /// Creates the record.
+  const new({
+    required this.kind,
+    required this.text,
+    required this.category,
+    required this.effort,
+    this.command,
+  });
+
+  /// Parses it.
+  factory fromJson(Json j) => Needs(
+    kind: str(j, 'kind'),
+    text: str(j, 'text'),
+    category: str(j, 'category'),
+    effort: intOr(j, 'effort') ?? 1,
+    command: strOr(j, 'command'),
+  );
+
+  /// `spec_questions`, `run_failed`, ...
+  final String kind;
+
+  /// What exactly is needed (spoken; shown in the card sheet as content).
+  final String text;
+
+  /// `questions`, `criteria`, `action`, `auto`, `phone`, `permission`.
+  final String category;
+
+  /// Answers or clicks still needed.
+  final int effort;
+
+  /// permission: the one-line grant command.
+  final String? command;
+}

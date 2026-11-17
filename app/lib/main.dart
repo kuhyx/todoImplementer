@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:todo_implementer/config/firebase_config.dart';
 import 'package:todo_implementer/shell/app.dart';
+import 'package:todo_implementer/sync/services.dart';
 
 // The entry point is the one line flutter_test cannot run; everything it
-// builds is TodoImplementerApp, which is tested.
+// builds (TodoImplementerApp, AppServices.open) is tested.
 // coverage:ignore-start
-void main() => runApp(const TodoImplementerApp());
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(
+    TodoImplementerApp(services: AppServices.open(FirebaseConfig.compiled)),
+  );
+}
 // coverage:ignore-end

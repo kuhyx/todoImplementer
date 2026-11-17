@@ -1,0 +1,177 @@
+/// The card sheet: the card's content, its offered actions, and the inputs
+/// some actions need (a message for `send`, answers for `spec-answers`, the
+/// auto-ship option for `start`). Results come back over the relay; a
+/// refusal shows as its code glyph in red.
+library;
+
+import 'package:design_system/design_system.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:todo_implementer/model/board.dart';
+import 'package:todo_implementer/model/json.dart';
+import 'package:todo_implementer/sync/board_relay.dart';
+import 'package:todo_implementer/ui/board/action_bar.dart';
+import 'package:todo_implementer/ui/board/glyphs.dart';
+import 'package:todo_implementer/ui/board/spec_answers.dart';
+
+/// Relay kind of a card action id (`spec-ok` -> `task_spec_ok`).
+String kindOf(String actionId) => 'task_${actionId.replaceAll('-', '_')}';
+
+/// The sheet body for [card].
+class CardSheet extends StatefulWidget {
+  /// Creates the sheet.
+  const new({
+    required this.card,
+    required this.relay,
+    required this.onError,
+    super.key,
+  });
+
+  /// The card.
+  final TaskCard card;
+
+  /// Where actions go.
+  final BoardRelay relay;
+
+  /// Records a failure for the copy-errors action.
+  final void Function(RelayFailed failure) onError;
+
+  @override
+  State<CardSheet> createState() => _CardSheetState();
+}
+
+class _CardSheetState extends State<CardSheet> {
+  final _message = TextEditingController();
+  bool _autoShip = false;
+  List<SpecQuestion>? _questions;
+  RelayFailed? _failure;
+
+  @override
+  void dispose() {
+    _message.dispose();
+    super.dispose();
+  }
+
+  Future<RelayOutcome> _send(String kind, Json args) =>
+      widget.relay.send(kind, {'card': widget.card.id, 'args': args});
+
+  Future<void> _settle(RelayOutcome out) async {
+    if (out is RelayFailed) {
+      widget.onError(out);
+      if (mounted) setState(() => _failure = out);
+      return;
+    }
+    if (mounted) await Navigator.of(context).maybePop();
+  }
+
+  Future<void> _run(CardAction a) async {
+    setState(() => _failure = null);
+    switch (a.id) {
+      case 'copy-resume' || 'copy-fix':
+        await Clipboard.setData(ClipboardData(text: a.value ?? ''));
+        await HapticFeedback.selectionClick();
+      case 'spec-answers':
+        final out = await widget.relay.send('task_detail', {
+          'card': widget.card.id,
+        });
+        if (out is RelayOk) {
+          setState(() => _questions = openQuestions(out.data));
+        } else {
+          await _settle(out);
+        }
+      case 'send':
+        final text = _message.text.trim();
+        if (text.isEmpty) return await HapticFeedback.heavyImpact();
+        await _settle(await _send(kindOf(a.id), {'text': text}));
+      case 'start':
+        final args = a.option?.enabled ?? false
+            ? <String, dynamic>{'auto_ship': _autoShip}
+            : <String, dynamic>{};
+        await _settle(await _send(kindOf(a.id), args));
+      default:
+        await _settle(await _send(kindOf(a.id), const {}));
+    }
+  }
+
+  Widget _autoShipChip(CardAction opt) => Semantics(
+    label: opt.spoken,
+    excludeSemantics: true,
+    child: Align(
+      alignment: Alignment.centerLeft,
+      child: FilterChip(
+        key: const Key('auto-ship'),
+        avatar: const Icon(Icons.rocket_launch_outlined),
+        label: const SizedBox.shrink(),
+        selected: _autoShip,
+        onSelected: opt.enabled ? (v) => setState(() => _autoShip = v) : null,
+      ),
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final card = widget.card;
+    final needs = card.needs;
+    final offers = {for (final a in card.actions) a.id: a};
+    final questions = _questions;
+    final failure = _failure;
+    const muted = TextStyle(color: AppPalette.mutedOnDark);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.md,
+        AppSpacing.md,
+        AppSpacing.md + MediaQuery.viewInsetsOf(context).bottom,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(card.title, style: Theme.of(context).textTheme.titleMedium),
+            if (card.repo case final repo?) Text(repo, style: muted),
+            if (card.current.isNotEmpty) Text(card.current),
+            if (needs != null)
+              Row(
+                children: [
+                  Icon(needsIcon(needs.category), color: AppPalette.warning),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(child: SelectableText(needs.command ?? needs.text)),
+                ],
+              ),
+            const SizedBox(height: AppSpacing.md),
+            if (offers.containsKey('send'))
+              TextField(
+                key: const Key('send-text'),
+                controller: _message,
+                minLines: 1,
+                maxLines: 5,
+              ),
+            if (offers['start']?.option case final opt?) _autoShipChip(opt),
+            const SizedBox(height: AppSpacing.sm),
+            ActionBar(actions: card.actions, onRun: _run),
+            if (questions != null) ...[
+              const SizedBox(height: AppSpacing.md),
+              SpecAnswers(
+                questions: questions,
+                onSend: (answers) async => await _settle(
+                  await _send('task_spec_answers', {'answers': answers}),
+                ),
+              ),
+            ],
+            if (failure != null)
+              Padding(
+                padding: const EdgeInsets.only(top: AppSpacing.md),
+                child: Icon(
+                  codeIcon(failure.code),
+                  key: const Key('sheet-failure'),
+                  color: AppPalette.danger,
+                  semanticLabel: failure.error,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}

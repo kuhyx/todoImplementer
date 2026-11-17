@@ -16,6 +16,7 @@ analyzer:
     - "**/*.g.dart"
     - "**/*.freezed.dart"
     - "test/**"
+    - lib/config/firebase_local.dart
     - android/**
     - ios/**
     - web/**

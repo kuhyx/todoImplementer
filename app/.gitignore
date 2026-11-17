@@ -46,3 +46,7 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Firebase identifiers for this install (tool/write_firebase_config.dart);
+# the repo is public.
+/lib/config/firebase_local.dart
