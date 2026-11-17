@@ -3,7 +3,7 @@
 import subprocess
 from pathlib import Path
 
-LOCKFILES = frozenset({"uv.lock", "pnpm-lock.yaml"})
+LOCKFILES = frozenset({"uv.lock", "pnpm-lock.yaml", "pubspec.lock"})
 
 
 def repo_files(root: Path) -> list[Path]:
