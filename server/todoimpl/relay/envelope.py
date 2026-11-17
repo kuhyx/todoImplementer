@@ -68,12 +68,15 @@ def _query(value: object) -> bool:
 
 
 def normalized(req: dict[str, Any]) -> dict[str, Any]:
-    """Undo RTDB's pruning: a missing body or args reads as {}, live_watch's missing card as null."""
+    """Undo RTDB's pruning: a missing body or args reads as {}, live_watch's card and session_mark's mark as null."""
     body = req.get("body", {})
     if isinstance(body, dict) and "args" in _shape(str(req.get("kind")))[0] and "args" not in body:
         body = {**body, "args": {}}
     if isinstance(body, dict) and req.get("kind") == "live_watch" and "card" not in body:
         body = {**body, "card": None}
+    args = body.get("args") if isinstance(body, dict) else None
+    if req.get("kind") == "session_mark" and isinstance(args, dict) and "mark" not in args:
+        body = {**body, "args": {**args, "mark": None}}  # unmark: the sealer pruned `mark: null` (T2041)
     return {**req, "body": body}
 
 

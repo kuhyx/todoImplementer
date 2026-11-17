@@ -8,6 +8,7 @@ import 'package:todo_implementer/sync/board_relay.dart';
 import 'package:todo_implementer/sync/google_sign_in_backend.dart';
 import 'package:todo_implementer/sync/layout.dart';
 import 'package:todo_implementer/sync/rtdb_board_relay.dart';
+import 'package:todo_implementer/sync/sessions_feed.dart';
 import 'package:uuid/uuid.dart';
 
 const _devKey = 'todoimpl.device_id';
@@ -31,6 +32,7 @@ class AppServices {
     required this.auth,
     required this.gate,
     required this.relay,
+    this.sessions,
   });
 
   /// Builds the production bundle for [config].
@@ -47,14 +49,24 @@ class AppServices {
       idToken: auth.idToken,
       sealRequired: true,
     );
+    // One listen for every page: the board and sessions share the request
+    // hub and the `rev` watcher.
+    final stream = RtdbStream(client);
+    final hub = RequestHub(stream, fullPath('requests'));
+    final rev = RevWatcher(stream, fullPath('rev'), yieldTo: hub.inFlight);
     return AppServices(
       config: config,
       auth: auth,
       gate: E2eGate(client: client),
-      relay: RtdbBoardRelay.live(
+      relay: RtdbBoardRelay(
         client: client,
-        stream: RtdbStream(client),
         dev: dev,
+        watch: hub.watch,
+        moves: () => rev.changesOf('board'),
+      ),
+      sessions: rtdbSessionsFeed(
+        client: client,
+        moves: () => rev.changesOf('sessions'),
       ),
     );
   }
@@ -68,6 +80,9 @@ class AppServices {
   /// Opens the e2e key from the keystore passphrase.
   final E2eGate gate;
 
-  /// The board's link to the PC.
+  /// The board's link to the PC (and every page's request sender).
   final BoardRelay relay;
+
+  /// The sessions page's `snap/sessions` feed (null: the page glyph).
+  final SessionsFeed? sessions;
 }

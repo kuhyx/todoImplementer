@@ -30,10 +30,13 @@ const shellPages = <ShellPage>[
 /// their page glyph until P4b/P4c.
 class Shell extends StatefulWidget {
   /// Creates the shell; [board] is the board page body (null: its glyph).
-  const new({this.board, super.key});
+  const new({this.board, this.sessions, super.key});
 
   /// The board page, once the relay is ready.
   final Widget? board;
+
+  /// The sessions page, once the relay is ready.
+  final Widget? sessions;
 
   @override
   State<Shell> createState() => _ShellState();
@@ -49,16 +52,20 @@ class _ShellState extends State<Shell> {
       body: SafeArea(
         child: KeyedSubtree(
           key: ValueKey(page.key),
-          child: page.key == 'board' && widget.board != null
-              ? widget.board!
-              : Center(
-                  child: Icon(
-                    page.icon,
-                    size: AppSpacing.xxl * 2,
-                    color: AppPalette.mutedOnDark,
-                    semanticLabel: page.semantics,
-                  ),
+          child:
+              switch (page.key) {
+                'board' => widget.board,
+                'sessions' => widget.sessions,
+                _ => null,
+              } ??
+              Center(
+                child: Icon(
+                  page.icon,
+                  size: AppSpacing.xxl * 2,
+                  color: AppPalette.mutedOnDark,
+                  semanticLabel: page.semantics,
                 ),
+              ),
         ),
       ),
       bottomNavigationBar: NavigationBar(

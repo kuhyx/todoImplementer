@@ -47,7 +47,7 @@ another path or rid. Clear: `meta`, `e2e`, `rev`, `requests/*/claim`, `created` 
 `beat` in worker presence, `seen` in client presence. Units: everything else. Unlike the tutor, **no legacy
 plaintext unit is accepted anywhere**: this root never had one. RTDB stores no empty object, so a `req` whose `body`
 (or `args`) was `{}` arrives without it, and `live_watch` `{card: null}` arrives as `{}`; the worker reads
-the missing key as `{}` (as `null` for that card). For the same reason a result or snap node arrives without its
+the missing key as `{}` (as `null` for that card, and for the `mark` of a `session_mark`, an unmark). For the same reason a result or snap node arrives without its
 `null` values and empty lists and objects; the app reads a missing key as that empty value.
 
 ## Kinds

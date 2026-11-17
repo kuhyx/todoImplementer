@@ -98,3 +98,13 @@ def test_empty_objects_dropped_by_rtdb_read_as_empty() -> None:
     assert envelope.normalized(sent)["body"] == {"args": {}}
     assert envelope.normalized({**sent, "kind": "snapshot_refresh"})["body"] == {}
     assert envelope.normalized({**sent, "body": "x"})["body"] == "x"
+
+
+def test_t2041_unmark_null_dropped_by_rtdb_reads_as_null() -> None:
+    """The app's sealer prunes nulls like RTDB, so an unmark ({mark: null}) arrives without `mark`."""
+    sid = "0123abcd-0000-4000-8000-000000000001"
+    sent = {"kind": "session_mark", "dev": DEV, "sent_at": 1, "body": {"args": {"ids": [sid]}}}
+    assert envelope.normalized(sent)["body"] == {"args": {"ids": [sid], "mark": None}}
+    assert envelope.problem(envelope.normalized(sent)) is None
+    done = {**sent, "body": {"args": {"id": sid, "mark": "done"}}}
+    assert envelope.normalized(done)["body"] == {"args": {"id": sid, "mark": "done"}}

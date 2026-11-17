@@ -12,6 +12,7 @@ import 'package:rtdb_relay/rtdb_relay.dart' show SignInOutcome;
 import 'package:todo_implementer/shell/shell.dart';
 import 'package:todo_implementer/sync/services.dart';
 import 'package:todo_implementer/ui/board/board_page.dart';
+import 'package:todo_implementer/ui/sessions/sessions_page.dart';
 
 /// The gate in front of the shell.
 class AppGate extends StatefulWidget {
@@ -90,7 +91,14 @@ class _AppGateState extends State<AppGate> {
               return const _Loading();
             }
             if (open.data ?? false) {
-              return Shell(board: BoardPage(relay: widget.services.relay));
+              final s = widget.services;
+              final sessions = s.sessions;
+              return Shell(
+                board: BoardPage(relay: s.relay),
+                sessions: sessions == null
+                    ? null
+                    : SessionsPage(feed: sessions, relay: s.relay),
+              );
             }
             return _lockView('${open.error ?? widget.services.gate.reason}');
           },
