@@ -7,6 +7,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from todoimpl.errors.marks import signatures
 from todoimpl.umbrella.note import is_umbrella
 
 from .actions import actions
@@ -61,6 +62,7 @@ def current_line(  # noqa: PLR0911 - one return per status
         Status.YOURS: "yours: no repo on this note" if run is None else "assigned to you",
         Status.CANCELLED: "cancelled",
         Status.SHIPPING: "pushing and closing the note",
+        Status.WAITING_PHONE_UPDATE: "wait for phone to connect, then update the app",
         Status.READY_TO_SHIP: "waiting for your Ship click",
         Status.READY_TO_CLOSE: "done_check re-run green: waiting for your Close click",
         Status.DONE: "done",
@@ -141,6 +143,8 @@ def build_card(task: TaskLike, run: RunState | None, ctx: Context) -> dict[str, 
     }
     if status == Status.YOURS and kuhys(task.title, getattr(task, "parts", ())):
         card["current"] = manual_ask(task)  # what kuhy must do, never "no repo" on a card that has one
+    if errors := len(signatures(task.body)):  # tickets of the errors loop on this card (a badge)
+        card["app_error"] = errors
     if (umbrella := card_view(task, run)) is not None:
         card["umbrella"] = umbrella
     if (parts := parts_of(task, run, working=status == Status.WORKING)) is not None:

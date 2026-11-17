@@ -15,8 +15,8 @@ export const STAGES = [
   "failed", "paused_limit", "paused_retry", "cancelled",
 ] as const;
 export const STATUSES = [
-  "backlog", "yours", "cancelled", "queued", "working", "paused_limit", "shipping", "needs_you", "ready_to_ship",
-  "ready_to_close", "done",
+  "backlog", "yours", "cancelled", "queued", "working", "paused_limit", "shipping", "waiting_phone_update", "needs_you",
+  "ready_to_ship", "ready_to_close", "done",
 ] as const;
 export const COLUMN_IDS = ["backlog", "running", "needs_you", "ready", "done"] as const;
 export const NEEDS_KINDS = [
@@ -161,6 +161,7 @@ export const repoPart = z.strictObject({
 
 export const taskCard = z.strictObject({
   actions,
+  app_error: z.number().int().min(1).optional(),
   assignee: z.enum(["human", "claude"]),
   auto: z.string().nullable(),
   auto_start: autoStart.nullable(),

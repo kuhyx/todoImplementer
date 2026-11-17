@@ -3,7 +3,7 @@ import type { NeedsCategory, Status, TaskCard } from "@/lib/schemas-common";
 /** One board card. Every word comes from the server's card; the status label is display text for the enum only. */
 import { icon, type IconName } from "@/components/icons";
 import { partsStrip, waitsBadge } from "@/components/repo-parts";
-import { umbrellaProgress } from "@/components/umbrella";
+import { badge, umbrellaProgress } from "@/components/umbrella";
 import { h } from "@/lib/dom";
 import { formatAgo, formatClock, formatIn, formatUsd } from "@/lib/format";
 
@@ -17,6 +17,7 @@ export const STATUS_LABEL: Record<Status, string> = {
   ready_to_close: "Ready to close",
   ready_to_ship: "Ready to ship",
   shipping: "Shipping",
+  waiting_phone_update: "Waiting for phone",
   working: "Working",
   yours: "Yours",
 };
@@ -31,6 +32,7 @@ export const STATUS_TONE: Record<Status, "accent" | "muted" | "ok" | "warn"> = {
   ready_to_close: "ok",
   ready_to_ship: "ok",
   shipping: "accent",
+  waiting_phone_update: "accent",
   working: "accent",
   yours: "muted",
 };
@@ -100,6 +102,7 @@ export function renderCard(card: TaskCard, now: number, shouldShowRepo = false):
       statusChip(card.status),
       routeChip(card),
       ...tierBadges(card),
+      card.app_error !== undefined && badge("issue", "App error", card.app_error, { "data-app-error": "" }),
       h("span", { class: "card-prio", text: card.priority }),
     ),
     h("span", { class: "card-title", text: card.title }),

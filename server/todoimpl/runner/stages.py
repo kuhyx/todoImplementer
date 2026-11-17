@@ -6,14 +6,16 @@ from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from todoimpl.errors import marks
 from todoimpl.repotask import files
 from todoimpl.umbrella import bounce
 from todoimpl.umbrella.note import is_umbrella
 from todoimpl.umbrella.run import run as run_umbrella
 
-from . import phone, shipfix, tiering
+from . import appfix, phone, shipfix, tiering
 from .checks import SENTENCE_NOTE, discover, record, run_all
 from .closing import closing_stage
+from .deploy import DeployFailedError
 from .deployheal import DirtyCheckoutError
 from .files import NeedsYouError, write_json
 from .live import rejudge, settle
@@ -168,7 +170,9 @@ def _checks(d: Driver) -> str | None:
         st.extra.pop("check_fixes", None)
         child = "umbrella_round" in st.extra  # an umbrella child ships itself when green (T1923)
         st.auto_ship = st.auto_ship or child
-        return "shipping" if child or (st.auto_ship and d.item.done_check) else "gate"
+        ticked = files.ticked(d.ctx.run_dir, d.item) if d.item.parts else []
+        own = marks.ships_itself(st, ticked, d.item.body)  # an app-error fix needs no done_check to ship
+        return "shipping" if child or (st.auto_ship and (d.item.done_check or own)) else "gate"
     tail = bounce.red_tail(
         st, "\n\n".join(f"== {r.name}: {r.command} (exit {r.exit_code})\n{r.tail}" for r in red)
     )
@@ -213,9 +217,13 @@ def _shipping(d: Driver) -> str | None:
         return "implement"
     except DirtyCheckoutError as blocked:  # kuhy's edits block the deploy's pull: wait, never touch them
         shipfix.wait_for_edits(st, blocked, d.ctx.now())
+    except DeployFailedError as failed:  # pushed, not deployed: maybe only because the phone is away
+        appfix.phone_wait(st, failed, d.ctx.now())
+        raise
     sha = st.ship["commit"]
     if sha:
         st.head_sha = sha
+        appfix.shipped(d.ctx.root, d.ctx.run_dir, d.item, sha, d.ctx.now())
     if sha and "pushed_at" not in st.ship:  # ship() closed it because the session pushed it already (T1865)
         d.activity(f"closed: the session already pushed {sha[:12]}")
         return "shipped"

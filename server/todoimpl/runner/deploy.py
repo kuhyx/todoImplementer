@@ -44,6 +44,14 @@ FENCE = re.compile(r"^[ \t]*(```|~~~)")
 _run = subprocess.run  # the one place systemd-run and systemctl are called: tests swap it
 
 
+class DeployFailedError(NeedsYouError):
+    """The deploy command ran and failed; `exit_code` is its exit status (None: it timed out)."""
+
+    def __init__(self, text: str, exit_code: int | None) -> None:  # noqa: D107
+        super().__init__(text, "run_failed")
+        self.exit_code = exit_code
+
+
 def declared(text: str) -> str | None:
     """Return the command of the first `- deploy: `<command>`` bullet outside code fences, else None."""
     fenced = False
@@ -215,4 +223,4 @@ def run(wt: Path, run_dir: Path, card: str, repo: str | None, command: str | Non
             continue
         why = "timed out" if result.exit_code is None else f"exit {result.exit_code}"
         msg = f"{PREFIX}: deploy failed ({why}): {result.tail[-TAIL:]}"
-        raise NeedsYouError(msg, "run_failed")
+        raise DeployFailedError(msg, result.exit_code)

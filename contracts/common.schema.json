@@ -13,7 +13,7 @@
       "description": "Run stage as written by the runner. See DOCS-spec.md for transitions."
     },
     "status": {
-      "enum": ["backlog", "yours", "cancelled", "queued", "working", "paused_limit", "shipping", "needs_you", "ready_to_ship", "ready_to_close", "done"],
+      "enum": ["backlog", "yours", "cancelled", "queued", "working", "paused_limit", "shipping", "waiting_phone_update", "needs_you", "ready_to_ship", "ready_to_close", "done"],
       "description": "THE single status, computed on the server by board.status.compute. Never recomputed in the page."
     },
     "column": {"enum": ["backlog", "running", "needs_you", "ready", "done"]},
@@ -163,7 +163,8 @@
         "updated": {"anyOf": [{"$ref": "#/$defs/epoch"}, {"type": "null"}]},
         "actions": {"$ref": "#/$defs/actions"},
         "auto_start": {"anyOf": [{"$ref": "#/$defs/auto_start"}, {"type": "null"}], "description": "Set when a passing done_check started this run (a closing run); kept after Close."},
-        "auto": {"type": ["string", "null"], "description": "Backlog cards with a done_check while auto close is on: the latest poll's one-line reason."}
+        "auto": {"type": ["string", "null"], "description": "Backlog cards with a done_check while auto close is on: the latest poll's one-line reason."},
+        "app_error": {"type": "integer", "minimum": 1, "description": "Optional: how many tickets of the errors loop (`Error-Signature:` lines, DOCS-errors.md) the card holds."}
       },
       "required": [
         "id", "title", "repo", "priority", "assignee", "stage", "status", "column", "current", "needs",

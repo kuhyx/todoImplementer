@@ -91,3 +91,9 @@ def _no_real_todo_images(tmp_path_factory: pytest.TempPathFactory, monkeypatch: 
 def _no_real_devices_file(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch) -> None:
     """Point the paired-device list at a temp file: kuhy's real devices.json is never read or written."""
     monkeypatch.setenv("TODOIMPL_DEVICES", str(tmp_path_factory.mktemp("devices") / "devices.json"))
+
+
+@pytest.fixture(autouse=True)
+def _no_real_error_state(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Point the app-error state root at an empty temp dir: kartka's real state.json is never read."""
+    monkeypatch.setenv("TODOIMPL_ERROR_STATE_ROOT", str(tmp_path_factory.mktemp("error-state")))

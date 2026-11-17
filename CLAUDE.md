@@ -12,6 +12,7 @@ Asks as buttons in the note (`ask` block: choice, command, screenshot, risk rule
 Phone over mobile data (Host-based device gate, pairing QR, cookie, device store, exemptions): `DOCS-phone.md`.
 Native Flutter app (phone + PC, Firebase RTDB relay, FCM pings, Astro retirement): `DOCS-native-app.md`; relay kinds,
 nodes and guards: `DOCS-native-app-relay.md`.
+App errors become tickets (contract, sources, start gate, ship policy, waiting for the phone): `DOCS-errors.md`.
 
 ## Commands
 

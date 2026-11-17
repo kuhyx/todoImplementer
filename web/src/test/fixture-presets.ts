@@ -86,6 +86,16 @@ export function preset(status: TaskCard["status"], hasRepository: boolean): Pres
     case "shipping": {
       return { actions: [], column: "running", current: "rebasing on origin/main", needs: null, stage: "shipping", status };
     }
+    case "waiting_phone_update": {
+      return {
+        actions: [{ enabled: true, id: "start", label: "Retry", reason: null }, CANCEL],
+        column: "running",
+        current: "wait for phone to connect, then update the app",
+        needs: null,
+        stage: "failed",
+        status,
+      };
+    }
     case "working": {
       return { actions: [SEND, CANCEL, RESUME], column: "running", current: "implementing: step 2 of 4", needs: null, stage: "implement", status };
     }

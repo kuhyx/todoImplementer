@@ -49,6 +49,18 @@
       }
     },
     "auto_ship": {"type": "boolean", "description": "Ticked at Start/Restart: a done_check note ships itself (checks -> shipping) once every check is green."},
+    "app_error": {
+      "type": "object",
+      "description": "Set when the errors loop started the card (DOCS-errors.md): why it may start, the ticket keys on it. Such a run answers to no one and ships itself when green.",
+      "properties": {
+        "reason": {"enum": ["weekly", "credits", "free"]},
+        "keys": {"type": "array", "items": {"type": "string"}},
+        "at": {"type": "number"}
+      },
+      "required": ["reason", "keys"]
+    },
+    "phone_update": {"type": "object", "description": "A failed deploy waits for the phone (status waiting_phone_update): when it began and which try this is.", "properties": {"since": {"type": "number"}, "tries": {"type": "integer", "minimum": 1}}, "required": ["since", "tries"]},
+    "phone_tries": {"type": "integer", "minimum": 1, "description": "How many phone waits this cycle had; the watcher gives up after five."},
     "repotask": {"type": "boolean", "description": "The run is a repo task's (DOCS-repotask.md): its id is the repo's, its parts are the repo's open sections."},
     "repotask_title": {"type": "string", "description": "The repo task's card title, kept for its Done card."},
     "cycle": {"type": "integer", "minimum": 1, "description": "Repo task only: which cycle the run is in; a shipped cycle that left parts open is followed by the next on Start."},

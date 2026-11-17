@@ -13,6 +13,7 @@ import re
 from typing import TYPE_CHECKING
 
 from todoimpl.board.ask import concrete_ask
+from todoimpl.errors.marks import unattended
 
 if TYPE_CHECKING:
     from .pipeline import Driver
@@ -74,8 +75,8 @@ def auto_grant(driver: Driver, res: TurnResult, stage: str) -> bool:
     reply = str(st.extra.get("last_reply", ""))
     if stage in NOT_FOR or st.extra.get("waiting_phone") or res.is_error:
         return False
-    # An umbrella child sends every other `A:` back to implement with its own brief (bounce.again, T1952).
-    autonomous = is_permission_ask(ask) if "umbrella_round" in st.extra else is_autonomous_ask(ask, reply)
+    # An umbrella child or an error run sends every other `A:` back to implement (bounce.again, T1952).
+    autonomous = is_permission_ask(ask) if unattended(st) else is_autonomous_ask(ask, reply)
     if not autonomous or (res.denials and not is_permission_ask(ask)):
         return False  # a refused tool call stays refused whatever a reply says
     given: dict[str, int] = st.extra.setdefault("ask_grants", {})

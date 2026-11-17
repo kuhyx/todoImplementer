@@ -12,7 +12,7 @@ from todoimpl.board.types import MANUAL_REASON
 from todoimpl.repotask.start import prepare
 from todoimpl.todo_mcp.model import TodoError
 
-from . import adopt, closing, retry
+from . import adopt, appfix, closing, retry
 from .engine import Client, default_clock
 from .files import read_json
 from .phone_sched import PhoneEngine
@@ -30,6 +30,7 @@ COUNTERS = (
     "failure_tail", "live_fixes", "check_fixes", "nudges", "nudge", "failed_stage", "resume_stage",
     "resettle", "retries", "crash_retries", "r_continues", "r_continue", "tagless_retry", "fresh",
     "ship_fixes", "reship", "hands_nudged", "ask_grants", "ask_grant_total", "part_nudges", "ship_resumes",
+    "phone_update",
 )  # fmt: skip
 
 
@@ -82,9 +83,13 @@ class Scheduler(PhoneEngine):
 
     auto_start = closing.auto_start  # a closing run when the item has none; False when one exists
     close_item = closing.close  # the Close click on a Ready-to-close run (`close` is the Engine's shutdown)
+    phone_update_start = appfix.restart  # a pushed fix whose deploy waits for the phone: Ship again
 
-    def start(self, card: str, *, auto_ship: bool | None = None) -> None:
-        """Start, Restart, Retry or Hand back; a failed run (Retry, Hand back) keeps its auto-ship choice."""
+    def start(self, card: str, *, auto_ship: bool | None = None, extra: dict[str, Any] | None = None) -> None:
+        """Start, Restart, Retry or Hand back; a failed run (Retry, Hand back) keeps its auto-ship choice.
+
+        `extra` goes into the run's state (the errors loop marks its cards); a new cycle forgets old marks.
+        """
         try:
             item = self.client.get_task(card).item
         except TodoError as exc:
@@ -105,6 +110,7 @@ class Scheduler(PhoneEngine):
             if st is None or st.stage in ("cancelled", "shipped"):  # shipped: a repo task's next cycle
                 st = st or RunState(task_id=card, stage="spec", started_at=self.clock(), repo=item.repo)
                 st.auto_ship = bool(auto_ship)
+                appfix.forget(st)
             if item.parts:
                 prepare(st, item, self.root / card)
             st.stage = restart_stage(st, item)
@@ -112,6 +118,7 @@ class Scheduler(PhoneEngine):
             st.note_body = clip_body(item.body)
             for key in COUNTERS:
                 st.extra.pop(key, None)
+            st.extra.update(extra or {})
             self.save(card, st)
             if st.stage != "gate":
                 self.enqueue(card)

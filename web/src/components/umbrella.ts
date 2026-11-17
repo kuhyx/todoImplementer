@@ -27,6 +27,7 @@ export const STATUS_ICON: Record<Status, IconName> = {
   ready_to_close: "ready",
   ready_to_ship: "ready",
   shipping: "running",
+  waiting_phone_update: "queued",
   working: "running",
   yours: "failed",
 };

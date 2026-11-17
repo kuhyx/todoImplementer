@@ -34,13 +34,13 @@ types:
 	@$(UV) mypy --cache-dir=/dev/null server scripts tests/test_*.py
 	@MYPYPATH="mcp:server" $(UV) mypy --cache-dir=/dev/null mcp/todoimpl_mcp
 	@for d in tests/*/; do \
-		if compgen -G "$$d*.py" > /dev/null; then MYPYPATH="$$d:server:scripts:tests/shims:tests/runner:tests/umbrella:deploy:mcp" $(UV) mypy --cache-dir=/dev/null "$$d"; fi; \
+		if compgen -G "$$d*.py" > /dev/null; then MYPYPATH="$$d:server:scripts:tests/shims:tests/runner:tests/umbrella:tests/service:deploy:mcp" $(UV) mypy --cache-dir=/dev/null "$$d"; fi; \
 	done
 
 # One pytest call per test dir (each well under the 60 s per-command cap), each writing its own coverage
 # file; `coverage` merges them and still enforces fail_under = 100 over server/, scripts/, deploy/ and mcp/.
 # Run one chunk with `make test-board`; all of them, then the gate, with `make test`.
-CHUNKS := asks resilience gateway apikey credits board http sessions service todo_mcp lessons usage prompts tokens tokens_audit tokens_api mcp_server deploy merge \
+CHUNKS := asks errors resilience gateway apikey credits board http sessions service todo_mcp lessons usage prompts tokens tokens_audit tokens_api mcp_server deploy merge \
 	runner runner_mid runner_flow runner_ship runner_tail umbrella umbrella_flow repotask repotask_flow root
 CHUNK_PATH_root := tests/test_*.py
 CHUNK_PATH_umbrella := tests/umbrella --ignore-glob='tests/umbrella/test_flow_*'

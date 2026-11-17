@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 
 from todoimpl.board import state as store
 from todoimpl.board.parse import StateError
+from todoimpl.errors.marks import PHONE
 
 from .engine import Engine
 from .phone import READY, SERIAL, TRIED, adb_command, attached_serials
@@ -40,14 +41,22 @@ class PhoneWatcher(threading.Thread):
         self._halt = threading.Event()
 
     def tick(self) -> bool:
-        """One poll; adb runs only while some run waits, and every waiting run is requeued."""
-        cards, tried = self.engine.phone_waiting(), self.engine.phone_tried()
-        if not cards and not tried:
+        """One poll; adb runs only while some run waits, and every waiting run is requeued.
+
+        A fix that is pushed but not on the phone (`phone_updates`) deploys again when the Pixel is attached.
+        """
+        cards, tried, updates = (
+            self.engine.phone_waiting(),
+            self.engine.phone_tried(),
+            self.engine.phone_updates(),
+        )
+        if not cards and not tried and not updates:
             return False
         if self.serial not in attached_serials(self.adb or adb_command()):
             self.engine.phone_unplugged(tried)
             return False
         requeued = [self.engine.phone_attached(card) for card in cards]
+        requeued += [self.engine.phone_update_start(card) for card in updates]
         return any(requeued)
 
     def run(self) -> None:  # noqa: D102
@@ -110,6 +119,22 @@ class PhoneEngine(Engine):
     def phone_tried(self) -> list[str]:
         """Cards whose phone-attached turn asked again: they rerun only after an unplug and replug."""
         return self._cards(tried=True)
+
+    def updating(self, card: str) -> RunState | None:
+        """Return the run of a card whose pushed fix waits for the phone (failed deploy, idle), else None."""
+        st = self._peek(self.root / card)
+        idle = card not in self._active and card not in self._queue
+        return st if st is not None and idle and st.stage == "failed" and PHONE in st.extra else None
+
+    def phone_updates(self) -> list[str]:
+        """Cards waiting for the phone to be updated with a fix that is already pushed, by id."""
+        with self._cv:
+            ids = (path.parent.name for path in sorted(self.root.glob("*/state.json")))
+            return [card for card in ids if self.updating(card) is not None]
+
+    def phone_update_start(self, card: str) -> bool:  # noqa: ARG002 - the Scheduler overrides it
+        """Restart the Ship of such a card (the Scheduler does); the bare engine cannot start runs."""
+        return False
 
     def phone_unplugged(self, cards: list[str]) -> None:
         """Re-arm the given tried cards once the Pixel is gone, so the next plug-in runs them once."""

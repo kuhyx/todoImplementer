@@ -22,14 +22,16 @@ class FakeScheduler:
         self.live: set[str] = set()
         self.events: list[dict[str, Any]] = []
         self.failure: Exception | None = None
+        self.extras: list[dict[str, Any] | None] = []
 
     def _rec(self, *call: Any) -> None:
         if self.failure is not None:
             raise self.failure
         self.calls.append(call)
 
-    def start(self, id8: str, *, auto_ship: bool | None = None) -> None:
+    def start(self, id8: str, *, auto_ship: bool | None = None, extra: dict[str, Any] | None = None) -> None:
         self._rec("start", id8, auto_ship)
+        self.extras.append(extra)
 
     def spec_answers(self, id8: str, answers: dict[str, str]) -> None:
         self._rec("spec_answers", id8, answers)

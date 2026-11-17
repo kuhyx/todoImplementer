@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 from todoimpl.board.state import run_root
 from todoimpl.credits import ledger
+from todoimpl.errors.loop import ErrorLoop
 from todoimpl.http.main import REPO, git_build_id
 from todoimpl.repotask import legacy
 from todoimpl.runner.autocheck import AutoCloser
@@ -92,7 +93,8 @@ def build_backend(
         gateway=gateway,
     )  # fmt: skip
     backend.merge_service = MergeService(client, cache, root)
-    backend.new_task_service = NewTaskService(client, cache)
+    new_tasks = NewTaskService(client, cache)
+    backend.new_task_service = new_tasks
     backend.ask_service = AskService(cache, scheduler, root)
     if refresh:
         cache.start()
@@ -103,4 +105,9 @@ def build_backend(
         # Auto close: polls trusted done_checks every 5 min (first tick now); off until settings.json says so.
         # A repo task ships its ticked parts; a closing run belongs to one section's card: no repo cards here.
         AutoCloser(root, lambda: [c for c in cache.snapshot().tasks if not c.parts], scheduler).start()
+        # App errors: one ticket per identical error, started by the gate (DOCS-errors.md).
+        ErrorLoop(
+            root, cards=lambda: cache.snapshot().tasks, tasks=client, creator=new_tasks,
+            starter=scheduler, refresh=cache.refresh,
+        ).start()  # fmt: skip
     return backend

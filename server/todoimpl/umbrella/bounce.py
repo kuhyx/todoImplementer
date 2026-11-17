@@ -12,6 +12,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
+from todoimpl.errors.marks import unattended
 from todoimpl.runner.deploy import PREFIX
 
 if TYPE_CHECKING:
@@ -34,8 +35,8 @@ _TAGGED = re.compile(r"^\s*[QA]:\s*(.*)$")
 
 
 def is_child(st: RunState) -> bool:
-    """Return True for a run that is a child of an umbrella."""
-    return "umbrella_round" in st.extra
+    """Return True for a run nobody answers: a child of an umbrella, or a card the errors loop started."""
+    return unattended(st)
 
 
 def again(st: RunState) -> bool:

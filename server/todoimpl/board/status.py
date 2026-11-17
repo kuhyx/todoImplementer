@@ -9,6 +9,7 @@ from __future__ import annotations
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
+from todoimpl.errors.marks import PHONE
 from todoimpl.umbrella.note import is_umbrella
 
 from .parts import kuhys
@@ -31,6 +32,7 @@ class Status(StrEnum):
     WORKING = "working"
     PAUSED_LIMIT = "paused_limit"
     SHIPPING = "shipping"
+    WAITING_PHONE_UPDATE = "waiting_phone_update"
     NEEDS_YOU = "needs_you"
     READY_TO_SHIP = "ready_to_ship"
     READY_TO_CLOSE = "ready_to_close"
@@ -55,6 +57,7 @@ _COLUMNS = {
     Status.WORKING: Column.RUNNING,
     Status.PAUSED_LIMIT: Column.RUNNING,
     Status.SHIPPING: Column.RUNNING,
+    Status.WAITING_PHONE_UPDATE: Column.RUNNING,
     Status.NEEDS_YOU: Column.NEEDS_YOU,
     Status.READY_TO_SHIP: Column.READY,
     Status.READY_TO_CLOSE: Column.READY,
@@ -92,13 +95,21 @@ def compute(  # noqa: PLR0911 - one return per rule of the spec table
         return Status.YOURS
     if run.stage == "gate":
         return Status.READY_TO_CLOSE if run.closing else Status.READY_TO_SHIP
-    if _needs_you(run, live):
-        return Status.NEEDS_YOU
+    if (resting := _resting(run, live)) is not None:
+        return resting
     if run.stage == "shipping":
         return Status.SHIPPING
     if run.stage == "paused_limit" or (limit_until is not None and not live):
         return Status.PAUSED_LIMIT
     return Status.WORKING if live or run.stage == "paused_retry" else Status.QUEUED
+
+
+def _resting(run: RunState, live: bool) -> Status | None:
+    """Return NEEDS_YOU when the run waits on kuhy, or WAITING_PHONE_UPDATE when only the phone is missing."""
+    if not _needs_you(run, live):
+        return None
+    pushed = run.stage == "failed" and PHONE in run.extra  # pushed, only the phone update is left
+    return Status.WAITING_PHONE_UPDATE if pushed else Status.NEEDS_YOU
 
 
 def _needs_you(run: RunState, live: bool) -> bool:

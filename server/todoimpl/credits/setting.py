@@ -25,6 +25,11 @@ def _read() -> dict[str, object]:
     return data if isinstance(data, dict) else {}
 
 
+def read() -> dict[str, object]:
+    """Return the whole settings file; a missing, unreadable or non-object file is {}."""
+    return _read()
+
+
 def enabled() -> bool:
     """Return the fallback setting; a missing, unreadable or non-boolean value means the default, on."""
     value = _read().get(KEY)

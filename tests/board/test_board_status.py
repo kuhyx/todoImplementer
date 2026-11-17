@@ -132,6 +132,7 @@ def test_columns() -> None:
         Status.PAUSED_LIMIT: "running",
         Status.SHIPPING: "running",
         Status.NEEDS_YOU: "needs_you",
+        Status.WAITING_PHONE_UPDATE: "running",
         Status.READY_TO_SHIP: "ready",
         Status.READY_TO_CLOSE: "ready",
         Status.DONE: "done",

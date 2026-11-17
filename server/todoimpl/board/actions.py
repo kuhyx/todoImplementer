@@ -151,6 +151,8 @@ def _primary(  # noqa: PLR0911 - one branch per status keeps the table readable
         return [Action("cancel", "Cancel", enabled=False, reason="shipping cannot be cancelled")]
     if status == Status.PAUSED_LIMIT:
         return [cancel]
+    if status == Status.WAITING_PHONE_UPDATE:  # Retry deploys now, the phone watcher does it when it attaches
+        return [_gate("Retry", "start", _missing(repo_missing, block)), cancel]
     if status == Status.READY_TO_SHIP:
         return [_gate("Ship", "ship", _ship_block(run), confirm=True), cancel]
     if status == Status.READY_TO_CLOSE:
