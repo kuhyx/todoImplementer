@@ -5,9 +5,11 @@ license = "MIT"
 description = "Board that plans, implements, reviews and ships todo-app notes with Claude Code sessions."
 requires-python = ">=3.15"
 # Runtime deps only for the phone relay (DOCS-native-app-relay.md): crdt-sync (Firebase session, sealing),
-# rtdb-relay (the shared request relay) and httpx (RTDB REST + SSE). Everything else stays stdlib.
+# rtdb-relay (the shared request relay), httpx (RTDB REST + SSE) and cryptography (RS256 for the FCM
+# service-account token; already in the tree through pyjwt). Everything else stays stdlib.
 dependencies = [
     "crdt-sync @ git+https://github.com/kuhyx/utils@crdt-sync-v0.11.1#subdirectory=crdt-sync",
+    "cryptography==50.0.2",
     "httpx==0.28.1",
     "rtdb-relay @ git+https://github.com/kuhyx/utils@rtdb-relay-v0.1.1#subdirectory=rtdb_relay",
 ]

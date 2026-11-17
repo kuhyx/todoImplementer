@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 from todoimpl.apikey import cache
-from todoimpl.relay.status import STATUS
+from todoimpl.relay.status import NOTIFY, STATUS
 
 
 @pytest.fixture(autouse=True)
@@ -102,6 +102,7 @@ def _no_real_error_state(tmp_path_factory: pytest.TempPathFactory, monkeypatch: 
 
 @pytest.fixture(autouse=True)
 def _no_real_relay(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Never start the phone relay against the real Firebase; each test starts with a healthy relay."""
+    """Never start the phone relay against the real Firebase; each test starts healthy (relay, pinger)."""
     monkeypatch.delenv("TODOIMPL_RELAY", raising=False)
     STATUS.ok()
+    NOTIFY.ok()

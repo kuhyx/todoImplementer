@@ -8,17 +8,16 @@ from typing import Any, cast
 import pytest
 from crdt_sync import E2eLockedError
 from httpfakes import FakeBackend
-from relayfakes import RIDS, ROOT, answer, board_handlers, req
+from relayfakes import DEV, RIDS, ROOT, answer, board_handlers, req
 from rtdb_relay.rtdb import Rtdb
 from rtdb_relay.seal import pruned
-from rtdb_relay.server import RequestError
 from rtdb_relay.tests._fake_rtdb import DB, TEST_KEY, FakeRtdb
 from todoimpl.credits import marks
 from todoimpl.http.routes import Router
 from todoimpl.relay import worker
 from todoimpl.relay.connect import Endpoint, RelaySetupError
 from todoimpl.relay.presence import Heart
-from todoimpl.relay.status import STATUS
+from todoimpl.relay.status import NOTIFY, STATUS
 
 PW = "pw"
 
@@ -125,6 +124,7 @@ def test_serves_publishes_and_beats_then_reports_a_failure(
         )
         await asyncio.wait_for(ready.wait(), 5)
         assert STATUS.cause is None
+        assert str(NOTIFY.cause).startswith("no Firebase service-account key at ")  # HOME is a scratch dir
         db = FakeEndpoint(fake).client(ROOT, fake.sealer)
         await db.put(f"requests/{RIDS[0]}/req", req("task_detail", {"card": backend.task_id}))
         for _ in range(300):
@@ -174,10 +174,14 @@ def test_cause_of_names_a_silent_error() -> None:
     assert worker.cause_of(ExceptionGroup("g", [ValueError()])) == "ValueError"
 
 
-def test_notify_test_is_refused_until_fcm_lands() -> None:
-    with pytest.raises(RequestError) as err:
-        asyncio.run(worker.no_notify({}))
-    assert err.value.code == "disabled"
+def test_notify_test_without_a_key_is_disabled(fake: FakeRtdb, router: Router) -> None:
+    fake.set(
+        f"{ROOT}/presence/clients/{DEV}",
+        {"platform": "android", "app": "1", "build": 1, "seen": 1, "fcm": "token-of-the-test-device-0001"},
+    )
+    [result] = answer(fake, board_handlers(router), [req("notify_test", {})])
+    assert (result["ok"], result["code"]) == (False, "disabled")
+    assert NOTIFY.cause == "no Firebase service-account key at test"
 
 
 def test_start_only_with_the_switch(router: Router, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

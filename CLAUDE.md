@@ -47,7 +47,8 @@ App errors become tickets (contract, sources, start gate, ship policy, waiting f
   `~/.config/todoImplementer/private-denylist.txt` (outside the repo, mode 0600). Never copy code from the predecessor.
 - Markdown: only `README.md`, `CLAUDE*.md`, `DOCS*.md`. Tasks live in the todo app, never in a TODO file.
 - Python 3.15.2 (newest stable, enforced by the freshness gate), uv, exact pins, newest stable. Runtime deps: stdlib,
-  plus `httpx`, `crdt-sync` and `rtdb_relay` for the relay worker (kuhy, 2026-11-16; `DOCS-native-app.md`). Web: Astro + TypeScript, pnpm only.
+  plus `httpx`, `crdt-sync`, `rtdb_relay` and `cryptography` (FCM token signing) for the relay worker (kuhy,
+  2026-11-16; `DOCS-native-app.md`). Web: Astro + TypeScript, pnpm only.
 
 ## Boundaries
 

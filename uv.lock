@@ -994,6 +994,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "crdt-sync" },
+    { name = "cryptography" },
     { name = "httpx" },
     { name = "rtdb-relay" },
 ]
@@ -1013,6 +1014,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "crdt-sync", git = "https://github.com/kuhyx/utils?subdirectory=crdt-sync&rev=crdt-sync-v0.11.1" },
+    { name = "cryptography", specifier = "==50.0.2" },
     { name = "httpx", specifier = "==0.28.1" },
     { name = "rtdb-relay", git = "https://github.com/kuhyx/utils?subdirectory=rtdb_relay&rev=rtdb-relay-v0.1.1" },
 ]

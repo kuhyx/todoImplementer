@@ -1,7 +1,9 @@
 """Why the relay is not serving, for the board's red banner (guard 8: a fail-closed relay is never silent).
 
 The worker sets a cause when it cannot start (no Firebase session, no or wrong crdt-sync password, RTDB down)
-and clears it once it serves. The board shows the cause as `alert` {kind: "relay"} while it is set.
+and clears it once it serves. The board shows the cause as `alert` {kind: "relay"} while it is set. NOTIFY
+does the same for the FCM pings (no or bad service-account key, FCM refusing): DOCS-native-app-relay.md
+"Notifications".
 """
 
 from __future__ import annotations
@@ -15,10 +17,11 @@ ALERT_S: Final = 3600.0  # the banner's `until`; it moves forward on every board
 class Status:
     """Thread-safe: the worker thread writes it, the HTTP threads read it."""
 
-    def __init__(self) -> None:
-        """Healthy until told otherwise (an off relay has no cause)."""
+    def __init__(self, label: str = "Phone relay is off") -> None:
+        """Healthy until told otherwise (an off relay has no cause); `label` opens the banner text."""
         self._lock = threading.Lock()
         self._cause: str | None = None
+        self._label = label
 
     @property
     def cause(self) -> str | None:
@@ -41,7 +44,8 @@ class Status:
         cause = self.cause
         if cause is None:
             return None
-        return {"kind": "relay", "text": f"Phone relay is off: {cause}", "until": int(now + ALERT_S)}
+        return {"kind": "relay", "text": f"{self._label}: {cause}", "until": int(now + ALERT_S)}
 
 
 STATUS: Final = Status()
+NOTIFY: Final = Status("Phone notifications are off")

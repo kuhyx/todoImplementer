@@ -14,16 +14,17 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 
+import httpx
 from crdt_sync import E2eCipher
 from rtdb_relay.seal import Sealer
-from rtdb_relay.server import RequestError
 from rtdb_relay.unlock import unlock
 
 from todoimpl.version import __version__
 
-from . import bridge, connect, kinds
+from . import bridge, connect, fcm, kinds
 from .layout import E2E, LAYOUT
 from .live import Live
+from .pinger import Pinger
 from .presence import Heart
 from .publisher import Publisher
 from .server import CURRENT, RelayServer
@@ -36,6 +37,7 @@ if TYPE_CHECKING:
 
     from todoimpl.http.routes import Router
 
+    from .pinger import Sender
     from .publisher import Source
 
 log = logging.getLogger("todoimpl.relay")
@@ -57,16 +59,7 @@ def sources(router: Router) -> dict[str, Source]:
     return {name: read(path) for name, path in SNAP_PATHS.items()}
 
 
-async def no_notify(body: dict[str, Any]) -> dict[str, Any]:
-    """Refuse notify_test until the FCM part lands (DOCS-native-app.md P6)."""
-    del body
-    msg = "notifications are not set up yet"
-    raise RequestError(code="disabled", message=msg)
-
-
-def handlers(
-    router: Router, publisher: Publisher, live: Live, notify: Handler = no_notify
-) -> dict[str, Handler]:
+def handlers(router: Router, publisher: Publisher, live: Live, notify: Handler) -> dict[str, Handler]:
     """Build one handler per allowlisted kind; routed kinds go through the Router like a click."""
 
     def routed(kind: kinds.Kind) -> Handler:
@@ -90,7 +83,7 @@ def handlers(
 
 @dataclass(frozen=True)
 class Wiring:
-    """What the worker serves (Router, build, run root) and where it connects; tests swap the last three."""
+    """What the worker serves (Router, build, run root), where it connects and pings; tests swap the rest."""
 
     router: Router
     build: str
@@ -98,6 +91,7 @@ class Wiring:
     endpoint: Callable[[], connect.Endpoint] = connect.connect
     secret: Callable[[], str] = connect.passphrase
     sleep: Callable[[float], Awaitable[None]] = asyncio.sleep
+    sender: Callable[[httpx.AsyncClient], Sender] = fcm.Sender
 
 
 async def serve(
@@ -110,10 +104,13 @@ async def serve(
     finally:
         await raw.aclose()
     rtdb = endpoint.client(LAYOUT.root, Sealer(E2eCipher(key.master), LAYOUT))
+    http = httpx.AsyncClient()
     try:
-        publisher = Publisher(rtdb, sources(wiring.router))
+        pinger = Pinger(rtdb, wiring.sender(http))
+        pinger.check()
+        publisher = Publisher(rtdb, sources(wiring.router), on_board=pinger.on_board)
         live = Live(rtdb, wiring.router)
-        server = RelayServer(rtdb, worker, handlers(wiring.router, publisher, live))
+        server = RelayServer(rtdb, worker, handlers(wiring.router, publisher, live, pinger.notify_test))
 
         def lanes() -> dict[str, Any]:
             return {"act": server.act, "read": server.reads}
@@ -128,6 +125,7 @@ async def serve(
             group.create_task(publisher.run())
             group.create_task(heart.run())
     finally:
+        await http.aclose()
         await rtdb.aclose()
 
 

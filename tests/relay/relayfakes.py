@@ -9,8 +9,10 @@ from rtdb_relay.rtdb import Rtdb
 from rtdb_relay.tests._fake_rtdb import FakeRtdb
 from todoimpl.http.routes import Router
 from todoimpl.relay import worker
+from todoimpl.relay.fcm import BadKeyError
 from todoimpl.relay.layout import LAYOUT
 from todoimpl.relay.live import Live
+from todoimpl.relay.pinger import Pinger
 from todoimpl.relay.publisher import Publisher
 from todoimpl.relay.server import RelayServer
 from todoimpl.sessions.commands import CommandResult
@@ -57,9 +59,21 @@ async def serve_one(srv: RelayServer, fake: FakeRtdb, rid: str) -> dict[str, Any
     return result
 
 
+class NoKeySender:
+    """An FCM sender without a key: notify_test answers disabled."""
+
+    def check(self) -> None:
+        raise BadKeyError("no Firebase service-account key at test")
+
+    async def send(self, token: str, data: dict[str, str]) -> None:
+        self.check()
+
+
 def board_handlers(router: Router) -> Callable[[Rtdb], dict[str, Any]]:
     """Build the real handler table (worker.handlers) on the server's client."""
-    return lambda db: worker.handlers(router, Publisher(db, worker.sources(router)), Live(db, router))
+    return lambda db: worker.handlers(
+        router, Publisher(db, worker.sources(router)), Live(db, router), Pinger(db, NoKeySender()).notify_test
+    )
 
 
 class Recorder:

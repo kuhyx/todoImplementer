@@ -127,5 +127,13 @@ keystore, never in a repo.
 3. The app shows one notification on channel `attention_v1` (ids are versioned; a change means a new id): the app
    glyph and the counts as badges, no text. Tapping opens the board on the Needs you column.
 4. Credential: the Firebase service-account key at `~/.config/todoImplementer/fcm-service-account.json` (0600),
-   never in the repo. A missing or failing key shows as the board `alert`, never as silence.
+   never in the repo. A missing or failing key shows as the board `alert`, never as silence: kind `relay`, text
+   `Phone notifications are off: <cause>` (`relay/status.py` NOTIFY, after the relay's own cause). Put the key
+   in place with `scripts/fcm_key.sh` (opens the console page, waits for the download, moves it, checks it);
+   `scripts/fcm_key.sh --verify-only` or `python -m todoimpl.relay.fcm_check` only checks that Google issues a
+   token for it. The key is read again on each token fetch, so a new key needs no restart.
 5. Budget: change on the PC to notification on the phone, 10 s at p90 (D4).
+6. Code: `relay/pinger.py` (which changes ping, coalescing, `notify_test`), `relay/fcm.py` (RS256 assertion with
+   `cryptography`, cached access token, data-only HTTP v1 send). `notify_test` answers `not_found` when the
+   asking device has no token or FCM no longer knows it, `disabled` without a usable key, and
+   `upstream_unavailable` (retry) when FCM refuses. A token FCM reports as gone is skipped, not an alert.
