@@ -9,6 +9,7 @@ import 'package:todo_implementer/sync/google_sign_in_backend.dart';
 import 'package:todo_implementer/sync/layout.dart';
 import 'package:todo_implementer/sync/rtdb_board_relay.dart';
 import 'package:todo_implementer/sync/sessions_feed.dart';
+import 'package:todo_implementer/sync/usage_relay.dart';
 import 'package:uuid/uuid.dart';
 
 const _devKey = 'todoimpl.device_id';
@@ -33,6 +34,7 @@ class AppServices {
     required this.gate,
     required this.relay,
     this.sessions,
+    this.usage,
   });
 
   /// Builds the production bundle for [config].
@@ -49,24 +51,30 @@ class AppServices {
       idToken: auth.idToken,
       sealRequired: true,
     );
-    // One listen for every page: the board and sessions share the request
-    // hub and the `rev` watcher.
+    // One listen for every page: board, sessions and usage share the
+    // request hub and the `rev` watcher.
     final stream = RtdbStream(client);
     final hub = RequestHub(stream, fullPath('requests'));
     final rev = RevWatcher(stream, fullPath('rev'), yieldTo: hub.inFlight);
+    final relay = RtdbBoardRelay(
+      client: client,
+      dev: dev,
+      watch: hub.watch,
+      moves: () => rev.changesOf('board'),
+    );
     return AppServices(
       config: config,
       auth: auth,
       gate: E2eGate(client: client),
-      relay: RtdbBoardRelay(
-        client: client,
-        dev: dev,
-        watch: hub.watch,
-        moves: () => rev.changesOf('board'),
-      ),
+      relay: relay,
       sessions: rtdbSessionsFeed(
         client: client,
         moves: rev.changesOf('sessions'),
+      ),
+      usage: RtdbUsageRelay(
+        send: relay.send,
+        read: () => client.get(fullPath('snap/usage')),
+        moves: () => rev.changesOf('usage'),
       ),
     );
   }
@@ -85,4 +93,7 @@ class AppServices {
 
   /// The sessions page's `snap/sessions` feed (null: the page glyph).
   final SessionsFeed? sessions;
+
+  /// The usage page's link to the PC (null in tests of the board alone).
+  final UsageRelay? usage;
 }

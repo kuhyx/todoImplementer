@@ -13,6 +13,7 @@ import 'package:todo_implementer/shell/shell.dart';
 import 'package:todo_implementer/sync/services.dart';
 import 'package:todo_implementer/ui/board/board_page.dart';
 import 'package:todo_implementer/ui/sessions/sessions_page.dart';
+import 'package:todo_implementer/ui/usage/usage_page.dart';
 
 /// The gate in front of the shell.
 class AppGate extends StatefulWidget {
@@ -93,11 +94,13 @@ class _AppGateState extends State<AppGate> {
             if (open.data ?? false) {
               final s = widget.services;
               final sessions = s.sessions;
+              final usage = s.usage;
               return Shell(
                 board: BoardPage(relay: s.relay),
                 sessions: sessions == null
                     ? null
                     : SessionsPage(feed: sessions, relay: s.relay),
+                usage: usage == null ? null : UsagePage(relay: usage),
               );
             }
             return _lockView('${open.error ?? widget.services.gate.reason}');

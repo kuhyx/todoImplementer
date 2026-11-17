@@ -30,13 +30,16 @@ const shellPages = <ShellPage>[
 /// their page glyph until P4b/P4c.
 class Shell extends StatefulWidget {
   /// Creates the shell; [board] is the board page body (null: its glyph).
-  const new({this.board, this.sessions, super.key});
+  const new({this.board, this.sessions, this.usage, super.key});
 
   /// The board page, once the relay is ready.
   final Widget? board;
 
   /// The sessions page, once the relay is ready.
   final Widget? sessions;
+
+  /// The usage page, once the relay is ready.
+  final Widget? usage;
 
   @override
   State<Shell> createState() => _ShellState();
@@ -56,6 +59,7 @@ class _ShellState extends State<Shell> {
               switch (page.key) {
                 'board' => widget.board,
                 'sessions' => widget.sessions,
+                'usage' => widget.usage,
                 _ => null,
               } ??
               Center(
