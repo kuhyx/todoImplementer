@@ -15,7 +15,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 
 import httpx
-from crdt_sync import E2eCipher
 from rtdb_relay.seal import Sealer
 from rtdb_relay.unlock import unlock
 
@@ -103,7 +102,7 @@ async def serve(
         key = await unlock(raw, secret, E2E)
     finally:
         await raw.aclose()
-    rtdb = endpoint.client(LAYOUT.root, Sealer(E2eCipher(key.master), LAYOUT))
+    rtdb = endpoint.client(LAYOUT.root, Sealer(key.cipher(), LAYOUT))
     http = httpx.AsyncClient()
     try:
         pinger = Pinger(rtdb, wiring.sender(http))

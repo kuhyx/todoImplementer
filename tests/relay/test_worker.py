@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, cast
 
 import pytest
-from crdt_sync import E2eLockedError
+from crdt_sync import E2eCipher, E2eLockedError
 from httpfakes import FakeBackend
 from relayfakes import DEV, RIDS, ROOT, answer, board_handlers, req
 from rtdb_relay.rtdb import Rtdb
@@ -41,6 +41,9 @@ class FakeEndpoint:
 
 class Key:
     master = TEST_KEY
+
+    def cipher(self) -> E2eCipher:
+        return E2eCipher(TEST_KEY)
 
 
 def stopper(delays: list[float], after: int) -> Any:
