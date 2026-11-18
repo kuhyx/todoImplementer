@@ -63,6 +63,7 @@ export async function mount(hash = "", options: Options = {}): Promise<Harness> 
   harness.stub = stubFetch({
     "GET /api/sessions": options.list ?? (() => sessionList(harness.rows)),
     "POST /api/sessions/delete": () => reply,
+    "POST /api/sessions/handoff": () => reply,
     "POST /api/sessions/mark": () => reply,
     "POST /api/sessions/resume": () => reply,
   });

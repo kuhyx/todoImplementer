@@ -65,6 +65,12 @@ void main() {
       'args': {'id': 'a', 'mark': null},
     });
     expect(SessionVerb.delete.kind, 'session_delete');
+    expect(SessionVerb.handoff.kind, 'session_handoff');
+    expect(sessionBody(SessionVerb.handoff, ['a', 'b']), {
+      'args': {
+        'ids': ['a', 'b'],
+      },
+    });
   });
 
   test('outcomes: ok, refused, failed and a relay failure', () {

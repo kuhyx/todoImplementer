@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import pytest
-from todoimpl.sessions import api
+from todoimpl.sessions import api, origin
 from todoimpl.tokens_api import paths
 
 if TYPE_CHECKING:
@@ -25,3 +25,9 @@ def sysroot(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 def fresh_scanner(monkeypatch: pytest.MonkeyPatch) -> None:
     """Give each test a fresh scanner cache, so one test's transcripts never leak into the next."""
     monkeypatch.setattr(api, "SCANNER", api.Scanner())
+
+
+@pytest.fixture(autouse=True)
+def fresh_origins(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Give each test a fresh cwd -> repo cache, so one test's git answers never leak into the next."""
+    monkeypatch.setattr(origin, "CACHE", origin.OriginCache())

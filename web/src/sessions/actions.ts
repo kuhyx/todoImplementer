@@ -2,7 +2,7 @@
 import type { Action } from "@/sessions/api";
 import type { Item } from "@/sessions/model";
 
-import { iconButton } from "@/components/icons";
+import { iconButton, setIcon } from "@/components/icons";
 import { h } from "@/lib/dom";
 import { label } from "@/sessions/labels";
 import { MAX_RESUME } from "@/sessions/model";
@@ -13,11 +13,19 @@ export type Perform = (action: Action, body: Record<string, unknown>, key: strin
 /** Resume opens a terminal on the desktop; a phone viewport hides it (CSS `.desktop-only`) and keeps the copy button. */
 const DESKTOP = "desktop-only";
 
+/** Move to the board, enabled only when the server said it can succeed; a disabled one names the server's reason. */
+function boardButton(name: string, blocked: null | string, isBusy: boolean, send: () => void): HTMLButtonElement {
+  const button = iconButton("robot", name, { "data-action": "handoff", disabled: isBusy || blocked !== null }, send);
+  if (blocked !== null) setIcon(button, "robot", blocked);
+  return button;
+}
+
 export function rowActions(item: Item, perform: Perform, outcome: Outcome | undefined, isBusy: boolean): HTMLElement {
   const body = { id: item.id };
   const buttons = [
     iconButton("terminal", label.resume, { disabled: isBusy }, () => { void perform("resume", body, item.id); }, DESKTOP),
     copyButton(() => item.resume_command, label.copy),
+    boardButton(label.handoff, item.movable ? null : (item.move_reason ?? label.handoff), isBusy, () => { void perform("handoff", body, item.id); }),
     // Only a hand mark can be undone; a session that tagged itself done has nothing to mark.
     item.mark === "manual"
       ? iconButton("retry", label.unmark, { disabled: isBusy }, () => { void perform("mark", { ...body, mark: null }, item.id); })
@@ -32,6 +40,8 @@ export interface BulkState {
   commands: () => string;
   ids: string[];
   isBusy: boolean;
+  /** The server's reason the first selected row cannot move to the board, if one cannot. */
+  moveBlock: null | string;
   onClear: () => void;
   outcome: Outcome | undefined;
 }
@@ -42,6 +52,7 @@ export function bulkBar(state: BulkState, perform: Perform): HTMLElement {
   const body = { ids };
   const isTooMany = ids.length > MAX_RESUME;
   const resume = iconButton("terminal", isTooMany ? label.resumeMax : label.resume, { disabled: isBusy || isTooMany }, () => { void perform("resume", body, "bulk"); }, DESKTOP);
+  const board = boardButton(isTooMany ? label.handoffMax : label.handoff, isTooMany ? label.handoffMax : state.moveBlock, isBusy, () => { void perform("handoff", body, "bulk"); });
   return h(
     "section",
     { attrs: { "aria-label": label.select }, class: "bulk-bar" },
@@ -50,6 +61,7 @@ export function bulkBar(state: BulkState, perform: Perform): HTMLElement {
     ids.length > 0 && iconButton("retry", label.unmark, { disabled: isBusy }, () => { void perform("mark", { ids, mark: null }, "bulk"); }),
     ids.length > 0 && copyButton(state.commands, label.copyAll),
     ids.length > 0 && resume,
+    ids.length > 0 && board,
     ids.length > 0 && deleteButton(ids.length, isBusy, () => { void perform("delete", body, "bulk"); }),
     iconButton("close", label.clearSelection, {}, state.onClear),
     state.outcome !== undefined && outcomeGlyph(state.outcome),

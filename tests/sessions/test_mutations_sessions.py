@@ -138,7 +138,7 @@ def test_mark_done_then_clear(transcript: Path) -> None:
         fx.OTHER_SID: {"mark": "done", "at": 1},
         fx.SID: {"mark": "done", "at": EPOCH},
     }
-    rows = api.listing()["sessions"]
+    rows = api.listing(FakeRunner({}))["sessions"]
     assert rows[0]["done"] is True
     assert mark.apply(FakeRunner({}), {"id": fx.SID, "mark": None}).ok
     assert json.loads(transcript.read_text()) == {fx.OTHER_SID: {"mark": "done", "at": 1}}

@@ -17,6 +17,8 @@ export const session = z.strictObject({
   last_user: z.string(),
   manual_mark: z.literal("done").nullable(),
   mark: z.enum(MARKS),
+  movable: z.boolean(),
+  move_reason: z.string().nullable(),
   project: z.string(),
   resume_command: z.string(),
   status,

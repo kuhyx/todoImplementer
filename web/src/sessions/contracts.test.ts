@@ -38,6 +38,10 @@ describe("contracts/sessions.schema.json", () => {
     ["mark_body", { id: ID }, false],
     ["delete_body", { id: ID, ids: [ID] }, false],
     ["delete_body", { ids: [ID] }, true],
+    ["handoff_body", { id: ID }, true],
+    ["handoff_body", { ids: [ID], repos: { [ID]: "kuhyx/demo" } }, true],
+    ["handoff_body", { ids: [ID, ID, ID, ID, ID, ID] }, false],
+    ["handoff_body", { id: ID, repos: { [ID]: "no slash" } }, false],
   ])("%s %j is %s", (def, body, valid) => {
     expect(contractValidator("sessions", def)(body)).toBe(valid);
   });

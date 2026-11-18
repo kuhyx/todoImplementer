@@ -89,6 +89,25 @@ def test_the_todo_app_failing_is_upstream_unavailable(
     assert caught.value.code == "upstream_unavailable"
 
 
+def test_check_twin_answers_before_anything_is_written(
+    rig: Rig, images: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    rig.note(title="Fix the header", repo="kuhyx/demo")
+    make = service(rig)
+    make.check_twin(NewTask("kuhyx/demo", "Another title", "", ()))
+    with pytest.raises(BackendError) as twin:
+        make.check_twin(NewTask("kuhyx/demo", "Fix the header", "", ()))
+    assert twin.value.code == "conflict"
+
+    def down(*_a: object, **_k: object) -> None:
+        raise TodoError("connection refused")
+
+    monkeypatch.setattr(make._client, "list_tasks", down)
+    with pytest.raises(BackendError) as broken:
+        make.check_twin(NewTask("kuhyx/demo", "x", "", ()))
+    assert broken.value.code == "upstream_unavailable"
+
+
 def test_a_done_card_never_holds_the_new_section() -> None:
     item = Item("abcd1234-full-id", 0, "Fix it", "", "kuhyx/demo", "done", None)
     done = CardTask("abcd1234-0", "Fix it", "", "kuhyx/demo", "done", "medium", None, item)

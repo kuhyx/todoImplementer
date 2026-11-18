@@ -67,6 +67,13 @@ class NewTaskService:
             raise BackendError(NOT_FOUND, msg)
         return note8, card
 
+    def check_twin(self, task: NewTask) -> None:
+        """Refuse (BackendError) a title the repo has open already; a session handoff checks a batch first."""
+        try:
+            self._refuse_twin(task)
+        except TodoError as exc:
+            raise BackendError(UPSTREAM, upstream_text(str(exc))) from exc
+
     def _refuse_twin(self, task: NewTask) -> None:
         """Refuse a title an open section has already: two parts nobody could tell apart."""
         for note in self._client.list_tasks(repo=task.repo, full=True):

@@ -29,8 +29,9 @@ Widget sessionButton(
   VoidCallback? onPressed, {
   VoidCallback? onLongPress,
   Color? color,
+  String? label,
 }) => Semantics(
-  label: spoken[id],
+  label: label ?? spoken[id],
   button: true,
   excludeSemantics: true,
   child: IconButton.filledTonal(
@@ -40,6 +41,20 @@ Widget sessionButton(
     onLongPress: onLongPress,
     icon: Icon(icon),
   ),
+);
+
+/// Move to the board: live only when the server said it can succeed; a
+/// blocked one is disabled and its label is the server's reason.
+Widget handoffButton({
+  required bool live,
+  required String? blocked,
+  required VoidCallback onRun,
+  String id = 'handoff',
+}) => sessionButton(
+  id,
+  Icons.smart_toy_outlined,
+  live && blocked == null ? onRun : null,
+  label: (blocked?.isEmpty ?? true) ? null : blocked,
 );
 
 /// The hold-to-confirm delete button.
@@ -141,6 +156,11 @@ class _SessionSheetState extends State<SessionSheet> {
                   'copy',
                   _copied ? Icons.check : Icons.content_copy,
                   _copy,
+                ),
+                handoffButton(
+                  live: live,
+                  blocked: s.movable ? null : s.moveReason,
+                  onRun: () => _run(SessionVerb.handoff),
                 ),
                 if (s.mark == SessionMark.manual)
                   sessionButton(

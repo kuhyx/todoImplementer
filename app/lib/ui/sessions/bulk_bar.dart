@@ -1,6 +1,7 @@
 /// The bar over the grid while sessions are selected (web `bulkBar`):
 /// count, mark, unmark, copy every resume command, resume (desktop, at most
-/// five) and hold-to-delete, then select-all and clear.
+/// five), move to the board (at most five) and hold-to-delete, then
+/// select-all and clear.
 library;
 
 import 'package:design_system/design_system.dart';
@@ -18,6 +19,7 @@ class BulkBar extends StatelessWidget {
     required this.ids,
     required this.commands,
     required this.busy,
+    required this.moveBlock,
     required this.outcome,
     required this.onRun,
     required this.onSelectAll,
@@ -33,6 +35,10 @@ class BulkBar extends StatelessWidget {
 
   /// A request is in flight.
   final bool busy;
+
+  /// The server's reason the first selected session cannot move to the
+  /// board, or null when every one can.
+  final String? moveBlock;
 
   /// The last bulk answer.
   final SessionOutcome? outcome;
@@ -92,6 +98,12 @@ class BulkBar extends StatelessWidget {
                 Icons.terminal,
                 live && !tooMany ? () => onRun(SessionVerb.resume) : null,
               ),
+            handoffButton(
+              id: tooMany ? 'handoff-max' : 'handoff',
+              live: live,
+              blocked: tooMany ? spoken['handoff-max'] : moveBlock,
+              onRun: () => onRun(SessionVerb.handoff),
+            ),
             deleteButton(
               live: live,
               onConfirm: () => onRun(SessionVerb.delete),

@@ -5,6 +5,7 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
 
 import sessfix as fx
+from sessrunner import FakeRunner
 from todoimpl.sessions import api
 
 if TYPE_CHECKING:
@@ -12,6 +13,8 @@ if TYPE_CHECKING:
 
 KEYS = {
     "id",
+    "movable",
+    "move_reason",
     "cwd",
     "project",
     "title",
@@ -32,7 +35,7 @@ def _sid(n: int) -> str:
 
 
 def _get() -> tuple[HTTPStatus, dict[str, Any]]:
-    return HTTPStatus.OK, api.listing()
+    return HTTPStatus.OK, api.listing(FakeRunner({}))
 
 
 def test_route_serves_the_contract_shape(sysroot: Path) -> None:

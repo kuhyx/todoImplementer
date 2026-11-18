@@ -41,7 +41,7 @@ def projects(sysroot: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     (sub / "agent-a.jsonl").write_text("{}\n")
     marks = sysroot / "home/tester/.claude/session-status.json"
     marks.write_text(json.dumps({sid: {"mark": "done", "at": 1} for sid in SIDS}))
-    api.listing()
+    api.listing(FakeRunner({}))
     return root
 
 
@@ -78,7 +78,7 @@ def test_delete_one_moves_transcript_and_subagents(projects: Path, sysroot: Path
     # Forgotten at once, not only on the next scan.
     assert fx.SID not in _cached_ids()
     assert fx.OTHER_SID in _cached_ids()
-    rows = api.listing()["sessions"]
+    rows = api.listing(FakeRunner({}))["sessions"]
     assert [r["id"] for r in rows] == [fx.OTHER_SID]
 
 
@@ -92,7 +92,7 @@ def test_delete_bulk_moves_every_copy(projects: Path, sysroot: Path) -> None:
     old = sysroot / "home/tester/.claude/projects-trash" / DAY / "-old-demo"
     assert (old / f"{fx.OTHER_SID}.jsonl").is_file()
     assert _marks(sysroot) == {}
-    assert api.listing()["sessions"] == []
+    assert api.listing(FakeRunner({}))["sessions"] == []
 
 
 def test_delete_skips_the_marks_write_when_unmarked(projects: Path, sysroot: Path) -> None:

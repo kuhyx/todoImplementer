@@ -13,7 +13,9 @@
       "last_ts": "2026-11-10T08:00:02.000Z",
       "last_user": "fix the thing",
       "last_assistant": "A: run `! sudo systemctl restart x`",
-      "resume_command": "cd '/home/tester/src/demo' && claude --resume 11111111-2222-4333-8444-555555555555"
+      "resume_command": "cd '/home/tester/src/demo' && claude --resume 11111111-2222-4333-8444-555555555555",
+      "movable": false,
+      "move_reason": "waits for your action (A:): answer it in its terminal"
     },
     {
       "id": "99999999-8888-4777-8666-555555555555",
@@ -28,7 +30,9 @@
       "last_ts": null,
       "last_user": "hi",
       "last_assistant": "",
-      "resume_command": "cd '/home/tester' && claude --resume 99999999-8888-4777-8666-555555555555"
+      "resume_command": "cd '/home/tester' && claude --resume 99999999-8888-4777-8666-555555555555",
+      "movable": false,
+      "move_reason": "already done"
     }
   ],
   "scanned": 2,

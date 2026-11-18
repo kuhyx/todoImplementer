@@ -25,6 +25,8 @@ Json sessionJson({
   Duration? idle = const Duration(minutes: 5),
   String lastUser = 'please',
   String lastAssistant = 'A: do the thing',
+  bool movable = false,
+  String? moveReason = 'waits for your action',
 }) {
   final sid =
       id ?? '0000000${_n++ % 10}-0000-4000-8000-${'$_n'.padLeft(12, '0')}';
@@ -44,6 +46,9 @@ Json sessionJson({
     'last_user': lastUser,
     'last_assistant': lastAssistant,
     'resume_command': "cd '/home/u/src/$project' && claude --resume $sid",
+    'movable': movable,
+    // RTDB keeps no null: a movable row arrives without the key.
+    if (moveReason != null && !movable) 'move_reason': moveReason,
   };
 }
 

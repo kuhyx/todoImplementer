@@ -81,7 +81,7 @@ class Router:
             "/version": lambda: json_reply({"build": self.build, "version": __version__}),
             "/api/board": lambda: json_reply(self.backend.board()),
             "/api/usage": lambda: json_reply(self.backend.usage()),
-            sessions_http.GET_PATH: sessions_http.listing,
+            sessions_http.GET_PATH: lambda: sessions_http.listing(self),
         }
         self.sessions_runner: CommandRunner = SubprocessRunner()  # tests swap in a recorder
 
@@ -182,7 +182,7 @@ class Router:
         found = merge_http.POST_PATH.fullmatch(path)
         if path == newtask.PATH:  # create, then the card's own Start click through _action
             reply = _guard(
-                lambda: newtask.handle(self.backend, raw, lambda card: _guard(partial(self._start, card)))
+                lambda: newtask.handle(self.backend, raw, lambda card: _guard(partial(self.start_card, card)))
             )
         elif path == settings.PATH:
             reply = _guard(lambda: settings.handle(self.backend, raw))
@@ -191,12 +191,12 @@ class Router:
         elif (hit := asks_http.POST_PATH.fullmatch(path)) and (ask := asks_http.api_of(self.backend)):
             reply = _guard(lambda: asks_http.handle_post(ask, hit, raw))
         elif mutation := sessions_http.POST_PATH.fullmatch(path):
-            reply = _guard(lambda: sessions_http.handle_post(self.sessions_runner, mutation, raw))
+            reply = _guard(lambda: sessions_http.handle_post(self, mutation, raw))
         else:
             reply = _guard(lambda: self._action(path, raw))
         return reply
 
-    def _start(self, card: str) -> Reply:
+    def start_card(self, card: str) -> Reply:  # noqa: D102 - the card's own Start click
         return self._action(f"/api/task/{card}/start", b"")
 
     def _request(self, path: str, raw: bytes) -> tuple[str, str, dict[str, Any]] | Reply:

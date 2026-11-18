@@ -142,6 +142,7 @@ class _SessionsPageState extends State<SessionsPage> {
                     if (ids.contains(s.id)) s.resumeCommand,
                 ].join('\n'),
                 busy: _busy,
+                moveBlock: _moveBlock(items, ids),
                 outcome: _bulk,
                 onRun: (verb, {unmark = false}) =>
                     unawaited(_runBulk(verb, ids, unmark: unmark)),
@@ -185,6 +186,14 @@ class _SessionsPageState extends State<SessionsPage> {
       );
     },
   );
+
+  /// The server's reason the first selected session cannot move, if any.
+  String? _moveBlock(List<Session> items, List<String> ids) {
+    for (final s in items) {
+      if (ids.contains(s.id) && !s.movable) return s.moveReason;
+    }
+    return null;
+  }
 
   Widget _errorRow() {
     final last = _errors.last;

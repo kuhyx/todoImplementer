@@ -25,7 +25,7 @@ def schema_kinds() -> set[str]:
 
 def test_the_allowlist_is_the_contracts() -> None:
     assert set(kinds.ALL) == schema_kinds()
-    assert len(kinds.ALL) == len(set(kinds.ALL)) == 32
+    assert len(kinds.ALL) == len(set(kinds.ALL)) == 33
 
 
 def test_lanes() -> None:
@@ -64,6 +64,7 @@ SID = "11111111-2222-4333-8444-555555555555"
 VALID_ARGS: dict[str, dict[str, Any]] = {
     "session_mark": {"args": {"id": SID, "mark": "done"}},
     "session_delete": {"args": {"ids": [SID]}},
+    "session_handoff": {"args": {"ids": [SID], "repos": {SID: "kuhyx/demo"}}},
 }
 SKIP = {"new_task", "session_resume"}  # their args need more than this test builds; the route checks them
 GOOD = [req(k, VALID_ARGS.get(k, b)) for k, b in bodies(CARD).items() if k not in SKIP]

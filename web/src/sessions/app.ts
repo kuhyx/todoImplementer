@@ -152,10 +152,12 @@ export class SessionsApp extends HTMLElement {
     const ids = selectedIds(this.#selected, this.#items);
     const isBulk = ids.length > 0 || this.#outcomes.has(BULK);
     const commands = (): string => this.#items.filter((item) => this.#selected.has(item.id)).map((item) => item.resume_command).join("\n");
+    const blocked = this.#items.find((item) => this.#selected.has(item.id) && !item.movable);
+    const moveBlock = blocked === undefined ? null : (blocked.move_reason ?? label.handoff);
     this.#host.replaceChildren(
       ...[
         this.#error !== null && this.#failure(this.#error),
-        isBulk && bulkBar({ commands, ids, isBusy: this.#busy, onClear: () => { this.#clearSelection(); }, outcome: this.#outcomes.get(BULK) }, this.#perform),
+        isBulk && bulkBar({ commands, ids, isBusy: this.#busy, moveBlock, onClear: () => { this.#clearSelection(); }, outcome: this.#outcomes.get(BULK) }, this.#perform),
         renderTable({
           isBusy: this.#busy,
           items: this.#items,

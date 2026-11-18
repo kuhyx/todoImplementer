@@ -36,6 +36,7 @@
     {"if": {"properties": {"kind": {"const": "session_resume"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/args_only_resume"}}}},
     {"if": {"properties": {"kind": {"const": "session_mark"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/args_only_mark"}}}},
     {"if": {"properties": {"kind": {"const": "session_delete"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/args_only_delete"}}}},
+    {"if": {"properties": {"kind": {"const": "session_handoff"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/args_only_handoff"}}}},
     {"if": {"properties": {"kind": {"enum": ["task_detail", "task_issues", "umbrella"]}}}, "then": {"properties": {"body": {"$ref": "#/$defs/card_only"}}}},
     {"if": {"properties": {"kind": {"const": "task_shot"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/shot_body"}}}},
     {"if": {"properties": {"kind": {"const": "umbrella_log"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/umbrella_log_body"}}}},
@@ -50,7 +51,7 @@
         "task_lesson_approve", "task_go", "task_rerun",
         "ask_answer", "ask_take_recommended", "ask_run", "ask_undo", "ask_approve", "ask_reject",
         "new_task", "credits_fallback", "merge_merge", "merge_dismiss",
-        "session_resume", "session_mark", "session_delete",
+        "session_resume", "session_mark", "session_delete", "session_handoff",
         "task_detail", "task_issues", "task_shot", "umbrella", "umbrella_log", "tokens",
         "live_watch", "snapshot_refresh", "notify_test"
       ],
@@ -78,6 +79,7 @@
     "args_only_resume": {"$ref": "#/$defs/args_wrapper", "properties": {"args": {"$ref": "https://todoimplementer.local/contracts/sessions.schema.json#/$defs/resume_body"}}},
     "args_only_mark": {"$ref": "#/$defs/args_wrapper", "properties": {"args": {"$ref": "https://todoimplementer.local/contracts/sessions.schema.json#/$defs/mark_body"}}},
     "args_only_delete": {"$ref": "#/$defs/args_wrapper", "properties": {"args": {"$ref": "https://todoimplementer.local/contracts/sessions.schema.json#/$defs/delete_body"}}},
+    "args_only_handoff": {"$ref": "#/$defs/args_wrapper", "properties": {"args": {"$ref": "https://todoimplementer.local/contracts/sessions.schema.json#/$defs/handoff_body"}}},
     "args_wrapper": {"type": "object", "required": ["args"], "properties": {"args": true}, "additionalProperties": false},
     "card_only": {
       "type": "object",

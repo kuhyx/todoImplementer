@@ -71,6 +71,8 @@ class Session {
     required this.group,
     required this.mark,
     required this.resumeCommand,
+    this.movable = false,
+    this.moveReason = '',
     this.lastTs,
     this.lastUser = '',
     this.lastAssistant = '',
@@ -87,6 +89,8 @@ class Session {
     group: intOr(j, 'group') ?? 2,
     mark: SessionMark.of(str(j, 'mark', 'open')),
     resumeCommand: str(j, 'resume_command'),
+    movable: flag(j, 'movable'),
+    moveReason: str(j, 'move_reason'),
     lastTs: DateTime.tryParse(str(j, 'last_ts')),
     lastUser: str(j, 'last_user'),
     lastAssistant: str(j, 'last_assistant'),
@@ -118,6 +122,12 @@ class Session {
 
   /// `cd '<cwd>' && claude --resume <id>`.
   final String resumeCommand;
+
+  /// The server says it can move to the board (never computed here).
+  final bool movable;
+
+  /// Why it cannot move ('' when it can): the disabled button's label.
+  final String moveReason;
 
   /// Time of the newest prompt or reply, if the transcript had one.
   final DateTime? lastTs;

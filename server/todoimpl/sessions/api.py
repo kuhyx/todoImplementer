@@ -13,6 +13,7 @@ import uuid
 from pathlib import PurePosixPath
 from typing import TYPE_CHECKING, Any
 
+from todoimpl.sessions import movable
 from todoimpl.sessions.markstore import read_marks
 from todoimpl.sessions.scan import Scanner
 from todoimpl.tokens_api import paths
@@ -20,6 +21,7 @@ from todoimpl.tokens_api import paths
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from todoimpl.sessions.commands import CommandRunner
     from todoimpl.sessions.parse import Session
 
 __all__ = ["SCANNER", "Scanner", "canonical_id", "find", "listing", "marks_path", "projects_dir"]
@@ -78,10 +80,11 @@ def _project(cwd: str) -> str:
     return PurePosixPath(cwd.rstrip("/")).name
 
 
-def _row(session: Session, mark: dict[str, Any] | None) -> dict[str, Any]:
+def _row(runner: CommandRunner, session: Session, mark: dict[str, Any] | None) -> dict[str, Any]:
     """Render one session in the frontend's JSON contract."""
     manual = mark.get("mark") if mark else None
     done = session.status in _DONE_STATUSES or manual == "done"
+    _, move_reason = movable.verdict(runner, session, manual)
     return {
         "id": session.id,
         "cwd": session.cwd,
@@ -96,6 +99,8 @@ def _row(session: Session, mark: dict[str, Any] | None) -> dict[str, Any]:
         "last_user": session.last_user,
         "last_assistant": session.last_assistant,
         "resume_command": f"cd {_quote(session.cwd)} && claude --resume {session.id}",
+        "movable": move_reason is None,
+        "move_reason": move_reason,
     }
 
 
@@ -105,11 +110,11 @@ def _ordered(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted(rows, key=lambda r: r["group"])
 
 
-def listing() -> dict[str, Any]:
-    """Return the whole session list with the scan's cost (the GET body)."""
+def listing(runner: CommandRunner) -> dict[str, Any]:
+    """Return the whole session list with the scan's cost (the GET body); `runner` asks git for repos."""
     started = time.perf_counter()
     sessions, scanned = SCANNER.scan(projects_dir())
     marks = read_marks(marks_path())
-    rows = _ordered([_row(s, marks.get(s.id)) for s in sessions.values()])
+    rows = _ordered([_row(runner, s, marks.get(s.id)) for s in sessions.values()])
     elapsed = (time.perf_counter() - started) * 1000
     return {"sessions": rows, "scanned": scanned, "scan_ms": round(elapsed, 1)}

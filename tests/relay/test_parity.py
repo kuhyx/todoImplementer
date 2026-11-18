@@ -40,6 +40,7 @@ def bodies(card: str) -> dict[str, dict[str, Any]]:
         "session_resume": {"args": {}},
         "session_mark": {"args": {}},
         "session_delete": {"args": {}},
+        "session_handoff": {"args": {}},
         "task_detail": {"card": card},
         "task_issues": {"card": card},
         "task_shot": {"card": card, "name": "shots/a.png"},

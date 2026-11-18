@@ -5,7 +5,7 @@ import { ApiError, getJson, readJson, send, shapeMessage } from "@/lib/http";
 import { apiError } from "@/lib/schemas-common";
 import { type MutationResult, mutationResult, type SessionList, sessionList } from "@/sessions/schemas";
 
-export type Action = "delete" | "mark" | "resume";
+export type Action = "delete" | "handoff" | "mark" | "resume";
 export const LIST_URL = "/api/sessions";
 export const actionUrl = (action: Action): string => `${LIST_URL}/${action}`;
 

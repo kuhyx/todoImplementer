@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://todoimplementer.local/contracts/sessions.schema.json",
-  "title": "GET /api/sessions (this schema's root) and POST /api/sessions/<resume|mark|delete>",
-  "description": "Claude Code sessions kuhy started by hand (headless runs, entrypoint sdk-cli and sdk-py, are never listed), read from ~/.claude/projects. `status` comes from the tag line of the last reply; `done` also counts a manual mark in ~/.claude/session-status.json; `group` is the server's urgency rank (0 needs_action, 1 question, 2 untagged, 3 running, 4 done or continuing), and the list arrives sorted by it, newest first. POSTs send Content-Type application/json, X-Todoimpl-Token and a same-origin Origin like every other action; the body is `resume_body`, `mark_body` or `delete_body`, the answer is `result`.",
+  "title": "GET /api/sessions (this schema's root) and POST /api/sessions/<resume|mark|delete|handoff>",
+  "description": "Claude Code sessions kuhy started by hand (headless runs, entrypoint sdk-cli and sdk-py, are never listed), read from ~/.claude/projects. `status` comes from the tag line of the last reply; `done` also counts a manual mark in ~/.claude/session-status.json; `group` is the server's urgency rank (0 needs_action, 1 question, 2 untagged, 3 running, 4 done or continuing), and the list arrives sorted by it, newest first. POSTs send Content-Type application/json, X-Todoimpl-Token and a same-origin Origin like every other action; the body is `resume_body`, `mark_body`, `delete_body` or `handoff_body`, the answer is `result`.",
   "$ref": "#/$defs/list",
   "$defs": {
     "session_id": {"type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", "description": "Canonical lowercase hyphenated UUID, the only spelling the mutations accept."},
@@ -23,9 +23,11 @@
         "last_ts": {"type": ["string", "null"], "description": "ISO time of the newest prompt or reply."},
         "last_user": {"type": "string"},
         "last_assistant": {"type": "string"},
-        "resume_command": {"type": "string", "description": "`cd '<cwd>' && claude --resume <id>`, single-quoted for a POSIX shell."}
+        "resume_command": {"type": "string", "description": "`cd '<cwd>' && claude --resume <id>`, single-quoted for a POSIX shell."},
+        "movable": {"type": "boolean", "description": "Whether POST /api/sessions/handoff would take it: untagged, or running and quiet for an hour, not done, in a clone with a GitHub origin the board has a clone of. Computed by the server only."},
+        "move_reason": {"type": ["string", "null"], "description": "Why it cannot move (the disabled button's title); null exactly when movable."}
       },
-      "required": ["id", "cwd", "project", "title", "status", "done", "group", "manual_mark", "mark", "last_ts", "last_user", "last_assistant", "resume_command"],
+      "required": ["id", "cwd", "project", "title", "status", "done", "group", "manual_mark", "mark", "last_ts", "last_user", "last_assistant", "resume_command", "movable", "move_reason"],
       "additionalProperties": false
     },
     "list": {
@@ -72,6 +74,22 @@
       "properties": {
         "id": {"$ref": "#/$defs/session_id"},
         "ids": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/session_id"}}
+      },
+      "allOf": [{"$ref": "#/$defs/one_or_many"}],
+      "additionalProperties": false
+    },
+    "handoff_body": {
+      "type": "object",
+      "description": "One `id`, or `ids` (1 to 5). Each session becomes a todo task in its repo (the cwd's GitHub origin, or `repos[id]`, which needs a local clone), its card is started and the session is marked done. All-or-nothing up to the first task.",
+      "properties": {
+        "id": {"$ref": "#/$defs/session_id"},
+        "ids": {"type": "array", "minItems": 1, "maxItems": 5, "items": {"$ref": "#/$defs/session_id"}},
+        "repos": {
+          "type": "object",
+          "propertyNames": {"$ref": "#/$defs/session_id"},
+          "additionalProperties": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"},
+          "description": "Repo override per id, for a cwd with no GitHub origin (such as $HOME)."
+        }
       },
       "allOf": [{"$ref": "#/$defs/one_or_many"}],
       "additionalProperties": false

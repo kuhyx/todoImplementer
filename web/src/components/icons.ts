@@ -46,6 +46,7 @@ const PATHS = {
   queued: "M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18zM12 7v5l3 2",
   ready: "M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10",
   retry: "M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5",
+  robot: "M6 8h12v11H6zM12 4v4M10 13h.01M14 13h.01M10 16h4M3 12v4M21 12v4",
   running: "M8 5v14l11-7z",
   search: "M11 4a7 7 0 1 0 0 14a7 7 0 0 0 0-14zM16 16l5 5",
   tag: "M3 12V3h9l9 9-9 9zM7.5 7.5h.01",

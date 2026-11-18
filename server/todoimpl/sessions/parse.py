@@ -54,6 +54,7 @@ class Session:
     last_user: str
     last_assistant: str
     mtime_ns: int
+    path: str  # the transcript, as read (under the test root in tests)
 
 
 @dataclass(slots=True)
@@ -199,4 +200,5 @@ def read_session(path: Path) -> Session | None:
         last_user=(seen.user or first_prompt)[:USER_CHARS],
         last_assistant=(seen.assistant or "")[-ASSISTANT_CHARS:],
         mtime_ns=stat.st_mtime_ns,
+        path=str(path),
     )

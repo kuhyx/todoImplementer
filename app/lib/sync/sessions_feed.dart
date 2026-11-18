@@ -1,5 +1,5 @@
 /// The sessions page's link to the PC: the `snap/sessions` node, re-read
-/// each time `rev/sessions` moves, and the three session request kinds
+/// each time `rev/sessions` moves, and the four session request kinds
 /// (DOCS-native-app-relay.md, "Publishing" and "Kinds").
 library;
 
@@ -41,7 +41,10 @@ enum SessionVerb {
   mark,
 
   /// Move the transcripts to the trash.
-  delete;
+  delete,
+
+  /// Hand the stalled session to the board as a started task.
+  handoff;
 
   /// The relay kind.
   String get kind => 'session_$name';

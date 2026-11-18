@@ -62,7 +62,7 @@ belongs to the browser device gate and goes away with it.
 | `new_task` | `POST /api/new-task` | `{args}`; args = `$defs/new_task` (body cap stays `newtask.MAX_BODY`) |
 | `credits_fallback` | `POST /api/settings/credits-fallback` | `{args}`; args = `$defs/credits_fallback` |
 | `merge_merge`, `merge_dismiss` | `POST /api/merge/<group>/<merge or dismiss>` | `{group, args: {}}` |
-| `session_resume`, `session_mark`, `session_delete` | `POST /api/sessions/<verb>` | `{args}`; args = `sessions.schema.json#/$defs/<verb>_body` |
+| `session_resume`, `session_mark`, `session_delete`, `session_handoff` | `POST /api/sessions/<verb>` | `{args}`; args = `sessions.schema.json#/$defs/<verb>_body` |
 
 The ten task actions: `start`, `spec-answers`, `spec-ok`, `send`, `ship`, `close`, `cancel`, `lesson-approve`,
 `go`, `rerun` (kind = `task_` + the action with `-` turned to `_`). `new_task` then starts the card, as the route does.

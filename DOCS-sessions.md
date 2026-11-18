@@ -11,8 +11,8 @@ replies are his own content and stay text.
 |---|---|
 | Page | `/sessions` (`web/src/pages/sessions.astro`, `web/src/sessions/`), reached by the terminal icon link next to the usage link on the board |
 | Scan | `server/todoimpl/sessions/` (`tags` = status tag regex, `parse`, `scan`, `markstore`, `api` = the GET body) |
-| Mutations | `sessions/resume.py`, `mark.py`, `delete.py`, `lookup.py` (the shared id guard), `commands.py` (command seam), `router.py` (name to handler) |
-| Routes | `http/sessions.py`: `GET /api/sessions`, `POST /api/sessions/<resume|mark|delete>`; contract `contracts/sessions.schema.json` |
+| Mutations | `sessions/resume.py`, `mark.py`, `delete.py`, `handoff.py` (+ `handoff_text.py`, `movable.py`, `origin.py`), `lookup.py` (the shared id guard), `commands.py` (command seam), `router.py` (name to handler) |
+| Routes | `http/sessions.py`: `GET /api/sessions`, `POST /api/sessions/<resume|mark|delete|handoff>`; contract `contracts/sessions.schema.json` |
 | Tests | `tests/sessions/` (ported from control-panel), `tests/http/test_http_sessions.py`, `web/src/sessions/*.test.ts` |
 
 ## Rules carried over
@@ -25,7 +25,7 @@ replies are his own content and stay text.
 - **Guard.** An id must be a canonical lowercase UUID of a scanned session; cwd comes from the transcript, never the request; bulk is all-or-nothing
   and one bad id refuses the lot. Resume allows at most 5 ids. Delete never unlinks: it moves to `~/.claude/projects-trash/<date>/<dir>/`, refuses
   an id written in the last 10 minutes, a symlink or a path outside `~/.claude/projects`, and an occupied trash slot.
-- **Auth.** The three POSTs run after `check_post` (same-origin Origin and the CSRF token), like Ship, because this server is reachable through
+- **Auth.** The four POSTs run after `check_post` (same-origin Origin and the CSRF token), like Ship, because this server is reachable through
   Caddy and Google sign-in; control-panel is loopback only. A refusal by the guard is HTTP 200 with `refused: true` (the guard working); bad
   JSON is 400, a bad Origin or token 403.
 
@@ -36,6 +36,28 @@ Desktop: `systemd-run --user --collect --unit=claude-resume-<id8>-<epoch> --sete
 `DISPLAY=:0`, `XAUTHORITY=/home/kuhy/.Xauthority`), so it works although `deploy/todoimplementer.service` sets neither; the unit's `PATH` has
 `/usr/bin` (terminator, systemd-run). On a phone-sized viewport (CSS, max-width 700 px) the terminal buttons are hidden and the copy button stays.
 Copy writes the same `cd '<cwd>' && claude --resume <id>` the board's copy-resume uses, but flashes a check on the button instead of a toast.
+
+## Move to board
+
+kuhy asked (2026-11-18) to hand a stalled manual session to the board's default headless mode instead of resuming it
+in a terminal. Every row carries `movable` and `move_reason`, computed by the server (`sessions/movable.py`), never
+by a page: a row can move when it is untagged, or tagged `R:` with no activity for an hour (`last_ts`, else the
+transcript's mtime), and is not done or hand-marked; `A:` and `Q:` wait for kuhy. Its cwd must also be a clone
+whose `git -C <cwd> remote get-url origin` is a github.com URL (https or ssh, read as `owner/name`, cached per cwd
+for a minute) and the board must have a clone of that repo (`board/repos.py`). git runs only for rows whose status
+allows a move. A disabled button carries `move_reason` as its `title` and `aria-label`.
+
+`POST /api/sessions/handoff` takes `{"id"}` or `{"ids": [...]}` (at most 5) and an optional
+`"repos": {"<id>": "owner/name"}` for a cwd with no origin, such as `$HOME`; an override needs a local clone. It
+runs the same guard as the other POSTs, then refuses the whole batch if any session cannot move, if two share a
+title in one repo, or if the repo already has an open part with that title (`NewTaskService.check_twin`). Then,
+per session, it creates the task through `NewTaskService.create` (title = the session title on one line, at most
+200 characters; body = `### what`, `### where`, `### done`, `### verify`, `### read first` with the transcript
+path, kuhy's last prompt and the end of the last reply quoted line by line so no line can start a card, a fence or
+a `done_check:`), presses the card's Start as `POST /api/new-task` does, and marks the session done in the marks
+file. A create that fails mid-batch reports `Moved n of m` and marks only what landed. The answer is the usual
+`result`, with one `<id>: note <id8> card <card> started|not started` line per session in `stdout`. The page
+and the app show it as a robot icon per row and in the bulk bar; the app sends `session_handoff` over the relay.
 
 ## The page
 

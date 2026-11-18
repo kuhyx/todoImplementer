@@ -59,6 +59,8 @@ const spoken = <String, String>{
   'resume': 'resume in a terminal',
   'resume-max': 'at most 5 terminals at once',
   'copy': 'copy the resume command',
+  'handoff': 'move to the board',
+  'handoff-max': 'at most 5 sessions at once',
   'copy-all': 'copy the resume commands',
   'mark': 'mark done',
   'unmark': 'remove the done mark',

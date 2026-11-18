@@ -58,6 +58,8 @@ export const label = {
   delete: "move to the trash",
   details: "details",
   filter: "filter",
+  handoff: "move to the board",
+  handoffMax: "at most 5 sessions at once",
   idleDays: "idle for more than this many days",
   loading: "reading the session transcripts",
   mark: "mark done",
