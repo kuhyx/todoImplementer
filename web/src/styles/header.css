@@ -11,6 +11,7 @@
 }
 
 .usage-body {
+  min-width: 0;
   flex: 1 1 auto;
   min-width: 0;
 }
@@ -97,6 +98,7 @@
   border: 1px solid var(--warning);
   border-radius: var(--radius-sm);
   font-size: var(--text-label);
+  overflow-wrap: anywhere; /* a long path in the message must not widen the page (and the full-screen dialog) */
 }
 
 .banner[role="alert"] {
