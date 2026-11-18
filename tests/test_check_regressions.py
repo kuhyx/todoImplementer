@@ -37,3 +37,13 @@ def test_empty_tables_pass_and_cwd_default(tmp_path: Path, monkeypatch: object) 
     repo = make_repo(tmp_path, "")
     monkeypatch.chdir(repo)  # type: ignore[attr-defined]
     assert check_regressions.main([]) == 0
+
+
+def test_a_flutter_test_title_counts_as_a_tag(tmp_path: Path) -> None:
+    repo = make_repo(tmp_path, "| T3 | app bug | app/test/a_test.dart |\n")
+    (repo / "app/test").mkdir(parents=True)
+    (repo / "app/test/a_test.dart").write_text("testWidgets('[T3] opens', (t) async {});\n")
+    (repo / "app/lib").mkdir(parents=True)
+    (repo / "app/lib/a.dart").write_text("// [T98] not a test\n")
+    subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
+    assert check_regressions.problems(repo) == []

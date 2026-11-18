@@ -9,7 +9,7 @@ from todoimpl.http.backend import BackendError
 from todoimpl.service.cards import card_tasks
 from todoimpl.todo_mcp.model import TodoError, upstream_text
 
-from . import images
+from . import images, uploads
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from todoimpl.service.cards import CardTask
     from todoimpl.todo_mcp.client import TodoClient
 
-UPSTREAM, NOT_FOUND, CONFLICT = "upstream_unavailable", "not_found", "conflict"
+UPSTREAM, NOT_FOUND, CONFLICT, BAD = "upstream_unavailable", "not_found", "conflict", "bad_request"
 
 
 def _fresh_folder() -> str:
@@ -49,8 +49,13 @@ class NewTaskService:
         """Add the section and return (note id8, the card that holds it now)."""
         try:
             self._refuse_twin(task)
-            links = images.save(task.images, images.root(), self._folder()) if task.images else ()
-            body = "\n\n".join([task.body, *(f"![]({link})" for link in links)]).strip()
+            staged = uploads.claim(task.files, uploads.root())
+            if isinstance(staged, str):
+                raise BackendError(BAD, staged)
+            folder = self._folder() if task.images or staged else ""
+            links = [f"![]({link})" for link in images.save(task.images, images.root(), folder)]
+            links += images.attach(staged, images.root(), folder)
+            body = "\n\n".join([task.body, *links]).strip()
             note = self._client.add_task(task.repo, task.title, body)
         except TodoError as exc:
             raise BackendError(UPSTREAM, upstream_text(str(exc))) from exc

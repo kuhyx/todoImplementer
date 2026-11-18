@@ -1,26 +1,24 @@
 import { trapTab } from "@/components/drawer-shell";
 /**
  * <ti-new-task>: kuhy's own task for a repo. The + button opens a dialog (repo from the board's repos or typed
- * owner/name, title, details, pictures by picker, camera, paste or drop). Create posts it; the server adds the
- * section, presses the repo card's Start and answers the card, which the app then opens. While the post runs
- * both buttons are disabled with the reason; after 1 s a loader names what it waits on.
+ * owner/name, title, details, files of any type by picker, camera, paste or drop). Create uploads each file
+ * unchanged (POST /api/upload, 100 MB each, 500 MB together), then posts the task with their ids; the server adds
+ * the section, presses the repo card's Start and answers the card, which the app then opens. While that runs both
+ * buttons are disabled with the reason; after 1 s a loader names what it waits on. At 640 px or less the dialog
+ * fills the visible viewport (it follows `visualViewport`, so the keyboard never covers the details field).
  */
 import { loader, showToast, SLOW_MS } from "@/components/feedback";
 import { iconButton } from "@/components/icons";
-import { buildForm, type Form, renderThumbs } from "@/components/new-task-form";
+import { type Attached, buildForm, type Form, renderThumbs } from "@/components/new-task-form";
 import { csrfToken } from "@/lib/boot";
 import { h } from "@/lib/dom";
 import { errorText } from "@/lib/http";
-import { encodeJpeg } from "@/lib/jpeg";
-import { MAX_IMAGES, postNewTask, REPO } from "@/lib/newtask-api";
+import { MAX_FILE, MAX_TOTAL, postNewTask, REPO, uploadFile } from "@/lib/newtask-api";
 import { routes } from "@/lib/routes";
 
-export { MAX_IMAGES } from "@/lib/newtask-api";
-
 const BUSY = "Creating the task…";
-const PREPARING = "Preparing the pictures…";
 const INCOMPLETE = "Needs a repo (owner/name) and a title";
-const FULL = `${String(MAX_IMAGES)} pictures at most`;
+const MB = 1024 * 1024;
 
 function block(button: HTMLButtonElement, reason: null | string, label: string): void {
   button.setAttribute("aria-disabled", String(reason !== null));
@@ -30,13 +28,13 @@ function block(button: HTMLButtonElement, reason: null | string, label: string):
 export class TiNewTask extends HTMLElement {
   #busy = false;
   readonly #form: Form;
-  #images: string[] = [];
+  #files: Attached[] = [];
   readonly #opener: HTMLButtonElement;
-  #pending = 0;
   #repos = "";
   #slow = false;
+  #waiting: string = routes.ownTask;
+  readonly #onViewport = (): void => { this.#fit(); };
   defaultRepo = "";
-  encode: (file: Blob) => Promise<string> = encodeJpeg;
 
   constructor() {
     super();
@@ -44,9 +42,9 @@ export class TiNewTask extends HTMLElement {
     this.#form = buildForm({
       onClose: () => { this.#close(); },
       onFiles: (files) => { this.#add(files); },
+      onGrow: () => { this.#grow(); },
       onInput: () => { this.#paint(); },
       onKey: (event) => { this.#onKey(event); },
-      onPick: () => { if (this.#images.length + this.#pending < MAX_IMAGES) this.#form.picker.click(); },
       onSubmit: () => void this.#submit(),
     });
   }
@@ -56,13 +54,36 @@ export class TiNewTask extends HTMLElement {
     const form = this.#form;
     if (form.repo.value === "") form.repo.value = this.defaultRepo;
     form.panel.hidden = false;
+    globalThis.visualViewport?.addEventListener("resize", this.#onViewport);
+    this.#fit();
     this.#paint();
     (form.repo.value === "" ? form.repo : form.title).focus();
   }
 
   #close(): void {
-    this.#form.panel.hidden = true;
+    this.#hide();
     this.#opener.focus();
+  }
+
+  #hide(): void {
+    this.#form.panel.hidden = true;
+    globalThis.visualViewport?.removeEventListener("resize", this.#onViewport);
+  }
+
+  /** The dialog's height and top follow the part of the page the keyboard leaves visible (CSS uses them at ≤640 px). */
+  #fit(): void {
+    const viewport: undefined | VisualViewport = globalThis.visualViewport ?? undefined; // jsdom has none
+    if (viewport === undefined) return;
+    this.#form.dialog.style.setProperty("--nt-vh", `${String(viewport.height)}px`);
+    this.#form.dialog.style.setProperty("--nt-top", `${String(viewport.offsetTop)}px`);
+  }
+
+  /** The details field grows with its text; the caret line stays in view above the pinned actions. */
+  #grow(): void {
+    const { body } = this.#form;
+    body.style.height = "auto";
+    body.style.height = `${String(body.scrollHeight)}px`;
+    body.scrollIntoView({ block: "nearest" });
   }
 
   #onKey(event: KeyboardEvent): void {
@@ -71,25 +92,39 @@ export class TiNewTask extends HTMLElement {
   }
 
   #add(files: readonly File[]): void {
-    const room = Math.max(0, MAX_IMAGES - this.#images.length - this.#pending);
-    for (const file of files.slice(0, room)) void this.#encodeOne(file);
+    let total = this.#files.reduce((sum, { file }) => sum + file.size, 0);
+    for (const file of files) {
+      if (file.size > MAX_FILE || total + file.size > MAX_TOTAL) {
+        const cap = file.size > MAX_FILE ? `${String(MAX_FILE / MB)} MB per file` : `${String(MAX_TOTAL / MB)} MB per task`;
+        showToast(`${file.name}: over ${cap}`, "error");
+        continue;
+      }
+      total += file.size;
+      this.#files.push({ file, url: file.type.startsWith("image/") ? URL.createObjectURL(file) : null });
+    }
     this.#paint();
   }
 
-  async #encodeOne(file: File): Promise<void> {
-    this.#pending += 1;
-    try {
-      this.#images.push(await this.encode(file));
-    } catch (error) {
-      showToast(errorText(error), "error");
-    }
-    this.#pending -= 1;
+  #remove(index: number): void {
+    const [gone] = this.#files.splice(index, 1);
+    if (gone?.url != null) URL.revokeObjectURL(gone.url);
     this.#paint();
+  }
+
+  /** Uploads what is not uploaded yet (a retry after a refusal sends nothing twice); answers every id in order. */
+  async #upload(csrf: string): Promise<string[]> {
+    for (const attached of this.#files) {
+      if (attached.id !== undefined) continue;
+      this.#waiting = `${routes.upload} (${attached.file.name})`;
+      this.#paint();
+      attached.id = await uploadFile(attached.file, csrf);
+    }
+    this.#waiting = routes.ownTask;
+    return this.#files.map(({ id = "" }) => id);
   }
 
   #reason(): null | string {
     if (this.#busy) return BUSY;
-    if (this.#pending > 0) return PREPARING;
     const { repo, title } = this.#form;
     return REPO.test(repo.value) && title.value.trim() !== "" ? null : INCOMPLETE;
   }
@@ -99,9 +134,9 @@ export class TiNewTask extends HTMLElement {
     block(form.submit, this.#reason(), "Create and start");
     form.submit.setAttribute("aria-busy", String(this.#busy));
     block(this.#opener, this.#busy ? BUSY : null, "New task");
-    block(form.pick, this.#images.length + this.#pending >= MAX_IMAGES ? FULL : null, "Add pictures (or paste, or drop them here)");
-    renderThumbs(form, this.#images, (index) => { this.#images.splice(index, 1); this.#paint(); });
-    form.slot.replaceChildren(...(this.#busy && this.#slow ? [loader(`Waiting for ${routes.ownTask}: the todo app adds the task, then its card starts…`)] : []));
+    renderThumbs(form, this.#files, (index) => { this.#remove(index); });
+    const text = this.#waiting === routes.ownTask ? `Waiting for ${routes.ownTask}: the todo app adds the task, then its card starts…` : `Uploading ${this.#waiting}…`;
+    form.slot.replaceChildren(...(this.#busy && this.#slow ? [loader(text)] : []));
   }
 
   async #submit(): Promise<void> {
@@ -117,18 +152,22 @@ export class TiNewTask extends HTMLElement {
     this.#paint();
     const timer = setTimeout(() => { this.#slow = true; this.#paint(); }, SLOW_MS);
     try {
-      const request = { body: form.body.value, images: this.#images.map((data) => ({ data_b64: data })), repo: form.repo.value, title: form.title.value.trim() };
+      const files = await this.#upload(csrf);
+      const request = { body: form.body.value, ...((files.length > 0) && { files }), repo: form.repo.value, title: form.title.value.trim() };
       const created = await postNewTask(request, csrf);
       form.title.value = "";
       form.body.value = "";
-      this.#images = [];
-      form.panel.hidden = true;
+      form.body.style.height = "";
+      for (const { url } of this.#files) if (url !== null) URL.revokeObjectURL(url);
+      this.#files = [];
+      this.#hide();
       this.dispatchEvent(new CustomEvent("task-created", { bubbles: true, detail: { id: created.task.id } }));
     } catch (error) {
       showToast(errorText(error), "error");
       form.dialog.classList.add("nt-shake");
     }
     clearTimeout(timer);
+    this.#waiting = routes.ownTask;
     this.#busy = false;
     this.#slow = false;
     this.#paint();

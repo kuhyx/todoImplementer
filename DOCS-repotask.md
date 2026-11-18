@@ -129,15 +129,22 @@ than one card because 7 older section runs are working or at Ready to ship (they
 ## kuhy's own task from the board: `POST /api/new-task`
 
 The toolbar's + opens a dialog: repo (an `<input list>` over the board's repos, free `owner/name` allowed), title,
-details and up to 8 pictures (file picker `accept="image/*"`, so the phone offers its camera; Ctrl+V; drag and drop).
-The page re-encodes every picture to JPEG (longest side 2560 px, quality 0.85, `web/src/lib/jpeg.ts`) and posts
-`{repo, title, body, images: [{data_b64}]}` (`contracts/requests.schema.json` `new_task`; up to 40 MB per request,
-6 MB per decoded picture, JPEG magic bytes checked). Code: `http/newtask.py`, `newtask/service.py`, `newtask/images.py`.
+details and any files (picker with no type filter, multi-select; a camera picker on touch devices; Ctrl+V; drag and
+drop). Images show as thumbnails, other files as a file icon and their name; each has a remove button. Caps: 100 MB
+per file, 500 MB per task, refused by name before upload (and again by the server). On Create the page sends each
+file unchanged to `POST /api/upload` (raw body, name percent-encoded in `X-Todoimpl-Name`; Origin and token checked
+before a byte is read; streamed to `$TODOIMPL_HOME/uploads/<id>/`, swept after 24 h; `http/upload.py`,
+`newtask/uploads.py`), then posts `{repo, title, body, files: [id]}` (`contracts/requests.schema.json` `new_task`).
+The relay's JSON `images: [{data_b64}]` (JPEG, 8 x 6 MB, 40 MB per request) still works. At 640 px or less the dialog
+fills the visible viewport (`visualViewport`), the details field grows with its text and Create stays pinned.
+Code: `http/newtask.py`, `newtask/service.py`, `newtask/images.py`.
 
 1. A title an open section of that repo already has is refused (`conflict`): two parts nobody could tell apart.
-2. The pictures go to a fresh uuid4 folder `<root>/<uuid>/<n>.jpg` (root `$TODOIMPL_IMAGES_ROOT`, default
+2. The files go to a fresh uuid4 folder: relay pictures as `<n>.jpg`, uploads moved byte-identical to
+   `<uuid4>.<ext>` (ext lower-cased, `bin` when unusable, the todo app's own rule) (root `$TODOIMPL_IMAGES_ROOT`, default
    `~/data/cloud/todo-images`, which dufs serves as `https://kuhy-cloud.duckdns.org/todo-images/`), written atomically.
-3. `add_task` appends `## title` with the details and one `![](<dufs url>)` line per picture to the repo's open note
+3. `add_task` appends `## title` with the details and one link per file, `![](<dufs url>)` for an image and
+   `[name](<dufs url>)` for anything else (the todo app's format), to the repo's open note
    (or creates one). The cache is refreshed at once, so the card is there before the answer.
 4. The router then presses that card's Start through the very path of a Start click (`_action`): a new repo card or
    one resting at Backlog starts; a card already at work refuses, and the section is simply a new part, worked by this
@@ -145,8 +152,9 @@ The page re-encodes every picture to JPEG (longest side 2560 px, quality 0.85, `
    A `MANUAL WORK REQUIRED:` title lands on the repo's `-1` card, whose Start is disabled (`started: false`).
 
 Sessions cannot log in to dufs, so every stage prompt rewrites those links to the local paths and adds one line
-asking the session to open each with Read (`prompts/texts.py`, `newtask/images.localize`); this covers pictures
-attached in the todo app too. Every turn gets the images root as an extra `--add-dir` when it exists.
+asking the session to open each with Read (`prompts/texts.py`, `newtask/images.localize`); this covers files
+attached in the todo app too. Each file found on this PC is first copied to `<run dir>/attachments/<folder>/<file>`
+and the line names the copy (`images.copy_into`). Every turn gets the images root as an extra `--add-dir` when it exists.
 
 ## Defaults chosen (not in the brief)
 

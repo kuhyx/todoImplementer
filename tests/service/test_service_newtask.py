@@ -8,6 +8,7 @@ import pytest
 from servicefakes import Rig
 from todoimpl.http.backend import BackendError
 from todoimpl.http.newtask import NewTask
+from todoimpl.newtask import uploads
 from todoimpl.newtask.service import NewTaskService, _holds
 from todoimpl.repotask.ids import repo_card_id, repo_human_id
 from todoimpl.service.cards import CardTask
@@ -102,3 +103,25 @@ def test_a_card_missing_after_the_add_is_not_found(
     with pytest.raises(BackendError) as caught:
         service(rig).create(NewTask("kuhyx/brand-new", "x", "", ()))
     assert caught.value.code == "not_found"
+
+
+def test_staged_files_are_moved_into_the_folder_and_linked_by_kind(rig: Rig, images: Path) -> None:
+    def stage(data: bytes, name: str) -> str:
+        left = [data, b""]
+        return uploads.stage(lambda _n: left.pop(0), len(data), name, uploads.root()).id
+
+    pdf, png = stage(b"%PDF-1", "spec.pdf"), stage(b"\x89PNG", "shot.png")
+    note, _ = service(rig).create(NewTask("kuhyx/fresh", "Read it", "", (JPEG,), files=(pdf, png)))
+    (stored,) = [n for n in rig.fake.store.notes.values() if n.id.startswith(note)]
+    url = re.escape("https://kuhy-cloud.duckdns.org/todo-images/")
+    assert re.search(rf"\[spec\.pdf\]\({url}[\w-]+/[\w-]+\.pdf\)", stored.text)
+    assert re.search(rf"!\[\]\({url}[\w-]+/[\w-]+\.png\)", stored.text)
+    (folder,) = images.iterdir()
+    assert sorted(p.read_bytes() for p in folder.iterdir()) == sorted([JPEG, b"%PDF-1", b"\x89PNG"])
+
+
+def test_an_unknown_staged_file_is_a_bad_request_and_writes_nothing(rig: Rig, images: Path) -> None:
+    with pytest.raises(BackendError) as caught:
+        service(rig).create(NewTask("kuhyx/fresh", "Read it", "", (), files=("0" * 32,)))
+    assert caught.value.code == "bad_request"
+    assert not images.exists()

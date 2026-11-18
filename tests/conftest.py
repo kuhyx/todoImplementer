@@ -106,3 +106,9 @@ def _no_real_relay(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("TODOIMPL_RELAY", raising=False)
     STATUS.ok()
     NOTIFY.ok()
+
+
+@pytest.fixture(autouse=True)
+def _no_real_uploads(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Stage new-task attachments in a temp dir: kuhy's real `$TODOIMPL_HOME/uploads` is never touched."""
+    monkeypatch.setenv("TODOIMPL_UPLOADS_ROOT", str(tmp_path_factory.mktemp("uploads")))

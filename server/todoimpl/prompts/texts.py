@@ -40,9 +40,9 @@ def _item(ctx: PromptContext) -> str:
     body, pictures = images.localize(f"{ctx.body}\n{ctx.parts}".strip(), images.root())  # dufs needs a login
     if body:
         lines.append(body)
-    if pictures:
+    if files := images.copy_into(pictures, ctx.run_dir):  # the run dir's own copy outlives the dufs folder
         lines.append(
-            f"Images attached to this item: open each with the Read tool: {', '.join(map(str, pictures))}"
+            f"Files attached to this item: open each with the Read tool: {', '.join(map(str, files))}"
         )
     lines.append(f"done_check: {ctx.done_check or 'none'}")
     if ctx.spec_answers:

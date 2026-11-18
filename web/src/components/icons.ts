@@ -4,8 +4,10 @@ import { h } from "@/lib/dom";
 const NS = "http://www.w3.org/2000/svg";
 const PATHS = {
   all: "M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01",
+  attach: "M21 11l-8.5 8.5a5 5 0 0 1-7-7L14 4a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-3-3L15 7",
   attention: "M6 17h12l-1.5-2v-4a4.5 4.5 0 0 0-9 0v4zM10 20a2 2 0 0 0 4 0",
   back: "M19 12H5M11 6l-6 6 6 6",
+  camera: "M4 7h4l2-3h4l2 3h4v12H4zM12 10a3 3 0 1 0 0 6a3 3 0 0 0 0-6z",
   cheap: "M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18zM8.5 12h7",
   check: "M5 12.5l4.5 4.5L19 7.5",
   chevron: "M6 9l6 6 6-6",
@@ -20,6 +22,7 @@ const PATHS = {
   eta: "M5 21V4M5 4h13l-3 4 3 4H5",
   eye: "M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6a3 3 0 0 0 0-6z",
   failed: "M12 3l10 18H2zM12 10v5M12 18h.01",
+  file: "M6 3h8l4 4v14H6zM14 3v4h4",
   fixed: "M14 6a4 4 0 0 0-5 5l-6 6 3 3 6-6a4 4 0 0 0 5-5l-3 3-2-2z",
   folder: "M3 6h6l2 2h10v11H3z",
   free: "M4 11h16v9H4zM3 7h18v4H3zM12 7v13M12 7c-2-4-5-3-4 0M12 7c2-4 5-3 4 0",

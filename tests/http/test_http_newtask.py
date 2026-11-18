@@ -141,3 +141,19 @@ def test_a_big_request_fits_but_one_over_the_cap_is_refused_unread(live: Live, m
 def test_a_post_without_the_token_is_forbidden(live: Live, made: FakeNewTasks) -> None:
     assert post(live, good(), **{"X-Todoimpl-Token": "-"}).status == 403
     assert made.calls == []
+
+
+def test_staged_file_ids_reach_the_service(live: Live, made: FakeNewTasks) -> None:
+    ids = ["a" * 32, "b" * 32]
+    body = good(images=[], files=ids)
+    validate("requests", body, "new_task")
+    assert post(live, body).status == 200
+    assert made.calls[0].files == tuple(ids)
+
+
+@pytest.mark.parametrize("files", [{}, ["x"], [5], ["a" * 32, "a" * 32]])
+def test_bad_file_ids_are_400(live: Live, made: FakeNewTasks, files: Any) -> None:
+    r = post(live, good(files=files))
+    assert r.status == 400
+    assert "files" in r.json()["error"]["message"]
+    assert made.calls == []

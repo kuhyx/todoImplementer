@@ -15,6 +15,7 @@ export const routes = {
     `/api/task/${encodeURIComponent(id)}/shot/${path.replace(/^shots\//, "").split("/").map((part) => encodeURIComponent(part)).join("/")}`,
   task: (id: string): string => `/api/task/${encodeURIComponent(id)}`,
   umbrella: (id: string): string => `/api/umbrella/${encodeURIComponent(id)}`,
+  upload: "/api/upload",
   usage: "/api/usage",
   version: "/version",
   workerLog: (id: string, child: string): string => `/api/umbrella/${encodeURIComponent(id)}/log/${encodeURIComponent(child)}`,

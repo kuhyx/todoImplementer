@@ -1,7 +1,7 @@
 """Gate: every regression row has a test tagged with its id, and every test tag has a row.
 
 Rows live in tests/regressions/*.md as `| T12 | what went wrong | test |`. A pytest test carries the tag as
-`def test_t12_...`; a vitest title carries `[T12]`.
+`def test_t12_...`; a vitest or Flutter test title (`app/**/*_test.dart`) carries `[T12]`.
 """
 
 import re
@@ -25,13 +25,15 @@ def row_ids(root: Path) -> set[str]:
 
 
 def test_tags(root: Path) -> set[str]:
-    """Return the ids that tests/**/*.py and web/**/*.test.ts name in a test title."""
+    """Return the ids that tests/**/*.py, web/**/*.test.ts and app/**/*_test.dart name in a test title."""
     tags: set[str] = set()
     for rel in repo_files(root):
         text_file = root / rel
         if rel.parts[0] == "tests" and rel.suffix == ".py":
             tags |= {tag.upper() for tag in PY_TAG.findall(text_file.read_text(encoding="utf-8"))}
-        elif rel.parts[0] == "web" and rel.name.endswith((".test.ts", ".test.tsx")):
+        elif (rel.parts[0] == "web" and rel.name.endswith((".test.ts", ".test.tsx"))) or (
+            rel.parts[0] == "app" and rel.name.endswith("_test.dart")
+        ):
             tags |= set(TS_TAG.findall(text_file.read_text(encoding="utf-8")))
     return tags
 

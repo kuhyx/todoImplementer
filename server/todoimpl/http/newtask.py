@@ -30,17 +30,20 @@ MAX_IMAGES = 8
 MAX_IMAGE = 6 * MB
 MAX_TITLE = 200
 REPO = re.compile(r"[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+")
-KEYS = frozenset({"repo", "title", "body", "images"})
+KEYS = frozenset({"repo", "title", "body", "images", "files"})
+FILE_ID = re.compile(r"[0-9a-f]{32}")
+MAX_FILES = 1000  # ids only; the real cap is uploads.MAX_TASK bytes
 
 
 @dataclass(frozen=True)
 class NewTask:
-    """A checked request: title and body stripped, images decoded JPEG bytes."""
+    """A checked request: title and body stripped, images decoded JPEG bytes, files staged upload ids."""
 
     repo: str
     title: str
     body: str
     images: tuple[bytes, ...]
+    files: tuple[str, ...] = ()
 
 
 @runtime_checkable
@@ -77,6 +80,21 @@ def _images(raw: object) -> tuple[bytes, ...] | str:
     return tuple(out)
 
 
+def _files(raw: object) -> tuple[str, ...] | str:
+    if not isinstance(raw, list) or len(raw) > MAX_FILES:
+        return f"files must be at most {MAX_FILES} distinct upload ids"
+    ids = tuple(i for i in raw if isinstance(i, str) and FILE_ID.fullmatch(i))
+    return ids if len(ids) == len(raw) == len(set(ids)) else _files(None)
+
+
+def _attachments(body: dict[str, Any]) -> tuple[tuple[bytes, ...], tuple[str, ...]] | str:
+    images = _images(body.get("images", []))
+    files = _files(body.get("files", []))
+    if isinstance(images, str) or isinstance(files, str):
+        return images if isinstance(images, str) else str(files)
+    return images, files
+
+
 def _title(title: object) -> str | None:
     ok = (
         isinstance(title, str) and title.strip() and len(title) <= MAX_TITLE and not {"\n", "\r"} & set(title)
@@ -90,7 +108,7 @@ def check(raw: bytes) -> NewTask | str:
     if isinstance(body, str):
         return body
     if not {"repo", "title"} <= set(body) <= KEYS:
-        return "body must be {repo, title, body?, images?}"
+        return "body must be {repo, title, body?, images?, files?}"
     repo, text = body["repo"], body.get("body", "")
     if not isinstance(repo, str) or not REPO.fullmatch(repo):
         return "repo must look like owner/name"
@@ -98,8 +116,8 @@ def check(raw: bytes) -> NewTask | str:
         return f"title must be 1..{MAX_TITLE} characters on one line"
     if not isinstance(text, str) or len(text) > MAX_TEXT:
         return f"body must be text of at most {MAX_TEXT} characters"
-    images = _images(body.get("images", []))
-    return images if isinstance(images, str) else NewTask(repo, title, text.strip(), images)
+    attached = _attachments(body)
+    return attached if isinstance(attached, str) else NewTask(repo, title, text.strip(), *attached)
 
 
 def handle(backend: Backend, raw: bytes, start: Callable[[str], Reply]) -> Reply:

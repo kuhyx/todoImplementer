@@ -56,7 +56,9 @@ ti-new-task {
 }
 
 .nt-row > textarea {
+  max-height: 60vh;
   resize: vertical;
+  scroll-margin-bottom: calc(var(--space-5) * 3);
 }
 
 .nt-glyph {
@@ -100,6 +102,41 @@ ti-new-task {
   border-radius: var(--radius-sm);
 }
 
+.nt-file {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  width: 5rem;
+  height: 5rem;
+  padding: var(--space-1);
+  overflow: hidden;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.nt-file > span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The camera picker only where there is a camera to point: touch devices. */
+.nt-camera {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .nt-camera {
+    display: inline-grid;
+  }
+}
+
 .nt-thumbs .icon-btn {
   position: absolute;
   top: var(--space-1);
@@ -110,6 +147,42 @@ ti-new-task {
   display: flex;
   justify-content: flex-end;
   gap: var(--space-2);
+}
+
+/* Phones: the create dialog fills the visible viewport (JS writes --nt-vh/--nt-top from visualViewport, so the
+   keyboard never covers it); the details field grows with its text and Create stays pinned at the bottom. */
+@media (max-width: 640px) {
+  .nt-panel {
+    padding: 0;
+    place-items: start stretch;
+  }
+
+  .nt-dialog {
+    width: 100%;
+    height: var(--nt-vh, 100dvh);
+    max-height: none;
+    margin-top: var(--nt-top, 0);
+    padding: max(var(--space-3), env(safe-area-inset-top)) max(var(--space-3), env(safe-area-inset-right)) 0
+      max(var(--space-3), env(safe-area-inset-left));
+    border: 0;
+    border-radius: 0;
+  }
+
+  .nt-row > textarea {
+    max-height: none;
+    min-height: 40vh;
+    resize: none;
+    overflow: hidden;
+  }
+
+  .nt-actions {
+    position: sticky;
+    bottom: 0;
+    margin-top: auto;
+    padding: var(--space-2) 0 max(var(--space-2), env(safe-area-inset-bottom));
+    background: var(--surface-1);
+    border-top: 1px solid var(--border);
+  }
 }
 
 /* A refused create: shake once and tint the edge (errors are shown, not worded). */
