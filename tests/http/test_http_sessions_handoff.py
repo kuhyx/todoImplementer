@@ -39,14 +39,12 @@ class Tasks:
         self.created: list[NewTask] = []
         self.conflict = False
 
-    def check_twin(self, task: NewTask) -> None:
+    def adopt(self, task: NewTask, key: str) -> tuple[str, str] | None:
         if self.conflict:
             raise BackendError("conflict", f"{task.repo} already has an open part titled {task.title!r}")
-
-    def adopt(self, task: NewTask, key: str) -> tuple[str, str] | None:
         return None
 
-    def add(self, task: NewTask) -> str:
+    def add(self, task: NewTask, *, checked: bool = False) -> str:
         self.created.append(task)
         return self.card[:8]
 

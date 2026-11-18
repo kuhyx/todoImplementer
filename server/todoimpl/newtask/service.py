@@ -60,10 +60,11 @@ class NewTaskService:
             raise BackendError(NOT_FOUND, msg)
         return note8, card
 
-    def add(self, task: NewTask) -> str:
-        """Add the section (refusing a twin) and return its note id8; the card is `card_of`'s to find."""
+    def add(self, task: NewTask, *, checked: bool = False) -> str:
+        """Add the section (refusing a twin unless `checked` by adopt) and return its note id8."""
         try:
-            self._refuse_twin(task)
+            if not checked:
+                self._refuse_twin(task)
             staged = uploads.claim(task.files, uploads.root())
             if isinstance(staged, str):
                 raise BackendError(BAD, staged)
@@ -98,25 +99,22 @@ class NewTaskService:
     def adopt(self, task: NewTask, key: str) -> tuple[str, str] | None:
         """Return (note id8, card) of the open section this very task became before (title, `key` in body).
 
-        A handoff rerun after a half-finished one finds its own task here instead of refusing it as a twin.
+        A handoff rerun after a half-finished one finds its own task here (T2047). An open section with the
+        title that is not its own is a twin: BackendError conflict. None when the title is new (or its card
+        never shows). One repo listing, so a batch does not pay one per check.
         """
         try:
             notes = self._client.list_tasks(repo=task.repo, full=True)
         except TodoError as exc:
             raise BackendError(UPSTREAM, upstream_text(str(exc))) from exc
-        for note in notes:
-            for section in card_tasks(note):
-                if section.title == task.title and section.status != "done" and key in section.body:
-                    card = self.card_of(note.id[:8], task)
-                    return None if card is None else (note.id[:8], card)
+        open_ = [(n, c) for n in notes for c in card_tasks(n) if c.title == task.title and c.status != "done"]
+        own = next((n for n, c in open_ if key in c.body), None)
+        if own is not None:
+            card = self.card_of(own.id[:8], task)
+            return None if card is None else (own.id[:8], card)
+        if open_:
+            raise BackendError(CONFLICT, f"{task.repo} already has an open part titled {task.title!r}")
         return None
-
-    def check_twin(self, task: NewTask) -> None:
-        """Refuse (BackendError) a title the repo has open already; a session handoff checks a batch first."""
-        try:
-            self._refuse_twin(task)
-        except TodoError as exc:
-            raise BackendError(UPSTREAM, upstream_text(str(exc))) from exc
 
     def _refuse_twin(self, task: NewTask) -> None:
         """Refuse a title an open section has already: two parts nobody could tell apart."""

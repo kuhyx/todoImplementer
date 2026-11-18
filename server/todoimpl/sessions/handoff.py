@@ -36,11 +36,8 @@ STARTED, WAITS, NOT_STARTED = "started", "starts when free", "not started"
 class Board(Protocol):
     """What the handoff needs from the board: the new-task path (`NewTaskService`) and the card's Start."""
 
-    def check_twin(self, task: NewTask) -> None:
-        """Raise BackendError when the repo already has an open part with this title."""
-
     def adopt(self, task: NewTask, key: str) -> tuple[str, str] | None:
-        """Return (note id8, card) of the open section this task became before (`key` in its body)."""
+        """Return (note id8, card) of the task's own open section (`key` in its body); conflict on a twin."""
         ...
 
     def add(self, task: NewTask) -> str:
@@ -106,8 +103,6 @@ def _resolve(board: Board, planned: list[tuple[Session, NewTask]]) -> list[Entry
     for session, task in planned:
         try:
             adopted = board.adopt(task, f"session {session.id}")
-            if adopted is None:
-                board.check_twin(task)
         except BackendError as exc:
             if exc.code == _CONFLICT:
                 return MutationResult.refusal(f"Nothing moved: {exc.message}.", stderr=exc.message)

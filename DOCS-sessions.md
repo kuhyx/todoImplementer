@@ -50,7 +50,7 @@ allows a move. A disabled button carries `move_reason` as its `title` and `aria-
 `POST /api/sessions/handoff` takes `{"id"}` or `{"ids": [...]}` (at most 5) and an optional
 `"repos": {"<id>": "owner/name"}` for a cwd with no origin, such as `$HOME`; an override needs a local clone. It
 runs the same guard as the other POSTs, then refuses the whole batch if any session cannot move, if two share a
-title in one repo, or if the repo already has an open part with that title (`NewTaskService.check_twin`), unless
+title in one repo, or if the repo already has an open part with that title (`NewTaskService.adopt`, one repo listing per session), unless
 that part is the session's own earlier task (its body names the session id): then the handoff adopts it, starts
 its card and marks the session, so a rerun of a half-finished handoff finishes it (T2047). Then it adds every
 new task through `NewTaskService.add` and looks the cards up after (`card_of`: a read of that repo alone, laid over

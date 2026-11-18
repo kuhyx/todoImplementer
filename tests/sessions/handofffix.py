@@ -35,12 +35,6 @@ class FakeBoard:
         self.hidden: set[str] = set()  # notes whose card never shows
         self.broken: set[str] = set()  # notes whose card lookup fails
 
-    def check_twin(self, task: NewTask) -> None:
-        if self.twin_error is not None:
-            raise self.twin_error
-        if (task.repo, task.title) in self.twins:
-            raise BackendError("conflict", f"{task.repo} already has an open part titled {task.title!r}")
-
     def adopt(self, task: NewTask, key: str) -> tuple[str, str] | None:
         if self.twin_error is not None:
             raise self.twin_error
@@ -58,7 +52,11 @@ class FakeBoard:
             ),
             0,
         )
-        return (f"note000{n}", f"note000{n}-0") if n and f"note000{n}" not in self.hidden else None
+        if n:
+            return (f"note000{n}", f"note000{n}-0") if f"note000{n}" not in self.hidden else None
+        if (task.repo, task.title) in self.twins:
+            raise BackendError("conflict", f"{task.repo} already has an open part titled {task.title!r}")
+        return None
 
     def add(self, task: NewTask) -> str:
         if self.fail_at == len(self.created):

@@ -90,23 +90,15 @@ def test_the_todo_app_failing_is_upstream_unavailable(
     assert caught.value.code == "upstream_unavailable"
 
 
-def test_check_twin_answers_before_anything_is_written(
-    rig: Rig, images: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_adopt_refuses_someone_elses_twin_before_anything_is_written(rig: Rig, images: Path) -> None:
     rig.note(title="Fix the header", repo="kuhyx/demo")
     make = service(rig)
-    make.check_twin(NewTask("kuhyx/demo", "Another title", "", ()))
+    assert make.adopt(NewTask("kuhyx/demo", "Another title", "", ()), "session s") is None
     with pytest.raises(BackendError) as twin:
-        make.check_twin(NewTask("kuhyx/demo", "Fix the header", "", ()))
+        make.adopt(NewTask("kuhyx/demo", "Fix the header", "", ()), "session s")
     assert twin.value.code == "conflict"
-
-    def down(*_a: object, **_k: object) -> None:
-        raise TodoError("connection refused")
-
-    monkeypatch.setattr(make._client, "list_tasks", down)
-    with pytest.raises(BackendError) as broken:
-        make.check_twin(NewTask("kuhyx/demo", "x", "", ()))
-    assert broken.value.code == "upstream_unavailable"
+    note8 = make.add(NewTask("kuhyx/demo", "Fix the header", "", ()), checked=True)  # adopt checked it
+    assert note8
 
 
 def test_a_done_card_never_holds_the_new_section() -> None:
