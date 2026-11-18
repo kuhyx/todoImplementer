@@ -49,13 +49,13 @@
         "id": {
           "enum": [
             "start", "spec-answers", "spec-ok", "send", "ship", "close", "cancel", "lesson-approve",
-            "copy-resume", "go", "copy-fix", "rerun"
+            "copy-resume", "go", "copy-fix", "rerun", "wont"
           ]
         },
         "label": {"type": "string", "minLength": 1},
         "enabled": {"type": "boolean"},
         "reason": {"type": ["string", "null"]},
-        "confirm": {"type": "boolean", "description": "Page asks 'sure?' first (ship, cancel)."},
+        "confirm": {"type": "boolean", "description": "Page asks 'sure?' first (ship, cancel, wont)."},
         "value": {"type": "string", "description": "copy-resume and copy-fix only: the text to copy."},
         "option": {
           "type": "object",

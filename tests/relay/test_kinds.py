@@ -25,7 +25,7 @@ def schema_kinds() -> set[str]:
 
 def test_the_allowlist_is_the_contracts() -> None:
     assert set(kinds.ALL) == schema_kinds()
-    assert len(kinds.ALL) == len(set(kinds.ALL)) == 33
+    assert len(kinds.ALL) == len(set(kinds.ALL)) == 34
 
 
 def test_lanes() -> None:

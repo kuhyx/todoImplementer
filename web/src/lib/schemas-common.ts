@@ -24,7 +24,7 @@ export const NEEDS_KINDS = [
 ] as const;
 export const ACTION_IDS = [
   "start", "spec-answers", "spec-ok", "send", "ship", "close", "cancel", "lesson-approve", "copy-resume", "go", "copy-fix",
-  "rerun",
+  "rerun", "wont",
 ] as const;
 
 export const stage = z.enum(STAGES);

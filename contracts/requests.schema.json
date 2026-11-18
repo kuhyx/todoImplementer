@@ -53,6 +53,11 @@
       "description": "Go click on a permission block: runs the card's one-line command as kuhy, reruns the stage on exit 0."
     },
     "rerun": {"type": "object", "additionalProperties": false, "description": "Done, rerun: kuhy ran the command himself."},
+    "wont": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Won't do: cancel a resting run and abandon every note behind the card (T2045)."
+    },
     "credits_fallback": {
       "type": "object",
       "description": "POST /api/settings/credits-fallback (not task-scoped): turn the free API credits fallback on or off for every run.",

@@ -62,8 +62,8 @@ def test_exhausted_credits_block_start_and_say_why() -> None:
     assert reason == f"usage limit until {fmt_when(EXHAUSTED.until or 0, NOW)}; credits exhausted"
 
 
-def test_yours_and_done_offer_nothing() -> None:
-    assert acts(S.YOURS, None, note=Note(repo=None)) == {}
+def test_yours_offers_only_wont_and_done_nothing() -> None:
+    assert list(acts(S.YOURS, None, note=Note(repo=None))) == ["wont"]
     assert acts(S.DONE, run(stage="shipped", session_id="s", worktree="/w")) == {}
 
 
@@ -157,12 +157,19 @@ def test_failed_run_offers_retry_and_handed_over_run_hands_back() -> None:
 
 def test_claude_question_offers_send_and_cancel_only() -> None:
     got = acts(S.NEEDS_YOU, run(last_tag="Q", session_id="s", worktree="/w"))
-    assert list(got) == ["cancel", "send", "copy-resume"]
+    assert list(got) == ["cancel", "wont", "send", "copy-resume"]
     assert acts(S.NEEDS_YOU, run(last_tag="A", session_id="s"))["send"].enabled
 
 
-def test_needs_you_without_a_run_is_empty() -> None:
-    assert acts(S.NEEDS_YOU, None) == {}
+def test_needs_you_without_a_run_offers_only_wont() -> None:
+    assert list(acts(S.NEEDS_YOU, None)) == ["wont"]
+
+
+def test_t2045_wont_rests_only_on_cards_no_turn_works_on() -> None:
+    for status in (S.QUEUED, S.WORKING, S.SHIPPING, S.PAUSED_LIMIT, S.READY_TO_SHIP, S.DONE):
+        assert "wont" not in acts(status, run(worktree="/w")), status
+    for status in (S.BACKLOG, S.CANCELLED):
+        assert acts(status, None)["wont"].confirm
 
 
 def test_cancelled_run_cannot_be_sent_to() -> None:

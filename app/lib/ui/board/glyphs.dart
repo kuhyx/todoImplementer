@@ -20,6 +20,7 @@ IconData actionIcon(String id) => switch (id) {
   'go' => Icons.bolt,
   'copy-fix' => Icons.build_outlined,
   'rerun' => Icons.replay,
+  'wont' => Icons.do_not_disturb_on_outlined,
   'merge' => Icons.merge,
   'dismiss' => Icons.close,
   _ => Icons.help_outline,

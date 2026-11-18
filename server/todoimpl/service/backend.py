@@ -26,8 +26,8 @@ from todoimpl.umbrella.view import overlay_for
 from todoimpl.usage import limit_state
 from todoimpl.usage.interventions import record
 
-from . import permission, tracking
-from .shots import read_shot
+from . import permission, shots, tracking
+from .wont import wont as _wont
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -87,7 +87,7 @@ class ServiceBackend:
         self.gateway = gateway  # the free-model gateway's newest reading rides on /api/usage
         self.merge_service: MergeService | None = None  # set by build_backend; the http layer looks for it
         self.ask_service: AskService | None = None  # POST /api/task/<id>/ask/<verb>
-        self.new_task_service: NewTaskService | None = None  # the same for POST /api/new-task
+        self.new_task_service: NewTaskService | None = None  # POST /api/new-task
 
     def _context(self) -> Context:
         now = self._clock()
@@ -114,8 +114,7 @@ class ServiceBackend:
             latest = latest_lesson(directory)
         except LessonError as exc:  # a corrupt lessons.json must not take the whole board down
             return replace(run, error=run.error or str(exc))
-        skills = run_skills(directory)
-        lesson = latest.to_dict() if latest else run.lesson
+        lesson, skills = (latest.to_dict() if latest else run.lesson), run_skills(directory)
         found = replace(run, lesson=lesson, skills_loaded=skills or run.skills_loaded)
         return overlay_for(self._context, directory, ticks_overlay(directory, found))
 
@@ -148,12 +147,13 @@ class ServiceBackend:
 
     def shot(self, id8: str, name: str) -> bytes | None:
         """Bytes of the png at `name` (a/b.png) under `<run dir>/shots`; None when it resolves outside it."""
-        return read_shot(run_dir(self.root, id8), name)
+        return shots.read_shot(run_dir(self.root, id8), name)
 
     issues = tracking.issues  # GET /api/task/<id8>/issues; these four need only the cache, run dirs, gateway
     usage = tracking.usage  # GET /api/usage
     umbrella = tracking.umbrella  # GET /api/umbrella/<id8>
     worker_log = tracking.worker_log  # the tail of a child's newest worker log
+    wont = _wont  # Won't do click (T2045)
 
     def subscribe(self, id8: str) -> Iterator[dict[str, Any]]:
         """Live events of one task; stage/done carry the freshly computed card fields (live.schema.json)."""

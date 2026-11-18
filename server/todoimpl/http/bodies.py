@@ -19,6 +19,7 @@ ACTIONS = (
     "lesson-approve",
     "go",
     "rerun",
+    "wont",
 )
 
 

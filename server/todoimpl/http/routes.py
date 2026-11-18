@@ -244,7 +244,7 @@ class Router:
                 backend.spec_answers(id8, body["answers"])
             case "send":
                 backend.send(id8, body["text"])
-            case "spec-ok" | "ship" | "close" | "cancel" | "go" | "rerun":  # the clicks that take only the id
+            case "spec-ok" | "ship" | "close" | "cancel" | "go" | "rerun" | "wont":  # id-only clicks
                 getattr(backend, action.replace("-", "_"))(id8)
             case _:
                 backend.lesson_approve(id8, body["lesson_id"])

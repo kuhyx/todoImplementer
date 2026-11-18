@@ -19,6 +19,7 @@ void main() {
       'go',
       'copy-fix',
       'rerun',
+      'wont',
     ];
     expect(actions.map(actionIcon).toSet(), hasLength(actions.length));
     expect(actionIcon('x'), Icons.help_outline);

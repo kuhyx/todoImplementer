@@ -130,6 +130,24 @@ class ItemView:
         self._cache.poke()
         return True
 
+    def wont(self, card: str) -> None:
+        """Abandon every note behind the card (T2045); refuse before any write when one holds other work."""
+        found = next((t for t in self._cache.snapshot().tasks if t.id == card), None)
+        if found is None:
+            msg = f"unknown task {card}"
+            raise TodoError(msg)
+        parts = [p for p in found.item.parts if not p.held]  # a held part still runs on its own card
+        keys = {p.key for p in parts} or {card}
+        ids = list(dict.fromkeys(p.note_id for p in parts)) or [found.item.note_id]
+        notes = [self._client.get_task(n) for n in ids]
+        for note in notes:
+            if others := [t.id for t in card_tasks(note) if t.status != "done" and t.id not in keys]:
+                msg = f"note {note.id[:8]} has open work on other cards: {', '.join(others)}"
+                raise TodoError(msg)
+        for note in notes:
+            self._client.update_task(note.id, status="abandoned")
+        self._cache.poke()
+
     def add_task(self, repo: str, title: str, body: str = "") -> Task:
         """Add a section to the repo's open note (a follow-up) and refresh the cached cards.
 

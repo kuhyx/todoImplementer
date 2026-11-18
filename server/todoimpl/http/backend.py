@@ -91,6 +91,10 @@ class Backend(Protocol):
         """Cancel the run."""
         ...
 
+    def wont(self, id8: str) -> None:
+        """Won't do: cancel a resting run, abandon every note behind the card."""
+        ...
+
     def set_credits_fallback(self, *, enabled: bool) -> dict[str, Any]:
         """Store the global free-credits fallback setting; return the contract's `credits` object."""
         ...

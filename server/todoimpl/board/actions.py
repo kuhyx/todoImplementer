@@ -25,6 +25,7 @@ FINAL_STAGES = ("shipped", "closed", "cancelled")
 NO_NOTES = "closing runs take no notes; Start again or Cancel"
 ABANDONED = "the note is abandoned: auto close no longer polls its done_check"
 AUTO_SHIP = "Auto-ship when checks pass"
+WONT = (Status.BACKLOG, Status.CANCELLED, Status.YOURS, Status.NEEDS_YOU)  # no turn runs: Won't do drops it
 
 
 @dataclass(frozen=True)
@@ -123,6 +124,8 @@ def actions(  # noqa: PLR0913 - the signature of the interface plus keyword-only
     clock = time.time() if now is None else now
     block = launch_block(limit, clock) or check_block(run, check, task.status)
     out = _primary(task, run, status, block, repo_missing)
+    if status in WONT:  # T2045: abandons every note behind the card
+        out.append(Action("wont", "Won't do", confirm=True))
     if run is not None and status != Status.DONE:
         out += _session(run, status, block)
     if run is not None and run.lesson and run.lesson.get("state") == "drafted":

@@ -23,6 +23,7 @@ POST_ACTIONS = (
     "lesson-approve",
     "go",
     "rerun",
+    "wont",
 )
 
 
@@ -133,6 +134,9 @@ class FakeBackend:
 
     def rerun(self, id8: str) -> None:
         self._record("rerun", id8)
+
+    def wont(self, id8: str) -> None:
+        self._record("wont", id8)
 
     def lesson_approve(self, id8: str, lesson_id: str) -> None:
         self._record("lesson_approve", id8, lesson_id)

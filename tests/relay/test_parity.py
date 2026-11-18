@@ -27,6 +27,7 @@ def bodies(card: str) -> dict[str, dict[str, Any]]:
         "task_lesson_approve": {"card": card, "args": {"lesson_id": "L1"}},
         "task_go": card_args,
         "task_rerun": card_args,
+        "task_wont": card_args,
         "ask_answer": {"card": card, "args": {"ask": "pick", "option": "a"}},
         "ask_take_recommended": card_args,
         "ask_run": {"card": card, "args": {"ask": "cmd", "add": True}},
