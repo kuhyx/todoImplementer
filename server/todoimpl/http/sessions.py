@@ -15,6 +15,7 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from todoimpl.sessions import api, router
+from todoimpl.sessions.handoff import NOT_STARTED, STARTED, WAITS
 
 from .reply import Reply, error_reply, json_reply
 
@@ -53,12 +54,22 @@ class TaskMaker(Protocol):
         ...
 
 
-class _Board:
-    """`handoff.Board` over the backend's new-task service and the Router's Start."""
+@runtime_checkable
+class Waiter(Protocol):
+    """The Scheduler's `start_when_free` (runner/whenfree.py)."""
 
-    def __init__(self, tasks: TaskMaker, host: Host) -> None:
+    def start_when_free(self, card: str) -> bool:
+        """Arm the card's Start for when its run ships; False when nothing holds it."""
+        ...
+
+
+class _Board:
+    """`handoff.Board` over the backend's new-task service, the Router's Start and the Scheduler's wait."""
+
+    def __init__(self, tasks: TaskMaker, host: Host, waiter: Waiter | None) -> None:
         self._tasks = tasks
         self._host = host
+        self._waiter = waiter
 
     def check_twin(self, task: NewTask) -> None:
         self._tasks.check_twin(task)
@@ -66,19 +77,33 @@ class _Board:
     def create(self, task: NewTask) -> tuple[str, str]:
         return self._tasks.create(task)
 
-    def start(self, card: str) -> bool:
+    def start(self, card: str) -> str:
         # As POST /api/new-task (`_guard` around Start): the task exists now, so a Start that breaks only
         # leaves the card waiting; it must not turn the handoff into a 500 that leaves the session unmarked.
+        # A Start refused because a run holds the card arms its start for when that run ships (kuhy,
+        # 2026-11-18); a card that came free between the two looks is pressed again.
         try:
-            return self._host.start_card(card).status == HTTPStatus.OK
+            if self._pressed(card):
+                return STARTED
+            if self._waiter is not None and self._waiter.start_when_free(card):
+                return WAITS
+            return STARTED if self._pressed(card) else NOT_STARTED
         except Exception:
             log.exception("handoff: Start of %s failed", card)
-            return False
+            return NOT_STARTED
+
+    def _pressed(self, card: str) -> bool:
+        return self._host.start_card(card).status == HTTPStatus.OK
 
 
 def _board(host: Host) -> Board | None:
     tasks = getattr(host.backend, "new_task_service", None)
-    return _Board(tasks, host) if isinstance(tasks, TaskMaker) else None
+    waiter = getattr(host.backend, "scheduler", None)
+    return (
+        _Board(tasks, host, waiter if isinstance(waiter, Waiter) else None)
+        if isinstance(tasks, TaskMaker)
+        else None
+    )
 
 
 def listing(host: Host) -> Reply:

@@ -166,6 +166,47 @@ def test_a_start_that_raises_still_moves_the_session(
     assert listed(live)[SID]["done"] is True
 
 
+class Waiter:
+    """The Scheduler's start_when_free: arms while `held`, else frees the Start (a race)."""
+
+    def __init__(self, live: Live, *, held: bool) -> None:
+        self.live, self.held = live, held
+        self.cards: list[str] = []
+
+    def start_when_free(self, card: str) -> bool:
+        self.cards.append(card)
+        if not self.held:
+            _offer_start(self.live, enabled=True)
+        return self.held
+
+
+def _offer_start(live: Live, *, enabled: bool) -> None:
+    for action in live.backend.task_data["card"]["actions"]:
+        if action["id"] == "start":
+            action.update(enabled=enabled, reason=None if enabled else "shipping is in progress")
+
+
+@pytest.mark.parametrize(
+    "case",
+    [(True, "starts when free", 0), (False, "started", 1), (None, "not started", 0)],
+    ids=["held", "freed-meanwhile", "no-scheduler"],
+)
+def test_a_card_whose_start_is_refused_waits_for_its_ship(
+    live: Live, home: Path, git: GitRunner, tasks: Tasks, case: tuple[bool | None, str, int]
+) -> None:
+    held, word, starts = case
+    _offer_start(live, enabled=False)
+    waiter = Waiter(live, held=held) if held is not None else None
+    if waiter is not None:
+        live.backend.scheduler = waiter  # type: ignore[attr-defined]
+    r = post(live, {"id": SID})
+    assert r.json()["ok"] is True, r.json()
+    assert r.json()["stdout"].endswith(f"card {live.backend.task_id} {word}")
+    pressed = [c for c in live.backend.calls if c[0] == "start"]
+    assert pressed == [("start", live.backend.task_id, None)] * starts
+    assert waiter is None or waiter.cards == [live.backend.task_id]
+
+
 @pytest.mark.parametrize("bad", [{"Origin": "https://evil.example"}, {"X-Todoimpl-Token": "-"}])
 def test_handoff_needs_the_origin_and_token(
     live: Live, home: Path, git: GitRunner, tasks: Tasks, bad: dict[str, str]

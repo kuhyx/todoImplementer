@@ -65,6 +65,10 @@ class Engine:
         self._drives: set[threading.Thread] = set()
         self._dispatcher = threading.Thread(target=self._dispatch, name="runner-dispatch", daemon=True)
         self._dispatcher.start()
+        self.after_recover()
+
+    def after_recover(self) -> None:
+        """Let the Scheduler act on what a restart left (a handoff waiting on a shipped run), once built."""
 
     def recover(self) -> None:
         """Re-queue runs a restart interrupted; a half-done ship is never redone on its own."""

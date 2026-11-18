@@ -24,6 +24,9 @@ if TYPE_CHECKING:
     from todoimpl.sessions.parse import Session
 
 _CONFLICT = "conflict"
+# What became of the card's Start, per session line. WAITS: the card is held (a run on it), so it starts by
+# itself when that run ships (runner/whenfree.py).
+STARTED, WAITS, NOT_STARTED = "started", "starts when free", "not started"
 
 
 class Board(Protocol):
@@ -36,8 +39,8 @@ class Board(Protocol):
         """Add the task and return (note id8, the card that holds it)."""
         ...
 
-    def start(self, card: str) -> bool:
-        """Press the card's Start; False when it cannot start now (it still waits on the board)."""
+    def start(self, card: str) -> str:
+        """Press the card's Start: STARTED, WAITS (held: it starts when its run ships) or NOT_STARTED."""
         ...
 
 
@@ -116,7 +119,7 @@ def _move(board: Board, planned: list[tuple[Session, NewTask]], *, bulk: bool) -
         except BackendError as exc:
             error = exc
             break
-        started = "started" if board.start(card) else "not started"
+        started = board.start(card)
         moved.append((session.id, note, card))
         lines.append(f"{session.id}: note {note} card {card} {started}")
     unmarked = _mark_moved([sid for sid, _, _ in moved]) if moved else None

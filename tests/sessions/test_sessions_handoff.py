@@ -61,11 +61,18 @@ def test_bulk_moves_every_session_in_one_go(git: FakeRunner, board: FakeBoard) -
 
 
 def test_a_card_that_cannot_start_now_still_counts_as_moved(git: FakeRunner, board: FakeBoard) -> None:
-    board.start_ok = False
+    board.outcome = handoff.NOT_STARTED
     result = handoff.apply(git, {"id": SIDS[0]}, board)
     assert result.ok
     assert "not started" in result.stdout
     assert set(marks()) == {SIDS[0]}
+
+
+def test_a_held_card_says_it_starts_when_its_ship_completes(git: FakeRunner, board: FakeBoard) -> None:
+    board.outcome = handoff.WAITS
+    result = handoff.apply(git, {"id": SIDS[0]}, board)
+    assert result.ok
+    assert f"{SIDS[0]}: note note0001 card note0001-0 starts when free" in result.stdout
 
 
 def test_a_non_object_body_is_a_failure(git: FakeRunner, board: FakeBoard) -> None:

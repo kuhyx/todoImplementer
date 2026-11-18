@@ -12,7 +12,7 @@ from todoimpl.board.types import MANUAL_REASON
 from todoimpl.repotask.start import prepare
 from todoimpl.todo_mcp.model import TodoError
 
-from . import adopt, appfix, closing, retry
+from . import adopt, appfix, closing, retry, whenfree
 from .engine import Client, default_clock
 from .files import read_json
 from .phone_sched import PhoneEngine
@@ -84,6 +84,8 @@ class Scheduler(PhoneEngine):
     auto_start = closing.auto_start  # a closing run when the item has none; False when one exists
     close_item = closing.close  # the Close click on a Ready-to-close run (`close` is the Engine's shutdown)
     phone_update_start = appfix.restart  # a pushed fix whose deploy waits for the phone: Ship again
+    start_when_free = whenfree.arm  # a handoff onto a held card: it starts when its Ship completes
+    after_recover = whenfree.recover  # a Ship that completed across a restart still starts its handoff
 
     def start(self, card: str, *, auto_ship: bool | None = None, extra: dict[str, Any] | None = None) -> None:
         """Start, Restart, Retry or Hand back; a failed run (Retry, Hand back) keeps its auto-ship choice.
@@ -111,6 +113,7 @@ class Scheduler(PhoneEngine):
                 st = st or RunState(task_id=card, stage="spec", started_at=self.clock(), repo=item.repo)
                 st.auto_ship = bool(auto_ship)
                 appfix.forget(st)
+                whenfree.clear(self.root / card)  # this Start is the one a pending handoff waited for
             if item.parts:
                 prepare(st, item, self.root / card)
             st.stage = restart_stage(st, item)
@@ -208,6 +211,7 @@ class Scheduler(PhoneEngine):
             self._route(st)
             self.save(card, st)
             self.enqueue(card)
+        whenfree.after_drive(self, card, st)
 
     def ship(self, card: str) -> None:  # noqa: D102
         with self._cv:

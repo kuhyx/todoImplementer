@@ -9,7 +9,7 @@ import pytest
 import sessfix as fx
 from sessrunner import FakeRunner, ok
 from todoimpl.http.backend import BackendError
-from todoimpl.sessions import api, mark, movable
+from todoimpl.sessions import api, handoff, mark, movable
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -30,7 +30,7 @@ class FakeBoard:
         self.fail_at: int | None = None
         self.fail = BackendError("upstream_unavailable", "todo MCP is down")
         self.twin_error: BackendError | None = None
-        self.start_ok = True
+        self.outcome = handoff.STARTED
 
     def check_twin(self, task: NewTask) -> None:
         if self.twin_error is not None:
@@ -45,9 +45,9 @@ class FakeBoard:
         n = len(self.created)
         return f"note000{n}", f"note000{n}-0"
 
-    def start(self, card: str) -> bool:
+    def start(self, card: str) -> str:
         self.started.append(card)
-        return self.start_ok
+        return self.outcome
 
 
 @pytest.fixture

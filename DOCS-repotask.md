@@ -59,8 +59,17 @@ state, a number for steps, names in `aria-label` and `title`).
   the todo app); its subject is the first ticked part's title.
 - **Cycles.** A run that shipped while parts remain (unticked, new, or added by the live-check follow-up) is a
   finished cycle: the card is Backlog again (cost kept), Start begins cycle N+1 (`repotask/cycle.py` clears worktree,
-  session, plan, ticks, checks; cost and history stay). It never starts by itself. When no open part is left the
-  notes are closed and the card is Done (from the shipped run dir, `ClosedNotes`).
+  session, plan, ticks, checks; cost and history stay). It never starts by itself, with one exception below. When
+  no open part is left the notes are closed and the card is Done (from the shipped run dir, `ClosedNotes`).
+- **A handoff waits on an event, not a click** (kuhy, 2026-11-18; `runner/whenfree.py`). When a session moved to
+  the board (DOCS-sessions.md, "Move to board") lands its part on a card whose run holds it (working, queued,
+  `gate`, `spec_wait`, paused, `shipping`), Start is refused, so the handoff arms `<run dir>/start-when-free.json`
+  (its own file: a live drive would drop a key added to the state it saved; written durably). When that run's
+  drive ends `shipped`, the Scheduler presses Start itself (`Scheduler.start`, no auto-ship, not counted as kuhy's
+  click) and cycle N+1 begins with the parts still open. Server start looks again (`after_recover`), so the
+  restart a Ship's own deploy causes loses nothing. A Start that begins a run or a cycle drops the flag; a run
+  that ends `failed` keeps it (kuhy's Retry, then its Ship, starts the handed-off work); Cancel leaves it unused
+  (Restart drops it). A refused automatic Start drops it too, unless the todo app was only unreachable.
 - Cancel stops the run only; it never abandons notes (they hold other parts too).
 
 ## The per-repo lock
@@ -159,7 +168,7 @@ and the line names the copy (`images.copy_into`). Every turn gets the images roo
 ## Defaults chosen (not in the brief)
 
 - Part key = the section card id; `Todo:` trailer per note of the ticked parts (not per part).
-- A cycle ends at Ship; the next cycle needs a Start click (no auto-continue).
+- A cycle ends at Ship; the next cycle needs a Start click (no auto-continue), unless a handoff waits on it.
 - Held = a run that is working, at Ready to ship or paused by the plan limit; `failed` and `spec_wait` count as
   resting and fold at once (kuhy's brief: "keep going until they reach a resting stage, then fold"). Nothing is
   cancelled for kuhy.
