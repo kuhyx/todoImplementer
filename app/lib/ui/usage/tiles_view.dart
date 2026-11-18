@@ -2,10 +2,8 @@
 /// banner shows its server text only when tapped).
 library;
 
-import 'dart:async';
-
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:todo_implementer/model/usage/route.dart';
 import 'package:todo_implementer/ui/usage/blocks.dart';
 import 'package:todo_implementer/ui/usage/glyphs.dart';
@@ -147,14 +145,12 @@ class BannerView extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppRadius.sm),
           onTap: block.text.isEmpty
               ? null
-              : () => unawaited(
-                  showModalBottomSheet<void>(
-                    context: context,
-                    showDragHandle: true,
-                    builder: (_) => Padding(
-                      padding: const EdgeInsets.all(AppSpacing.md),
-                      child: SelectableText(block.text),
-                    ),
+              : () => showModalBottomSheet<void>(
+                  context: context,
+                  showDragHandle: true,
+                  builder: (_) => Padding(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    child: SelectableText(block.text),
                   ),
                 ),
           child: Semantics(

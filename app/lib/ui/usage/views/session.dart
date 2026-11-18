@@ -1,7 +1,7 @@
 /// One session: prompts, tools, subagents (`web/src/usage/view-session.ts`).
 library;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:todo_implementer/model/json.dart';
 import 'package:todo_implementer/model/usage/columns.dart';
 import 'package:todo_implementer/model/usage/format.dart';

@@ -29,7 +29,7 @@ const q = <T extends Element = HTMLElement>(sel: string): T => {
 
 async function mount(routes: Record<string, unknown>): Promise<TiMerges> {
   stubFetch(routes);
-  const element = document.createElement("ti-merges") as TiMerges;
+  const element = new TiMerges();
   document.body.append(element);
   await settle(0);
   return element;
@@ -92,7 +92,7 @@ describe("merge suggestions strip", () => {
       [`POST /api/merge/${GROUP}/merge`]: { new_id: "aaaaaaaa-3", ok: true, suggestions: [] },
       "GET /api/merges": { suggestions: [suggestion()] },
     });
-    const element = document.createElement("ti-merges") as TiMerges;
+    const element = new TiMerges();
     document.body.append(element);
     await settle(0);
     q("[data-action=merge]").click();
@@ -165,7 +165,7 @@ describe("merge suggestions strip", () => {
     const stub = stubFetch({
       "GET /api/merges": () => (isFail ? Response.json({ no: 1 }, { status: 500 }) : { suggestions: [suggestion()] }),
     });
-    const element = document.createElement("ti-merges") as TiMerges;
+    const element = new TiMerges();
     document.body.append(element);
     await settle(0);
     isFail = true;

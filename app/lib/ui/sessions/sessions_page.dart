@@ -8,8 +8,8 @@ library;
 import 'dart:async';
 
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:todo_implementer/model/sessions.dart';
 import 'package:todo_implementer/model/sessions_view.dart';
 import 'package:todo_implementer/sync/board_relay.dart';
@@ -98,13 +98,11 @@ class _SessionsPageState extends State<SessionsPage> {
         : {..._selected, id};
   });
 
-  void _open(Session s) => unawaited(
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (_) => SessionSheet(session: s, perform: _perform),
-    ),
+  void _open(Session s) => showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (_) => SessionSheet(session: s, perform: _perform),
   );
 
   @override

@@ -4,8 +4,8 @@
 library;
 
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:todo_implementer/model/sessions_view.dart';
 import 'package:todo_implementer/sync/sessions_feed.dart';
 import 'package:todo_implementer/ui/sessions/session_glyphs.dart';

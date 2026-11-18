@@ -20,13 +20,13 @@ dependencies:
   crdt_sync_flutter:
     git:
       url: https://github.com/kuhyx/utils
-      ref: crdt_sync_flutter-v0.8.2
+      ref: crdt_sync_flutter-v0.9.1
       path: crdt_sync_flutter
   # The shared palette, spacing and type scale. No local theme to drift from.
   design_system:
     git:
       url: https://github.com/kuhyx/utils
-      ref: design_system-v0.3.1
+      ref: design_system-v0.4.1
       path: design_system
   flutter:
     sdk: flutter
@@ -38,13 +38,13 @@ dependencies:
       path: google_account_token
   http: 1.6.0
   # Its MaterialLocalizations for crdt_sync_flutter's material_ui dialogs.
-  material_ui: 1.11.0
+  material_ui: 1.11.1
   # The relay client: RTDB REST/SSE, e2e sealing, request hub, rev watcher,
   # passphrase gate, session (shared with the tutor app).
   rtdb_relay:
     git:
       url: https://github.com/kuhyx/utils
-      ref: rtdb-relay-v0.2.0
+      ref: rtdb-relay-v0.2.1
       path: rtdb_relay/dart
   # This install's device id.
   shared_preferences: 2.5.6

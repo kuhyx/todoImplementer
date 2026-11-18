@@ -6,8 +6,8 @@ library;
 import 'dart:async';
 
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:todo_implementer/model/board.dart';
 import 'package:todo_implementer/model/board_view.dart';
 import 'package:todo_implementer/sync/board_relay.dart';
@@ -61,31 +61,27 @@ class _BoardPageState extends State<BoardPage> {
     );
   }
 
-  void _open(TaskCard card) => unawaited(
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (sheet) => CardSheet(
-        card: card,
-        relay: widget.relay,
-        onError: _record,
-        onDetail: () => _detail(sheet, card),
-      ),
+  void _open(TaskCard card) => showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (sheet) => CardSheet(
+      card: card,
+      relay: widget.relay,
+      onError: _record,
+      onDetail: () => _detail(sheet, card),
     ),
   );
 
-  void _newTask(Board board) => unawaited(
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (_) => NewTaskSheet(
-        repos: board.repos,
-        relay: widget.relay,
-        onError: _record,
-        repo: _state.repo.isEmpty || _state.repo == yours ? null : _state.repo,
-      ),
+  void _newTask(Board board) => showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    builder: (_) => NewTaskSheet(
+      repos: board.repos,
+      relay: widget.relay,
+      onError: _record,
+      repo: _state.repo.isEmpty || _state.repo == yours ? null : _state.repo,
     ),
   );
 

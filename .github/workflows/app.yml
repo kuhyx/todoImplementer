@@ -23,7 +23,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: 3.47.9
+          flutter-version: 3.50.0
           channel: stable
       - run: flutter pub get
       # lib/config/firebase_local.dart is gitignored; empty values are enough to analyze and test.
@@ -68,7 +68,7 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: 3.47.9
+          flutter-version: 3.50.0
           channel: stable
           cache: true
 

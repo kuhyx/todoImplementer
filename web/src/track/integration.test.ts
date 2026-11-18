@@ -1,7 +1,7 @@
 /** The tracking view in the page: the link on the umbrella card and in the drawer, the route, Back, the routes helpers. */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { defineApp, type TiApp } from "@/components/app";
+import { defineApp, TiApp } from "@/components/app";
 import { renderBoard } from "@/components/board-columns";
 import { defineDrawer } from "@/components/drawer";
 import { renderUmbrella } from "@/components/umbrella";
@@ -95,7 +95,7 @@ describe("ti-app with the tracking view", () => {
       "GET /api/board": () => makeBoard(cards()),
       "GET /api/usage": () => makeUsage(),
     });
-    const app = document.createElement("ti-app") as TiApp;
+    const app = new TiApp();
     document.body.append(app);
     await settle(0);
     return app;

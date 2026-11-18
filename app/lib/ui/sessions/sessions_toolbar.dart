@@ -3,10 +3,8 @@
 /// status chips with their counts.
 library;
 
-import 'dart:async';
-
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:todo_implementer/model/sessions.dart';
 import 'package:todo_implementer/model/sessions_view.dart';
 import 'package:todo_implementer/ui/sessions/session_filters.dart';
@@ -35,14 +33,12 @@ class SessionsToolbar extends StatelessWidget {
   /// A new query.
   final ValueChanged<SessionQuery> onChanged;
 
-  void _filters(BuildContext context) => unawaited(
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (_) =>
-          SessionFilters(all: all, query: query, onChanged: onChanged),
-    ),
+  void _filters(BuildContext context) => showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    isScrollControlled: true,
+    builder: (_) =>
+        SessionFilters(all: all, query: query, onChanged: onChanged),
   );
 
   @override

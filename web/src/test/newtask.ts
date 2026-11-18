@@ -1,8 +1,7 @@
 /** Shared harness for the <ti-new-task> tests: mount, fill, query and file events. */
 import { vi } from "vitest";
 
-import type { TiNewTask } from "@/components/new-task";
-
+import { TiNewTask } from "@/components/new-task";
 import { makeCards } from "@/test/fixtures";
 import { stubFetch } from "@/test/net";
 
@@ -25,7 +24,7 @@ export const ids = ["a", "b", "c"].map((c) => c.repeat(32));
 
 export function mount(routes_: Record<string, unknown> = {}): TiNewTask {
   stubFetch(routes_);
-  const element = document.createElement("ti-new-task") as TiNewTask;
+  const element = new TiNewTask();
   document.body.append(element);
   element.repos = ["kuhyx/demo", "kuhyx/other"];
   return element;

@@ -3,10 +3,8 @@
 /// its sheet); long-press: the sheet with every column.
 library;
 
-import 'dart:async';
-
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:todo_implementer/model/json.dart';
 import 'package:todo_implementer/model/usage/columns.dart';
 import 'package:todo_implementer/model/usage/route.dart';
@@ -55,17 +53,15 @@ class TablePage extends StatelessWidget {
     return null;
   }
 
-  void _sheet(BuildContext context, Json row) => unawaited(
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      isScrollControlled: true,
-      builder: (_) => RowSheet(
-        columns: block.columns,
-        row: row,
-        link: _link(row),
-        open: open,
-      ),
+  void _sheet(BuildContext context, Json row) => showModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    isScrollControlled: true,
+    builder: (_) => RowSheet(
+      columns: block.columns,
+      row: row,
+      link: _link(row),
+      open: open,
     ),
   );
 

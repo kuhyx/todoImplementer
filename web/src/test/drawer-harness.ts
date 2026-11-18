@@ -40,7 +40,7 @@ export function useDrawerHarness(): void {
     document.body.innerHTML = '<button id="opener">card</button>';
     defineDrawer();
     defineDrawer();
-    env.drawer = document.createElement("ti-drawer") as TiDrawer;
+    env.drawer = new TiDrawer();
     document.body.append(env.drawer);
   });
 

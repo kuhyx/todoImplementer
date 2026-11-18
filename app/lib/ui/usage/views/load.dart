@@ -2,7 +2,7 @@
 /// `tokens` fetch, chart shorthands, and the route -> loader table.
 library;
 
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:todo_implementer/model/json.dart';
 import 'package:todo_implementer/model/usage/route.dart';
 import 'package:todo_implementer/sync/board_relay.dart';

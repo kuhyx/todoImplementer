@@ -146,7 +146,7 @@ export function defineTable(): void {
 
 export function makeTable<R extends Row>(config: TableConfig<R>): UsageTable<R> {
   defineTable();
-  const table = document.createElement("usage-table") as UsageTable<R>;
+  const table = new UsageTable<R>();
   table.configure(config);
   return table;
 }

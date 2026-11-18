@@ -23,7 +23,7 @@ async function mountApp(hash = ""): Promise<TiApp> {
     "GET /api/board": () => boardBody(),
     "GET /api/usage": () => makeUsage(),
   });
-  const app = document.createElement("ti-app") as TiApp;
+  const app = new TiApp();
   document.body.append(app);
   await settle(0);
   return app;

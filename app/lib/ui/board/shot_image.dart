@@ -6,7 +6,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:todo_implementer/sync/board_relay.dart';
 
 /// Loads a screenshot of the card as PNG bytes, or null.

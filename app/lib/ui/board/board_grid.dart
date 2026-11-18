@@ -4,7 +4,7 @@
 library;
 
 import 'package:design_system/design_system.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:todo_implementer/model/board.dart';
 import 'package:todo_implementer/model/board_view.dart';
 import 'package:todo_implementer/ui/board/card_tile.dart';

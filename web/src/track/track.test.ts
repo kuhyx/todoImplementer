@@ -13,7 +13,7 @@ let calls: () => number;
 function mount(): TiTrack {
   const stub = stubFetch({ [URL]: () => body() });
   calls = () => stub.calls.length;
-  const view = document.createElement("ti-track") as TiTrack;
+  const view = new TiTrack();
   document.body.append(view);
   return view;
 }
@@ -42,7 +42,7 @@ afterEach(() => {
 describe("ti-track", () => {
   it("shows a loader naming the request, then renders the run at once", async () => {
     stubFetch({ [URL]: () => new Promise(() => {}) });
-    const view = document.createElement("ti-track") as TiTrack;
+    const view = new TiTrack();
     document.body.append(view);
     view.show(TRACK_ID);
     expect(q(view, ".loader").textContent).toContain(`/api/umbrella/${TRACK_ID}`);
