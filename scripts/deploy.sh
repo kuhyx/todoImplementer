@@ -6,7 +6,8 @@
 #   scripts/deploy.sh
 #
 # Env: TODOIMPL_APP_PORT (default 8786), TODOIMPL_BUILD_ID (stamps the web build only),
-#      RUN_WAIT_TRIES (default 60) x RUN_WAIT_INTERVAL (default 0.5 s) bound the wait for /version.
+#      RUN_WAIT_TRIES (default 240) x RUN_WAIT_INTERVAL (default 0.5 s) bound the wait for /version: the
+#      server takes ~30 s to start, and a deploy that gives up on it restarts it again on resume (T2044).
 # Needs: pacman + sudo (only when uv, pnpm or jq is on neither PATH nor a per-user bin dir), systemctl --user, curl, git.
 # Success means /version reports `git rev-parse --short HEAD` of this checkout: the server computes that
 # itself at start (http/main.py), so TODOIMPL_BUILD_ID is not what /version says.
@@ -19,7 +20,7 @@ readonly UNIT=todoimplementer.service
 readonly PREVIEW_UNIT=todoimplementer-preview.service
 # The cap every board unit runs under (deploy/todoimpl.slice, T1982).
 readonly SLICE=todoimpl.slice
-readonly WAIT_TRIES="${RUN_WAIT_TRIES:-60}"
+readonly WAIT_TRIES="${RUN_WAIT_TRIES:-240}"
 readonly WAIT_INTERVAL="${RUN_WAIT_INTERVAL:-0.5}"
 
 step() {

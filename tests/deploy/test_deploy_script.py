@@ -44,6 +44,18 @@ def test_deploy_reports_a_server_that_never_answers(box: tuple[Env, Stubber]) ->
     assert "never answered /version" in done.stderr
 
 
+def test_t2044_deploy_waits_long_enough_for_a_server_that_takes_over_30_s_to_start(
+    box: tuple[Env, Stubber],
+) -> None:
+    """The board answered /version 29 s after a restart; the default 60 x 0.5 s was a coin toss (T2044)."""
+    env, stub = box
+    late = 'n=$(cat "$HOME/curl.n" 2>/dev/null || echo 0); echo $((n + 1)) > "$HOME/curl.n"; '
+    _stubs(stub, curl=late + '[ "$n" -ge 100 ] || exit 7; ' + VERSION_OK)  # answers on the 101st look
+    done = env.run("bash", str(DEPLOY_SH), RUN_WAIT_INTERVAL="0")  # the default number of looks
+    assert done.returncode == 0, done.stderr
+    assert f"serving build {HEAD}" in done.stdout
+
+
 def test_t1857_deploy_creates_the_sdk_venv_once_with_the_exact_pin(box: tuple[Env, Stubber]) -> None:
     env, stub = box
     _stubs(stub)
