@@ -8,6 +8,7 @@ import time
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING
 
+from todoimpl.repotask.ids import norm
 from todoimpl.todo_mcp.model import UnreachableError
 
 if TYPE_CHECKING:
@@ -31,6 +32,15 @@ class Snapshot:
     loaded: bool = False  # True once any fetch succeeded: the cards may be stale, but they were real
 
 
+def _overlay(tasks: tuple[CardTask, ...], repo: str, cards: tuple[CardTask, ...]) -> tuple[CardTask, ...]:
+    """Swap the repo's open cards for `cards` (a fresh read of that repo); every other card stays."""
+    ids = {card.id for card in cards}
+    kept = [
+        t for t in tasks if t.id not in ids and not (t.repo and norm(t.repo) == repo and t.status != "done")
+    ]
+    return (*kept, *cards)
+
+
 class TaskCache:
     """Holds a Snapshot; refresh() runs fetch, a daemon thread repeats it `interval` s after each finish."""
 
@@ -39,9 +49,13 @@ class TaskCache:
         fetch: Callable[[], list[CardTask]],
         interval: float = INTERVAL,
         clock: Callable[[], float] = time.time,
+        repo_fetch: Callable[[str], list[CardTask]] | None = None,
     ) -> None:
-        """Nothing is fetched until refresh() or start()."""
+        """Nothing is fetched until refresh() or start(); `repo_fetch` reads one repo (refresh_repo)."""
         self._fetch = fetch
+        self._repo_fetch = repo_fetch
+        self._seq = 0  # counts repo patches, so a full fetch knows which ones came after it began
+        self._patches: dict[str, tuple[int, tuple[CardTask, ...]]] = {}
         self._interval = interval
         self._clock = clock
         self._snap = Snapshot()
@@ -57,22 +71,50 @@ class TaskCache:
         with self._lock:
             return self._snap
 
-    def refresh(self) -> Snapshot:
+    def refresh(self, *, fresh: bool = False) -> Snapshot:
         """Fetch now; a failure keeps the old cards but records why, it never reads as an empty board.
 
         Single-flight (T2005): while a fetch runs, a second refresh returns the current snapshot and
-        opens no connection.
+        opens no connection. `fresh` waits that fetch out and runs one that starts after the call, so a
+        caller that just wrote a note sees it (T2046).
         """
-        if not self._flight.acquire(blocking=False):
+        if not self._flight.acquire(blocking=fresh):
             return self.snapshot()
         try:
             return self._refresh()
         finally:
             self._flight.release()
 
+    def refresh_repo(self, repo: str) -> Snapshot:
+        """Read one repo's cards now and lay them over the snapshot: seconds, where a whole board takes ~30 s.
+
+        A full fetch that began before this read keeps the patch on top when it lands (T2046). Without a
+        `repo_fetch` it is a full fetch that starts after the call. A todo-app error propagates.
+        """
+        if self._repo_fetch is None:
+            return self.refresh(fresh=True)
+        key, cards = norm(repo), tuple(self._repo_fetch(repo))
+        with self._lock:
+            self._seq += 1
+            self._patches[key] = (self._seq, cards)
+            self._snap = replace(self._snap, tasks=_overlay(self._snap.tasks, key, cards))
+            return self._snap
+
+    def _laid_over(self, tasks: tuple[CardTask, ...], began: int) -> tuple[CardTask, ...]:
+        """Drop the patches the fetch saw; lay the newer ones over its cards (call with the lock held)."""
+        self._patches = {k: v for k, v in self._patches.items() if v[0] > began}
+        for key, (_, cards) in self._patches.items():
+            tasks = _overlay(tasks, key, cards)
+        return tasks
+
     def _refresh(self) -> Snapshot:
+        with self._lock:
+            began = self._seq
         try:
-            fresh = Snapshot(tuple(self._fetch()), None, self._clock(), loaded=True)
+            tasks = tuple(self._fetch())
+            with self._lock:
+                tasks = self._laid_over(tasks, began)
+            fresh = Snapshot(tasks, None, self._clock(), loaded=True)
         except Exception as exc:  # noqa: BLE001 - the loop must survive anything; the message reaches the page
             log.warning("todo refresh failed: %s", exc)
             # An outage reads as itself, not as "TodoError: <whatever the sick server last said>".

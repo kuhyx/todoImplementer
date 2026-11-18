@@ -32,7 +32,7 @@ class GitRunner:
 
 
 class Tasks:
-    """The new-task service the handoff drives: twin check, then create (returning the fake board's card)."""
+    """The new-task service the handoff drives: adopt, twin check, add, then the fake board's card."""
 
     def __init__(self, card: str) -> None:
         self.card = card
@@ -43,9 +43,15 @@ class Tasks:
         if self.conflict:
             raise BackendError("conflict", f"{task.repo} already has an open part titled {task.title!r}")
 
-    def create(self, task: NewTask) -> tuple[str, str]:
+    def adopt(self, task: NewTask, key: str) -> tuple[str, str] | None:
+        return None
+
+    def add(self, task: NewTask) -> str:
         self.created.append(task)
-        return self.card[:8], self.card
+        return self.card[:8]
+
+    def card_of(self, note8: str, task: NewTask) -> str | None:
+        return self.card
 
 
 def record(kind: str, ts: str, text: str) -> dict[str, Any]:

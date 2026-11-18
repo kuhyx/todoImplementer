@@ -119,24 +119,24 @@ def test_a_done_card_never_holds_the_new_section() -> None:
 def test_a_card_missing_after_the_add_is_not_found(
     rig: Rig, images: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(rig.backend.cache, "refresh", lambda: None)
+    monkeypatch.setattr(rig.backend.cache, "refresh_repo", lambda _repo: None)
     monkeypatch.setattr(newtask_service, "_PAUSE_S", 0.0)
     with pytest.raises(BackendError) as caught:
         service(rig).create(NewTask("kuhyx/brand-new", "x", "", ()))
     assert caught.value.code == "not_found"
 
 
-def test_a_refresh_that_lands_mid_fetch_is_retried_until_the_card_shows(
+def test_a_repo_read_that_misses_the_new_section_is_retried_until_the_card_shows(
     rig: Rig, images: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    real = rig.backend.cache.refresh
+    real = rig.backend.cache.refresh_repo
     calls: list[int] = []
 
-    def stale_twice() -> object:
+    def stale_twice(repo: str) -> object:
         calls.append(1)
-        return rig.backend.cache.snapshot() if len(calls) < 3 else real()
+        return rig.backend.cache.snapshot() if len(calls) < 3 else real(repo)
 
-    monkeypatch.setattr(rig.backend.cache, "refresh", stale_twice)
+    monkeypatch.setattr(rig.backend.cache, "refresh_repo", stale_twice)
     monkeypatch.setattr(newtask_service, "_PAUSE_S", 0.0)
     _, card = service(rig).create(NewTask("kuhyx/brand-new", "x", "", ()))
     assert card == repo_card_id("kuhyx/brand-new")

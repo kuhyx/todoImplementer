@@ -76,3 +76,38 @@ def test_poke_refreshes_without_waiting_the_interval() -> None:
 
 def test_stop_without_start_is_fine() -> None:
     TaskCache(list).stop()
+
+
+def card(note: str, repo: str, status: str = "todo") -> CardTask:
+    return card_tasks(Task(note, note, "", repo, status, "low", None))[0]
+
+
+def test_t2046_a_repo_patch_swaps_that_repos_open_cards_and_outlives_an_older_fetch() -> None:
+    board = [card("aaaa0000", "kuhyx/r"), card("bbbb0000", "kuhyx/r", "done"), card("cccc0000", "kuhyx/o")]
+    fresh = [card("dddd0000", "kuhyx/r")]
+    began, release = threading.Event(), threading.Event()
+
+    def slow() -> list[CardTask]:
+        began.set()
+        release.wait(5)
+        return board
+
+    cache = TaskCache(lambda: board, repo_fetch=lambda _repo: fresh)
+    cache.refresh()
+    ids = {c.id for c in cache.refresh_repo("KUHYX/r").tasks}
+    assert ids == {"bbbb0000-0", "cccc0000-0", "dddd0000-0"}  # done and other-repo cards stay
+    cache._fetch = slow
+    flight = threading.Thread(target=cache.refresh)
+    flight.start()
+    assert began.wait(5)
+    cache.refresh_repo("kuhyx/r")  # a patch after that fetch began
+    release.set()
+    flight.join(5)
+    assert "dddd0000-0" in {c.id for c in cache.snapshot().tasks}
+    cache.refresh()  # a fetch that began after the patch saw it: the patch is dropped
+    assert "dddd0000-0" not in {c.id for c in cache.snapshot().tasks}
+
+
+def test_without_a_repo_fetch_a_repo_refresh_is_a_full_fetch() -> None:
+    cache = TaskCache(lambda: cards(2))
+    assert len(cache.refresh_repo("kuhyx/r").tasks) == 2

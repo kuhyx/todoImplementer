@@ -50,14 +50,18 @@ allows a move. A disabled button carries `move_reason` as its `title` and `aria-
 `POST /api/sessions/handoff` takes `{"id"}` or `{"ids": [...]}` (at most 5) and an optional
 `"repos": {"<id>": "owner/name"}` for a cwd with no origin, such as `$HOME`; an override needs a local clone. It
 runs the same guard as the other POSTs, then refuses the whole batch if any session cannot move, if two share a
-title in one repo, or if the repo already has an open part with that title (`NewTaskService.check_twin`). Then,
-per session, it creates the task through `NewTaskService.create` (title = the session title on one line, at most
+title in one repo, or if the repo already has an open part with that title (`NewTaskService.check_twin`), unless
+that part is the session's own earlier task (its body names the session id): then the handoff adopts it, starts
+its card and marks the session, so a rerun of a half-finished handoff finishes it (T2047). Then it adds every
+new task through `NewTaskService.add` and looks the cards up after (`card_of`: a read of that repo alone, laid over
+the board cache, never the in-flight board fetch, which may predate the add: T2046), so a batch costs no board fetch (title = the session title on one line, at most
 200 characters; body = `### what`, `### where`, `### done`, `### verify`, `### read first` with the transcript
 path, kuhy's last prompt and the end of the last reply quoted line by line so no line can start a card, a fence or
 a `done_check:`), presses the card's Start as `POST /api/new-task` does, and marks the session done in the marks
 file. When a run holds the card (it is working, at Ready to ship, on spec questions or shipping) and Start is
 refused, the card starts by itself the moment that run ships (`start_when_free`, DOCS-repotask.md, "Cycles").
-A create that fails mid-batch reports `Moved n of m` and marks only what landed. The answer is the usual
+A create that fails mid-batch, or a card that never shows, reports `Moved n of m` and marks only the sessions
+whose card started; a rerun adopts the rest. The answer is the usual
 `result`, with one `<id>: note <id8> card <card> started|starts when free|not started` line per session in
 `stdout`. The page
 and the app show it as a robot icon per row and in the bulk bar; the app sends `session_handoff` over the relay.

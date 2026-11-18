@@ -49,8 +49,16 @@ class TaskMaker(Protocol):
     def check_twin(self, task: NewTask) -> None:
         """Raise BackendError when the title is open already."""
 
-    def create(self, task: NewTask) -> tuple[str, str]:
-        """Add the task; return (note id8, card)."""
+    def adopt(self, task: NewTask, key: str) -> tuple[str, str] | None:
+        """Return (note id8, card) of the task's own open section, else None."""
+        ...
+
+    def add(self, task: NewTask) -> str:
+        """Add the task; return its note id8."""
+        ...
+
+    def card_of(self, note8: str, task: NewTask) -> str | None:
+        """Return the card holding the section, None when it never shows."""
         ...
 
 
@@ -74,8 +82,14 @@ class _Board:
     def check_twin(self, task: NewTask) -> None:
         self._tasks.check_twin(task)
 
-    def create(self, task: NewTask) -> tuple[str, str]:
-        return self._tasks.create(task)
+    def adopt(self, task: NewTask, key: str) -> tuple[str, str] | None:
+        return self._tasks.adopt(task, key)
+
+    def add(self, task: NewTask) -> str:
+        return self._tasks.add(task)
+
+    def card_of(self, note8: str, task: NewTask) -> str | None:
+        return self._tasks.card_of(note8, task)
 
     def start(self, card: str) -> str:
         # As POST /api/new-task (`_guard` around Start): the task exists now, so a Start that breaks only

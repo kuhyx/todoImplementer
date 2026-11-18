@@ -31,6 +31,9 @@ class FakeBoard:
         self.fail = BackendError("upstream_unavailable", "todo MCP is down")
         self.twin_error: BackendError | None = None
         self.outcome = handoff.STARTED
+        self.adoptable: dict[tuple[str, str, str], tuple[str, str]] = {}  # (repo, title, key) -> (note, card)
+        self.hidden: set[str] = set()  # notes whose card never shows
+        self.broken: set[str] = set()  # notes whose card lookup fails
 
     def check_twin(self, task: NewTask) -> None:
         if self.twin_error is not None:
@@ -38,12 +41,35 @@ class FakeBoard:
         if (task.repo, task.title) in self.twins:
             raise BackendError("conflict", f"{task.repo} already has an open part titled {task.title!r}")
 
-    def create(self, task: NewTask) -> tuple[str, str]:
+    def adopt(self, task: NewTask, key: str) -> tuple[str, str] | None:
+        if self.twin_error is not None:
+            raise self.twin_error
+        found = [
+            v for (r, t, k), v in self.adoptable.items() if (r, t, k in key) == (task.repo, task.title, True)
+        ]
+        if found:
+            return found[0]
+        # what an earlier call created: its body names the session, so a rerun finds it
+        n = next(
+            (
+                i
+                for i, t in enumerate(self.created, 1)
+                if (t.repo, t.title) == (task.repo, task.title) and key in t.body
+            ),
+            0,
+        )
+        return (f"note000{n}", f"note000{n}-0") if n and f"note000{n}" not in self.hidden else None
+
+    def add(self, task: NewTask) -> str:
         if self.fail_at == len(self.created):
             raise self.fail
         self.created.append(task)
-        n = len(self.created)
-        return f"note000{n}", f"note000{n}-0"
+        return f"note000{len(self.created)}"
+
+    def card_of(self, note8: str, task: NewTask) -> str | None:
+        if note8 in self.broken:
+            raise BackendError("upstream_unavailable", "todo MCP is down")
+        return None if note8 in self.hidden else f"{note8}-0"
 
     def start(self, card: str) -> str:
         self.started.append(card)

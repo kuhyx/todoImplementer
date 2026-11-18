@@ -5,6 +5,10 @@ ids of scanned sessions, cwd from the transcript), at most five ids like resume,
 first task: every id must be movable (`movable.py`, the verdict the GET row shows), every title new on the
 board and in the batch, before anything is created. `add_task` cannot be undone, so a create failing
 mid-batch reports what landed, and only the sessions that landed are marked done.
+
+Idempotent (T2047): a session whose own task is open already (same title, its id in the body) adopts it, so
+a rerun after a half-finished handoff starts that card and marks the session instead of refusing a twin.
+Every task is added first and the cards are looked up after, so a batch costs one board fetch, not one each.
 """
 
 from __future__ import annotations
@@ -35,8 +39,16 @@ class Board(Protocol):
     def check_twin(self, task: NewTask) -> None:
         """Raise BackendError when the repo already has an open part with this title."""
 
-    def create(self, task: NewTask) -> tuple[str, str]:
-        """Add the task and return (note id8, the card that holds it)."""
+    def adopt(self, task: NewTask, key: str) -> tuple[str, str] | None:
+        """Return (note id8, card) of the open section this task became before (`key` in its body)."""
+        ...
+
+    def add(self, task: NewTask) -> str:
+        """Add the task and return its note id8."""
+        ...
+
+    def card_of(self, note8: str, task: NewTask) -> str | None:
+        """Return the card that holds the section, None when it never shows."""
         ...
 
     def start(self, card: str) -> str:
@@ -85,15 +97,23 @@ def _plan(
     return planned
 
 
-def _check_twins(board: Board, planned: list[tuple[Session, NewTask]]) -> MutationResult | None:
-    for _, task in planned:
+type Entry = tuple[Session, NewTask, tuple[str, str] | None]  # the adopted (note id8, card), if any
+
+
+def _resolve(board: Board, planned: list[tuple[Session, NewTask]]) -> list[Entry] | MutationResult:
+    """Adopt each session's own open task; refuse a twin that belongs to someone else."""
+    out: list[Entry] = []
+    for session, task in planned:
         try:
-            board.check_twin(task)
+            adopted = board.adopt(task, f"session {session.id}")
+            if adopted is None:
+                board.check_twin(task)
         except BackendError as exc:
             if exc.code == _CONFLICT:
                 return MutationResult.refusal(f"Nothing moved: {exc.message}.", stderr=exc.message)
             return MutationResult.failure("Could not ask the todo app for open tasks.", stderr=exc.message)
-    return None
+        out.append((session, task, adopted))
+    return out
 
 
 def _mark_moved(moved: list[str]) -> str | None:
@@ -109,28 +129,50 @@ def _mark_moved(moved: list[str]) -> str | None:
     return None
 
 
-def _move(board: Board, planned: list[tuple[Session, NewTask]], *, bulk: bool) -> MutationResult:
+type Landed = tuple[Session, NewTask, str]  # the session, its task and the note id8 holding it
+
+
+def _add(board: Board, entries: list[Entry]) -> tuple[list[Landed], BackendError | None]:
+    """Add every task not adopted (adopted ones keep their note); stop at the first failure."""
+    landed: list[Landed] = []
+    for session, task, adopted in entries:
+        if adopted is not None:
+            landed.append((session, task, adopted[0]))
+            continue
+        try:
+            landed.append((session, task, board.add(task)))
+        except BackendError as exc:
+            return landed, exc
+    return landed, None
+
+
+def _move(board: Board, entries: list[Entry], *, bulk: bool) -> MutationResult:
+    known = {s.id: a[1] for s, _, a in entries if a is not None}
+    landed, error = _add(board, entries)
     moved: list[tuple[str, str, str]] = []  # (session id, note id8, card)
     lines: list[str] = []
-    error: BackendError | None = None
-    for session, task in planned:
+    missing: list[str] = []
+    for session, task, note in landed:
         try:
-            note, card = board.create(task)
+            card = known.get(session.id) or board.card_of(note, task)
         except BackendError as exc:
-            error = exc
-            break
-        started = board.start(card)
+            card, why = None, exc.message
+        else:
+            why = "its card is not on the board yet"
+        if card is None:  # the task landed: a rerun adopts it
+            missing.append(f"note {note} got {session.id[:8]}'s task, but {why}")
+            continue
         moved.append((session.id, note, card))
-        lines.append(f"{session.id}: note {note} card {card} {started}")
+        lines.append(f"{session.id}: note {note} card {card} {board.start(card)}")
     unmarked = _mark_moved([sid for sid, _, _ in moved]) if moved else None
     stdout = "\n".join(lines)
-    if error is not None and not moved and error.code == _CONFLICT:
+    if error is not None and not landed and error.code == _CONFLICT:
         return MutationResult.refusal(f"Nothing moved: {error.message}.", stderr=error.message)
-    if error is not None:
-        summary = f"Moved {len(moved)} of {len(planned)} sessions; the next one failed."
-        return MutationResult.failure(
-            summary, stderr="\n".join(filter(None, [error.message, unmarked, stdout]))
-        )
+    if error is not None or missing:
+        why = "the next one failed" if error is not None else "rerun to adopt the rest"
+        summary = f"Moved {len(moved)} of {len(entries)} sessions; {why}."
+        problems = [error.message if error else None, *missing, unmarked, stdout]
+        return MutationResult.failure(summary, stderr="\n".join(filter(None, problems)))
     if unmarked is not None:
         return MutationResult.failure(
             "Moved to the board, but the done marks were not written.", stderr=unmarked
@@ -139,7 +181,7 @@ def _move(board: Board, planned: list[tuple[Session, NewTask]], *, bulk: bool) -
         return MutationResult.success(f"Moved {plural(len(moved))} to the board.", stdout=stdout)
     _, note, card = moved[0]
     return MutationResult.success(
-        f"Moved {planned[0][1].title} to the board: note {note}, card {card}.", stdout
+        f"Moved {entries[0][1].title} to the board: note {note}, card {card}.", stdout
     )
 
 
@@ -171,4 +213,5 @@ def apply(runner: CommandRunner, body: object, board: Board | None) -> MutationR
     planned = _plan(runner, *checked)
     if isinstance(planned, MutationResult):
         return planned
-    return _check_twins(board, planned) or _move(board, planned, bulk=is_bulk(body))
+    entries = _resolve(board, planned)
+    return entries if isinstance(entries, MutationResult) else _move(board, entries, bulk=is_bulk(body))

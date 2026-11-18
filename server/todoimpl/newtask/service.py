@@ -22,9 +22,9 @@ if TYPE_CHECKING:
 
 UPSTREAM, NOT_FOUND, CONFLICT, BAD = "upstream_unavailable", "not_found", "conflict", "bad_request"
 
-# The cache refresh is single-flight: one that lands while the background fetch is mid-flight answers with the
-# snapshot from before the add. So the card is looked up again a few times (about 8 s in all).
-_LOOKUPS = 16
+# The lookup forces a fetch that starts after the add (T2046); a few more tries cover a todo app that lists
+# the new section a moment late.
+_LOOKUPS = 4
 _PAUSE_S = 0.5
 
 
@@ -53,6 +53,15 @@ class NewTaskService:
 
     def create(self, task: NewTask) -> tuple[str, str]:
         """Add the section and return (note id8, the card that holds it now)."""
+        note8 = self.add(task)
+        card = self.card_of(note8, task)
+        if card is None:
+            msg = f"note {note8} got the task, but its card is not on the board yet"
+            raise BackendError(NOT_FOUND, msg)
+        return note8, card
+
+    def add(self, task: NewTask) -> str:
+        """Add the section (refusing a twin) and return its note id8; the card is `card_of`'s to find."""
         try:
             self._refuse_twin(task)
             staged = uploads.claim(task.files, uploads.root())
@@ -65,22 +74,41 @@ class NewTaskService:
             note = self._client.add_task(task.repo, task.title, body)
         except TodoError as exc:
             raise BackendError(UPSTREAM, upstream_text(str(exc))) from exc
-        note8 = note.id[:8]
-        card = self._find_card(note8, task.title)
-        if card is None:
-            msg = f"note {note8} got the task, but its card is not on the board yet"
-            raise BackendError(NOT_FOUND, msg)
-        return note8, card
+        return note.id[:8]
 
-    def _find_card(self, note8: str, title: str) -> str | None:
-        """Refresh until the cache shows the new section's card; None if it never does."""
-        for attempt in range(_LOOKUPS):
-            if attempt:
+    def card_of(self, note8: str, task: NewTask) -> str | None:
+        """Return the card holding the section: the snapshot, else fresh reads of its repo; None if never.
+
+        Never the in-flight board fetch, which may predate the add (T2046): a read of the repo alone.
+        """
+        for attempt in range(_LOOKUPS + 1):
+            if attempt > 1:
                 time.sleep(_PAUSE_S)
-            self._cache.refresh()
-            card = next((c.id for c in self._cache.snapshot().tasks if _holds(c, note8, title)), None)
+            if attempt:
+                try:
+                    self._cache.refresh_repo(task.repo)
+                except TodoError as exc:
+                    raise BackendError(UPSTREAM, upstream_text(str(exc))) from exc
+            snap = self._cache.snapshot().tasks
+            card = next((c.id for c in snap if _holds(c, note8, task.title)), None)
             if card is not None:
                 return card
+        return None
+
+    def adopt(self, task: NewTask, key: str) -> tuple[str, str] | None:
+        """Return (note id8, card) of the open section this very task became before (title, `key` in body).
+
+        A handoff rerun after a half-finished one finds its own task here instead of refusing it as a twin.
+        """
+        try:
+            notes = self._client.list_tasks(repo=task.repo, full=True)
+        except TodoError as exc:
+            raise BackendError(UPSTREAM, upstream_text(str(exc))) from exc
+        for note in notes:
+            for section in card_tasks(note):
+                if section.title == task.title and section.status != "done" and key in section.body:
+                    card = self.card_of(note.id[:8], task)
+                    return None if card is None else (note.id[:8], card)
         return None
 
     def check_twin(self, task: NewTask) -> None:

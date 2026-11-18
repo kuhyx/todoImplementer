@@ -51,6 +51,16 @@ def board_fetch(
     return fetch
 
 
+def repo_fetch(client: TodoClient, root: Path) -> Callable[[str], list[CardTask]]:
+    """Return the cache's one-repo read: the repo's open notes grouped as `board_fetch` groups them."""
+
+    def fetch(repo: str) -> list[CardTask]:
+        notes = client.list_tasks(repo=repo, full=True)
+        return group_cards(notes, lambda card: legacy.older(root, card), released_in(root))
+
+    return fetch
+
+
 def build_backend(
     root: Path | None = None,
     build: str | None = None,
@@ -67,7 +77,7 @@ def build_backend(
     client = client or TodoClient.from_env()
     ledger.load(root)  # rebuilds the credit ledger from the streams once, if it is missing
     run_titles = RunTitles(client, root)
-    cache = TaskCache(board_fetch(client, root, run_titles))
+    cache = TaskCache(board_fetch(client, root, run_titles), repo_fetch=repo_fetch(client, root))
     cache.run_titles = run_titles
     if refresh:
         # Before the Scheduler: its recovery drives resolve card ids through this cache at once.
