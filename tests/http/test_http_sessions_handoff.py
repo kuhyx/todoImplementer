@@ -150,13 +150,20 @@ def test_without_the_task_service_it_fails_cleanly(live: Live, home: Path, git: 
     assert (r.status, r.json()["ok"], r.json()["refused"]) == (200, False, False)
 
 
+@pytest.mark.parametrize(
+    "failure",
+    [BackendError("upstream_unavailable", "board is busy"), RuntimeError("boom")],
+    ids=["refused", "crash"],
+)
 def test_a_start_that_raises_still_moves_the_session(
-    live: Live, home: Path, git: GitRunner, tasks: Tasks
+    live: Live, home: Path, git: GitRunner, tasks: Tasks, failure: Exception
 ) -> None:
-    live.backend.failure = BackendError("upstream_unavailable", "board is busy")
+    live.backend.failure = failure
     r = post(live, {"id": SID})
+    assert r.status == 200
     assert r.json()["ok"] is True
     assert "not started" in r.json()["stdout"]
+    assert listed(live)[SID]["done"] is True
 
 
 @pytest.mark.parametrize("bad", [{"Origin": "https://evil.example"}, {"X-Todoimpl-Token": "-"}])

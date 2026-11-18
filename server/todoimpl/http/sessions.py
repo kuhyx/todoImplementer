@@ -9,13 +9,13 @@ the board's new-task service and presses the card's Start the way POST /api/new-
 from __future__ import annotations
 
 import json
+import logging
 import re
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 from todoimpl.sessions import api, router
 
-from .backend import BackendError
 from .reply import Reply, error_reply, json_reply
 
 if TYPE_CHECKING:
@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 
 GET_PATH = "/api/sessions"
 POST_PATH = re.compile(r"/api/sessions/(resume|mark|delete|handoff)")
+log = logging.getLogger("todoimpl.http")
 
 
 class Host(Protocol):
@@ -66,9 +67,12 @@ class _Board:
         return self._tasks.create(task)
 
     def start(self, card: str) -> bool:
+        # As POST /api/new-task (`_guard` around Start): the task exists now, so a Start that breaks only
+        # leaves the card waiting; it must not turn the handoff into a 500 that leaves the session unmarked.
         try:
             return self._host.start_card(card).status == HTTPStatus.OK
-        except BackendError:
+        except Exception:
+            log.exception("handoff: Start of %s failed", card)
             return False
 
 
