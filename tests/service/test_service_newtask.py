@@ -8,6 +8,7 @@ import pytest
 from servicefakes import Rig
 from todoimpl.http.backend import BackendError
 from todoimpl.http.newtask import NewTask
+from todoimpl.newtask import service as newtask_service
 from todoimpl.newtask import uploads
 from todoimpl.newtask.service import NewTaskService, _holds
 from todoimpl.repotask.ids import repo_card_id, repo_human_id
@@ -119,9 +120,27 @@ def test_a_card_missing_after_the_add_is_not_found(
     rig: Rig, images: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(rig.backend.cache, "refresh", lambda: None)
+    monkeypatch.setattr(newtask_service, "_PAUSE_S", 0.0)
     with pytest.raises(BackendError) as caught:
         service(rig).create(NewTask("kuhyx/brand-new", "x", "", ()))
     assert caught.value.code == "not_found"
+
+
+def test_a_refresh_that_lands_mid_fetch_is_retried_until_the_card_shows(
+    rig: Rig, images: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    real = rig.backend.cache.refresh
+    calls: list[int] = []
+
+    def stale_twice() -> object:
+        calls.append(1)
+        return rig.backend.cache.snapshot() if len(calls) < 3 else real()
+
+    monkeypatch.setattr(rig.backend.cache, "refresh", stale_twice)
+    monkeypatch.setattr(newtask_service, "_PAUSE_S", 0.0)
+    _, card = service(rig).create(NewTask("kuhyx/brand-new", "x", "", ()))
+    assert card == repo_card_id("kuhyx/brand-new")
+    assert len(calls) == 3
 
 
 def test_staged_files_are_moved_into_the_folder_and_linked_by_kind(rig: Rig, images: Path) -> None:

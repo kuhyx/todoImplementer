@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 import uuid
 from typing import TYPE_CHECKING
 
@@ -20,6 +21,11 @@ if TYPE_CHECKING:
     from todoimpl.todo_mcp.client import TodoClient
 
 UPSTREAM, NOT_FOUND, CONFLICT, BAD = "upstream_unavailable", "not_found", "conflict", "bad_request"
+
+# The cache refresh is single-flight: one that lands while the background fetch is mid-flight answers with the
+# snapshot from before the add. So the card is looked up again a few times (about 8 s in all).
+_LOOKUPS = 16
+_PAUSE_S = 0.5
 
 
 def _fresh_folder() -> str:
@@ -59,13 +65,23 @@ class NewTaskService:
             note = self._client.add_task(task.repo, task.title, body)
         except TodoError as exc:
             raise BackendError(UPSTREAM, upstream_text(str(exc))) from exc
-        self._cache.refresh()  # Start looks the card up in the cache: a poke would answer before it is there
         note8 = note.id[:8]
-        card = next((c.id for c in self._cache.snapshot().tasks if _holds(c, note8, task.title)), None)
+        card = self._find_card(note8, task.title)
         if card is None:
             msg = f"note {note8} got the task, but its card is not on the board yet"
             raise BackendError(NOT_FOUND, msg)
         return note8, card
+
+    def _find_card(self, note8: str, title: str) -> str | None:
+        """Refresh until the cache shows the new section's card; None if it never does."""
+        for attempt in range(_LOOKUPS):
+            if attempt:
+                time.sleep(_PAUSE_S)
+            self._cache.refresh()
+            card = next((c.id for c in self._cache.snapshot().tasks if _holds(c, note8, title)), None)
+            if card is not None:
+                return card
+        return None
 
     def check_twin(self, task: NewTask) -> None:
         """Refuse (BackendError) a title the repo has open already; a session handoff checks a batch first."""
