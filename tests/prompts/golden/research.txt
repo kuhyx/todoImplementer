@@ -11,10 +11,15 @@ You have no repo and no worktree. Work in /wt/todo and write only the two files 
    could apply to (`~/src/<repo>/README.md`).
 3. Write /run/ab12cd34/research.md: per article the key ideas (a few lines), then how they apply to kuhy's repos
    and projects. Short and concrete.
-4. Write /run/ab12cd34/research.json: a JSON list of 2 to 5 concrete suggested actions, each
+4. Write /run/ab12cd34/research.json: a JSON object
+   {"deliverable": "<one line: the thing the note itself asks to be made (a logo, a page, a tool), or null>",
+   "actions": [...]}. "actions" is a list of 2 to 5 concrete suggested actions, each
    {"id": "c1", "title": "<one line: the action and its target>", "repo": "<owner/name of an existing repo>",
    "body": "<what to do, ending with a one-line done condition>"}. The target is an existing repo, a new repo
    or all repos. For a new repo or all repos set "repo" to null: the board routes a note without a repo.
+   When the note asks for something to be made, one action must make that very thing (never only candidates,
+   a plan or tests of it): set `"delivers": true` on it and put the thing itself in its done condition. The
+   board keeps the research note open until a picked action delivers it.
 5. End the reply with one fenced `ask` block, a line per action with the same id as in research.json, and then
    a line `A:`:
 ```ask

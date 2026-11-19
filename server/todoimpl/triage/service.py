@@ -20,7 +20,7 @@ from todoimpl.todo_mcp.model import TodoError
 from todoimpl.umbrella.note import is_umbrella
 
 from . import label, newrepo, umbrella
-from .classify import ClassifyError, build_prompt, claude_classifier, parse
+from .classify import NOT_RESEARCH, ClassifyError, build_prompt, claude_classifier, has_url, parse
 from .repos import Listing
 
 if TYPE_CHECKING:
@@ -102,7 +102,7 @@ class TriageService:
             repos = self.repos()
             files = umbrella.workflow_names(repos, lambda r: repo_path(r, self.src))
             try:
-                verdict = parse(self._classifier(build_prompt(card.title, card.body, repos, files)), repos)
+                verdict = self._verdict(card, repos, files)
             except ClassifyError as exc:
                 log.warning("triage of %s failed: %s", card.id, exc)
                 self._failed[card.id] = self._clock()
@@ -113,6 +113,17 @@ class TriageService:
             self._act(card, verdict, directory)
             done += 1
         return done
+
+    def _verdict(self, card: CardTask, repos: list[str], files: list[str]) -> label.Verdict:
+        """Classify one note; `research` needs a URL, else the model is asked once more (T2090)."""
+        prompt = build_prompt(card.title, card.body, repos, files)
+        verdict = parse(self._classifier(prompt), repos)
+        if verdict.label != label.RESEARCH or has_url(card.title, card.body):
+            return verdict
+        verdict = parse(self._classifier(prompt + NOT_RESEARCH), repos)
+        if verdict.label == label.RESEARCH:  # still no URL: it is no reading list, kuhy decides
+            return label.Verdict(label.MANUAL, f"no URL to read: {verdict.reason}")
+        return verdict
 
     def _act(self, card: CardTask, verdict: label.Verdict, directory: Path) -> None:
         """Do what a label needs without a click: existing_repo sets the repo, all_repos makes an umbrella."""

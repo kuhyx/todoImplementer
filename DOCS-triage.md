@@ -16,12 +16,14 @@ note is triaged again, an unchanged one never. A failed call leaves the note unt
 | `existing_repo` | clearly one repo in the list | `update_task(repo=...)` at once; the note's sections become parts of that repo's one card |
 | `all_repos` | one change in many or all repos | at once: the note is rewritten into an umbrella (`Umbrella: per-repo`, DOCS-umbrella.md); children = repos with a local clone where `git grep -F <token>` hits (inside `path` when given; no token = every cloned repo); none found = Yours with `error` on the label. The umbrella is started by kuhy's click like any |
 | `new_repo` | asks for a new app, tool, site, game, library | Backlog card with Start; Start creates the repo (below) |
-| `research` | mainly URLs or articles | Backlog card with Start; Start runs the research session (below) |
+| `research` | mainly URLs or articles; never a note that asks to make something, even when it says "research how" (T2090) | Backlog card with Start; Start runs the research session (below) |
 | `manual` | not code (also: an unknown repo or a bad name in the answer) | Yours, only Won't do |
 
 `board/norepo.py` `is_yours` is the one rule: no repo, not an umbrella and no `new_repo` or `research` label. The card
 carries `triage` (`task_card.triage`, optional), drawn as an icon with the name only in tooltip and aria-label.
 `CardTask.triage` is read from the run dir by the board fetch; the tick also patches the cache snapshot at once (`TaskCache.set_triage`, T2074), because a label is a file and no note change wakes a fetch (about 30 s). A reply with broken JSON but readable fields still counts (T2076).
+A `research` label on a note with no URL is asked again once with the mistake named; a second `research` becomes `manual`
+(`TriageService._verdict`, T2090).
 
 ## New repo
 
@@ -42,9 +44,14 @@ resumes. A second click while it runs is `conflict`.
 `ResearchDriver` (`triage/research.py`, chosen by `driver_for` from the label): no worktree (cwd `<run dir>/research`),
 spec and plan skipped, one Sonnet turn at medium effort (`tiering.plan_turn`). The session reads each URL, writes
 `research.md` (shown as the drawer's report) and `research.json` (2 to 5 actions: id, title, repo or null, body with a
-done condition) and ends on `A:` with one `choice cN: ... | Make note | *Skip | risk=reversible` per action (an ask
+done condition; since T2091 an object `{"deliverable": ..., "actions": [...]}`, a plain list still reads) and ends on `A:` with one `choice cN: ... | Make note | *Skip | risk=reversible` per action (an ask
 has one answer, so no multi-select; all Skip = nothing to do; the 24 h auto-adopt of DOCS-asks.md applies). When every
 choice is resolved the next drive makes no turn: it adds a note per `Make note` (`add_task` for a repo, the todo CLI
 `create_umbrella` for none, which triage then routes), records each in `research-done.json` (a retry makes none
 twice), closes the note with the ids as evidence, and ends `shipped` (Done). A reply with no choices and `D:` closes
 the same way.
+
+**Deliverable (T2091).** When the note itself asks for something to be made (a logo, a page), the session names it as
+`deliverable` and marks the action that makes that very thing `"delivers": true`. The note closes only when a made
+note delivers it; otherwise the card rests as a failed run that names the missing deliverable, and the note stays
+open (Done manually or Won't do close it by hand).

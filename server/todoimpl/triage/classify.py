@@ -19,6 +19,11 @@ TIMEOUT_S = 50.0  # under the 60 s per-action cap
 BODY_CHARS = 1500
 PATH = re.compile(r"[\w.][\w./-]*")  # never starts with a dash, `..` is refused in parse
 PAIR = re.compile(r'"(\w+)"\s*:\s*"((?:[^"\\]|\\.)*)"')  # one string field of a reply that is not valid JSON
+URL = re.compile(r"https?://\S+")
+NOT_RESEARCH = """
+Your last label was research, but this note has no URL to read. A note that asks to make something is never
+research: answer again with new_repo, existing_repo, all_repos or manual.
+"""
 NAME = re.compile(r"[a-z0-9][a-z0-9-]{1,38}[a-z0-9]")
 PROMPT = """override
 You label one todo note that has no repo yet. Labels:
@@ -29,7 +34,9 @@ You label one todo note that has no repo yet. Labels:
   literal that appears in the files of the repos the change applies to (take it from the file names below when
   they fit; never a common word like version, test or build), and "path", the directory it is in (such as
   .github); omit both when every repo applies.
-- research: it is mainly URLs or articles to read, study and turn into suggested actions.
+- research: it is mainly URLs or articles to read, study and turn into suggested actions. A note that asks
+  to MAKE something (a logo, an app, a page, a tool) is never research, even when it says "research how":
+  label it new_repo, existing_repo or all_repos by where the thing belongs.
 - manual: not code: an errand, a message to send, a link to read for fun, a puzzle, a question to think about.
 When unsure between manual and anything else, choose manual.
 
@@ -55,6 +62,11 @@ def build_prompt(title: str, body: str, repos: list[str], files: list[str] | Non
     return PROMPT.format(
         repos=", ".join(repos) or "(none)", files=", ".join(files or []) or "(none)", title=title, body=text
     )
+
+
+def has_url(title: str, body: str) -> bool:
+    """Return whether the note names a URL: a `research` note is mainly URLs, so it needs one."""
+    return URL.search(f"{title}\n{body}") is not None
 
 
 def claude_classifier(prompt: str, root: Path | None = None) -> str:

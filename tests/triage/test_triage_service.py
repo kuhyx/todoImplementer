@@ -99,7 +99,7 @@ def test_t2070_a_note_is_classified_once_and_again_when_its_text_changes(rig: Ri
 def test_t2070_a_failed_call_leaves_the_note_untriaged_and_waits_before_retrying(
     rig: Rig, triage: Make
 ) -> None:
-    card = rig.note("an idea", repo=None)
+    card = rig.note("https://x.example/idea", repo=None)
     run = triage(ClassifyError("claude down"), {"label": "research"})
     assert run.service.tick() == 0
     assert run.service.tick() == 0  # still inside the retry wait

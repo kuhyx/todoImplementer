@@ -8,7 +8,7 @@ from todoimpl.board.state import run_dir
 from todoimpl.triage import label
 
 Make = Callable[..., Triage]
-NAMES = ("manual one", "new app", "reading", "everywhere")
+NAMES = ("manual one", "new app", "https://x.example/reading", "everywhere")
 
 
 def test_t2074_a_label_shows_on_the_board_at_once_not_after_the_next_30_s_fetch(

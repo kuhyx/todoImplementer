@@ -53,12 +53,29 @@ def _choices(text: str) -> list[Ask]:
     return [ask for ask in parse_asks(text) if ask.type == "choice"]
 
 
+def _read(directory: Path) -> tuple[str | None, Any]:
+    """Return the note's deliverable and the action rows of `research.json`.
+
+    The file is a plain list of actions, or `{"deliverable": "<line or null>", "actions": [...]}` (T2091).
+    """
+    try:
+        data = json.loads((directory / "research.json").read_text(encoding="utf-8"))
+    except OSError, ValueError:
+        return None, None
+    if not isinstance(data, dict):
+        return None, data
+    need = data.get("deliverable")
+    return (need.strip() or None if isinstance(need, str) else None), data.get("actions")
+
+
+def _deliverable(directory: Path) -> str | None:
+    """Return what the research note itself asks to be made (a logo, a page), None when it asks for none."""
+    return _read(directory)[0]
+
+
 def _actions(directory: Path) -> dict[str, dict[str, Any]]:
     """Return the suggested actions the session wrote, keyed by choice id; malformed rows are dropped."""
-    try:
-        rows = json.loads((directory / "research.json").read_text(encoding="utf-8"))
-    except OSError, ValueError:
-        return {}
+    rows = _read(directory)[1]
     keep = {}
     for row in rows if isinstance(rows, list) else []:
         ok = isinstance(row, dict) and all(
@@ -87,7 +104,10 @@ def _make_note(d: Driver, action: dict[str, Any]) -> str:
 
 
 def finish(d: Driver, choices: list[Ask]) -> str:
-    """Make a note per picked action (once each, even on a retry), close the research note, end shipped."""
+    """Make a note per picked action (once each, even on a retry), close the research note, end shipped.
+
+    The note closes only when a made note `delivers` the note's own deliverable; else it stays open (T2091).
+    """
     directory = d.ctx.run_dir
     answers, actions, made = store.load(directory)["items"], _actions(directory), _made(directory)
     failed = []
@@ -104,6 +124,10 @@ def finish(d: Driver, choices: list[Ask]) -> str:
         raise NeedsYouError(msg, "run_failed")
     skipped = len(choices) - len(made)
     notes = ", ".join(f"{key}={note}" for key, note in made.items()) or "none"
+    need = _deliverable(directory)
+    if need and not any(actions.get(key, {}).get("delivers") is True for key in made):
+        msg = f"research note kept open: it asks for {need!r} and no note made delivers it (made: {notes})"
+        raise NeedsYouError(msg, "run_failed")
     d.ctx.client.close_task(d.state.task_id, f"Research done: notes made {notes}; skipped {skipped}.")
     return "shipped"
 
