@@ -6,7 +6,7 @@ import contextlib
 import json
 import subprocess
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -32,10 +32,20 @@ def run_gh(argv: list[str]) -> str:
     return proc.stdout
 
 
-def gh_repos(gh: Callable[[list[str]], str] = run_gh) -> list[str]:
-    """Return `kuhyx/<name>` of every repo the account has (limit 1000: gh lists 30 by default), sorted."""
+def _rows(gh: Callable[[list[str]], str]) -> list[dict[str, Any]]:
+    """Return the account's repos as gh prints them (limit 1000: gh lists 30 by default)."""
     rows = json.loads(gh(["repo", "list", OWNER, "--limit", "1000", "--json", "name,isArchived"]))
-    return sorted(f"{OWNER}/{row['name']}" for row in rows if not row.get("isArchived"))
+    return [row for row in rows if isinstance(row, dict)]
+
+
+def gh_repos(gh: Callable[[list[str]], str] = run_gh) -> list[str]:
+    """Return `kuhyx/<name>` of every live (not archived) repo, sorted."""
+    return sorted(f"{OWNER}/{row['name']}" for row in _rows(gh) if not row.get("isArchived"))
+
+
+def all_names(gh: Callable[[list[str]], str] = run_gh) -> list[str]:
+    """Return the bare names of every repo, archived ones too: a new repo may not reuse any of them."""
+    return [str(row["name"]) for row in _rows(gh)]
 
 
 class Listing:

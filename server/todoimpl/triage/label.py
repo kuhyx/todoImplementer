@@ -61,6 +61,13 @@ def save(directory: Path, verdict: Verdict, text_digest: str, at: float, **extra
     atomic.write_text(directory / FILE, json.dumps(record, ensure_ascii=False, indent=1))
 
 
+def update(directory: Path, **extra: object) -> None:
+    """Add facts to the stored record (the repo made for a `new_repo` note, the card it became)."""
+    found = load(directory)
+    if found is not None:
+        atomic.write_text(directory / FILE, json.dumps({**found, **extra}, ensure_ascii=False, indent=1))
+
+
 def label_of(directory: Path) -> str | None:
     """Return the stored label, None while the note is untriaged."""
     found = load(directory)

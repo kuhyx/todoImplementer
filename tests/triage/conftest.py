@@ -43,20 +43,43 @@ def rig(fake: FakeTodoMcp, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> I
 
 
 class Triage:
-    """A TriageService whose classifier replays `replies` and records the prompts it was given."""
+    """A TriageService whose classifier replays `replies` and records the prompts it was given.
+
+    New repos are made by `provision` (a fake that records its calls) and every background job runs inline.
+    """
 
     def __init__(self, rig: Rig, replies: list[object]) -> None:
         self.prompts: list[str] = []
         self.replies = replies
         self.now = 1000.0
+        self.created: list[dict[str, str]] = []
+        self.provision_error: Exception | None = None
+        self.jobs: list[Callable[[], None]] | None = None  # a list holds the jobs instead of running them
         self.service = TriageService(
             TodoClient(rig.fake.url, rig.fake.token),
             rig.backend.cache,
             rig.root,
+            scheduler=rig.scheduler,
             classifier=self._ask,
             repos=lambda: REPOS,
             clock=lambda: self.now,
+            spawn=self._spawn,
+            provision=self._provision,
+            src=rig.root.parent / "src",
         )
+        rig.backend.triage_service = self.service
+
+    def _spawn(self, job: Callable[[], None]) -> None:
+        if self.jobs is None:
+            job()
+        else:
+            self.jobs.append(job)
+
+    def _provision(self, directory: Path, src: Path, **facts: str) -> str:
+        if self.provision_error is not None:
+            raise self.provision_error
+        self.created.append({**facts, "dir": str(directory), "src": str(src)})
+        return f"kuhyx/{facts['name']}"
 
     def _ask(self, prompt: str) -> str:
         self.prompts.append(prompt)

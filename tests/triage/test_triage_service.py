@@ -38,7 +38,7 @@ def test_t2070_a_manual_note_stays_yours_with_only_wont_do(rig: Rig, triage: Mak
     rig.backend.cache.refresh()
     shown = rig.card(card)
     assert (shown["triage"], shown["status"]) == ("manual", "yours")
-    assert [a["id"] for a in shown["actions"]] == ["wont"]  # type: ignore[attr-defined]
+    assert [a["id"] for a in shown["actions"]] == ["wont"]
 
 
 def test_t2070_an_existing_repo_label_sets_the_repo_and_the_card_joins_that_repos(
@@ -52,7 +52,7 @@ def test_t2070_an_existing_repo_label_sets_the_repo_and_the_card_joins_that_repo
     assert card not in ids  # the note has a repo now: its sections are parts of the repo's one card
     assert repo_card_id("kuhyx/utils") in ids
     parts = rig.card(repo_card_id("kuhyx/utils"))["parts"]
-    assert len(parts) == 2  # type: ignore[arg-type]
+    assert len(parts) == 2
 
 
 def test_t2070_an_unknown_repo_or_a_bad_name_falls_back_to_manual(rig: Rig, triage: Make) -> None:
@@ -134,5 +134,5 @@ def test_t2070_the_loop_survives_a_failing_tick(
 
     monkeypatch.setattr(service, "TICK", 0.01)
     monkeypatch.setattr(run.service, "tick", fake_tick)
-    run.service.start()
+    run.service.watch()
     assert done.wait(5)

@@ -199,7 +199,8 @@ class ServiceBackend:
     def start(self, id8: str, *, auto_ship: bool | None = None) -> None:
         """Start click (a retry on a card that has a run); `auto_ship` None keeps the stored choice."""
         kind = "start" if load(run_dir(self.root, id8)) is None else "retry"
-        self._click(id8, kind, lambda: self.scheduler.start(id8, auto_ship=auto_ship))
+        starter = self.triage_service or self.scheduler  # a new-repo card is created first (DOCS-triage.md)
+        self._click(id8, kind, lambda: starter.start(id8, auto_ship=auto_ship))
 
     def spec_answers(self, id8: str, answers: dict[str, str]) -> None:
         """Answers to spec questions."""

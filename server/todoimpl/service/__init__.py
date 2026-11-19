@@ -118,11 +118,11 @@ def build_backend(
     new_tasks = NewTaskService(client, cache)
     backend.new_task_service = new_tasks
     backend.ask_service = AskService(cache, scheduler, root)
-    backend.triage_service = TriageService(client, cache, root)
+    backend.triage_service = TriageService(client, cache, root, scheduler=scheduler)
     if refresh:
         cache.start()
         backend.ask_service.start()  # 24 h auto-adopt of reversible choices
-        backend.triage_service.start()  # labels notes without a repo (DOCS-triage.md)
+        backend.triage_service.watch()  # labels notes without a repo (DOCS-triage.md)
         monitor.start()  # first check runs on its own thread: a slow network never delays startup
         probe.start()
         gateway.start()  # a dead gateway only makes its reading `down`
