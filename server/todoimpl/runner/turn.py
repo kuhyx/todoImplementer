@@ -13,10 +13,10 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from todoimpl.board import state as store
-from todoimpl.board.status import WAITS_FOR
+from todoimpl.board.status import SILENT, WAITS_FOR
 from todoimpl.credits import ledger, live, setting
 
-from . import adopt, allowlist, claude, credit, creditguard, files, guard, launch, orphans, session
+from . import adopt, allowlist, claude, credit, creditguard, files, guard, launch, orphans, session, watchdog
 from .files import KilledError
 from .stream import StreamParser, TurnResult, state_tag
 
@@ -143,14 +143,14 @@ def _apply(env: TurnEnv, state: RunState, rec: orphans.Record, res: TurnResult, 
     env.publish({"type": "cost", "cost_usd": state.cost_usd})
 
 
-def _show_wait(env: TurnEnv, state: RunState, found: dict[str, Any] | None) -> None:
-    """Put what the idle turn waits on into the card's line (or take it off): save, then announce (T2124)."""
-    if found is None and WAITS_FOR not in state.extra:
+def _show(env: TurnEnv, state: RunState, key: str, found: dict[str, Any] | None) -> None:
+    """Put an idle turn's wait (T2124) or a silent one (T2198) on the card (or off): save, announce."""
+    if found is None and key not in state.extra:
         return
     if found is None:
-        state.extra.pop(WAITS_FOR)
+        state.extra.pop(key)
     else:
-        state.extra[WAITS_FOR] = found
+        state.extra[key] = found
     store.save(env.run_dir, state)
     env.publish({"type": "stage", "stage": state.stage})
 
@@ -175,13 +175,18 @@ def _consume(env: TurnEnv, state: RunState, rec: orphans.Record) -> TurnResult |
             lambda until: state.extra.__setitem__("overage_hit", until),
             env.now,
         )
-    show = functools.partial(_show_wait, env, state)
+    show, silent = (functools.partial(_show, env, state, key) for key in (WAITS_FOR, SILENT))
     show(None)  # a wait saved before a restart is no longer known
+    silent(None)
+    watch = watchdog.Watch(env.run_dir, stem, silent, env.activity)
     try:
-        code = adopt.follow(env.run_dir, rec, parser, env.activity, handle.detach, handle.stop, waiting=show)
+        code = adopt.follow(
+            env.run_dir, rec, parser, env.activity, handle.detach, handle.stop, waiting=show, watch=watch
+        )
     finally:
         env.register(None)
         show(None)
+        silent(None)
     if code is None:
         env.activity("error", f"turn lost: the {role} turn has no exit record and its host is gone")
         orphans.clear(env.run_dir)

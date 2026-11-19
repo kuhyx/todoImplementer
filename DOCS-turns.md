@@ -70,3 +70,31 @@ project or plugin MCP servers start (about 500 MB per session; 25 sessions froze
 except the driver of the repo kind: Flutter adds flutter-web-drive, Godot godot-mcp-runtime (`runner/mcpconf.py`).
 The definition comes from `~/.claude.json` (a restored server), else `~/.claude/mcp-parked.json`; a server kuhy
 does not have is skipped silently. The board's own tasks need no MCP: sessions tick through the repotask CLI.
+
+## Silent turns: the watchdog (T2195-T2199)
+
+kuhy's rule (2026-11-19): a running card whose last real action (a tool call or result, model output) is over
+1 min old is suspicious; over 5 min it is fixed at once. A `tool_progress` heartbeat (every 30 s while a tool
+runs) and a rate-limit notice are no action; nothing makes a session look alive, and no bare timeout kills a
+healthy wait. Code: `runner/watchdog.py` (the follower's side), `runner/deadwait.py` and `runner/deadrules.py`.
+
+- The follower keeps the time of the last real line in `<stem>.real` (a deploy or restart keeps the count).
+  Past 1 min it judges the turn's jobs every 5 s: each shell below claude with its processes, and each of the
+  card's transient units beside its turn unit in `todoimpl.slice` (`bgwait.mine`: cwd in the run dir or
+  `TODOIMPL_BUILD_CARD`). A handful of /proc and cgroup reads; no fork.
+- Healthy: a place in the build lock's queue, a process (no shell, sleep or poll tool) whose CPU rose since
+  the last look, or an event wait (`gh run watch`, `systemd-run --wait`, `inotifywait`, a blocking `flock`).
+- Dead: (a) `pgrep -f <pattern>` whose pattern matches no command line but the loop's own and its
+  ancestors' (kartka, 22 min on a card already shipped); (b) no CPU for 2 min with every process asleep in a
+  pipe read, a futex or a wait for a child (b11.sh, a background job inside `$(...)`, 21 min holding the
+  build lock); (c) it names another card that is done, or whose turn is gone and that is not shipping.
+  Anything else is unknown.
+- The card's line (`state.extra.silent`, server-computed) gains the age in minutes past 1 min, and the job's
+  command when no T2124 wait names it: `⏳ <job> 3m`. Past 5 min, `🚨` marks a card with no healthy job and
+  `💀` a dead one.
+- Past 5 min a dead job is stopped once: its unit (`systemctl --user stop`), else its processes (SIGTERM, only
+  those whose start time is still the judged one). The reason goes to the job's stderr (the tool's output,
+  read when it returns), the card's feed (an error line) and the inbox (the next turn, as Send to Claude).
+- The standing prompt carries the wait rules (`standing.WAITS`): event waits, no self-matching `pgrep -f`, no
+  background job inside `$(...)`, no `flock -n` polling or when_free.sh, no wait on another card, no periodic
+  "still waiting" output. The self-resume note (T2104) asks for one event wait, no sleep loop.

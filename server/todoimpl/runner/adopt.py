@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from pathlib import Path
     from typing import Any
 
+    from . import watchdog
     from .stream import StreamParser
 
 POLL = 0.05  # a change shows within 100 ms
@@ -95,14 +96,17 @@ class _Feed:
             if show:
                 self.activity(act.kind, act.text, act.tool)
 
-    def lines(self, lines: list[bytes]) -> None:
-        """Take complete lines (each one byte longer on disk: its newline)."""
+    def lines(self, lines: list[bytes]) -> list[bytes]:
+        """Take complete lines (each one byte longer on disk: its newline); return those shown (new ones)."""
+        shown = []
         for line in lines:
             self.base += len(line) + 1
             self._emit(line, show=self.base > self.fed)
+            shown += [line] if self.base > self.fed else []
         if lines and self.base > self.fed:
             self.fed = self.base
             write_json(self.path, self.fed, durable=False)  # a lost offset only replays the feed
+        return shown
 
     def last(self, partial: bytes) -> None:
         """Take the unterminated last line of a finished stream."""
@@ -144,12 +148,14 @@ def follow(  # noqa: PLR0913, PLR0917 - the turn's files, parser, feed and its t
     stop: Callable[[], None] | None = None,
     *,
     waiting: Callable[[dict[str, Any] | None], None] | None = None,
+    watch: watchdog.Watch | None = None,
 ) -> int | None:
     """Feed the turn's stream to `parser` until it is over; return claude's exit code, None if it was lost.
 
     Complete lines only (a partial one waits for the rest); lines below the `.fed` offset are parsed silently.
     `stop` ends a turn idle after its result (`idle.should_stop`); its exit record then closes it.
     `waiting` hears what an idle turn's background job waits on, and None once the stream speaks (T2124).
+    `watch` hears every new line and judges the turn's wait once it has had no real action for 1 min (T2198).
     """
     stem = str(rec.stem)
     stream, over = sibling(run_dir, stem, STREAM_SUFFIX), sibling(run_dir, stem, EXIT_SUFFIX)
@@ -165,7 +171,9 @@ def follow(  # noqa: PLR0913, PLR0917 - the turn's files, parser, feed and its t
         chunk = _read_from(stream, pos)
         pos += len(chunk)
         *lines, buf = (buf + chunk).split(b"\n")
-        feed.lines(lines)
+        fresh = feed.lines(lines)
+        if watch is not None:
+            watch.heard(fresh)
         if chunk:
             quiet_since = time.monotonic()
             waits.heard()
@@ -177,6 +185,8 @@ def follow(  # noqa: PLR0913, PLR0917 - the turn's files, parser, feed and its t
             return None
         pid = (orphans.read(run_dir) or rec).pid
         waits.quiet(finished=parser.result.finished, silent_for=time.monotonic() - quiet_since, pid=pid)
+        if watch is not None:
+            watch.quiet(pid)
         if stop is not None and idle.should_stop(
             finished=parser.result.finished,
             silent_for=time.monotonic() - quiet_since,

@@ -33,6 +33,15 @@ GRANT = (
     "If a page truly must be opened, give its full absolute URL (scheme, host, port, path). "
     "Do everything else yourself and log the automatic choice."
 )
+WAITS = (
+    "Waits (kuhy, 2026-11-19; the board kills a dead wait once you are silent 5 min): wait on an event, "
+    "never poll: `systemd-run --wait`, `systemctl --user is-active <unit>` by unit name, `inotifywait`, "
+    "`gh run watch`; no self-made `until`/`while ... sleep` loop when an event wait exists. Never `pgrep -f` "
+    "a pattern that is in your own command line (it matches itself and never ends). Never start a "
+    "background job (`&`) inside `$(...)`: it holds the pipe open, a deadlock. No `flock -n` polling and "
+    "no when_free.sh: a build waits on the lock by itself. Never wait on another card's process or unit: "
+    'the board sequences cards. Never print periodic "still waiting" output to look alive.'
+)
 DEPLOY = (
     "Done means deployed: after Ship pushes, the server runs the repo's `- deploy: `<command>`` bullet from "
     "CLAUDE.md (Commands section). If CLAUDE.md has no `- deploy: `<command>`` line, add one that installs, "

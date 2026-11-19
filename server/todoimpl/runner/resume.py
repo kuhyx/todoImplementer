@@ -28,8 +28,9 @@ MAX_RESUMES = 12
 SHOWN = 110
 RESUMED = (
     "(runner) Resume it yourself, nobody else will: the steps below are yours, you have kuhy's standing "
-    "permission. If the unit or build is still running, wait for it inside this turn (a loop of short "
-    "sleeps) or end `A:` again with the next check, then do the rest and carry on. Your last ask was:\n\n"
+    "permission. If the unit or build is still running, wait for it inside this turn with one event wait "
+    "(`systemd-run --wait`, `inotifywait`, `gh run watch`), never a sleep loop, or end `A:` again with the "
+    "next check, then do the rest and carry on. Your last ask was:\n\n"
 )
 # What marks a wait or a resume line: "Resume by ...", "is-active", "when it finishes".
 RESUME_ASK = re.compile(

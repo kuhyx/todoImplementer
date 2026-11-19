@@ -60,7 +60,7 @@ def _plan(ctx: PromptContext) -> str:
 
 
 def _rules(ctx: PromptContext) -> str:
-    return f"{RULES.format(wt=ctx.worktree)}\n{standing.grant(ctx)}\n{BLOCKS}"
+    return f"{RULES.format(wt=ctx.worktree)}\n{standing.grant(ctx)}\n{BLOCKS}\n{standing.WAITS}"
 
 
 def _post(*parts: str) -> str:
@@ -127,6 +127,7 @@ def live_check(ctx: PromptContext) -> str:
         "the work yourself, then check it. One that needs kuhy's phone: `- [~] C7: needs phone: <why>`.",
         standing.grant(ctx),
         "Write the whole checklist yourself in this turn; no background agent, do not end with `R:`.",
+        standing.WAITS,
         ctx.failure_tail[-TAIL_CHARS:],
         f"Save screenshots to {ctx.run_dir}/shots/. Stop what you started. End with `D:`.",
     )

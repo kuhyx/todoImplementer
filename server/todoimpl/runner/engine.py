@@ -19,7 +19,7 @@ from todoimpl.usage.limits import UNTIL_FILE
 
 from . import adopt, limits, orphans, recovery, retry
 from .bus import Bus
-from .files import read_json, write_json
+from .files import INBOX, read_json, write_json
 from .pipeline import Ctx
 from .repolock import RepoLocks
 
@@ -34,7 +34,6 @@ if TYPE_CHECKING:
     from .launch import Handle
 
 log = logging.getLogger("todoimpl.runner")
-INBOX = "inbox.json"
 IDLE_WAIT = 5.0
 
 

@@ -14,7 +14,7 @@ from .badges import tier_badges
 from .needs import needs
 from .norepo import is_yours
 from .parts import is_repo_task, kuhys, manual_ask, parts_of
-from .status import CYCLE_ENDS, SHIP_STEP, WAITS_FOR, Status, column, compute
+from .status import CYCLE_ENDS, SHIP_STEP, SILENT, WAITS_FOR, Status, column, compute
 from .types import Limit, fmt_when
 from .umbrella import card_view
 
@@ -23,6 +23,9 @@ if TYPE_CHECKING:
 
     from .state import RunState
     from .types import TaskLike
+
+
+FIX_MINUTES = 5  # kuhy, 2026-11-19: silent past 1 min is suspicious, past 5 min must be fixed (T2198)
 
 
 @dataclass(frozen=True)
@@ -43,7 +46,7 @@ def current_line(  # noqa: PLR0911 - one return per status
 ) -> str:
     """Return one line on what the task does or waits on (never a second status)."""
     if status == Status.WORKING and run is not None:
-        return _working(run)
+        return _silent(run, _working(run), now)
     if status == Status.QUEUED and run is not None:
         return f"waiting to continue {run.stage}"
     if status == Status.PAUSED_LIMIT:
@@ -82,6 +85,21 @@ def _working(run: RunState) -> str:
         at = f" {time.strftime('%H:%M', time.localtime(float(since)))}" if since is not None else ""
         return f"{'⏳🔒' if wait.get('lock') else '⏳'} {wait.get('who', '?')}{at}"
     return run.stage
+
+
+def _silent(run: RunState, line: str, now: float) -> str:
+    """Add a silent turn's age in minutes; mark 💀 a dead wait, 🚨 past 5 min with no healthy one."""
+    quiet = run.extra.get(SILENT)
+    if not isinstance(quiet, dict):
+        return line
+    age = int((now - float(quiet.get("since") or now)) // 60)
+    if age < 1:
+        return line
+    if line == run.stage and quiet.get("who"):
+        line = f"⏳ {quiet['who']}"
+    verdict = quiet.get("verdict")
+    mark = "💀 " if verdict == "dead" else "🚨 " if verdict != "healthy" and age >= FIX_MINUTES else ""
+    return f"{mark}{line} {age}m"
 
 
 def partial_of(run: RunState | None) -> dict[str, Any] | None:
