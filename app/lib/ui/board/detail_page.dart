@@ -88,6 +88,12 @@ class _DetailPageState extends State<DetailPage> {
         Text(d.card.title, style: Theme.of(context).textTheme.titleMedium),
         if (d.card.repo case final repo?)
           Text(repo, style: const TextStyle(color: AppPalette.mutedOnDark)),
+        if (d.card.model case final model?)
+          Text(
+            model,
+            key: const Key('detail-model'),
+            style: const TextStyle(color: AppPalette.mutedOnDark),
+          ),
         if (d.card.current.isNotEmpty) Text(d.card.current),
         if (needs != null)
           ListTile(

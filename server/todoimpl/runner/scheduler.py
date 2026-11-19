@@ -13,7 +13,7 @@ from todoimpl.board.types import MANUAL_REASON
 from todoimpl.repotask.start import prepare
 from todoimpl.todo_mcp.model import TodoError
 
-from . import appfix, closing, phone, retry, stopping, whenfree
+from . import appfix, closing, modelswitch, phone, retry, stopping, whenfree
 from .engine import Client, default_clock
 from .files import read_json
 from .phone_sched import PhoneEngine
@@ -91,10 +91,12 @@ class Scheduler(PhoneEngine):
     start_when_free = whenfree.arm  # a handoff onto a held card: it starts when its Ship completes
     cancel = stopping.cancel  # the Cancel click
     done_manually = stopping.done_manually  # kuhy did the work himself (T2064)
+    set_model = modelswitch.pick  # a note naming a model, or the picker: the stage again on it
 
     def after_recover(self) -> None:
         """Settle a Done manually click a restart cut; a Ship that completed across it starts its handoff."""
         stopping.recover(self)
+        modelswitch.recover(self)
         whenfree.recover(self)
         self.heal_phone_waits()
 
@@ -217,7 +219,7 @@ class Scheduler(PhoneEngine):
 
     def after_drive(self, card: str) -> None:
         """Requeue a paused run at the front; reopen a resting run when a note arrived mid-turn."""
-        if stopping.settle(self, card):  # kuhy marked the card done while this drive ran (T2064)
+        if stopping.settle(self, card) or modelswitch.settle(self, card):  # Done manually (T2064), a pick
             return
         st = store.load(self.root / card)
         if st is None:  # pragma: no cover - a drive always saves

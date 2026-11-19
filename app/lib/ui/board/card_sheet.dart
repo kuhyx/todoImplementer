@@ -12,6 +12,7 @@ import 'package:todo_implementer/model/json.dart';
 import 'package:todo_implementer/sync/board_relay.dart';
 import 'package:todo_implementer/ui/board/action_bar.dart';
 import 'package:todo_implementer/ui/board/glyphs.dart';
+import 'package:todo_implementer/ui/board/model_picker.dart';
 import 'package:todo_implementer/ui/board/spec_answers.dart';
 
 /// Relay kind of a card action id (`spec-ok` -> `task_spec_ok`).
@@ -149,6 +150,8 @@ class _CardSheetState extends State<CardSheet> {
               ],
             ),
             if (card.repo case final repo?) Text(repo, style: muted),
+            if (card.model case final model?)
+              Text(model, key: const Key('card-model'), style: muted),
             if (card.current.isNotEmpty) Text(card.current),
             if (needs != null)
               Row(
@@ -168,7 +171,19 @@ class _CardSheetState extends State<CardSheet> {
               ),
             if (offers['start']?.option case final opt?) _autoShipChip(opt),
             const SizedBox(height: AppSpacing.sm),
-            ActionBar(actions: card.actions, onRun: _run),
+            ActionBar(
+              actions: [
+                for (final a in card.actions)
+                  if (a.id != 'model') a,
+              ],
+              onRun: _run,
+            ),
+            if (offers['model'] case final pick?)
+              ModelPicker(
+                action: pick,
+                onPick: (id) async =>
+                    await _settle(await _send('task_model', {'model': id})),
+              ),
             if (questions != null) ...[
               const SizedBox(height: AppSpacing.md),
               SpecAnswers(

@@ -6,6 +6,7 @@ import type { Action, ActionOption } from "@/lib/schemas-common";
  * the server's answer, not a guess, decides what shows next.
  */
 import { loader, SLOW_MS } from "@/components/feedback";
+import { renderPicker } from "@/components/model-picker";
 import { h } from "@/lib/dom";
 
 export interface BarState {
@@ -35,6 +36,7 @@ export function renderAction(action: Action, host: BarHost, taskId: string): HTM
       h("button", { attrs: { type: "button" }, class: "btn", on: { click: () => { host.cancelConfirm(); } }, text: "Back" }),
     );
   }
+  if (action.choices !== undefined) return renderPicker(action, action.choices, host, taskId);
   const isBusy = state.pending === action.id;
   const isBlocked = !action.enabled || state.pending !== null;
   const reasonId = `reason-${taskId}-${action.id}`;

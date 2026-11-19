@@ -24,7 +24,7 @@ export const NEEDS_KINDS = [
 ] as const;
 export const ACTION_IDS = [
   "start", "spec-answers", "spec-ok", "send", "ship", "close", "cancel", "lesson-approve", "copy-resume", "go", "copy-fix",
-  "rerun", "wont", "done-manually",
+  "rerun", "wont", "done-manually", "model",
 ] as const;
 
 export const stage = z.enum(STAGES);
@@ -60,8 +60,12 @@ export const actionOption = z
   .strictObject({ enabled: z.boolean(), id: z.enum(["auto_ship"]), label: z.string().min(1), reason: z.string().nullable() })
   .refine(hasReason, { message: "a disabled option needs a reason" });
 
+/** One row of the model picker: the id the click sends, a short name. */
+export const actionChoice = z.strictObject({ id: z.string().min(1), label: z.string().min(1) });
+
 export const action = z
   .strictObject({
+    choices: z.array(actionChoice).min(1).optional(),
     confirm: z.boolean().optional(),
     enabled: z.boolean(),
     id: z.enum(ACTION_IDS),
@@ -172,6 +176,7 @@ export const taskCard = z.strictObject({
   cost_usd: usd,
   current: z.string(),
   id: itemId,
+  model: z.string().min(1).optional(),
   needs,
   partial,
   parts: z.array(repoPart).optional(),
@@ -191,6 +196,7 @@ export const taskCard = z.strictObject({
 
 export type Action = z.infer<typeof action>;
 export type ActionOption = z.infer<typeof actionOption>;
+export type ActionChoice = z.infer<typeof actionChoice>;
 export type Credits = z.infer<typeof credits>;
 export type Question = z.infer<typeof question>;
 export type RepoPart = z.infer<typeof repoPart>;

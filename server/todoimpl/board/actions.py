@@ -6,6 +6,8 @@ import shlex
 import time
 from typing import TYPE_CHECKING
 
+from todoimpl import modelpick
+
 from .button import Action
 from .needs import needs
 from .norepo import is_yours
@@ -86,7 +88,7 @@ def actions(  # noqa: PLR0913 - the signature of the interface plus keyword-only
         why = "shipping cannot be stopped" if status == Status.SHIPPING else None
         out.append(Action("done-manually", "Done manually", why is None, why, confirm=True))
     if run is not None and status not in DONE:
-        out += _session(run, status, block)
+        out += _session(run, status, block) + _model(run, status)
     if run is not None and run.lesson and run.lesson.get("state") == "drafted":
         out.append(Action("lesson-approve", "Approve lesson"))
     return out
@@ -178,6 +180,16 @@ def _session(run: RunState, status: Status, block: str | None) -> list[Action]:
     if run.session_id:
         out.append(_resume(run))
     return out
+
+
+def _model(run: RunState, status: Status) -> list[Action]:
+    """Return the model picker (modelswitch): the pin, or `default`; it reruns the stage on the pick."""
+    if run.stage in FINAL_STAGES or run.closing or status == Status.YOURS:
+        return []
+    why = "shipping is in progress" if status == Status.SHIPPING else None
+    pin = run.extra.get(modelpick.PIN)
+    value = pin if isinstance(pin, str) and pin else modelpick.DEFAULT
+    return [Action("model", "Model", why is None, why, value=value, choices=tuple(modelpick.choices()))]
 
 
 def _resume(run: RunState) -> Action:

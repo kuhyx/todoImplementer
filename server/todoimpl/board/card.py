@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from todoimpl.errors.marks import signatures
+from todoimpl.modelpick import PIN
 
 from .actions import actions
 from .badges import tier_badges
@@ -180,6 +181,8 @@ def build_card(task: TaskLike, run: RunState | None, ctx: Context) -> dict[str, 
         card["umbrella"] = umbrella
     if (parts := parts_of(task, run, working=status == Status.WORKING)) is not None:
         card["parts"] = parts
+    if run is not None and (model := run.extra.get(PIN) or run.extra.get("last_model")):
+        card["model"] = str(model)  # kuhy's pin, else the model the latest turn ran on
     if (waits := ctx.waits.get(tid)) is not None and status == Status.QUEUED:
         card["waits_on"] = waits
         card["current"] = ""  # the lock badge names the run it waits on; no stage line (T1925)

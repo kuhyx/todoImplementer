@@ -22,6 +22,7 @@ IconData actionIcon(String id) => switch (id) {
   'rerun' => Icons.replay,
   'wont' => Icons.do_not_disturb_on_outlined,
   'done-manually' => Icons.done_all,
+  'model' => Icons.psychology_outlined,
   'merge' => Icons.merge,
   'dismiss' => Icons.close,
   _ => Icons.help_outline,

@@ -6,6 +6,8 @@ import json
 import re
 from typing import Any
 
+from todoimpl import modelpick
+
 QUESTION_ID = re.compile(r"Q[0-9]+")
 MAX_TEXT = 20000
 ACTIONS = (
@@ -21,6 +23,7 @@ ACTIONS = (
     "rerun",
     "wont",
     "done-manually",
+    "model",
 )
 
 
@@ -71,6 +74,12 @@ def _start(body: dict[str, Any]) -> str | None:
     return None if isinstance(body["auto_ship"], bool) else "auto_ship must be true or false"
 
 
+def _model(body: dict[str, Any]) -> str | None:
+    if (bad := _only(body, "model")) is not None:
+        return bad
+    return None if body["model"] in modelpick.IDS else f"model must be one of {', '.join(modelpick.IDS)}"
+
+
 def check(action: str, body: dict[str, Any]) -> str | None:
     """Return what is wrong with the body for this action, or None when it is valid."""
     if action == "start":
@@ -81,4 +90,6 @@ def check(action: str, body: dict[str, Any]) -> str | None:
         return _text(body)
     if action == "lesson-approve":
         return _lesson(body)
+    if action == "model":
+        return _model(body)
     return None if not body else "body must be empty"

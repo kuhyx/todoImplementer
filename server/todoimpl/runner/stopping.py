@@ -17,7 +17,7 @@ from todoimpl.board.actions import FINAL_STAGES
 from todoimpl.board.status import CYCLE_ENDS, DONE_STAGES, MANUAL_STAGE
 from todoimpl.todo_mcp.model import TodoError
 
-from . import adopt
+from . import adopt, modelswitch
 from .files import read_json, write_json
 
 if TYPE_CHECKING:
@@ -38,6 +38,7 @@ def cancel(sched: Scheduler, card: str) -> None:
         if st.stage in FINAL_STAGES:
             msg = f"The run is already {st.stage}"
             raise RunnerError(msg, "disabled")
+        (sched.root / card / modelswitch.FILE).unlink(missing_ok=True)  # a pending pick must not restart it
         if card in sched._active:  # noqa: SLF001
             sched.kill(card)
         else:
@@ -84,6 +85,7 @@ def done_manually(
         if st is not None and (msg := refusal(st.stage, repotask=repotask)) is not None:
             raise RunnerError(msg, "disabled")
         write_json(sched.root / card / FILE, {"repo": repo, "title": title, "repotask": repotask})
+        (sched.root / card / modelswitch.FILE).unlink(missing_ok=True)
         if card in sched._active:  # noqa: SLF001
             sched.kill(card)  # the drive's cancel ends it; `after_drive` then calls `settle`
         else:

@@ -17,6 +17,7 @@ class CardAction {
     this.confirm = false,
     this.value,
     this.option,
+    this.choices = const [],
   });
 
   /// Parses one action.
@@ -30,6 +31,10 @@ class CardAction {
       confirm: flag(j, 'confirm'),
       value: strOr(j, 'value'),
       option: o == null ? null : CardAction.fromJson(o),
+      choices: [
+        for (final c in objs(j, 'choices'))
+          (id: str(c, 'id'), label: str(c, 'label')),
+      ],
     );
   }
 
@@ -48,8 +53,12 @@ class CardAction {
   /// Ask "sure?" first (ship, cancel).
   final bool confirm;
 
-  /// copy-resume / copy-fix: the text to copy.
+  /// copy-resume / copy-fix: the text to copy; model: the pinned model id
+  /// or `default`.
   final String? value;
+
+  /// model only: the picker's rows (the id a tap sends, a short name).
+  final List<({String id, String label})> choices;
 
   /// start only: the auto_ship checkbox.
   final CardAction? option;

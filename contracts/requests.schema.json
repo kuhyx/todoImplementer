@@ -63,6 +63,13 @@
       "additionalProperties": false,
       "description": "Done manually: stop the run, close every note behind the card as done, rest the card in Done (T2064)."
     },
+    "model": {
+      "type": "object",
+      "description": "Model picker (modelswitch): pin the card to a model, or drop the pin with `default`; its current stage runs again on it (a live turn is cut and resumed on it).",
+      "properties": {"model": {"enum": ["claude-fable-5-2", "claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-5-5", "default"]}},
+      "required": ["model"],
+      "additionalProperties": false
+    },
     "credits_fallback": {
       "type": "object",
       "description": "POST /api/settings/credits-fallback (not task-scoped): turn the free API credits fallback on or off for every run.",

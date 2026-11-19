@@ -1,5 +1,7 @@
 """The credit route: one turn through the Claude Agent SDK on the free API credits, model `credits_model`.
 
+A card kuhy pinned to a model (`modelswitch`) runs that model instead.
+
 Anthropic covers the Agent SDK (not the `claude` CLI) with the Max plan's API credits, so a credit turn is
 `<sdk venv python> -m todoimpl.runner.sdkturn <spec>` under the same turn host as a plan turn. The spec
 mirrors the plan argv (`claude.options` builds both): same session policy, tools and deny list.
@@ -42,7 +44,7 @@ def build(  # noqa: PLR0913, PLR0917 - same signature as claude.build
     resume: str | None = None,
     extra_dirs: tuple[Path, ...] = (),
     allow: tuple[str, ...] = (),
-    model: str | None = None,  # noqa: ARG001 - a credit turn always runs the `credits_model` setting
+    model: str | None = None,  # kuhy's pin (modelswitch) only; else the `credits_model` setting
     effort: str | None = None,
 ) -> claude.Invocation:
     """Build a credit turn; NeedsYouError when the SDK venv or the key vanished since routing."""
@@ -50,7 +52,7 @@ def build(  # noqa: PLR0913, PLR0917 - same signature as claude.build
     if python is None or key is None:
         msg = f"free API credits cannot run: {sdk.MISSING if python is None else 'no usable API key'}"
         raise NeedsYouError(msg)
-    opt = claude.options(role, prompt, worktree, resume, extra_dirs, allow, setting.model(), effort)
+    opt = claude.options(role, prompt, worktree, resume, extra_dirs, allow, model or setting.model(), effort)
     spec = {
         "prompt": opt.prompt, "model": opt.model, "cwd": str(opt.cwd), "add_dirs": list(opt.add_dirs),
         "permission_mode": opt.permission_mode, "resume": opt.resume, "settings": opt.settings,

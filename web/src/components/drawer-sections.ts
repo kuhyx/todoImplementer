@@ -20,7 +20,7 @@ export function renderHead(detail: TaskDetail): HTMLElement {
   return h(
     "div",
     { class: "drawer-headline" },
-    h("div", { class: "drawer-chips" }, statusChip(card.status), routeChip(card), ...tierBadges(card), ...triageBadge(card), h("span", { class: "chip", text: card.repo ?? "Yours (no repo)" }), h("span", { class: "chip", text: `#${card.id}` })),
+    h("div", { class: "drawer-chips" }, statusChip(card.status), routeChip(card), ...tierBadges(card), ...triageBadge(card), h("span", { class: "chip", text: card.repo ?? "Yours (no repo)" }), h("span", { class: "chip", text: `#${card.id}` }), card.model !== undefined && h("span", { attrs: { "data-model": "" }, class: "chip", text: card.model })),
     h("h2", { attrs: { id: "drawer-title", title: card.title }, class: "drawer-title", text: card.title }),
     h("p", { class: "drawer-current", text: card.current }),
     card.waits_on != null && waitsBadge(card.waits_on),

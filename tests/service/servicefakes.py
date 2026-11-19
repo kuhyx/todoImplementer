@@ -41,6 +41,9 @@ class FakeScheduler:
     def send(self, id8: str, text: str) -> None:
         self._rec("send", id8, text)
 
+    def set_model(self, id8: str, model: str) -> None:
+        self._rec("set_model", id8, model)
+
     def ship(self, id8: str) -> None:
         self._rec("ship", id8)
 

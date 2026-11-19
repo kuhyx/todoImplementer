@@ -32,6 +32,21 @@ longer transient: it takes the crash path (3 tries, then Needs you).
 
 Not changed on purpose: Sonnet for spec and plan (`tokens/ab.py` compares subagent arms only and holds no data for these board roles); every role on credits runs the `credits_model` setting (Opus 5.5 since 2026-11-15; Sonnet before, kuhy 2026-11-08).
 
+## kuhy's model pick (T2215-T2220)
+
+kuhy can pin a card to a model (2026-11-19, "run it on claude fable 5.2"): a Send-to-Claude note that is a whole
+model command, or the task detail's model picker (`POST /api/task/<id>/model {model}`, relay kind `task_model`).
+Code: `server/todoimpl/modelpick.py` (names, plain regex, no LLM), `runner/modelswitch.py`.
+
+- Names: Fable 5.2 `claude-fable-5-2`, Opus 5.5 `claude-opus-5-5`, Sonnet 5.5 `claude-sonnet-5-5`, Haiku 5.5
+  `claude-haiku-5-5`, with or without `claude` and the version ("fable", "rerun on opus", "use sonnet 5.5", "on
+  haiku"); `default` drops the pin. A note with any other words or version is an ordinary note.
+- The pin (`state.extra.model_pin`) wins over the role, tier, research and escalation models and over
+  `credits_model` on the credit route, until kuhy names another model or `default`; effort stays the role's.
+- The card's current stage runs again on the pick. A live turn is cut and its session resumed with
+  `--resume <id> --model <pin>` (claude 2.1.328 switches a resumed session's model; probed 2026-11-19).
+- The card shows `model`: the pin, else the model the latest turn ran on (`state.extra.last_model`).
+
 ## One build at a time
 
 kuhy's order (2026-11-11, after ~25 sessions building at once froze the PC): exactly one build runs at a time

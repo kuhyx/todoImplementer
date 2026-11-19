@@ -19,3 +19,17 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Model picker: one short button per model, the pinned one filled --------------- */
+
+.model-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.model-picker .btn[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-fill);
+}

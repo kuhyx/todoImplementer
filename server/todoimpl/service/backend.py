@@ -19,14 +19,14 @@ from todoimpl.credits import marks, route
 from todoimpl.http.backend import ERROR_CODES, BackendError
 from todoimpl.lessons import LessonError, approve, draft_lesson, latest_lesson, run_skills
 from todoimpl.repotask.files import overlay as ticks_overlay
-from todoimpl.runner import autocheck
+from todoimpl.runner import autocheck, modelswitch
 from todoimpl.runner.scheduler import RunnerError
 from todoimpl.todo_mcp.model import TodoError, upstream_text
 from todoimpl.umbrella.view import overlay_for
 from todoimpl.usage import limit_state
 from todoimpl.usage.interventions import record
 
-from . import dropping, permission, shots, tracking
+from . import dropping, notes, permission, shots, tracking
 from .settings import credits_fallback as _credits_fallback
 
 if TYPE_CHECKING:
@@ -112,6 +112,7 @@ class ServiceBackend:
         if run is None:
             return None
         directory = run_dir(self.root, run.task_id)
+        run = modelswitch.overlay(directory, run)  # a pick a live drive has not settled yet
         try:
             latest = latest_lesson(directory)
         except LessonError as exc:  # a corrupt lessons.json must not take the whole board down
@@ -210,12 +211,8 @@ class ServiceBackend:
         """Spec OK click."""
         self._click(id8, "spec_ok", lambda: self.scheduler.spec_ok(id8))
 
-    def send(self, id8: str, text: str) -> None:
-        """Send to Claude; at the gate this is a rejection, so a lesson is drafted in the background."""
-        run = load(run_dir(self.root, id8))
-        if run is not None and run.stage == "gate":
-            self.spawn(lambda: self._draft(id8, text))
-        self._click(id8, "send", lambda: self.scheduler.send(id8, text))
+    send = notes.send  # Send to Claude; a model note pins it (modelpick), a gate note drafts a lesson
+    model = notes.model  # the model picker
 
     def _draft(self, id8: str, note: str) -> None:
         directory = run_dir(self.root, id8)

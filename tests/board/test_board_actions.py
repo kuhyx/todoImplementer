@@ -69,7 +69,7 @@ def test_yours_offers_start_wont_and_done_nothing() -> None:
 
 
 def test_queued_and_working_can_be_cancelled() -> None:
-    assert list(acts(S.QUEUED, run())) == ["cancel", "done-manually", "send"]
+    assert list(acts(S.QUEUED, run())) == ["cancel", "done-manually", "send", "model"]
     assert acts(S.QUEUED, run(session_id="s"))["send"].reason == "the run is waiting to start"
     working = acts(S.WORKING, run(session_id="s", worktree="/w"), limit=LIMITED)
     assert working["cancel"].enabled
@@ -143,7 +143,7 @@ def test_failed_run_offers_retry_and_handed_over_run_hands_back() -> None:
 
 def test_claude_question_offers_send_and_cancel_only() -> None:
     got = acts(S.NEEDS_YOU, run(last_tag="Q", session_id="s", worktree="/w"))
-    assert list(got) == ["cancel", "wont", "done-manually", "send", "copy-resume"]
+    assert list(got) == ["cancel", "wont", "done-manually", "send", "copy-resume", "model"]
     assert acts(S.NEEDS_YOU, run(last_tag="A", session_id="s"))["send"].enabled
 
 

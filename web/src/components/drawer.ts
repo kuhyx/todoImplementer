@@ -173,7 +173,7 @@ export class TiDrawer extends HTMLElement {
     });
     try {
       const autoShip = optionValue(action, this);
-      await postAction(detail.card.id, action.id, { autoShip, lessonId: detail.lesson?.id ?? "", text }, csrf);
+      await postAction(detail.card.id, action.id, { autoShip, lessonId: detail.lesson?.id ?? "", model: action.value, text }, csrf);
       if (action.id === "send") for (const box of this.querySelectorAll<HTMLTextAreaElement>("textarea[name$=send]")) box.value = "";
       showToast(`${action.label}: done`);
     } catch (error) {

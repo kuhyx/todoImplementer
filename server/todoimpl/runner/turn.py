@@ -18,6 +18,7 @@ from todoimpl.credits import ledger, live, setting
 
 from . import adopt, allowlist, claude, credit, creditguard, files, guard, launch, orphans, session, watchdog
 from .files import KilledError
+from .modelswitch import pinned
 from .stream import StreamParser, TurnResult, state_tag
 
 if TYPE_CHECKING:
@@ -72,10 +73,13 @@ def _launch(  # noqa: PLR0913, PLR0917 - the turn environment plus its route
 ) -> orphans.Record:
     plan = session.plan_turn(_prior(env, state, role), now=env.now())
     allow = allowlist.rules_for(files.root_of(env.run_dir), state.repo, state.task_id)
+    pin = pinned(state)  # kuhy's pick wins over the role, tier and escalation models
+    model = pin or model
     build = credit.build if route == "credits" else claude.build
-    inv = build(role, prompt_for(plan.situation), env.worktree, plan.resume, extra_dirs, allow, model, effort)
+    given = pin if route == "credits" else model  # a credit turn runs `credits_model` unless pinned
+    inv = build(role, prompt_for(plan.situation), env.worktree, plan.resume, extra_dirs, allow, given, effort)
     wanted = model or claude.model_for(role)
-    ran = setting.model() if route == "credits" else wanted
+    ran = (pin or setting.model()) if route == "credits" else wanted
     if ran != wanted:  # every role on credits runs on the `credits_model` setting; the feed says so
         env.activity("system", f"turn on free API credits: the {role} role wants {wanted}, runs on {ran}")
     else:
@@ -136,6 +140,8 @@ def _apply(env: TurnEnv, state: RunState, rec: orphans.Record, res: TurnResult, 
         state.sessions[role] = {"session_id": res.session_id, "last_turn_end": env.now(), "route": route}
         state.session_id = res.session_id
     state.extra["route"] = route
+    if models.get("ran"):  # the card's model line (card.schema `model`) when no pin names one
+        state.extra["last_model"] = models["ran"]
     state.cost_usd = round(state.cost_usd + spent, 6)
     state.extra["consumed_turn"] = stem
     state.extra["last_exit"] = code

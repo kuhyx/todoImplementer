@@ -246,5 +246,5 @@ class Router:
                 backend.send(id8, body["text"])
             case "lesson-approve":
                 backend.lesson_approve(id8, body["lesson_id"])
-            case _:  # every other action is an id-only click
-                getattr(backend, action.replace("-", "_"))(id8)
+            case _:  # an id-only click, or `model` with its one keyword (bodies.check pins the body)
+                getattr(backend, action.replace("-", "_"))(id8, **body)

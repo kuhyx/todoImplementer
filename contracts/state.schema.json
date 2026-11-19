@@ -38,6 +38,8 @@
     "free_models": {"type": "boolean", "description": "The server's verdict before the latest cheap implement turn: public repo and a live gateway."},
     "escalated": {"type": "boolean", "description": "A cheap run handed over to Opus (ESCALATE line or a failed turn); at most once per run."},
     "escalate_reason": {"type": "string", "description": "Why it escalated, at most 300 characters."},
+    "model_pin": {"type": "string", "minLength": 1, "description": "kuhy's model for this card (a model note or the picker; modelswitch): every turn runs it, over the role, tier and escalation models, until he names another or `default`."},
+    "last_model": {"type": "string", "minLength": 1, "description": "The model the latest turn ran on (the card's `model` when nothing is pinned)."},
     "credit_downgrade": {
       "type": "object",
       "description": "Roles whose latest turn ran on a smaller model than they want because the credits route runs every role on the `credits_model` setting (default Opus 5.5): role -> wanted and ran. Absent when none.",

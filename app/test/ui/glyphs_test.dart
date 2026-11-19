@@ -21,6 +21,7 @@ void main() {
       'rerun',
       'wont',
       'done-manually',
+      'model',
     ];
     expect(actions.map(actionIcon).toSet(), hasLength(actions.length));
     expect(actionIcon('x'), Icons.help_outline);
@@ -43,12 +44,7 @@ void main() {
       'internal',
     ];
     expect(codes.map(codeIcon).toSet(), hasLength(8));
-    const statuses = [
-      'needs_you',
-      'working',
-      'paused_limit',
-      'backlog',
-    ];
+    const statuses = ['needs_you', 'working', 'paused_limit', 'backlog'];
     expect(statuses.map(statusColor).toSet(), hasLength(4));
   });
 }

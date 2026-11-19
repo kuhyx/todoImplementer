@@ -29,6 +29,7 @@ def bodies(card: str) -> dict[str, dict[str, Any]]:
         "task_rerun": card_args,
         "task_wont": card_args,
         "task_done_manually": card_args,
+        "task_model": {"card": card, "args": {"model": "claude-fable-5-2"}},
         "ask_answer": {"card": card, "args": {"ask": "pick", "option": "a"}},
         "ask_take_recommended": card_args,
         "ask_run": {"card": card, "args": {"ask": "cmd", "add": True}},

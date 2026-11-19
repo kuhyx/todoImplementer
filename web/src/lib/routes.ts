@@ -27,6 +27,7 @@ export interface Payload {
   answers?: Record<string, string>;
   autoShip?: boolean | undefined;
   lessonId?: string;
+  model?: string | undefined;
   text?: string;
 }
 
@@ -35,6 +36,9 @@ export function bodyFor(action: ActionId, payload: Payload): Record<string, unkn
   switch (action) {
     case "lesson-approve": {
       return { lesson_id: payload.lessonId ?? "" };
+    }
+    case "model": {
+      return { model: payload.model ?? "default" };
     }
     case "send": {
       return { text: payload.text ?? "" };

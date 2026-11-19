@@ -99,6 +99,10 @@ class Backend(Protocol):
         """Done manually: close every note behind the card, stop the run, rest the card in Done."""
         ...
 
+    def model(self, id8: str, *, model: str) -> None:
+        """Pin the card to a model (an id, or `default` to drop the pin) and run its stage again on it."""
+        ...
+
     def set_credits_fallback(self, *, enabled: bool) -> dict[str, Any]:
         """Store the global free-credits fallback setting; return the contract's `credits` object."""
         ...

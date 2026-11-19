@@ -15,9 +15,10 @@ class Action:
     reason: str | None = None
     confirm: bool = False
     value: str | None = None
+    choices: tuple[dict[str, str], ...] = ()  # model only: the picker's {id, label} rows
 
     def to_dict(self) -> dict[str, object]:
-        """Return the contract object (confirm/value only when set)."""
+        """Return the contract object (confirm, value and choices only when set)."""
         out: dict[str, object] = {
             "id": self.id,
             "label": self.label,
@@ -28,4 +29,6 @@ class Action:
             out["confirm"] = True
         if self.value is not None:
             out["value"] = self.value
+        if self.choices:
+            out["choices"] = [dict(c) for c in self.choices]
         return out

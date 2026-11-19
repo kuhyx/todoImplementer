@@ -16,6 +16,7 @@ def test_every_post_action_calls_the_backend_and_returns_the_card(live: Live, ac
         "spec-answers": {"answers": {"Q1": "yes"}},
         "send": {"text": "hello"},
         "lesson-approve": {"lesson_id": "L1"},
+        "model": {"model": "claude-fable-5-2"},
     }
     r = post(live, action, bodies.get(action, {}))
     assert r.status == 200, r.body
@@ -36,6 +37,7 @@ def test_every_post_action_calls_the_backend_and_returns_the_card(live: Live, ac
         "rerun": ("rerun",),
         "wont": ("wont",),
         "done-manually": ("done_manually",),
+        "model": ("model", "claude-fable-5-2"),
     }[action]
     assert live.backend.calls == [(expect[0], live.backend.task_id, *expect[1:])]
 
@@ -112,6 +114,9 @@ def test_non_object_or_invalid_json_is_400(live: Live, body: Any) -> None:
         ("lesson-approve", {}),
         ("lesson-approve", {"lesson_id": ""}),
         ("lesson-approve", {"lesson_id": 1}),
+        ("model", {}),
+        ("model", {"model": "gpt-5"}),
+        ("model", {"model": "claude-fable-5-2", "more": 1}),
     ],
 )
 def test_body_must_match_requests_schema(live: Live, action: str, body: dict[str, Any]) -> None:
