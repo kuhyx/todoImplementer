@@ -59,14 +59,17 @@ abstract interface class BoardRelay {
   /// Every new `snap/board` the worker publishes, newest first on listen.
   Stream<Board> boards();
 
-  /// Sends one request of [kind] with [body] and waits for its result.
-  Future<RelayOutcome> send(String kind, Json body);
+  /// Sends one request of [kind] with [body] and waits for its result; with
+  /// [timeout], no answer by then is a retryable `timeout` failure.
+  Future<RelayOutcome> send(String kind, Json body, {Duration? timeout});
 
   /// Every new `snap/merges` the worker publishes.
   Stream<List<MergeSuggestion>> merges();
 
   /// [card]'s live feed (`live/{card}`), oldest first, while listened to:
-  /// listening sends `live_watch`, cancelling releases it.
+  /// listening sends `live_watch` and renews it while listened to (the
+  /// worker drops a watch 120 s after its last renewal); cancelling releases
+  /// it.
   Stream<List<Json>> liveFeed(String card);
 }
 

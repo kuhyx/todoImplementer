@@ -46,6 +46,29 @@ def test_feed_lands_in_order_and_old_events_go(
     assert fake.get(f"{ROOT}/watch/{DEV}") is None
 
 
+def test_t2312_keys_continue_after_a_restart(
+    fake: FakeRtdb, router: Router, backend: FakeBackend, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A new mirror (server restart, lapsed watch) continues above the stored keys and keeps the cap."""
+    monkeypatch.setattr(live_mod, "KEEP", 3)
+    backend.events = [{"type": "activity", "seq": 1}, {"type": "activity", "seq": 2}]
+    card = backend.task_id
+    old = {f"s{n:09d}": {"type": "activity", "seq": n} for n in (1, 2, 366, 367, 368)}
+    fake.set(f"{ROOT}/live/{card}", {**old, "junk": {"type": "x"}})
+
+    async def go() -> None:
+        db = fake.rtdb()
+        lv = Live(db, router)
+        await lv.watch(DEV, card)
+        await mirror_done(lv, card)
+        await db.aclose()
+
+    asyncio.run(go())
+    feed = fake.get(f"{ROOT}/live/{card}")
+    assert sorted(feed) == ["junk", "s000000369", "s000000370", "s000000371"]
+    assert feed["s000000371"]["seq"] == 2
+
+
 def test_unknown_card_is_refused(fake: FakeRtdb, router: Router) -> None:
     async def go() -> None:
         db = fake.rtdb()

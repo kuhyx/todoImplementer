@@ -27,6 +27,10 @@ Stream<int> _still(String _) => const Stream.empty();
 
 Stream<RtdbEvent> _quiet(String _) => const Stream.empty();
 
+/// How often an open feed renews its `live_watch`; the worker keeps a watch
+/// for 120 s after the last one (`server/todoimpl/relay/live.py`).
+const kLiveRenew = Duration(seconds: 60);
+
 /// The live events under a streamed `live/{card}` tree, in key order.
 List<Json> feedOf(Object? tree) {
   if (tree is! Map) return const [];
@@ -45,6 +49,7 @@ class RtdbBoardRelay implements BoardRelay {
     RevMoves? revOf,
     NodeListen? listen,
     DateTime Function()? clock,
+    this.renewEvery = kLiveRenew,
   }) : revOf = revOf ?? _still,
        listen = listen ?? _quiet,
        _clock = clock ?? DateTime.now;
@@ -85,6 +90,9 @@ class RtdbBoardRelay implements BoardRelay {
   /// Streams one node (the live feed).
   final NodeListen listen;
 
+  /// Renewal period of an open feed's `live_watch`.
+  final Duration renewEvery;
+
   final DateTime Function() _clock;
 
   Future<Board?> _fetch() async {
@@ -121,11 +129,14 @@ class RtdbBoardRelay implements BoardRelay {
   @override
   Stream<List<Json>> liveFeed(String card) {
     StreamSubscription<RtdbEvent>? sub;
+    Timer? renew;
     Object? tree;
     late final StreamController<List<Json>> out;
+    void watchIt() => unawaited(send('live_watch', {'card': card}));
     out = StreamController<List<Json>>(
       onListen: () {
-        unawaited(send('live_watch', {'card': card}));
+        watchIt();
+        renew = Timer.periodic(renewEvery, (_) => watchIt());
         sub = listen(fullPath('live/$card')).listen((event) {
           if (event is! RtdbPut && event is! RtdbPatch) return;
           tree = applyEvent(tree, event);
@@ -133,6 +144,7 @@ class RtdbBoardRelay implements BoardRelay {
         });
       },
       onCancel: () async {
+        renew?.cancel();
         await sub?.cancel();
         // RTDB drops the null: the worker reads a missing card as release.
         unawaited(send('live_watch', {'card': null}));
@@ -142,7 +154,7 @@ class RtdbBoardRelay implements BoardRelay {
   }
 
   @override
-  Future<RelayOutcome> send(String kind, Json body) async {
+  Future<RelayOutcome> send(String kind, Json body, {Duration? timeout}) async {
     final now = _clock();
     final rid = ulid(now: now);
     final result = Completer<Json>();
@@ -158,7 +170,16 @@ class RtdbBoardRelay implements BoardRelay {
         'sent_at': now.millisecondsSinceEpoch,
         'body': body,
       });
-      return outcomeOf(await result.future);
+      final answer = timeout == null
+          ? result.future
+          : result.future.timeout(timeout);
+      return outcomeOf(await answer);
+    } on TimeoutException {
+      return RelayFailed(
+        code: 'timeout',
+        error: 'no answer to $kind from the PC worker in $timeout',
+        retry: true,
+      );
     } on Object catch (error) {
       // `on Object`: transport Errors and Exceptions both reach the user.
       return RelayFailed(code: 'offline', error: '$error', retry: true);

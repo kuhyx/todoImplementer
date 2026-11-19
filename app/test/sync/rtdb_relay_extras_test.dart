@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:rtdb_relay/rtdb_relay.dart';
+import 'package:todo_implementer/sync/board_relay.dart';
 import 'package:todo_implementer/sync/layout.dart';
 import 'package:todo_implementer/sync/rtdb_board_relay.dart';
 
@@ -17,7 +18,11 @@ void main() {
   late StreamController<RtdbEvent> events;
   late List<String> listened;
 
-  RtdbBoardRelay relay({bool seams = true}) => RtdbBoardRelay(
+  RtdbBoardRelay relay({
+    bool seams = true,
+    Duration renewEvery = const Duration(seconds: 60),
+  }) => RtdbBoardRelay(
+    renewEvery: renewEvery,
     client: RtdbClient(
       layout: kTodoImplLayout,
       databaseUrl: 'https://db.example',
@@ -111,6 +116,36 @@ void main() {
     await sub.cancel();
     await pumpEventQueue();
     expect(sentKinds(), ['live_watch', 'live_watch']);
+  });
+
+  List<Object?> watchedCards() => [
+    for (final e in tree.entries)
+      if (e.key.endsWith('/req') && (e.value! as Map)['kind'] == 'live_watch')
+        ((e.value! as Map)['body'] as Map)['card'],
+  ];
+
+  test('[T2311] liveFeed renews live_watch until cancelled', () async {
+    final r = relay(renewEvery: const Duration(milliseconds: 20));
+    final sub = r.liveFeed('c1').listen((_) {});
+    await Future<void>.delayed(const Duration(milliseconds: 90));
+    expect(watchedCards().length, greaterThanOrEqualTo(3));
+    expect(watchedCards().toSet(), {'c1'});
+    await sub.cancel();
+    await pumpEventQueue();
+    final released = watchedCards();
+    expect(released.last, isNull);
+    await Future<void>.delayed(const Duration(milliseconds: 60));
+    expect(watchedCards(), released);
+  });
+
+  test('[T2313] a request with no answer times out, stops watching', () async {
+    final out = await relay().send('task_detail', {
+      'card': 'c1',
+    }, timeout: const Duration(milliseconds: 20));
+    expect(out, isA<RelayFailed>());
+    expect((out as RelayFailed).code, 'timeout');
+    expect(out.retry, isTrue);
+    expect(watches.values.single.hasListener, isFalse);
   });
 
   test('feedOf ignores non-maps and non-object children', () {

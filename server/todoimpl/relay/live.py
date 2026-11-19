@@ -2,7 +2,8 @@
 
 A watch lasts WATCH_S after its last renewal (the app renews every 60 s while the drawer is open and sends
 card null on close). The feed is the Router's own SSE source, so the relay sees exactly what the page sees.
-Events land at live/{card}/s<9-digit n>; only the newest KEEP are kept.
+Events land at live/{card}/s<9-digit n>; only the newest KEEP are kept. A new mirror (server restart, lapsed
+watch) continues above the highest stored key, so new events never sort below old ones (T2312).
 """
 
 from __future__ import annotations
@@ -10,8 +11,10 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import re
 import threading
 import time
+from collections import deque
 from typing import TYPE_CHECKING, Any, Final
 
 from todoimpl.http.routes import SseReply
@@ -29,6 +32,7 @@ log = logging.getLogger("todoimpl.relay")
 WATCH_S: Final = 120.0
 KEEP: Final = 200
 POLL_S: Final = 5.0  # how often a quiet mirror checks whether anyone still watches
+_KEY: Final = re.compile(r"s(\d{9})")
 
 
 class Live:
@@ -65,20 +69,28 @@ class Live:
             self.mirrors[card] = asyncio.create_task(self._mirror(card, stream))
         return {}
 
+    async def _stored(self, card: str) -> deque[int]:
+        """Return the seq numbers already under live/{card}, ascending (a shallow read: keys only)."""
+        node = await self._rtdb.get(f"live/{card}", {"shallow": "true"})
+        keys = node if isinstance(node, dict) else {}
+        return deque(sorted(int(m[1]) for k in keys if (m := _KEY.fullmatch(k))))
+
     async def _mirror(self, card: str, reply: SseReply) -> None:
         queue: asyncio.Queue[dict[str, Any] | None] = asyncio.Queue()
         loop = asyncio.get_running_loop()
         stop = threading.Event()
         threading.Thread(target=_pump, args=(reply.events, queue, loop, stop), daemon=True).start()
-        n = 0
         try:
+            kept = await self._stored(card)
+            n = kept[-1] if kept else 0
             item: dict[str, Any] | None = reply.snapshot
             while self.watched(card):
                 if item is not None:
                     n += 1
                     await self._rtdb.put(f"live/{card}/s{n:09d}", item)
-                    if n > KEEP:
-                        await self._rtdb.delete(f"live/{card}/s{n - KEEP:09d}")
+                    kept.append(n)
+                while len(kept) > KEEP:
+                    await self._rtdb.delete(f"live/{card}/s{kept.popleft():09d}")
                 try:
                     item = await asyncio.wait_for(queue.get(), self.poll)
                 except TimeoutError:

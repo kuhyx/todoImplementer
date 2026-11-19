@@ -30,7 +30,7 @@ sessions 5 s, usage and merges 10 s. The FCM pinger plugs into `Publisher(on_boa
 | `presence/workers/{dev}` | worker | heartbeat every 30 s, with `version` and `build` (replaces `GET /version`) |
 | `presence/clients/{dev}` | app | platform, app version, build number, `seen`, FCM token or null |
 | `watch/{dev}` | worker | which card's live feed is mirrored for that client, and until when |
-| `live/{card}/{seq}` | worker | the `/api/live` events of a watched card, key `s` + 9-digit seq, last 200 kept |
+| `live/{card}/{seq}` | worker | the `/api/live` events of a watched card, key `s` + 9-digit seq continuing above the highest stored key (restarts too), last 200 kept |
 | `requests/{rid}/req` | app | a request (`relay-request.schema.json`) |
 | `requests/{rid}/claim` (clear) | worker | lease, attempt and phase, as the tutor |
 | `requests/{rid}/result` | worker | the answer (`relay-result.schema.json`) |

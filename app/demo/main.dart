@@ -25,7 +25,11 @@ class _DemoRelay implements BoardRelay {
   Stream<Board> boards() => Stream.value(Board.fromJson(_board));
 
   @override
-  Future<RelayOutcome> send(String kind, Json body) async {
+  Future<RelayOutcome> send(
+    String kind,
+    Json body, {
+    Duration? timeout,
+  }) async {
     await Future<void>.delayed(const Duration(milliseconds: 600));
     if (kind == 'task_detail') {
       return const RelayOk({

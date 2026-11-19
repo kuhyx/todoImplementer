@@ -104,9 +104,17 @@ class FakeRelay implements BoardRelay {
   void push(Json json) => boardsOut.add(Board.fromJson(json));
 
   @override
-  Future<RelayOutcome> send(String kind, Json body) async {
+  Future<RelayOutcome> send(String kind, Json body, {Duration? timeout}) async {
     sent.add((kind, body));
-    await gate?.future;
+    final wait = gate?.future;
+    if (wait != null && timeout != null) {
+      try {
+        await wait.timeout(timeout);
+      } on TimeoutException {
+        return RelayFailed(code: 'timeout', error: 'no $kind', retry: true);
+      }
+    }
+    await wait;
     return outcomes[kind] ?? const RelayOk({});
   }
 

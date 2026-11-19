@@ -19,6 +19,33 @@ import 'package:todo_implementer/ui/board/needs_links.dart';
 import 'package:todo_implementer/ui/board/note_box.dart';
 import 'package:todo_implementer/ui/board/umbrella_view.dart';
 
+/// How long the page waits for the PC worker's `task_detail` answer.
+const kDetailPatience = Duration(seconds: 15);
+
+/// The first load's wait: a spinner around the PC glyph, named for what it
+/// waits on (the PC worker's answer to `task_detail`).
+class _Waiting extends StatelessWidget {
+  const new();
+
+  @override
+  Widget build(BuildContext context) => const Center(
+    child: Stack(
+      alignment: Alignment.center,
+      children: [
+        CircularProgressIndicator(
+          semanticsLabel: 'Waiting for the PC: card detail',
+        ),
+        Icon(
+          Icons.computer,
+          key: Key('detail-waits-on'),
+          size: AppSpacing.md,
+          color: AppPalette.mutedOnDark,
+        ),
+      ],
+    ),
+  );
+}
+
 /// The drawer page of [card].
 class DetailPage extends StatefulWidget {
   /// Creates the page.
@@ -54,7 +81,10 @@ class _DetailPageState extends State<DetailPage> {
   }
 
   Future<void> _load() async {
-    final out = await widget.relay.send('task_detail', {'card': widget.card});
+    if (_detail == null && _failure != null) setState(() => _failure = null);
+    final out = await widget.relay.send('task_detail', {
+      'card': widget.card,
+    }, timeout: kDetailPatience);
     if (!mounted) return;
     setState(() {
       if (out is RelayOk) {
@@ -146,6 +176,17 @@ class _DetailPageState extends State<DetailPage> {
     );
   }
 
+  /// The first load failed or timed out: its glyph, and a retry.
+  Widget _retry(RelayFailed f) => Center(
+    child: IconButton(
+      key: const Key('detail-retry'),
+      iconSize: AppSpacing.xxl * 2,
+      color: AppPalette.danger,
+      icon: Icon(codeIcon(f.code), semanticLabel: 'Retry: ${f.error}'),
+      onPressed: _load,
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     final d = _detail;
@@ -186,11 +227,13 @@ class _DetailPageState extends State<DetailPage> {
             tabs: [for (final (icon, _) in tabs) Tab(icon: Icon(icon))],
           ),
         ),
-        body: d == null
-            ? const Center(
-                child: CircularProgressIndicator(semanticsLabel: 'detail'),
-              )
-            : TabBarView(children: [for (final (_, build) in tabs) build(d)]),
+        body: switch ((d, failure)) {
+          (final TaskDetail d, _) => TabBarView(
+            children: [for (final (_, build) in tabs) build(d)],
+          ),
+          (null, final RelayFailed f) => _retry(f),
+          (null, null) => const _Waiting(),
+        },
       ),
     );
   }
