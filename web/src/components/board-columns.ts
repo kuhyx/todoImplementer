@@ -79,10 +79,9 @@ function renderTabs(view: ColumnView[], active: ColumnId, handlers: ColumnHandle
 
 export function renderBoard(view: ColumnView[], state: ViewState, now: number, handlers: ColumnHandlers): HTMLElement {
   const active = activeColumn(view, state);
-  return h(
-    "div",
-    { class: "board" },
-    renderTabs(view, active, handlers),
-    h("div", { class: "cols" }, ...view.map((column) => renderColumn(column, active, now, state, handlers))),
-  );
+  const tabs = renderTabs(view, active, handlers);
+  const cols = h("div", { class: "cols" }, ...view.map((column) => renderColumn(column, active, now, state, handlers)));
+  // The grids split the width by the real column count (board.css), so a removed column leaves no empty strip.
+  for (const row of [tabs, cols]) row.style.setProperty("--cols", String(view.length));
+  return h("div", { class: "board" }, tabs, cols);
 }

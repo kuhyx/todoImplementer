@@ -29,7 +29,7 @@ def step_board(cdp: Cdp, url: str, out: Path, tag: str) -> dict[str, Any]:
     goto(cdp, url)
     cdp.shot(out / f"{tag}-board.png")
     selectors = ["input[name=q]", "select[name=repo]", "select[name=sort]", ".col[data-active] .card"]
-    # The tab bar only exists below the five-column breakpoint (board.css, 1500px).
+    # The tab bar only exists below the side-by-side breakpoint (board.css, 1500px).
     if cdp.size is not None and cdp.size[0] < 1500:
         selectors.append(".tab[aria-current]")
     return probe(cdp, selectors)
