@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from .state import RunState
     from .types import TaskLike
 
+SHIP_STEP = "ship_step"  # run.extra: the step a shipping run is in (T2060)
 CLOSED = ("done", "abandoned")
 DONE_STAGES = ("shipped", "closed")
 

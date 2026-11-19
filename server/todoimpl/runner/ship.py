@@ -65,6 +65,7 @@ class ShipPlan:
     timeout: float
     live_summary: str = ""
     base_sha: str = ""  # where the run's branch began: the session's own commits are base_sha..HEAD
+    step: Callable[[str], None] = lambda _step: None  # told each step the ship enters (T2060)
 
 
 def commit_message(title: str, id8: str) -> str:  # noqa: D103
@@ -129,7 +130,7 @@ def _rebase(plan: ShipPlan, ref: str) -> None:
     git(wt, "rebase", "--abort", check=False)
     mark.unlink()
     where = ", ".join(files) or "unknown files"
-    msg = f"Rebase on {ref} conflicts in {where}: resolve it in {wt}, then ship again"
+    msg = f"Rebase on {ref} conflicts in {where}: resolve it in {wt}, then Retry"
     raise NeedsYouError(msg, "run_failed")
 
 
@@ -184,7 +185,7 @@ def ship(
         git(wt, "rebase", "--abort", check=False)
         (plan.run_dir / REBASING).unlink()
     if has_conflicts(wt):  # `add --all` would commit the markers as if resolved
-        msg = f"Unresolved conflicts in {wt}: resolve them and finish the rebase, then ship again"
+        msg = f"Unresolved conflicts in {wt}: resolve them and finish the rebase, then Retry"
         raise NeedsYouError(msg, "run_failed")
     if (own := deploy.pushed(plan.run_dir, wt)) and _on_origin(wt, ref):  # a Retry after this ship's own push
         kept = {
@@ -194,16 +195,21 @@ def ship(
         return _finish(plan, client, now, kept, [CheckResult(**row) for row in own["results"]], branch)
     if landed := _landed(plan, ref):  # the session pushed its own work: check it, deploy it, close (T1964)
         command = deploy.command_of(wt, plan.item.repo)  # no line: stop before the checks run
+        plan.step("running the checks")
         results = _verified(plan, ref, changed=False)
         said = f"Pushed by the session: {', '.join(landed)}."
         head = git(wt, "rev-parse", "HEAD").stdout.strip()
         return _finish(plan, client, now, {"commit": head}, results, branch, said, command)
+    plan.step("squashing the work")
     changed = _squash(plan, ref, allow_empty=allow_empty)
     if changed:
+        plan.step("rebasing")
         _rebase(plan, ref)
+    plan.step("running the checks")
     results = _verified(plan, ref, changed=changed)
     info: dict[str, Any] = {"commit": ""}
     if changed:
+        plan.step("pushing")
         info.update(commit=_push_rebasing(plan, ref, branch, results), pushed_at=now())
         deploy.mark_pushed(plan.run_dir, str(info["commit"]), info["pushed_at"], results)
     return _finish(plan, client, now, info, results, branch)
@@ -221,6 +227,7 @@ def _finish(  # noqa: PLR0913, PLR0917 - one ship's parts
 ) -> dict[str, Any]:
     """Deploy what was pushed (a close with no code change deploys nothing), then close with the evidence."""
     if info["commit"]:
+        plan.step("deploying")
         card = f"{plan.item.note_id}-{plan.item.index}"
         results = [*results, deploy.run(plan.worktree, plan.run_dir, card, plan.item.repo, command)]
     text = evidence(str(info["commit"]), branch, results, plan.live_summary, head)
@@ -232,6 +239,7 @@ def _close(
 ) -> dict[str, Any]:
     """Close the note with `text` as evidence, remove the worktree, and return `info` plus the close time."""
     sha = str(info["commit"])
+    plan.step("closing the note")
     try:
         client.close_task(f"{plan.item.note_id}-{plan.item.index}", text)
     except TodoError as exc:

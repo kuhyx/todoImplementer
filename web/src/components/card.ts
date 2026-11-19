@@ -81,6 +81,12 @@ function resumeLine(card: TaskCard, now: number): null | string {
   return card.resumes_at === null ? null : `resumes ${formatIn(card.resumes_at, now)} (${formatClock(card.resumes_at)})`;
 }
 
+/** The server's line on what the card does; a card that ships itself gets a spinner before it (T2060). */
+function currentLine(card: TaskCard): HTMLElement {
+  const spinner = card.status === "shipping" && h("span", { attrs: { "aria-hidden": "true" }, class: "spinner" });
+  return h("span", { attrs: { "data-shipping": String(card.status === "shipping") }, class: "card-current" }, spinner, card.current);
+}
+
 export function renderCard(card: TaskCard, now: number, shouldShowRepo = false): HTMLButtonElement {
   const resume = resumeLine(card, now);
   const meta = [
@@ -102,7 +108,7 @@ export function renderCard(card: TaskCard, now: number, shouldShowRepo = false):
       h("span", { class: "card-prio", text: card.priority }),
     ),
     h("span", { class: "card-title", text: card.title }),
-    h("span", { class: "card-current", text: card.current }),
+    currentLine(card),
     resume !== null && h("span", { class: "card-current", text: resume }),
     card.umbrella !== undefined && umbrellaProgress(card.umbrella),
     card.parts !== undefined && card.parts.length > 0 && partsStrip(card.parts),

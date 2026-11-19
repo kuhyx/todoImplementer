@@ -127,6 +127,12 @@ def test_t1214_a_run_waiting_to_retry_says_when_and_why() -> None:
     validate("state", waiting.to_dict())
 
 
+def test_t2060_a_shipping_card_names_its_step() -> None:
+    stepping = run(stage="shipping", extra={"ship_step": "pushing"})
+    assert current_line(Status.SHIPPING, stepping, None, NOW) == "shipping: pushing"
+    assert current_line(Status.SHIPPING, run(stage="shipping"), None, NOW) == "pushing and closing the note"
+
+
 def test_current_lines() -> None:
     cases = [
         (Status.WORKING, run(stage="live_check"), "live_check"),

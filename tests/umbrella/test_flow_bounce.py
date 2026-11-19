@@ -9,7 +9,7 @@ from runnerfakes import Env
 from tierfakes import Free
 from todoimpl.board import state as store
 from todoimpl.runner.scheduler import Scheduler
-from todoimpl.runner.stages import _shipping
+from todoimpl.runner.shipstage import shipping
 from todoimpl.umbrella import bounce
 from todoimpl.umbrella.children import fresh_state
 from todoimpl.umbrella.note import children
@@ -90,9 +90,9 @@ def test_t1955_a_child_whose_checks_did_not_pass_never_ships() -> None:
     kid = SimpleNamespace(body="", parts=[])
     red = store.RunState(task_id="x-1", stage="shipping", extra={"umbrella_round": 1})
     red.checks = {"passed": False, "results": []}
-    assert _shipping(SimpleNamespace(state=red, item=kid)) == "checks"  # type: ignore[arg-type]
+    assert shipping(SimpleNamespace(state=red, item=kid)) == "checks"  # type: ignore[arg-type]
     never = store.RunState(task_id="x-1", stage="shipping", extra={"umbrella_round": 1})
-    assert _shipping(SimpleNamespace(state=never, item=kid)) == "checks"  # type: ignore[arg-type]
+    assert shipping(SimpleNamespace(state=never, item=kid)) == "checks"  # type: ignore[arg-type]
 
 
 def test_t1955_the_umbrella_does_not_close_over_a_done_child_with_unpassed_checks(

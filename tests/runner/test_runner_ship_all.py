@@ -128,3 +128,16 @@ def test_t2060_a_close_the_todo_app_refuses_fails_with_its_reason(world: Env, sh
         assert st.error == "Closing the item failed: close refused"
     finally:
         sched.close()
+
+
+def test_t2060_a_shipping_card_names_each_step_it_enters(world: Env, ships: None) -> None:
+    sched, _ = boot(world, PLAN, IMPL, LIVE_OK, **PLAIN)
+    try:
+        sched.start(CARD)
+        wait_stage(world, sched, "shipped")
+        said = [e["text"] for e in sched.bus.history(CARD, 0) if str(e["text"]).startswith("shipping: ")]
+        assert said[0] == "shipping: squashing the work"
+        assert said[-1] == "shipping: closing the note"
+        assert {"shipping: rebasing", "shipping: running the checks", "shipping: pushing"} <= set(said)
+    finally:
+        sched.close()

@@ -165,6 +165,12 @@
   overflow-wrap: anywhere;
 }
 
+.card-current[data-shipping="true"] {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .card-category,
 .card-partial {
   font-size: var(--text-label);

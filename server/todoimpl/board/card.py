@@ -14,7 +14,7 @@ from .actions import actions
 from .badges import tier_badges
 from .needs import needs
 from .parts import is_repo_task, kuhys, manual_ask, parts_of
-from .status import Status, column, compute
+from .status import SHIP_STEP, Status, column, compute
 from .types import Limit, fmt_when
 from .umbrella import card_view
 
@@ -57,6 +57,8 @@ def current_line(  # noqa: PLR0911 - one return per status
         return "paused by the usage limit" + (f", resumes {fmt_when(resumes_at, now)}" if resumes_at else "")
     if status == Status.NEEDS_YOU and run is not None:
         return needs(run).text
+    if status == Status.SHIPPING and run is not None and run.extra.get(SHIP_STEP):
+        return f"shipping: {run.extra[SHIP_STEP]}"  # the step the ship is in (T2060)
     return {
         Status.BACKLOG: "not started",
         Status.YOURS: "yours: no repo on this note" if run is None else "assigned to you",

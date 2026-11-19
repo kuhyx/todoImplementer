@@ -53,6 +53,16 @@ describe("renderCard", () => {
     expect(renderCard(card, NOW).querySelector(".card-meta")?.textContent).not.toContain(card.repo);
   });
 
+  it("[T2060] a shipping card shows a spinner before the server's step line, other cards none", () => {
+    const shipping = makeCards().find((c) => c.status === "shipping");
+    const working = makeCards().find((c) => c.status === "working");
+    if (shipping === undefined || working === undefined) throw new Error("fixture");
+    const line = renderCard({ ...shipping, current: "shipping: pushing" }, NOW).querySelector(".card-current");
+    expect(line?.textContent).toBe("shipping: pushing");
+    expect(line?.querySelector(".spinner")).not.toBeNull();
+    expect(renderCard(working, NOW).querySelector(".card-current .spinner")).toBeNull();
+  });
+
   it("shows server words only, no raw objects", () => {
     const card = makeCards().find((c) => c.status === "needs_you");
     if (card === undefined) throw new Error("fixture");

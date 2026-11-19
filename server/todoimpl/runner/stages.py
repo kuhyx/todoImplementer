@@ -12,16 +12,13 @@ from todoimpl.umbrella import bounce
 from todoimpl.umbrella.note import is_umbrella
 from todoimpl.umbrella.run import run as run_umbrella
 
-from . import appfix, hold, phone, shipfix, tiering
+from . import hold, phone, tiering
 from .checks import SENTENCE_NOTE, discover, record, run_all
 from .closing import closing_stage
-from .deploy import DeployFailedError
-from .deployheal import DirtyCheckoutError
 from .files import NeedsYouError, write_json
 from .live import rejudge, settle
-from .parsing import parse_criteria, parse_live, parse_questions, parse_self_check
-from .ship import CommitRefusedError, RedAfterRebaseError, ShipPlan, ship
-from .worktree import base_ref, repo_dir
+from .parsing import parse_criteria, parse_questions, parse_self_check
+from .shipstage import shipping
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -31,7 +28,6 @@ if TYPE_CHECKING:
     from .pipeline import Driver
 
 MAX_CHECK_FIXES = 2
-MAX_SHIP_FIXES = 2
 MAX_PART_NUDGES = 2
 
 
@@ -182,65 +178,12 @@ def _checks(d: Driver) -> str | None:
     return _retry(d, "check_fixes", cap, tail, NeedsYouError(why, "checks_failed"))
 
 
-def _word(row: dict[str, object]) -> str:
-    return "deferred" if row["deferred"] else "done" if row["done"] else "not done"
-
-
-def live_summary(report: str) -> str:
-    """One line per criterion of the live check, for the close evidence."""
-    rows = parse_live(report)
-    return "\n".join(f"live {r['criterion']}: {_word(r)} ({r['note']})" for r in rows)
-
-
-def _shipping(d: Driver) -> str | None:
-    if is_umbrella(d.item.body):  # Ship ships every child at its gate
-        return run_umbrella(d)  # type: ignore[arg-type]
-    if bounce.unverified(d.state):  # a child ships only on green checks, whatever path led here (T1955)
-        return "checks"
-    st, wt = d.state, Path(str(d.state.worktree))
-    if d.item.parts and not files.ticked(d.ctx.run_dir, d.item):
-        msg = "No part is ticked, so Ship would close nothing: tick the finished parts, then ship again"
-        raise NeedsYouError(msg, "run_failed")
-    live = live_summary(str((st.live_check or {}).get("report_md", "")))
-    checks = discover(wt, d.item.done_check)
-    plan = ShipPlan(
-        repo_dir(d.item.repo), wt, str(st.branch), d.item, checks, d.ctx.run_dir, d.ctx.check_timeout, live,
-        str(st.base_sha or ""),
-    )  # fmt: skip
-    try:
-        st.ship = ship(plan, d.ctx.client, d.ctx.now, allow_empty=st.auto_ship)
-    except (CommitRefusedError, RedAfterRebaseError) as refused:  # the session fixes it first (T1226, T2008)
-        fixes = int(st.extra.get("ship_fixes", 0))
-        if fixes >= MAX_SHIP_FIXES:
-            raise
-        d.activity(f"ship refused, the session fixes it ({fixes + 1}/{MAX_SHIP_FIXES}): {refused.text[:100]}")
-        st.extra.update(ship_fixes=fixes + 1, failure_tail=refused.output, reship=True)
-        return "implement"
-    except DirtyCheckoutError as blocked:  # kuhy's edits block the deploy's pull: wait, never touch them
-        shipfix.wait_for_edits(st, blocked, d.ctx.now())
-    except DeployFailedError as failed:  # pushed, not deployed: maybe only because the phone is away
-        appfix.phone_wait(st, failed, d.ctx.now())
-        d.activity(shipfix.deploy_fix(st, failed))  # raises `failed` when kuhy is needed
-        return "implement"
-    sha = st.ship["commit"]
-    if sha:
-        st.head_sha = sha
-        appfix.shipped(d.ctx.root, d.ctx.run_dir, d.item, sha, d.ctx.now())
-    if sha and "pushed_at" not in st.ship:  # ship() closed it because the session pushed it already (T1865)
-        d.activity(f"closed: the session already pushed {sha[:12]}")
-        return "shipped"
-    d.activity(
-        f"shipped {sha[:12]} to origin/{base_ref(plan.repo)[1]}" if sha else "closed with no code change"
-    )
-    return "shipped"
-
-
 HANDLERS: dict[str, Callable[[Driver], str | None]] = {
     "spec": _spec,
     "plan": _plan,
     "implement": _implement,
     "live_check": _live_check,
     "checks": _checks,
-    "shipping": _shipping,
+    "shipping": shipping,
     "closing": closing_stage,
 }

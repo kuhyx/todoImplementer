@@ -52,6 +52,9 @@ plan, live check and checks are green goes from `checks` straight to `shipping` 
 deploy per the repo's `deploy:` line, close), and a closing run closes its note as soon as its own re-run is green.
 No click, no `Ready to ship` / `Ready to close` status or column; `shipping` shows in Running.
 
+- **Loader.** The card's line reads `shipping: <step>` (squashing the work, rebasing, running the checks, pushing,
+  deploying, closing the note) from `run.extra.ship_step`, set by `ShipPlan.step`; the web card draws a spinner
+  before it. Each step also lands in the activity feed.
 - **Restart.** A run found at `gate` when the server starts (an older server left it) is queued in `shipping`, a
   closing one in `closing` with `close_only` (no second Sonnet turn): `runner/recovery.py`.
 - **Failure.** Any Ship or deploy failure takes the paths below and in `DOCS-errors.md` (Needs you with Retry,
