@@ -39,6 +39,7 @@ class Verdict:
     repo: str | None = None  # existing_repo: owner/name
     name: str | None = None  # new_repo: the kebab-case name to create
     token: str | None = None  # all_repos: a literal the change touches (`git grep -F`), None = every repo
+    path: str | None = None  # all_repos: the directory to look in (`.github`), None = the whole repo
 
 
 def digest(title: str, body: str) -> str:

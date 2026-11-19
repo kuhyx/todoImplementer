@@ -19,7 +19,7 @@ from todoimpl.repotask.ids import repo_card_id
 from todoimpl.todo_mcp.model import TodoError
 from todoimpl.umbrella.note import is_umbrella
 
-from . import label, newrepo
+from . import label, newrepo, umbrella
 from .classify import ClassifyError, build_prompt, claude_classifier, parse
 from .repos import Listing
 
@@ -113,11 +113,23 @@ class TriageService:
         return done
 
     def _act(self, card: CardTask, verdict: label.Verdict, directory: Path) -> None:
-        """Do what a label needs without a click: existing_repo sets the repo (the card joins that repo's)."""
-        if verdict.label != label.EXISTING_REPO:
+        """Do what a label needs without a click: existing_repo sets the repo, all_repos makes an umbrella."""
+        note, fields = card.item.note_id[:8], {}
+        if verdict.label == label.EXISTING_REPO:
+            fields = {"repo": verdict.repo}
+        elif verdict.label == label.ALL_REPOS:
+            found = umbrella.matching(
+                self.repos(), verdict.token, verdict.path, lambda r: repo_path(r, self.src)
+            )
+            if not found:  # no child, no umbrella: the note stays Yours with the reason on its label
+                label.update(directory, error="no repo matches")
+                return
+            label.update(directory, repos=found)
+            fields = {"body": umbrella.body(card.title, card.item.body, found, note)}
+        else:
             return
         try:
-            self.client.update_task(card.item.note_id[:8], repo=verdict.repo)
+            self.client.update_task(note, **fields)
         except TodoError as exc:
             log.warning("setting the repo of %s failed: %s", card.id, exc)
             label.update(directory, error=str(exc))

@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 
 TIMEOUT_S = 50.0  # under the 60 s per-action cap
 BODY_CHARS = 1500
+PATH = re.compile(r"[\w.][\w./-]*")  # never starts with a dash, `..` is refused in parse
 NAME = re.compile(r"[a-z0-9][a-z0-9-]{1,38}[a-z0-9]")
 PROMPT = """override
 You label one todo note that has no repo yet. Labels:
@@ -24,7 +25,8 @@ You label one todo note that has no repo yet. Labels:
   a short kebab-case repo name (letters, digits, hyphens).
 - existing_repo: it clearly belongs to ONE of kuhy's repos listed below. Give "repo" exactly as listed.
 - all_repos: it asks for one change across many or all of kuhy's repos. Give "token", a short literal that
-  appears in the files (under .github) of the repos the change applies to, or omit it when every repo applies.
+  appears in the files of the repos the change applies to, and "path", the directory it is in (such as
+  .github); omit both when every repo applies.
 - research: it is mainly URLs or articles to read, study and turn into suggested actions.
 - manual: not code: an errand, a message to send, a link to read for fun, a puzzle, a question to think about.
 When unsure between manual and anything else, choose manual.
@@ -35,7 +37,7 @@ Note title: {title}
 Note text: {body}
 
 Reply with ONLY a JSON object
-{{"label": "...", "reason": "one line", "repo": "...", "name": "...", "token": "..."}};
+{{"label": "...", "reason": "one line", "repo": "...", "name": "...", "token": "...", "path": "..."}};
 omit the fields the label does not use.
 """
 
@@ -91,5 +93,7 @@ def parse(text: str, repos: list[str]) -> Verdict:
             else Verdict("manual", f"bad repo name {name}: {why}")
         )
     if label == ALL_REPOS:
-        return Verdict(label, why, token=_text(data, "token"))
+        path = _text(data, "path")
+        ok = path is not None and PATH.fullmatch(path) and ".." not in path
+        return Verdict(label, why, token=_text(data, "token"), path=path if ok else None)
     return Verdict(label, why)
