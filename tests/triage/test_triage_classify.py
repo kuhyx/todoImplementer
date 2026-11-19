@@ -44,6 +44,14 @@ def test_parse(reply: str, expected: Verdict) -> None:
     assert classify.parse(reply, REPOS) == expected
 
 
+def test_t2076_an_answer_with_broken_json_but_a_readable_label_is_still_a_verdict() -> None:
+    """A live reply for a reading list had a quote inside its reason, so no label was stored."""
+    reply = '{"label": "manual", "reason": "links with no code, not "research" at all", "name": "x"} (done)'
+    assert classify.parse(reply, REPOS).label == "manual"
+    cut = '{"label": "new_repo", "name": "pacman-gui", "reason": "asks for a new app, the reply was cut o'
+    assert classify.parse(cut, REPOS) == Verdict(NEW_REPO, "", name="pacman-gui")
+
+
 @pytest.mark.parametrize("reply", ["no json", '{"label":"bogus"}', "[1]", "{broken}", '{"reason":"x"}'])
 def test_parse_refuses_an_answer_without_a_known_label(reply: str) -> None:
     with pytest.raises(classify.ClassifyError, match="not a JSON object"):

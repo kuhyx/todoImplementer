@@ -21,7 +21,7 @@ note is triaged again, an unchanged one never. A failed call leaves the note unt
 
 `board/norepo.py` `is_yours` is the one rule: no repo, not an umbrella and no `new_repo` or `research` label. The card
 carries `triage` (`task_card.triage`, optional), drawn as an icon with the name only in tooltip and aria-label.
-`CardTask.triage` is read from the run dir by the board fetch.
+`CardTask.triage` is read from the run dir by the board fetch; the tick also patches the cache snapshot at once (`TaskCache.set_triage`, T2074), because a label is a file and no note change wakes a fetch (about 30 s). A reply with broken JSON but readable fields still counts (T2076).
 
 ## New repo
 

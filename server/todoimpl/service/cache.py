@@ -125,6 +125,16 @@ class TaskCache:
             self._snap = fresh
         return fresh
 
+    def set_triage(self, card_id: str, found: str) -> None:
+        """Show a triage label now: it is a file in the run dir, so no note changed and no fetch would see it.
+
+        The next full fetch reads the same file, so the patch never outlives the truth (T2074).
+        """
+        with self._lock:
+            tasks = tuple(replace(t, triage=found) if t.id == card_id else t for t in self._snap.tasks)
+            self._snap = replace(self._snap, tasks=tasks)
+        self.poke()
+
     def poke(self) -> None:
         """Refresh as soon as possible (after an action changed a note)."""
         self._wake.set()

@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 TIMEOUT_S = 50.0  # under the 60 s per-action cap
 BODY_CHARS = 1500
 PATH = re.compile(r"[\w.][\w./-]*")  # never starts with a dash, `..` is refused in parse
+PAIR = re.compile(r'"(\w+)"\s*:\s*"((?:[^"\\]|\\.)*)"')  # one string field of a reply that is not valid JSON
 NAME = re.compile(r"[a-z0-9][a-z0-9-]{1,38}[a-z0-9]")
 PROMPT = """override
 You label one todo note that has no repo yet. Labels:
@@ -80,6 +81,9 @@ def parse(text: str, repos: list[str]) -> Verdict:
         data: Any = json.loads(text[start : end + 1]) if 0 <= start < end else None
     except ValueError:
         data = None
+    if data is None and start >= 0:
+        # A quote inside the reason or a cut-off reply breaks the JSON but not the fields before it (T2076).
+        data = dict(PAIR.findall(text[start:]))
     if not isinstance(data, dict) or data.get("label") not in LABELS:
         msg = f"answer is not a JSON object with a label: {text[:200]!r}"
         raise ClassifyError(msg)

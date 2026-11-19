@@ -109,6 +109,7 @@ class TriageService:
                 continue
             directory = run_dir(self.root, card.id)
             label.save(directory, verdict, label.digest(card.title, card.body), self._clock())
+            self.cache.set_triage(card.id, verdict.label)  # the board shows it now, not after the next fetch
             self._act(card, verdict, directory)
             done += 1
         return done
