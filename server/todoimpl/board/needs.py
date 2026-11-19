@@ -58,7 +58,7 @@ def _phone_wait_text(wait: object) -> str:
 def _phone_needs(run: RunState) -> Needs | None:
     """Needs of a phone wait, or None when the run does not rest on one."""
     wait, err = run.extra.get("waiting_phone"), run.error
-    if not wait:
+    if not wait or run.stage == "spec_wait":  # a spec card has no phone check to wait for (T2081)
         return None
     if isinstance(wait, dict) and wait.get("tried_attached") and run.last_tag == "A" and not err:
         # The phone was in when Claude asked this, so plugging it in is not the answer.

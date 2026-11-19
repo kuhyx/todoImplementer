@@ -206,7 +206,7 @@ class Driver:
             raise failure from exc
         st.extra["last_reply"] = res.text[-1500:]
         if res.finished and not res.is_error:
-            phone.after_turn(st, ctx.run_dir, res)
+            phone.after_turn(st, ctx.run_dir, res, stage)
         self.save()
         self._check_turn(res)
         if (

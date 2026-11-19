@@ -113,7 +113,7 @@ with its error text ("pushed, not deployed ..."), the push stays recorded (`push
 `board.status.compute` says `waiting_phone_update` (column Running, not Needs you). The card line reads "wait for
 phone to connect, then update the app"; actions are Retry (deploys now) and Cancel.
 
-`PhoneWatcher` (every 20 s, adb only while something waits) now also lists these cards (`phone_updates`). When the
+`PhoneWatcher` (every 5 s, adb only while something waits) now also lists these cards (`phone_updates`). When the
 Pixel attaches it restarts each one (`Scheduler.phone_update_start`): `ship()` sees its own push and only deploys
 again (T1968), then closes the note and marks the ledger. Five phone waits per cycle; the sixth failure is an
 ordinary one (Needs you). A new cycle forgets `app_error` and `phone_tries`.

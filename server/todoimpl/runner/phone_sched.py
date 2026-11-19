@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import shutil
 import threading
 from typing import TYPE_CHECKING
 
@@ -12,7 +11,7 @@ from todoimpl.board.parse import StateError
 from todoimpl.errors.marks import PHONE
 
 from .engine import Engine
-from .phone import READY, SERIAL, TRIED, adb_command, attached_serials
+from .phone import SERIAL, TRIED, adb_command, attach, attached_serials
 from .pipeline import WORK_STAGES
 
 if TYPE_CHECKING:
@@ -21,8 +20,7 @@ if TYPE_CHECKING:
     from todoimpl.board.state import RunState
 
 log = logging.getLogger("todoimpl.runner")
-WATCH_SECS = 20.0
-EMULATOR_REPORT = "live_check.emulator.md"
+WATCH_SECS = 5.0  # adb runs only while a card waits, so a plug-in is noticed within a few seconds
 
 
 class PhoneWatcher(threading.Thread):
@@ -136,6 +134,15 @@ class PhoneEngine(Engine):
         """Restart the Ship of such a card (the Scheduler does); the bare engine cannot start runs."""
         return False
 
+    def heal_phone_waits(self) -> None:
+        """Drop the phone wait a spec card carries by mistake: it is no phone ask and nothing clears it."""
+        with self._cv:
+            for path in sorted(self.root.glob("*/state.json")):
+                st = self._peek(path.parent)
+                if st is not None and st.stage == "spec_wait" and st.extra.pop("waiting_phone", None):
+                    st.last_tag = None
+                    self.save(path.parent.name, st)
+
     def phone_unplugged(self, cards: list[str]) -> None:
         """Re-arm the given tried cards once the Pixel is gone, so the next plug-in runs them once."""
         with self._cv:
@@ -150,15 +157,7 @@ class PhoneEngine(Engine):
             st = self._waiting(card)
             if st is None:
                 return False
-            run_dir = self.root / card
-            if (run_dir / READY).exists():
-                (run_dir / READY).replace(run_dir / "phone_ready.used.json")
-            if (run_dir / "live_check.md").exists():
-                shutil.copyfile(run_dir / "live_check.md", run_dir / EMULATOR_REPORT)
-            st.stage, st.last_tag, st.error = "live_check", None, None
-            st.extra["phone_attached"] = True
-            for key in ("live_fixes", "nudges"):
-                st.extra.pop(key, None)
+            attach(st, self.root / card)
             self.save(card, st)
             self.enqueue(card, first=True)
             return True

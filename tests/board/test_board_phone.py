@@ -9,7 +9,6 @@ def test_t1540_a_phone_wait_is_its_own_needs_kind_ahead_of_every_other_reason() 
     for fields in (
         {},
         {"assignee": "human"},
-        {"stage": "spec_wait"},
         {"stage": "live_check"},
     ):
         state = run(last_tag="A", extra={"waiting_phone": WAIT}, **fields)

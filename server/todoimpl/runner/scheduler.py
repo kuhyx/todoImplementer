@@ -13,7 +13,7 @@ from todoimpl.board.types import MANUAL_REASON
 from todoimpl.repotask.start import prepare
 from todoimpl.todo_mcp.model import TodoError
 
-from . import appfix, closing, retry, stopping, whenfree
+from . import appfix, closing, phone, retry, stopping, whenfree
 from .engine import Client, default_clock
 from .files import read_json
 from .phone_sched import PhoneEngine
@@ -95,6 +95,7 @@ class Scheduler(PhoneEngine):
         """Settle a Done manually click a restart cut; a Ship that completed across it starts its handoff."""
         stopping.recover(self)
         whenfree.recover(self)
+        self.heal_phone_waits()
 
     def start(self, card: str, *, auto_ship: bool | None = None, extra: dict[str, Any] | None = None) -> None:
         """Start, Restart, Retry or Hand back; a failed run (Retry, Hand back) keeps its auto-ship choice.
@@ -172,6 +173,7 @@ class Scheduler(PhoneEngine):
             st.stage = "implement"
         elif st.stage == "spec_wait":
             st.stage = "spec"
+            st.extra.pop("waiting_phone", None)  # a spec turn stages no phone check (T2080)
         elif st.stage == "failed":
             failed = str(st.extra.pop("failed_stage", "implement"))
             st.stage = "implement" if failed in ("shipping", "gate") else failed
@@ -180,6 +182,11 @@ class Scheduler(PhoneEngine):
         st.error, st.last_tag, st.assignee = None, None, "claude"
         for key in RESET:
             st.extra.pop(key, None)
+        if st.stage in (
+            "implement",
+            "live_check",
+        ):  # "it is connected": the Pixel in adb is tested on (T2084)
+            phone.attach_if_present(st, self.root / st.task_id)
 
     def send(self, card: str, text: str) -> None:  # noqa: D102
         if not text.strip():

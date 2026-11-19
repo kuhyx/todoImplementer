@@ -77,6 +77,11 @@ def make_env(tmp: Path) -> tuple[Env, dict[str, str]]:
     executable(world.bin / "capped.sh", '#!/bin/sh\nexec "$@"\n')
     executable(world.bin / "gh", GH_SHIM)
     executable(world.bin / "systemctl", "#!/bin/sh\nexit 3\n")  # no unit is ever running: never the real one
+    (world.tmp / "adb").mkdir()  # no phone attached, and never the real adb (`fake_adb` lists devices)
+    executable(
+        world.bin / "adb",
+        f'#!/bin/sh\nFAKE_ADB_DIR="{world.tmp / "adb"}" exec "{sys.executable}" "{SHIMS / "adb"}" "$@"\n',
+    )
     env = {
         "HOME": str(world.home),
         "PATH": f"{world.bin}:{os.environ['PATH']}",

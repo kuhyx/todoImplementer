@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import re
+import shutil
 import subprocess
 from typing import TYPE_CHECKING
 
@@ -20,6 +21,8 @@ if TYPE_CHECKING:
 READY = "phone_ready.json"
 SERIAL = "23181JEGR08034"
 TRIED = "tried_attached"
+EMULATOR_REPORT = "live_check.emulator.md"
+PHONE_STAGES = ("spec", "plan")  # turns here never stage a phone check: a leftover wait must not bind them
 ADB_TIMEOUT = 5.0
 DEVICE_COLUMNS = 2
 HANDS = "hands_nudged"
@@ -90,9 +93,16 @@ def adb_command() -> str:  # noqa: D103
     return os.environ.get("TODOIMPL_ADB", "adb")
 
 
-def after_turn(st: RunState, run_dir: Path, res: TurnResult) -> None:
-    """Record or clear the phone wait after a turn; a staged check turns any non-question tag into `A`."""
+def after_turn(st: RunState, run_dir: Path, res: TurnResult, stage: str = "") -> None:
+    """Record or clear the phone wait after a turn; a staged check turns any non-question tag into `A`.
+
+    A spec or plan turn stages nothing: an old `phone_ready.json` there must not park the card on a phone it
+    may already have (T2080), so such a turn only clears a leftover wait.
+    """
     attached = bool(st.extra.pop("phone_attached", False))
+    if stage in PHONE_STAGES:
+        st.extra.pop("waiting_phone", None)
+        return
     staged = read_json(run_dir / READY)
     line = phone_line(res.text)
     if attached and line is None:
@@ -120,3 +130,30 @@ def attached_serials(adb: str, timeout: float = ADB_TIMEOUT) -> set[str]:
         return set()
     rows = (line.split("\t") for line in out.splitlines()[1:])
     return {row[0] for row in rows if len(row) == DEVICE_COLUMNS and row[1].strip() == "device"}
+
+
+def attach(st: RunState, run_dir: Path) -> None:
+    """Turn a phone wait into a phone-attached live check; keep the emulator report and the staged deploy."""
+    if (run_dir / READY).exists():
+        (run_dir / READY).replace(run_dir / "phone_ready.used.json")
+    if (run_dir / "live_check.md").exists():
+        shutil.copyfile(run_dir / "live_check.md", run_dir / EMULATOR_REPORT)
+    st.stage, st.last_tag, st.error = "live_check", None, None
+    st.extra["phone_attached"] = True
+    for key in ("live_fixes", "nudges"):
+        st.extra.pop(key, None)
+
+
+def attach_if_present(st: RunState, run_dir: Path, tag: str | None = "A") -> bool:
+    """Attach a run whose untried phone wait meets the Pixel in `adb devices`; True when it did (T2083).
+
+    The server checks adb itself, so a session never rests on "plug in the Pixel" while it is in. A wait
+    already tried with the phone attached stays (it waits for a replug), so this cannot loop.
+    """
+    wait = st.extra.get("waiting_phone")
+    if tag != "A" or not isinstance(wait, dict) or wait.get(TRIED):
+        return False
+    if SERIAL not in attached_serials(adb_command()):
+        return False
+    attach(st, run_dir)
+    return True

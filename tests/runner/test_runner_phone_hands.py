@@ -5,7 +5,6 @@ from runnerfakes import Env
 from schedfakes import CARD, IMPL, LIVE_OK, PLAN, boot, reply, state, wait, wait_stage
 from todoimpl.board.needs import needs
 from todoimpl.runner import phone
-from todoimpl.runner.phone_sched import PhoneWatcher
 from todoimpl.runner.pipeline import NUDGE
 from todoimpl.runner.scheduler import COUNTERS
 
@@ -83,9 +82,7 @@ def attached_run(world: Env, last: str) -> None:
     fake_adb(world, f"{SERIAL} device")
     sched, _ = boot(world, PLAN, IMPL, phone_turn(world), reply(last), LIVE_OK, done_check="true")
     try:
-        sched.start(CARD)
-        wait_stage(world, sched, "live_check", tag="A")
-        assert PhoneWatcher(sched).tick() is True
+        sched.start(CARD)  # the Pixel is in: the staged ask goes straight back (T2083)
         wait_stage(world, sched, "gate")
     finally:
         sched.close()
@@ -112,8 +109,6 @@ def test_t1831_a_lost_phone_ask_on_an_attached_turn_is_not_nudged(world: Env) ->
     )
     try:
         sched.start(CARD)
-        wait_stage(world, sched, "live_check", tag="A")
-        assert PhoneWatcher(sched).tick() is True
         st = wait_stage(world, sched, "live_check", tag="A")
         assert len(world.calls()) == 4
         assert needs(st).text == "the Pixel is gone, plug it in"

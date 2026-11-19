@@ -28,7 +28,7 @@ def test_t1530_a_staged_phone_check_rests_the_run_in_the_phone_category(world: E
         assert st.extra["waiting_phone"] == {**READY, "note": "plug in the Pixel"}
         assert needs(st).kind == "phone"
         assert compute(client.get_task(CARD), st, live=False, limit_until=None).value == "needs_you"
-        assert adb_calls(adb) == []
+        assert adb_calls(adb) == ["devices"]  # asked once, before parking (T2083)
     finally:
         sched.close()
 
@@ -66,9 +66,7 @@ def test_t1532_the_emulator_report_is_kept_for_the_phone_turn(world: Env) -> Non
     )
     sched, _ = boot(world, PLAN, IMPL, live, LIVE_OK, done_check="true")
     try:
-        sched.start(CARD)
-        wait_stage(world, sched, "live_check", tag="A")
-        assert PhoneWatcher(sched).tick() is True
+        sched.start(CARD)  # the Pixel is in already: the staged ask goes straight back (T2083)
         wait_stage(world, sched, "gate")
         assert (world.root / CARD / "live_check.emulator.md").read_text(encoding="utf-8") == report
     finally:
@@ -146,11 +144,12 @@ def test_t1536_only_a_resting_phone_wait_can_be_attached(world: Env) -> None:
 
 
 def test_the_watcher_thread_polls_and_stops(world: Env) -> None:
-    fake_adb(world, f"{SERIAL} device")
+    adb = fake_adb(world)
     sched, _ = boot(world, PLAN, phone_turn(world), LIVE_OK, done_check="true")
     try:
         sched.start(CARD)
         wait_stage(world, sched, "implement", tag="A")
+        (adb / "devices").write_text(f"{SERIAL} device\n", encoding="utf-8")
         watcher = sched.start_phone_watch(interval=0.05)
         assert sched.start_phone_watch() is watcher
         wait(lambda: state(world).stage != "implement")

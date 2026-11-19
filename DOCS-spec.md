@@ -216,6 +216,10 @@ Feel/audio criteria are `[~] skipped: needs a human sense` and never block; the 
 Runner side (`runner/phone.py`, `hands_nudge`): when a live-check turn ends on an `A:` asking kuhy to tap, open,
 look, plug, pause or feel, ONE runner nudge turn tells Claude to do it on its slot; a second ask rests as Needs you
 with the ask text. An unattached `A: phone:` (the cable wait) and an attached one (a lost phone) are never nudged.
+The server also checks `adb devices` itself (kuhy, 2026-11-19): a turn that ends `A: phone:` with the Pixel already
+listed as `device` (emulators beside it do not matter) goes straight back to the session on the attached prompt,
+once; a Send to a waiting card does the same, and the watcher (5 s) resumes any card that waits while the Pixel
+shows. `phone_ready.json` is applied in implement and live-check turns only: a spec or plan turn never re-parks.
 
 ## Token usage (CHANGE 4)
 

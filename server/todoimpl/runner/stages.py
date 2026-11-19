@@ -68,7 +68,7 @@ def _plan(d: Driver) -> str | None:
     return "implement"
 
 
-def _implement(d: Driver) -> str | None:
+def _implement(d: Driver) -> str | None:  # noqa: PLR0911 - one return per way out of the stage
     if is_umbrella(d.item.body):  # the rounds of an umbrella note (umbrella/run.py)
         return run_umbrella(d)  # type: ignore[arg-type]
     if isinstance(d, ResearchDriver):  # a note of URLs: report and choices (triage/research.py)
@@ -79,6 +79,8 @@ def _implement(d: Driver) -> str | None:
         return "implement"
     d.state.extra.pop("failure_tail", None)
     d.state.self_check = parse_self_check(res.text)
+    if phone.attach_if_present(d.state, d.ctx.run_dir, res.tag):  # the staged ask meets the Pixel at once
+        return "live_check"
     if res.tag in ("Q", "A") and bounce.again(d.state):  # an umbrella child has no one to ask (T1952)
         d.state.extra["nudge"] = bounce.brief(res.text)
         return "implement"
@@ -115,7 +117,7 @@ def _retry(d: Driver, key: str, cap: int, tail: str, stop: NeedsYouError) -> str
     return "implement"
 
 
-def _live_check(d: Driver) -> str | None:
+def _live_check(d: Driver) -> str | None:  # noqa: PLR0911 - one return per way out of the stage
     st, run_dir = d.state, d.ctx.run_dir
     if st.extra.get("resettle"):
         return rejudge(d)
@@ -131,6 +133,8 @@ def _live_check(d: Driver) -> str | None:
     replied = bool(st.extra.pop(phone.REPLIED, False)) or carried
     if phone.hands_nudge(st, res, attached=attached, info=info):  # Claude tries the phone itself first
         st.extra[phone.REPLY_CARRY] = replied
+        return "live_check"
+    if phone.attach_if_present(st, run_dir, res.tag):  # the Pixel is in adb: test on it, never rest (T2083)
         return "live_check"
     settles = phone.answered(st, run_dir, res.tag, replied=replied)
     if res.tag == "Q" or (res.tag == "A" and not settles):
