@@ -31,10 +31,11 @@ COUNTERS = (
     "failure_tail", "live_fixes", "check_fixes", "nudges", "nudge", "failed_stage", "resume_stage",
     "resettle", "retries", "crash_retries", "r_continues", "r_continue", "tagless_retry", "fresh",
     "ship_fixes", "deploy_fixes", "reship", "hands_nudged", "ask_grants", "ask_grant_total", "ask_forms",
-    "ask_form_total", "part_nudges", "ship_resumes", "phone_update",
+    "ask_form_total", "part_nudges", "ship_resumes", "phone_update", "self_resumes",
 )  # fmt: skip
 RESET = "live_fixes check_fixes nudges ship_fixes deploy_fixes reship hands_nudged".split()  # noqa: SIM905
 RESET += ["ask_grants", "ask_grant_total", "ask_forms", "ask_form_total"]  # Start and Retry reset these
+RESET += ["self_resumes"]
 
 
 class RunnerError(Exception):

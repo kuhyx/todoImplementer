@@ -36,6 +36,10 @@ cleared by Start, Retry and a note from kuhy). The count is saved before the gra
 grant the same ask twice. A further ask parks the card as before. Not used in the spec and plan stages, nor while a
 phone wait is set. No LLM. The standing grant tells sessions the same: never end on `A:` for what you can run.
 
+### Self-resume (`runner/resume.py`, T2104)
+
+An `A:` whose resume text is only commands and waits (`Resume by ...`, `is-active`, `when it finishes`) with nothing of kuhy's in it (no plug, audio, Ship click, credential, decision, ask block; a phone/screen check is Claude's own) does not park: the run rests in `paused_retry` on the retry ladder (1, 2, 5, 10 min, then 30 min) and the stage reruns with the ask as `(runner) Resume it yourself` prompt. 12 passes per run (`extra["self_resumes"]`, cleared by Start, Retry and a note), then the card parks as before. A phone wait the Pixel was already in (`tried_attached`) stays set and is no cable ask; an untried one is kuhy's cable and is left alone. Runs before the grant backstop and, unlike it, does not skip a phone wait.
+
 ## Where a repo lives (kuhy, 2026-11-19; `board/repos.py`, `board/clone.py`, T2079)
 
 The board used to assume `~/src/<name>`; claude-config lives in `~/.claude`, so its Start said "repo not found".

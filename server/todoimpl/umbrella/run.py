@@ -32,7 +32,7 @@ RESTING = ("paused_limit", "paused_retry")
 REPO_POLL = 2.0
 COUNTERS = (
     "bounces", "live_fixes", "check_fixes", "nudges", "nudge", "retries", "crash_retries", "ask_grants",
-    "ask_grant_total", "ask_forms", "ask_form_total", "ship_resumes",
+    "ask_grant_total", "ask_forms", "ask_form_total", "ship_resumes", "self_resumes",
 )  # fmt: skip
 
 
