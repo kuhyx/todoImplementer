@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from .types import TaskLike
 
 SHIP_STEP = "ship_step"  # run.extra: the step a shipping run is in (T2060)
+WAITS_FOR = "waits_for"  # run.extra: what an idle turn waits on, the build lock or a background job (T2124)
 CLOSED = ("done", "abandoned")
 DONE_STAGES = ("shipped", "closed")
 MANUAL_STAGE = "done_manually"  # kuhy did the work himself (T2064); the run ended with no push

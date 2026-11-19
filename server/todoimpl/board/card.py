@@ -14,7 +14,7 @@ from .badges import tier_badges
 from .needs import needs
 from .norepo import is_yours
 from .parts import is_repo_task, kuhys, manual_ask, parts_of
-from .status import CYCLE_ENDS, SHIP_STEP, Status, column, compute
+from .status import CYCLE_ENDS, SHIP_STEP, WAITS_FOR, Status, column, compute
 from .types import Limit, fmt_when
 from .umbrella import card_view
 
@@ -75,6 +75,12 @@ def _working(run: RunState) -> str:
     if run.stage == "paused_retry":
         at = time.strftime("%H:%M", time.localtime(run.resume_at or 0))
         return f"retrying at {at}: {run.extra.get('retry_reason', 'a failed turn')}"
+    if isinstance(
+        wait := run.extra.get(WAITS_FOR), dict
+    ):  # an idle turn's job: lock holder or command (T2124)
+        since = wait.get("since")
+        at = f" {time.strftime('%H:%M', time.localtime(float(since)))}" if since is not None else ""
+        return f"{'⏳🔒' if wait.get('lock') else '⏳'} {wait.get('who', '?')}{at}"
     return run.stage
 
 

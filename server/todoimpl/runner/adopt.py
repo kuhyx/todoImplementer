@@ -11,13 +11,14 @@ from __future__ import annotations
 import time
 from typing import TYPE_CHECKING
 
-from . import idle, launch, orphans
+from . import bgwait, buildlock, idle, launch, orphans
 from .files import EXIT_SUFFIX, STREAM_SUFFIX, read_json, sibling, write_json
 
 if TYPE_CHECKING:
     import threading
     from collections.abc import Callable
     from pathlib import Path
+    from typing import Any
 
     from .stream import StreamParser
 
@@ -25,6 +26,8 @@ POLL = 0.05  # a change shows within 100 ms
 START_GRACE = 30.0  # a launched host that has not recorded itself by then never started
 FED_SUFFIX = ".fed"
 IDLE_AFTER_RESULT = 600.0  # a turn silent this long after its result, with no shell running, is ended (T1991)
+WAIT_AFTER = 1.0  # a turn silent this long after its result shows what its background job waits on (T2124)
+SCAN_EVERY = 1.0  # seconds between two looks at that job (a few small /proc reads)
 
 
 class Detached(BaseException):
@@ -106,6 +109,32 @@ class _Feed:
         self._emit(partial, show=True)
 
 
+class _Waits:
+    """Tell `show` what an idle turn's background job waits on (`bgwait.scan`), only when that changes."""
+
+    def __init__(self, run_dir: Path, show: Callable[[dict[str, Any] | None], None] | None) -> None:
+        self.run_dir, self.show = run_dir, show
+        self.shown: dict[str, Any] | None = None
+        self.next = 0.0
+
+    def _tell(self, found: dict[str, Any] | None) -> None:
+        if found != self.shown and self.show is not None:
+            self.shown = found
+            self.show(found)
+
+    def heard(self) -> None:
+        """Clear the wait: the stream spoke, so the turn works again."""
+        self._tell(None)
+
+    def quiet(self, *, finished: bool, silent_for: float, pid: int | None) -> None:
+        """Look again at most every `SCAN_EVERY` s once the result is in and the stream is silent."""
+        now = time.monotonic()
+        if self.show is None or not finished or silent_for < WAIT_AFTER or now < self.next:
+            return
+        self.next = now + SCAN_EVERY
+        self._tell(bgwait.scan(pid, self.run_dir, buildlock.root() / buildlock.LOCK))
+
+
 def follow(  # noqa: PLR0913, PLR0917 - the turn's files, parser, feed and its two ways out
     run_dir: Path,
     rec: orphans.Record,
@@ -113,11 +142,14 @@ def follow(  # noqa: PLR0913, PLR0917 - the turn's files, parser, feed and its t
     activity: Callable[[str, str, str | None], None],
     detach: threading.Event,
     stop: Callable[[], None] | None = None,
+    *,
+    waiting: Callable[[dict[str, Any] | None], None] | None = None,
 ) -> int | None:
     """Feed the turn's stream to `parser` until it is over; return claude's exit code, None if it was lost.
 
     Complete lines only (a partial one waits for the rest); lines below the `.fed` offset are parsed silently.
     `stop` ends a turn idle after its result (`idle.should_stop`); its exit record then closes it.
+    `waiting` hears what an idle turn's background job waits on, and None once the stream speaks (T2124).
     """
     stem = str(rec.stem)
     stream, over = sibling(run_dir, stem, STREAM_SUFFIX), sibling(run_dir, stem, EXIT_SUFFIX)
@@ -125,6 +157,7 @@ def follow(  # noqa: PLR0913, PLR0917 - the turn's files, parser, feed and its t
     pos = 0
     buf = b""
     quiet_since = time.monotonic()
+    waits = _Waits(run_dir, waiting)
     while True:
         if detach.is_set():
             raise Detached
@@ -135,17 +168,20 @@ def follow(  # noqa: PLR0913, PLR0917 - the turn's files, parser, feed and its t
         feed.lines(lines)
         if chunk:
             quiet_since = time.monotonic()
+            waits.heard()
             continue
         if ended:
             feed.last(buf)
             return exit_code(run_dir, stem)
         if not host_alive(run_dir, rec) and not over.exists():
             return None
+        pid = (orphans.read(run_dir) or rec).pid
+        waits.quiet(finished=parser.result.finished, silent_for=time.monotonic() - quiet_since, pid=pid)
         if stop is not None and idle.should_stop(
             finished=parser.result.finished,
             silent_for=time.monotonic() - quiet_since,
             limit=IDLE_AFTER_RESULT,
-            claude_pid=(orphans.read(run_dir) or rec).pid,
+            claude_pid=pid,
         ):
             activity("system", "turn idle after its result: ended, the next turn resumes it", None)
             stop()

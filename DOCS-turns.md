@@ -49,8 +49,19 @@ across all board sessions and the board's own checks. Code: `server/todoimpl/run
   the same lock before their timeout starts.
 - Turn env build tuning (`buildlock.TUNING`): `GRADLE_OPTS` (no daemon, 4 workers, `-Xmx3g`) and
   `CARGO_BUILD_JOBS=4`; no `MAKEFLAGS` (make already runs one job; `-j4` would raise it). The standing prompt says a wait is normal and never to kill a waiting build.
-- Not locked on purpose: a job started with `systemd-run` (it gets the user manager's PATH, no shims). It may
-  outlive the turn, and a server or watcher there would hold the lock for good; the slice caps its memory.
+- An idle turn names its wait (T2124, `runner/bgwait.py`): once a turn's result is in and its stream has been
+  silent 1 s, the follower looks every 1 s at the live shell jobs below claude. If a waiter on `build.lock` (a
+  `->` line of `/proc/locks`) is the card's (below claude, cwd in the card's run dir, or `TODOIMPL_BUILD_CARD`
+  in its environ; a `systemd-run` job is no child of claude) the card's line reads `⏳🔒 <holder> <HH:MM>` (the
+  holder's card, or its command when the card is `?`, and since when it holds); else `⏳ <job command> <HH:MM>`.
+  It sits in `state.extra.waits_for`, is saved and announced as a stage event, and is cleared when the stream
+  speaks again and when the turn ends.
+- The turn's 4 h clock (`$TODOIMPL_TURN_TIMEOUT`) keeps running while a job waits on the lock. Kept on purpose
+  for now: the host would need the same /proc attribution as the follower to pause it, and the waiter is often
+  outside its tree. A turn queued behind many builds can therefore time out and retry like a crash.
+- Not locked on purpose: a job started with `systemd-run` that keeps the user manager's PATH (no shims). It may
+  outlive the turn, and a server or watcher there would hold the lock for good; the slice caps its memory. A
+  job that passes PATH on (a repo's `scripts/bg.sh` does) takes the lock, with `?` as its card.
 
 ## Lean MCP (T1986)
 

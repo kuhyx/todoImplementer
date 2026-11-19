@@ -8,10 +8,12 @@ waited for (never killed), its cost kept, its result dropped, and then the asked
 
 from __future__ import annotations
 
+import functools
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from todoimpl.board import state as store
+from todoimpl.board.status import WAITS_FOR
 from todoimpl.credits import ledger, live, setting
 
 from . import adopt, allowlist, claude, credit, creditguard, files, guard, launch, orphans, session
@@ -141,6 +143,18 @@ def _apply(env: TurnEnv, state: RunState, rec: orphans.Record, res: TurnResult, 
     env.publish({"type": "cost", "cost_usd": state.cost_usd})
 
 
+def _show_wait(env: TurnEnv, state: RunState, found: dict[str, Any] | None) -> None:
+    """Put what the idle turn waits on into the card's line (or take it off): save, then announce (T2124)."""
+    if found is None and WAITS_FOR not in state.extra:
+        return
+    if found is None:
+        state.extra.pop(WAITS_FOR)
+    else:
+        state.extra[WAITS_FOR] = found
+    store.save(env.run_dir, state)
+    env.publish({"type": "stage", "stage": state.stage})
+
+
 def _consume(env: TurnEnv, state: RunState, rec: orphans.Record) -> TurnResult | None:
     """Follow the recorded turn to its end and apply its result once; None when the turn was lost."""
     stem, role = str(rec.stem), str(rec.role)
@@ -161,10 +175,13 @@ def _consume(env: TurnEnv, state: RunState, rec: orphans.Record) -> TurnResult |
             lambda until: state.extra.__setitem__("overage_hit", until),
             env.now,
         )
+    show = functools.partial(_show_wait, env, state)
+    show(None)  # a wait saved before a restart is no longer known
     try:
-        code = adopt.follow(env.run_dir, rec, parser, env.activity, handle.detach, handle.stop)
+        code = adopt.follow(env.run_dir, rec, parser, env.activity, handle.detach, handle.stop, waiting=show)
     finally:
         env.register(None)
+        show(None)
     if code is None:
         env.activity("error", f"turn lost: the {role} turn has no exit record and its host is gone")
         orphans.clear(env.run_dir)
