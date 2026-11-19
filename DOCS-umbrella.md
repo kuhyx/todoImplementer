@@ -183,7 +183,10 @@ round, verdict icon, free-worker icon, issue count and its error text. Child row
 - A child's Ship also deploys (`DOCS-landing.md`, "Done means deployed"). A child that is pushed but not deployed
   (its repo declares no `- deploy:` line, or the deploy failed) fails with "pushed, not deployed: ..."; the card lists
   those apart from children that need kuhy ("N of M children need you: ...; K pushed, not deployed: ...", T1967).
-  Retry re-ships such a child without pushing again, and a restart mid-deploy resumes it (T1968).
+  Retry re-ships such a child without pushing again, and a restart mid-deploy resumes it (T1968). Before that, a
+  missing line, a red or killed deploy and a killed or red gate step go back to the child's session or rerun by
+  themselves, and children that already failed so are revived on server start (`DOCS-landing.md`, "Ship failures
+  Claude can fix", T2340-T2344).
 
 ## The one exception to one card per repo
 

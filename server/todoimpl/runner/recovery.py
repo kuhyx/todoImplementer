@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import time
 from pathlib import Path
 
 from todoimpl.board import state as store
 from todoimpl.board.parse import StateError
+from todoimpl.umbrella import revive
 
 from . import hold, live, orphans, retry
 from .closing import CLOSE_ONLY
@@ -32,6 +34,11 @@ def interrupted(root: Path) -> list[str]:
         ):  # a run that rested here before T2060 ships or closes now
             st.stage, st.error = ("closing", None) if st.closing else ("shipping", None)
             st.extra[CLOSE_ONLY] = st.closing
+            store.save(path.parent, st)
+            queue.append(st.task_id)
+        elif st.stage == "failed" and "umbrella" in st.extra and revive.children(path.parent, time.time()):
+            st.stage, st.error = "implement", None  # its children Claude can fix work again (T2344)
+            st.extra.pop("failed_stage", None)
             store.save(path.parent, st)
             queue.append(st.task_id)
         elif live.rejudgeable(st):  # judged under older rules: judge the stored report again, no turn

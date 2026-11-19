@@ -113,7 +113,9 @@ the "session already pushed" path) and before the note closes, Ship runs the rep
 - **Declaration.** The repo's CLAUDE.md, Commands section, has a bullet ``- deploy: `<command>` `` (same shape as
   `- run: ...`). Ship reads it from the worktree at the pushed HEAD (`git show HEAD:CLAUDE.md`, first match outside
   code fences), never from `~/src/<repo>`. The command runs in the worktree through `capped.sh` (4 GiB, 20 % CPU) and
-  must be idempotent and exit non-zero unless its own health check passes.
+  must be idempotent and exit non-zero unless its own health check passes. A repo where nothing runs or installs
+  anywhere says so with ``- deploy: none (<why>)`` (T2342, `runner/deployline.py`): a reason is required, no unit
+  starts, and the evidence reads ``deploy `none (<why>)` exit 0: nothing to deploy``.
 - **Where it runs.** Like the pre-push gate (`DOCS-spec.md`), as its own transient unit `todoimpl-deploy-<card>`
   (`systemd-run --user --collect`, `RuntimeMaxSec` 4 h), one at a time with gates (the `gate.lock` flock). The host
   kills the command after 1800 s and writes `<run dir>/deploy/exit.json` (`commit`, `ok`, `exit`, `command`, `tail`,
@@ -158,12 +160,35 @@ the "session already pushed" path) and before the note closes, Ship runs the rep
   `prompts/standing.py`). The implement drive drops `pushed.json`, so its commits and tag ship as pushed work and the
   deploy runs again. 2 fix turns per Start (`deploy_fixes`, `shipfix.MAX_DEPLOY_FIXES`; Start, Retry and a note clear
   it), then Needs you; its text leads with the deploy's own `FAIL` lines when the 600-char tail would cut them. A
-  phone wait (`appfix.phone_wait`) comes first; an umbrella child, a "declares no deploy" failure or a blocked pull
-  (T2007) get no fix turn.
+  phone wait (`appfix.phone_wait`) comes first; a blocked pull (T2007) gets no fix turn. Umbrella children get it
+  too (T2343).
 - **Umbrella card.** Children that are pushed but not deployed are listed apart from children that need kuhy:
   `3 of 7 children need you: a (why); b. 4 pushed, not deployed: c (declares no deploy: command in CLAUDE.md); ...`.
 - **Self-healing.** The implement prompt (`prompts/standing.py`, `DEPLOY`) tells a session to add the line when the repo
-  lacks one: installs, releases and deploys the change, idempotent, non-zero unless its own health check passes, never
-  uninstalls an app or `pm clear`; a service that runs from `~/src/<repo>` updates it with `git -C ~/src/<repo> pull
-  --ff-only` (fails on a dirty tree). Umbrella children are worked by free workers that never see that prompt, so most
-  of them end "pushed, not deployed" until their repo has the line.
+  lacks one, and a Ship that finds none sends the session back to add it (below).
+
+## Ship failures Claude can fix (kuhy, 2026-11-19; `runner/shipfix.py`, `umbrella/revive.py`, T2340-T2344)
+
+Umbrella 2556952d-0 sat in Needs you with 24 children whose failures were all Claude's work. Only a physical tap,
+a secret only kuhy has or a decision with no recommended answer may stay in Needs you. `shipfix.heal` routes the
+rest. A plain rerun rests the run in `paused_retry` (kind `killed`) on the retry ladder and resumes at `shipping`.
+A fix turn goes to `implement` with a brief and `reship`, and the push record is dropped first, so edits the
+session leaves are squashed and pushed. Start and Retry clear every counter (also a child's, `umbrella/run.py`).
+
+| Failure (`NeedsYouError` subclass) | First | Then | Bound, then Needs you |
+| --- | --- | --- | --- |
+| Gate step killed while its log holds only the build lock's wait line (`GateRedError.waited_only`) | rerun, not counted as a kill | rerun | `gate_waits` 12 |
+| Gate step killed by a signal (exit < 0, 137, 143), e.g. OOM at capped.sh's 4 GiB | one rerun (`gate_kills`) | fix turn: shard it finer or cut its memory | `ship_fixes` 2 |
+| Gate step red (`GateRedError`) | fix turn with its tail | fix turn | `ship_fixes` 2 |
+| No `- deploy:` line (`NoDeployLineError`) | fix turn: add a working line and run it, or `- deploy: none (<why>)` | fix turn | `deploy_fixes` 2; the text then says Retry gives 2 more |
+| Deploy red (`DeployFailedError`), umbrella child or not | phone wait if the phone is why; a kill (exit < 0) reruns once (`deploy_kills`) | fix turn with the deploy log tail | `deploy_fixes` 2 |
+
+The -15 exits of 2556952d's gate steps (habit_stack, screen-locker, home_inventory) were OOM kills of the step's
+capped scope after it had the build lock, not a timeout of the wait: the queue is outside every step's timer
+(`buildlock.held`), and the wait line is only the first log line.
+
+**Children that already failed (T2344).** `recovery.interrupted` (server start) looks into every failed umbrella:
+`revive.children` rebuilds each failed child's failure from its error text (a deploy's tail from
+`<child>/deploy/exit.json`) and asks `shipfix.heal`. A rerun puts the child in `shipping` at once (its
+`ship_resumes` start afresh), a fix turn in `implement`; the count is saved before any drive, so restarts never
+revive a child without end. When any child revived, the umbrella goes back to `implement` and is queued.

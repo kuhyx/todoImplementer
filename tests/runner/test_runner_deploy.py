@@ -10,7 +10,7 @@ from typing import Any
 
 import pytest
 from runnerfakes import Env, make_repo, sh
-from todoimpl.runner import deploy, deployhost, gatehost, launch, worktree
+from todoimpl.runner import deploy, deployhost, deployline, gatehost, launch, worktree
 from todoimpl.runner.files import NeedsYouError
 
 CARD = "abcd1234-0"
@@ -32,9 +32,9 @@ def _deploys(world: Env) -> int:
 
 def test_t1966_declared_reads_the_first_bullet_outside_code_fences() -> None:
     text = FENCED + "* Deploy: `bash scripts/deploy.sh --all` (notes)\n- deploy: `second`\n"
-    assert deploy.declared(text) == "bash scripts/deploy.sh --all"
-    assert deploy.declared("- deploy:\n- deploy: none\n- run: `deploy:`\n") is None
-    assert deploy.declared(FENCED) is None
+    assert deployline.declared(text) == "bash scripts/deploy.sh --all"
+    assert deployline.declared("- deploy:\n- deploy: none\n- run: `deploy:`\n") is None
+    assert deployline.declared(FENCED) is None
 
 
 def test_t1966_a_deploy_runs_in_the_worktree_and_reports_exit_and_tail(

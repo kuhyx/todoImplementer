@@ -13,7 +13,7 @@ import re
 from typing import TYPE_CHECKING
 
 from todoimpl.errors.marks import unattended
-from todoimpl.runner.deploy import PREFIX
+from todoimpl.runner.deployline import PREFIX
 
 if TYPE_CHECKING:
     from todoimpl.board.state import RunState

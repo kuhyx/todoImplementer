@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from todoimpl.umbrella.sched import start_stage
 
-from . import deploy, hold
+from . import deployline, hold
 
 if TYPE_CHECKING:
     from todoimpl.board.state import RunState
@@ -41,7 +41,7 @@ def restart_stage(st: RunState, item: Item) -> str:
         return "closing"
     failed = st.extra.get("failed_stage") if st.stage == "failed" else None
     cut = str(st.error).startswith(INTERRUPTED)  # a restart cut the Ship (also the legacy "gate" form)
-    if (failed == "shipping" and str(st.error).startswith(deploy.PREFIX)) or (
+    if (failed == "shipping" and str(st.error).startswith(deployline.PREFIX)) or (
         failed in ("shipping", "gate") and cut
     ):  # Ship is idempotent (pushed.json, origin): it goes on, no second click
         return "shipping"

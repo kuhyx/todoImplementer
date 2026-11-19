@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from runnerfakes import sh
-from todoimpl.runner import deploy
+from todoimpl.runner import deployline
 from todoimpl.runner.files import NeedsYouError
 
 if TYPE_CHECKING:
@@ -32,17 +32,17 @@ def _repo(tmp_path: Path, files: dict[str, str], links: dict[str, str]) -> Path:
 
 def test_t1987_a_claude_md_symlink_to_agents_md_is_followed(tmp_path: Path) -> None:
     repo = _repo(tmp_path, {"AGENTS.md": DEPLOY}, {"CLAUDE.md": "AGENTS.md"})
-    assert deploy.command_of(repo, "kuhyx/demo") == "scripts/deploy.sh"
+    assert deployline.command_of(repo, "kuhyx/demo") == "scripts/deploy.sh"
 
 
 def test_t1987_a_regular_claude_md_still_wins(tmp_path: Path) -> None:
     repo = _repo(tmp_path, {"CLAUDE.md": DEPLOY, "AGENTS.md": "- deploy: `other`\n"}, {})
-    assert deploy.command_of(repo, None) == "scripts/deploy.sh"
+    assert deployline.command_of(repo, None) == "scripts/deploy.sh"
 
 
 def test_t1987_a_chain_of_links_and_a_subdirectory_target_are_followed(tmp_path: Path) -> None:
     repo = _repo(tmp_path, {"docs/real.md": DEPLOY}, {"CLAUDE.md": "docs/mid.md", "docs/mid.md": "real.md"})
-    assert deploy.command_of(repo, "kuhyx/demo") == "scripts/deploy.sh"
+    assert deployline.command_of(repo, "kuhyx/demo") == "scripts/deploy.sh"
 
 
 @pytest.mark.parametrize(
@@ -63,4 +63,4 @@ def test_t1987_unusable_links_still_say_no_deploy_declared(
 ) -> None:
     repo = _repo(tmp_path, files or {"README.md": "x\n"}, links)
     with pytest.raises(NeedsYouError, match=r"declares no deploy: command in CLAUDE\.md"):
-        deploy.command_of(repo, "kuhyx/demo")
+        deployline.command_of(repo, "kuhyx/demo")

@@ -11,19 +11,20 @@ from todoimpl.umbrella import bounce
 from todoimpl.umbrella.note import is_umbrella
 from todoimpl.umbrella.run import run as run_umbrella
 
-from . import appfix, shipfix
+from . import appfix, deploy, shipfix
 from .checks import discover
 from .deploy import DeployFailedError
 from .deployheal import DirtyCheckoutError
+from .deployline import NoDeployLineError
 from .files import NeedsYouError
+from .gate import GateRedError
 from .parsing import parse_live
 from .ship import CommitRefusedError, RedAfterRebaseError, ShipPlan, ship
+from .shipfix import MAX_SHIP_FIXES
 from .worktree import base_ref, repo_dir
 
 if TYPE_CHECKING:
     from .pipeline import Driver
-
-MAX_SHIP_FIXES = 2
 
 
 def _word(row: dict[str, object]) -> str:
@@ -52,6 +53,14 @@ def _ship_plan(d: Driver, wt: Path, live: str) -> ShipPlan:
     )  # fmt: skip
 
 
+def _heal(d: Driver, failed: GateRedError | NoDeployLineError | DeployFailedError) -> str:
+    """Send a failure Claude can fix to the session's fix turn (`shipfix.heal` raises a rerun or kuhy's)."""
+    d.activity(shipfix.heal(d.state, failed, d.ctx.now()))
+    if isinstance(failed, NoDeployLineError):  # the new line must reach origin: squash it, never skip deploy
+        deploy.forget(d.ctx.run_dir)
+    return "implement"
+
+
 def shipping(d: Driver) -> str | None:
     """Ship the run (an umbrella ships its children); return `shipped`, or the stage a refusal sends it to."""
     if is_umbrella(d.item.body):  # Ship ships every child at its gate
@@ -76,10 +85,8 @@ def shipping(d: Driver) -> str | None:
         return "implement"
     except DirtyCheckoutError as blocked:  # kuhy's edits block the deploy's pull: wait, never touch them
         shipfix.wait_for_edits(st, blocked, d.ctx.now())
-    except DeployFailedError as failed:  # pushed, not deployed: maybe only because the phone is away
-        appfix.phone_wait(st, failed, d.ctx.now())
-        d.activity(shipfix.deploy_fix(st, failed))  # raises `failed` when kuhy is needed
-        return "implement"
+    except (GateRedError, NoDeployLineError, DeployFailedError) as failed:  # Claude's to fix (T2340-T2343)
+        return _heal(d, failed)
     sha = st.ship["commit"]
     if sha:
         st.head_sha = sha

@@ -33,6 +33,44 @@ POLL = 1.0
 UNIT_ENV = ("PATH", "HOME", "TODOIMPL_CAPPED", "UTILS_ROOT", "GIT_CONFIG_GLOBAL", "GIT_CONFIG_NOSYSTEM")
 TAIL = 600
 _run = subprocess.run  # the one place systemd-run and systemctl are called: tests swap it
+SIGNAL_EXITS = (137, 143)  # a shell's report of SIGKILL / SIGTERM; below 0 is Python's own report
+WAIT_LINE = "waiting for build lock held by "  # `buildlock.WAITING`: the first line of a queued step
+FIX_ASK = "Fix it yourself: commit, rebase, push, deploy (you have permission)."
+KILLED_ASK = (
+    "The step was killed by a signal twice, most likely the 4 GiB memory cap of capped.sh (OOM): make it "
+    "fit, shard it finer or cut its memory (fewer workers or isolates, smaller shards), then commit, rebase, "
+    "push, deploy (you have permission)."
+)
+
+
+class GateRedError(NeedsYouError):
+    """A pre-push gate step is red; `killed` when a signal ended it (T2340, T2341)."""
+
+    def __init__(self, text: str, step: str, exit_code: int | None, tail: str) -> None:  # noqa: D107
+        super().__init__(text, "checks_failed")
+        self.step, self.exit_code, self.tail = step, exit_code, tail
+
+    @classmethod
+    def build(cls, step: str, exit_code: int | None, tail: str) -> GateRedError:
+        """Return the failure of `step` with the text the card shows."""
+        code = "timed out" if exit_code is None else f"exit {exit_code}"
+        return cls(f"Pre-push gate step {step} is red ({code}):\n{tail[-TAIL:]}", step, exit_code, tail)
+
+    @property
+    def killed(self) -> bool:
+        """Say whether a signal ended the step (OOM, a stop): not a red test."""
+        return self.exit_code is not None and (self.exit_code < 0 or self.exit_code in SIGNAL_EXITS)
+
+    @property
+    def waited_only(self) -> bool:
+        """Say whether the step was killed before it ran: its log holds nothing but the build lock's wait."""
+        lines = [ln for ln in self.tail.splitlines() if ln.strip()]
+        return self.killed and bool(lines) and all(ln.startswith(WAIT_LINE) for ln in lines)
+
+    @property
+    def output(self) -> str:
+        """The brief for the session's fix turn: the step's output, what failed, and what to do."""
+        return f"{self.tail[-1800:]}\n\n{self.text}\n\n{KILLED_ASK if self.killed else FIX_ASK}"
 
 
 def unit_name(card: str) -> str:
@@ -118,7 +156,5 @@ def run(wt: Path, run_dir: Path, card: str) -> list[CheckResult]:
             report(result)
     red = next((r for r in results if not r.passed), None)
     if red is not None:
-        code = "timed out" if red.exit_code is None else f"exit {red.exit_code}"
-        msg = f"Pre-push gate step {red.name.removeprefix('gate-')} is red ({code}):\n{red.tail[-TAIL:]}"
-        raise NeedsYouError(msg, "checks_failed")
+        raise GateRedError.build(red.name.removeprefix("gate-"), red.exit_code, red.tail)
     return results

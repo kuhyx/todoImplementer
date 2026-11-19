@@ -10,8 +10,6 @@ finds the unit still running, or its record, and goes on from there (`run`). Eve
 
 from __future__ import annotations
 
-import posixpath
-import re
 import subprocess
 import sys
 import threading
@@ -23,6 +21,7 @@ from . import deployheal, launch, stepwatch
 from .checks import CheckResult, clean_env, from_row, report
 from .deployheal import DirtyCheckoutError
 from .deployhost import DEPLOY_DIR, EXIT_FILE
+from .deployline import PREFIX, command_of, is_none, nothing
 from .files import NeedsYouError, read_json, write_json
 from .gate import UNIT_ENV
 from .worktree import git, repo_dir
@@ -30,7 +29,6 @@ from .worktree import git, repo_dir
 if TYPE_CHECKING:
     from pathlib import Path
 
-PREFIX = "pushed, not deployed"  # what every failure here starts with: the umbrella card keys on it
 PUSHED = "pushed.json"  # the run's own push: commit, time, the checks that were green for it
 UNIT_MAX = 14400.0  # the unit's RuntimeMaxSec: it may queue behind gates; above deployhost.TIMEOUT
 WAIT = UNIT_MAX + 120.0  # the server stops waiting once the unit cannot be running any more
@@ -45,11 +43,6 @@ FIX_ASK = (
     "Fix it yourself: bump and tag the changed package, push, redeploy, read the result "
     "(you have permission; a check like 'X changed after <tag>' wants a version bump and a release)."
 )
-LINE = re.compile(r"^[ \t]*[-*][ \t]+deploy:[ \t]*`([^`\n]+)`", re.IGNORECASE)
-LINK_HOPS = 5  # CLAUDE.md -> AGENTS.md is one hop; a few more cover a chain, a loop ends here
-SYMLINK_MODE = "120000"  # git tree mode of a symlink
-LS_FIELDS = 4  # `git ls-tree` prints <mode> <type> <sha>\t<path>
-FENCE = re.compile(r"^[ \t]*(```|~~~)")
 _run = subprocess.run  # the one place systemd-run and systemctl are called: tests swap it
 
 
@@ -73,46 +66,6 @@ class DeployFailedError(NeedsYouError):
     def output(self) -> str:
         """The brief for the session's fix turn: what the deploy printed and what to do about it."""
         return f"{self.text}\n\n{self.tail[-FIX_TAIL:]}\n\n{FIX_ASK}"
-
-
-def declared(text: str) -> str | None:
-    """Return the command of the first `- deploy: `<command>`` bullet outside code fences, else None."""
-    fenced = False
-    for line in text.splitlines():
-        if FENCE.match(line):
-            fenced = not fenced
-        elif not fenced and (found := LINE.match(line)) and found.group(1).strip():
-            return found.group(1).strip()
-    return None
-
-
-def claude_md(wt: Path) -> str:
-    """Return CLAUDE.md as committed at HEAD, following in-repo symlinks (CLAUDE.md -> AGENTS.md), else "".
-
-    `git show` on a symlink returns the link text, so the blob is resolved by hand: a target that is absolute,
-    leaves the repo, dangles, is not a file or loops past `LINK_HOPS` yields "".
-    """
-    path = "CLAUDE.md"
-    for _ in range(LINK_HOPS):
-        entry = git(wt, "ls-tree", "HEAD", "--", path, check=False).stdout.split(maxsplit=3)
-        if len(entry) < LS_FIELDS or entry[1] != "blob":
-            return ""
-        blob = git(wt, "cat-file", "blob", entry[2], check=False).stdout
-        if entry[0] != SYMLINK_MODE:
-            return blob
-        target = posixpath.normpath(posixpath.join(posixpath.dirname(path), blob.strip()))
-        if blob.startswith("/") or target == ".." or target.startswith("../"):
-            return ""
-        path = target
-    return ""
-
-
-def command_of(wt: Path, repo: str | None) -> str:
-    """Return the deploy command CLAUDE.md declares at HEAD, or raise "pushed, not deployed"."""
-    if (command := declared(claude_md(wt))) is None:
-        msg = f"{PREFIX}: {repo or 'the repo'} declares no deploy: command in CLAUDE.md"
-        raise NeedsYouError(msg, "run_failed")
-    return command
 
 
 def mark_pushed(run_dir: Path, commit: str, at: float, results: list[CheckResult]) -> None:
@@ -233,6 +186,8 @@ def run(wt: Path, run_dir: Path, card: str, repo: str | None, command: str | Non
     A pull that git stops on kuhy's edits in his checkout is `DirtyCheckoutError` (see `deployheal`).
     """
     command = command or command_of(wt, repo)
+    if is_none(command):  # `- deploy: none (<why>)`: nothing runs anywhere, the push is the deploy (T2342)
+        return nothing(command)
     commit = git(wt, "rev-parse", "HEAD").stdout.strip()
     healed = False
     while True:

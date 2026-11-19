@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, Protocol
 from todoimpl.repotask import files
 from todoimpl.todo_mcp.model import TodoError
 
-from . import deploy, gate
+from . import deploy, deployline, gate
 from .checks import CheckResult, run_all
 from .files import NeedsYouError
 from .worktree import base_ref, git, has_conflicts, output_tail, remove
@@ -194,7 +194,7 @@ def ship(
         }  # checked then: only the deploy is left
         return _finish(plan, client, now, kept, [CheckResult(**row) for row in own["results"]], branch)
     if landed := _landed(plan, ref):  # the session pushed its own work: check it, deploy it, close (T1964)
-        command = deploy.command_of(wt, plan.item.repo)  # no line: stop before the checks run
+        command = deployline.command_of(wt, plan.item.repo)  # no line: stop before the checks run
         plan.step("running the checks")
         results = _verified(plan, ref, changed=False)
         said = f"Pushed by the session: {', '.join(landed)}."

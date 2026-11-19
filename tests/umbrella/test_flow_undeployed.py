@@ -26,16 +26,40 @@ def test_t1967_a_child_pushed_but_not_deployed_is_named_as_such_not_as_needing_k
         st = at_rest(world, sched, "failed")
     finally:
         sched.close()
-    assert (
-        st.error
-        == "1 of 1 children pushed, not deployed: kuhyx/alpha (declares no deploy: command in CLAUDE.md)"
+    assert str(st.error).startswith(  # the session's two fix turns added no line (T2342)
+        "1 of 1 children pushed, not deployed: kuhyx/alpha (declares no deploy: command in CLAUDE.md: 2 fix"
     )
     child = store.load(world.root / CARD / "children" / KEY)
     assert child is not None
-    assert child.error == f"pushed, not deployed: {NO_LINE}"
+    assert child.error == (
+        f"pushed, not deployed: {NO_LINE}: 2 fix turns did not add one; Retry gives the session 2 more"
+    )
+    assert child.extra["deploy_fixes"] == 2
     remote = world.tmp / "remotes" / "alpha.git"
     assert sh(remote, "git", "log", "-1", "--format=%s", "main").startswith("Make alpha text-free")  # pushed
     assert "- [ ] kuhyx/alpha" in client.tasks[NOTE].body  # not ticked, the note stays open
+
+
+def test_t2342_a_child_with_no_deploy_line_adds_one_in_its_fix_turn_and_ships(world: Env, free: Free) -> None:
+    sched, client = boot(world, 1, undeployed=("alpha",))
+    world.script(NOTE, *manager("CHILD kuhyx/alpha: clean"))
+    world.script(KEY, *LIVE)
+    md = "# alpha\n\n## Commands\n\n- run: `./run.sh`\n- deploy: none (a demo: nothing runs anywhere)\n"
+    world.script(
+        KEY,
+        {"_fake": "write", "path": "CLAUDE.md", "text": md},
+        {"_fake": "result", "text": "Added the deploy line.\n\nD: done"},
+    )
+    try:
+        sched.start(CARD)
+        at_rest(world, sched, "shipped")
+    finally:
+        sched.close()
+    prompt = next(c["prompt"] for c in world.calls() if "declares no deploy" in str(c.get("prompt")))
+    assert "- deploy: none (<why>)" in prompt
+    remote = world.tmp / "remotes" / "alpha.git"
+    assert "deploy: none (a demo" in sh(remote, "git", "show", "main:CLAUDE.md")
+    assert "- [x] kuhyx/alpha" in client.tasks[NOTE].body
 
 
 def test_t1967_the_summary_lists_the_two_kinds_apart() -> None:
@@ -99,7 +123,7 @@ def test_t1967_retry_deploys_a_failed_child_again_and_does_not_push_it_twice(
         at_rest(world, sched, "shipped")
     finally:
         sched.close()
-    assert (_count(world, "pushes"), _count(world, "deploys")) == (1, 2)
+    assert (_count(world, "pushes"), _count(world, "deploys")) == (1, 4)  # 1 + 2 fix turns (T2343), Retry
     assert "- [x] kuhyx/alpha" in client.tasks[NOTE].body
 
 
