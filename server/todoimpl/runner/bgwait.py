@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from .buildlock import CARD_VAR, HOLDER
+from .buildqueue import tickets
 
 PROC = Path("/proc")
 CHILDREN = "children"  # an umbrella run keeps its children's run dirs here; each is its own card
@@ -84,17 +85,21 @@ def command(pid: int) -> str:
     return " ".join(first.split())[:WIDE]
 
 
-def waiters(lock: Path) -> list[int]:
-    """Return the pids blocked on `lock` (flock), from `/proc/locks`."""
+def _key(path: Path) -> str:
     try:
-        st = lock.stat()
+        st = path.stat()
     except OSError:
-        return []
-    key = f"{os.major(st.st_dev):02x}:{os.minor(st.st_dev):02x}:{st.st_ino}"
+        return ""
+    return f"{os.major(st.st_dev):02x}:{os.minor(st.st_dev):02x}:{st.st_ino}"
+
+
+def waiters(lock: Path) -> list[int]:
+    """Return the pids blocked on `lock` (flock) or on a ticket of its queue (T2164), from `/proc/locks`."""
+    keys = {_key(path) for path in (lock, *tickets(lock.parent))} - {""}
     found = []
     for line in read(PROC / "locks").splitlines():
         parts = line.split()
-        if "->" in parts and "FLOCK" in parts and len(parts) >= 4 and parts[-3] == key:  # noqa: PLR2004 - pid key start end
+        if "->" in parts and "FLOCK" in parts and len(parts) >= 4 and parts[-3] in keys:  # noqa: PLR2004 - pid key start end
             found.append(int(parts[-4]))
     return found
 

@@ -38,17 +38,36 @@ kuhy's order (2026-11-11, after ~25 sessions building at once froze the PC): exa
 across all board sessions and the board's own checks. Code: `server/todoimpl/runner/buildlock.{py,sh}`.
 
 - The lock is `flock` on `$TODOIMPL_HOME/build.lock`; `build.lock.holder` says `<card> (<cmd>) since <t>`, and a
-  waiter prints `waiting for build lock held by ...` to stderr once, then waits. Nothing times the wait out.
+  waiter prints `waiting for build lock held by ...; <n> ahead` to stderr once, then waits. Nothing times the wait out.
+- Arrival order (T2164, `runner/buildqueue.py`, same protocol in the wrapper): a build first takes the next
+  ticket `build.queue/<12 digits>` under `build.queue.lock` and flocks it while it waits and builds; it waits on
+  the nearest earlier ticket, then on `build.lock`, which stays the one mutex (an old wrapper or a hand-held lock
+  still excludes). A ticket whose flock is free is dead (killed waiter, reboot) and is removed by whoever meets
+  it. A ticket's line: `<pid> <wait|held> <card> (<cmd>) since <t>`; `buildlock.sh --queue` lists them in order.
+- No whole scripts (T2165): `buildlock.sh bash x.sh` (any shell, python or node with a script, `-c` or stdin,
+  also behind env, nice, timeout, capped.sh; or a script path) exits 2 with a hint. Run the script plainly: the
+  Bash tool's PATH has the shims, so each heavy tool inside takes the lock itself; a `systemd-run` job needs
+  `-E PATH -E TODOIMPL_BUILD_CARD` (a repo's `scripts/bg.sh` passes PATH). `python -m x` is one tool.
+- Hold ceiling (T2166, `runner/holdceiling.py`, a server thread): every 10 s it samples the holding ticket's
+  process tree; 2 min with no CPU beyond 1 %, no read or write bytes, no new or gone process and none in disk
+  sleep, and it sends the wrapper SIGUSR1: the wrapper lets go of the lock and ticket, the tool runs on unkilled,
+  and the card (or the run dir the wrapper works in) gets a `system` activity event. The server's own checks
+  and a pid that is no buildlock.sh are skipped.
+- No touching by hand (T2167): the standing prompt forbids it, and a `flock` guard shim refuses a flock on
+  build.lock, its holder or the queue (a path or an fd open on one) with exit 2. A Bash deny rule would be
+  inert: kuhy's session policy has `deny: []`.
 - Every turn gets one-line shims in `$TODOIMPL_HOME/shims` (flutter, dart, gradle, java for `./gradlew`, pnpm,
-  npm, yarn, vite, vitest, cargo, go, make, cmake, ninja, godot, pytest, uv) that run `buildlock.sh <tool>`.
+  npm, yarn, vite, vitest, cargo, go, make, cmake, ninja, godot, pytest, uv, pre-commit) that run
+  `buildlock.sh <tool>`, plus the `flock` guard.
   Never node, npx, uvx, git, python or claude: MCP servers and claude itself use them.
 - The shims reach claude's Bash tool through `CLAUDE_ENV_FILE` (`$TODOIMPL_HOME/shims-env/<card>.sh`, sourced
   before every Bash command), not a PATH prefix: kuhy's zshrc puts `~/.local/bin` (flutter, dart, uv, pytest)
   in front of any inherited PATH. MCP servers and hooks keep the plain PATH, so none of them can hold the lock.
 - Under a held lock `TODOIMPL_BUILD_LOCK_HELD=1` is set, so nested tools (flutter -> gradle -> java, make ->
-  pytest) run at once. A version or help probe (`--version`, `-version`, `version`, `--help`, `-h`, `help` as
+  pytest) run at once. A version or help probe (`--version`, `-version`, `version`, `--help`, `-h`, `-V`, `help` as
   the only argument) and a dev server (`dev`, `serve`, `start`, `preview`, `watch`, also after `run`) skip it.
-- Only the wrapper's bash holds the lock fd; the tool runs without it, so a daemon it leaves never keeps it.
+- Only the wrapper's bash holds the lock fds; the tool runs without them (in the background, so the wrapper hears
+  SIGUSR1 and forwards TERM, INT as TERM, and HUP), so a daemon it leaves never keeps the lock.
 - The board's checks (`checks.run_capped`: done_check, `make test`, pre-commit, gate steps, autocheck) take
   a lane before their timeout starts (T2186, `runner/lanes.py`). `lanes.classify` calls a command `light` only when
   every part (split on `;`, `&&`, `||`, `|`; `timeout`, `uv run`, `python -m`, `VAR=` peeled) is a known linter

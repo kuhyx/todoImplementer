@@ -1,6 +1,7 @@
 """One build at a time across every board session and check (DOCS-turns.md, "One build at a time").
 
-~25 sessions building at once froze kuhy's PC (2026-11-11). The lock is `<root>/build.lock` (flock). Turns
+~25 sessions building at once froze kuhy's PC (2026-11-11). The lock is `<root>/build.lock` (flock), taken in
+arrival order through the ticket queue (buildqueue.py, T2164). Turns
 get it through one-line shims in `<root>/shims` that run `<root>/buildlock.sh <tool>`; the server's own
 checks take it in `held` before their timeout starts, so a queued check never times out while it waits.
 A PATH prefix in the turn env does not reach claude's Bash tool (kuhy's zshrc puts ~/.local/bin first), so
@@ -20,6 +21,8 @@ from typing import IO, TYPE_CHECKING
 from todoimpl import atomic
 from todoimpl.board import state as store
 
+from . import buildqueue
+
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
 
@@ -34,14 +37,16 @@ ENV_DIR = "shims-env"
 # Real build tools only. Never node, npx, uvx, git, python or claude: MCP servers and claude itself use them.
 TOOLS = (
     "flutter", "dart", "gradle", "java", "pnpm", "npm", "yarn", "vite", "vitest", "cargo", "go", "make",
-    "cmake", "ninja", "godot", "pytest", "uv",
+    "cmake", "ninja", "godot", "pytest", "uv", "pre-commit",
 )  # fmt: skip
+# Guard shims: `flock` on the build lock, its holder or its queue is refused (it would jump the queue, T2167).
+GUARDS = ("flock",)
 # Build tuning for every turn: no Gradle daemon left behind, bounded workers and heap, four cargo jobs.
 TUNING = {
     "GRADLE_OPTS": "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=4 -Dorg.gradle.jvmargs=-Xmx3g",
     "CARGO_BUILD_JOBS": "4",
 }
-WAITING = "waiting for build lock held by {held}\n"
+WAITING = "waiting for build lock held by {held}; {ahead} ahead\n"
 
 
 def root() -> Path:
@@ -63,6 +68,8 @@ def ensure(base: Path) -> Path:
     shims = base / SHIM_DIR
     for tool in TOOLS:
         _put(shims / tool, f'#!/bin/bash\nexec {shlex.quote(str(wrapper))} {tool} "$@"\n', 0o755)
+    for tool in GUARDS:
+        _put(shims / tool, f'#!/bin/bash\nexec {shlex.quote(str(wrapper))} --{tool} "$@"\n', 0o755)
     return shims
 
 
@@ -92,23 +99,34 @@ def _say(out: IO[str] | int, text: str) -> None:
 def held(
     card: str, command: str, out: IO[str] | int, on_wait: Callable[[], None] | None = None
 ) -> Iterator[None]:
-    """Hold the build lock, waiting for it (said once in `out`, `on_wait` called); a no-op when held."""
+    """Hold the build lock in queue order; a wait is said once in `out` and calls `on_wait`; a no-op when held."""
     if os.environ.get(HELD_VAR) == "1":
         yield
         return
     base = root()
     base.mkdir(parents=True, exist_ok=True)
     holder = base / HOLDER
-    with (base / LOCK).open("a", encoding="utf-8") as lock:
+    said: list[int] = []
+
+    def wait(ahead: int) -> None:
+        if not said:
+            said.append(ahead)
+            _say(out, WAITING.format(held=_read(holder) or "another build", ahead=ahead))
+            if on_wait is not None:
+                on_wait()
+
+    with (
+        buildqueue.queued(base, card, command, wait) as mark,
+        (base / LOCK).open("a", encoding="utf-8") as lock,
+    ):
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
-            _say(out, WAITING.format(held=_read(holder) or "another build"))
-            if on_wait is not None:
-                on_wait()
+            wait(0)
             fcntl.flock(lock, fcntl.LOCK_EX)
         since = time.strftime("%Y-%m-%d %H:%M:%S")
         atomic.write_text(holder, f"{card} ({command[:120]}) since {since}\n", durable=False)
+        mark()
         try:
             yield
         finally:

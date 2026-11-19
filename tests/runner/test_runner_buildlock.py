@@ -41,8 +41,9 @@ def test_turn_env_points_claude_at_an_env_file_that_puts_the_shims_first(
     assert env["CARGO_BUILD_JOBS"] == "4"
     assert "MAKEFLAGS" not in buildlock.TUNING  # make defaults to one job; -j4 would raise it
     shims = buildlock.root() / buildlock.SHIM_DIR
-    assert sorted(p.name for p in shims.iterdir()) == sorted(buildlock.TOOLS)
-    assert all(os.access(shims / t, os.X_OK) for t in buildlock.TOOLS)
+    tools = (*buildlock.TOOLS, *buildlock.GUARDS)
+    assert sorted(p.name for p in shims.iterdir()) == sorted(tools)
+    assert all(os.access(shims / t, os.X_OK) for t in tools)
     script = f'PATH=/usr/bin:{shims}:/bin; . "$1"; . "$1"; echo "$PATH"'
     path = subprocess.run(
         ["bash", "-c", script, "_", env["CLAUDE_ENV_FILE"]], capture_output=True, text=True, check=True
@@ -63,7 +64,7 @@ def test_a_check_waits_for_the_lock_outside_its_timeout(world: Env, tmp_path: Pa
     result = checks.run_check("tests", 'echo "held=$TODOIMPL_BUILD_LOCK_HELD"', tmp_path, run_dir, 0.5)
     assert result.passed
     log = (run_dir / result.log).read_text()
-    assert log.startswith("waiting for build lock held by card-x (make test) since 12:00\n")
+    assert log.startswith("waiting for build lock held by card-x (make test) since 12:00; 0 ahead\n")
     assert "held=1" in log
     assert (buildlock.root() / buildlock.HOLDER).read_text() == ""
 

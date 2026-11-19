@@ -106,6 +106,7 @@ def build_backend(
     from todoimpl.gateway.monitor import GatewayMonitor  # noqa: PLC0415 - gateway imports the runner
     from todoimpl.merge.service import MergeService  # noqa: PLC0415 - merge.apply imports service.cards
     from todoimpl.newtask.service import NewTaskService  # noqa: PLC0415 - it imports service.cards
+    from todoimpl.runner.holdceiling import Ceiling  # noqa: PLC0415 - runner imports the service view
     from todoimpl.runner.limitprobe import LimitProbe  # noqa: PLC0415 - runner imports the service view
     from todoimpl.triage.service import TriageService  # noqa: PLC0415 - it imports service.cards
 
@@ -129,6 +130,7 @@ def build_backend(
         monitor.start()  # first check runs on its own thread: a slow network never delays startup
         probe.start()
         gateway.start()  # a dead gateway only makes its reading `down`
+        Ceiling(scheduler).start()  # an idle build-lock holder gives the lock on after 2 min (T2166)
         # Auto close: polls trusted done_checks every 5 min (first tick now); off until settings.json says so.
         # A repo task ships its ticked parts; a closing run belongs to one section's card: no repo cards here.
         AutoCloser(root, lambda: [c for c in cache.snapshot().tasks if not c.parts], scheduler).start()
