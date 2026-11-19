@@ -18,6 +18,7 @@ def test_prompt_carries_title_repos_and_a_cut_body() -> None:
     assert "Note title: gui for pacman" in prompt
     assert "x" * classify.BODY_CHARS not in prompt  # the body is flattened and cut
     assert "(none)" in classify.build_prompt("t", "", [])
+    assert "ci.yml (3), x.yml (1)" in classify.build_prompt("t", "b", REPOS, ["ci.yml (3)", "x.yml (1)"])
 
 
 @pytest.mark.parametrize(

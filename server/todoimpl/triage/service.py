@@ -100,8 +100,9 @@ class TriageService:
         done = 0
         for card in self.due()[:PER_TICK]:
             repos = self.repos()
+            files = umbrella.workflow_names(repos, lambda r: repo_path(r, self.src))
             try:
-                verdict = parse(self._classifier(build_prompt(card.title, card.body, repos)), repos)
+                verdict = parse(self._classifier(build_prompt(card.title, card.body, repos, files)), repos)
             except ClassifyError as exc:
                 log.warning("triage of %s failed: %s", card.id, exc)
                 self._failed[card.id] = self._clock()

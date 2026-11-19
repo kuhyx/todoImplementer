@@ -24,14 +24,16 @@ You label one todo note that has no repo yet. Labels:
 - new_repo: it asks to build a NEW app, tool, site, game or library (nothing exists for it yet). Give "name",
   a short kebab-case repo name (letters, digits, hyphens).
 - existing_repo: it clearly belongs to ONE of kuhy's repos listed below. Give "repo" exactly as listed.
-- all_repos: it asks for one change across many or all of kuhy's repos. Give "token", a short literal that
-  appears in the files of the repos the change applies to, and "path", the directory it is in (such as
+- all_repos: it asks for one change across many or all of kuhy's repos. Give "token", the most specific short
+  literal that appears in the files of the repos the change applies to (take it from the file names below when
+  they fit; never a common word like version, test or build), and "path", the directory it is in (such as
   .github); omit both when every repo applies.
 - research: it is mainly URLs or articles to read, study and turn into suggested actions.
 - manual: not code: an errand, a message to send, a link to read for fun, a puzzle, a question to think about.
 When unsure between manual and anything else, choose manual.
 
 kuhy's repos: {repos}
+File names under .github/workflows in those repos, with how many repos have each: {files}
 
 Note title: {title}
 Note text: {body}
@@ -46,10 +48,12 @@ class ClassifyError(Exception):
     """The classifier call or its answer was unusable."""
 
 
-def build_prompt(title: str, body: str, repos: list[str]) -> str:
+def build_prompt(title: str, body: str, repos: list[str], files: list[str] | None = None) -> str:
     """Return the prompt for one note; the body is cut so a pasted article never costs more than a line."""
     text = " ".join(body.split())[:BODY_CHARS] or "(none)"
-    return PROMPT.format(repos=", ".join(repos) or "(none)", title=title, body=text)
+    return PROMPT.format(
+        repos=", ".join(repos) or "(none)", files=", ".join(files or []) or "(none)", title=title, body=text
+    )
 
 
 def claude_classifier(prompt: str, root: Path | None = None) -> str:

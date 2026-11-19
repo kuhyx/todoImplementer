@@ -47,6 +47,22 @@ def matching(
     return out
 
 
+def workflow_names(repos: list[str], find: Callable[[str], Path] = repo_path, limit: int = 40) -> list[str]:
+    """Return `<file name> (<repos having it>)` for the CI files of the local clones, most common first.
+
+    The classifier cannot see the repos; these names let it pick a real token (`freshness`) for `git grep`.
+    """
+    counts: dict[str, int] = {}
+    for repo in repos:
+        clone = find(repo)
+        if not is_clone_of(clone, repo):
+            continue
+        for item in sorted((clone / ".github" / "workflows").glob("*")):
+            counts[item.name] = counts.get(item.name, 0) + 1
+    ranked = sorted(counts.items(), key=lambda pair: (-pair[1], pair[0]))
+    return [f"{name} ({count})" for name, count in ranked[:limit]]
+
+
 def body(title: str, text: str, repos: list[str], note: str) -> str:
     """Return the umbrella body: the marker, a checkbox and a `## ` child per repo, each holding the ask."""
     ask = f"{title}\n\n{text}".strip()

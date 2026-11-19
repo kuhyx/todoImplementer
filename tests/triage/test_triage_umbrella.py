@@ -107,6 +107,18 @@ def test_t2072_has_token_reads_a_missing_hit_a_bad_dir_and_a_timeout_as_no(
     assert not umbrella.has_token(repo, "freshness", None)
 
 
+def test_t2072_the_prompt_lists_the_ci_file_names_with_how_many_repos_have_each(
+    rig: Rig, triage: Make, clones: Path
+) -> None:
+    rig.note(TITLE, repo=None)
+    run = triage(ALL)
+    run.service.tick()
+    assert "ci.yml (1), dependency-freshness.yml (1)" in run.prompts[0]
+    both = ["kuhyx/screen-locker", "kuhyx/utils"]
+    assert umbrella.workflow_names(both, lambda r: clones / r.split("/")[1], 1) == ["ci.yml (1)"]
+    assert umbrella.workflow_names(["kuhyx/gone"], lambda _r: clones / "gone") == []
+
+
 def test_t2072_a_path_must_stay_inside_the_repo() -> None:
     repos = ["kuhyx/a"]
     for path, kept in [(".github", ".github"), ("../x", None), ("-x", None), ("a b", None)]:
