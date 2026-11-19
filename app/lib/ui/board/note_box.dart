@@ -61,33 +61,26 @@ class _NoteBoxState extends State<NoteBox> {
     final action = widget.action;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  key: const Key('detail-send-text'),
-                  controller: _text,
-                  contentInsertionConfiguration: _images.paste,
-                  minLines: 1,
-                  maxLines: 5,
-                ),
-              ),
-              IconButton(
-                key: const Key('detail-send'),
-                icon: _busy
-                    ? const SizedBox.square(
-                        dimension: AppSpacing.md,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Icon(Icons.send, semanticLabel: action.spoken),
-                onPressed: action.enabled && !_busy ? _send : null,
-              ),
-            ],
-          ),
-          ImageStrip(attach: _images, prefix: 'detail'),
-        ],
+      child: ImageStrip(
+        attach: _images,
+        prefix: 'detail',
+        field: TextField(
+          key: const Key('detail-send-text'),
+          controller: _text,
+          contentInsertionConfiguration: _images.paste,
+          minLines: 1,
+          maxLines: 5,
+        ),
+        trailing: IconButton(
+          key: const Key('detail-send'),
+          icon: _busy
+              ? const SizedBox.square(
+                  dimension: AppSpacing.md,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Icon(Icons.send, semanticLabel: action.spoken),
+          onPressed: action.enabled && !_busy ? _send : null,
+        ),
       ),
     );
   }

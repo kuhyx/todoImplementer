@@ -72,10 +72,24 @@ PickImages imagePicker = pickImages;
   ),
 };
 
-/// The row for [attach]; keys start with [prefix].
+/// The row for [attach]; keys start with [prefix]. With a [field] the
+/// buttons share one row with it (and [trailing], the send arrow) and the
+/// chips go in a strip above, so no control sits below the fold.
 class ImageStrip extends StatefulWidget {
   /// Creates the row.
-  const new({required this.attach, required this.prefix, super.key});
+  const new({
+    required this.attach,
+    required this.prefix,
+    this.field,
+    this.trailing,
+    super.key,
+  });
+
+  /// The text field to put between the buttons and [trailing].
+  final Widget? field;
+
+  /// What follows the field (the send arrow).
+  final Widget? trailing;
 
   /// The box's images.
   final ImageAttach attach;
@@ -147,39 +161,62 @@ class _ImageStripState extends State<ImageStrip> {
     ),
   );
 
+  Widget _state() {
+    final problem = widget.attach.problem;
+    if (_busy || widget.attach.busy) {
+      return SizedBox.square(
+        key: Key('${widget.prefix}-image-busy'),
+        dimension: AppSpacing.md,
+        child: const CircularProgressIndicator(
+          strokeWidth: 2,
+          semanticsLabel: 'Adding images',
+        ),
+      );
+    }
+    if (problem == null) return const SizedBox.shrink();
+    return Icon(
+      problemGlyph(problem).$1,
+      key: Key('${widget.prefix}-image-problem'),
+      color: AppPalette.danger,
+      semanticLabel: problemGlyph(problem).$2,
+    );
+  }
+
+  Widget _chips(List<Uint8List> images) => SingleChildScrollView(
+    scrollDirection: Axis.horizontal,
+    child: Row(children: [for (final (i, b) in images.indexed) _chip(i, b)]),
+  );
+
+  List<Widget> _buttons() => [
+    _button(PickFrom.gallery, Icons.photo_library_outlined, 'Gallery'),
+    _button(PickFrom.camera, Icons.photo_camera_outlined, 'Camera'),
+    _state(),
+  ];
+
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: widget.attach,
     builder: (context, _) {
       final images = widget.attach.images;
-      final problem = widget.attach.problem;
-      return Row(
+      final field = widget.field;
+      if (field == null) {
+        return Row(
+          children: [
+            ..._buttons(),
+            Expanded(child: _chips(images)),
+          ],
+        );
+      }
+      return Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          _button(PickFrom.gallery, Icons.photo_library_outlined, 'Gallery'),
-          _button(PickFrom.camera, Icons.photo_camera_outlined, 'Camera'),
-          if (_busy || widget.attach.busy)
-            SizedBox.square(
-              key: Key('${widget.prefix}-image-busy'),
-              dimension: AppSpacing.md,
-              child: const CircularProgressIndicator(
-                strokeWidth: 2,
-                semanticsLabel: 'Adding images',
-              ),
-            )
-          else if (problem != null)
-            Icon(
-              problemGlyph(problem).$1,
-              key: Key('${widget.prefix}-image-problem'),
-              color: AppPalette.danger,
-              semanticLabel: problemGlyph(problem).$2,
-            ),
-          Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [for (final (i, b) in images.indexed) _chip(i, b)],
-              ),
-            ),
+          if (images.isNotEmpty) _chips(images),
+          Row(
+            children: [
+              ..._buttons(),
+              Expanded(child: field),
+              ?widget.trailing,
+            ],
           ),
         ],
       );

@@ -177,14 +177,17 @@ class _CardSheetState extends State<CardSheet> {
               ),
             const SizedBox(height: AppSpacing.md),
             if (offers.containsKey('send')) ...[
-              TextField(
-                key: const Key('send-text'),
-                controller: _message,
-                contentInsertionConfiguration: _images.paste,
-                minLines: 1,
-                maxLines: 5,
+              ImageStrip(
+                attach: _images,
+                prefix: 'sheet',
+                field: TextField(
+                  key: const Key('send-text'),
+                  controller: _message,
+                  contentInsertionConfiguration: _images.paste,
+                  minLines: 1,
+                  maxLines: 5,
+                ),
               ),
-              ImageStrip(attach: _images, prefix: 'sheet'),
             ],
             if (offers['start']?.option case final opt?) _autoShipChip(opt),
             const SizedBox(height: AppSpacing.sm),

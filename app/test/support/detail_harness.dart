@@ -129,7 +129,9 @@ Future<void> settle(WidgetTester tester) async {
 
 /// Brings [f] on screen, then taps (or long-presses) it.
 Future<void> hit(WidgetTester tester, Finder f, {bool long = false}) async {
-  await tester.ensureVisible(f);
+  // A pinned control (the note box, T2339) is already on screen; ensureVisible
+  // would page the tab view sideways to align it.
+  if (f.hitTestable().evaluate().isEmpty) await tester.ensureVisible(f);
   await settle(tester);
   await (long ? tester.longPress(f) : tester.tap(f));
   await settle(tester);

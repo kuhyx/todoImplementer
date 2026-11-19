@@ -128,7 +128,9 @@ class _DetailPageState extends State<DetailPage> {
     final needs = d.card.needs;
     final lesson = d.lesson;
     final umbrella = d.umbrella;
-    return ListView(
+    final send = d.card.actions.where((a) => a.id == 'send').firstOrNull;
+    // The note box is pinned under the list: never below the fold (T2339).
+    final list = ListView(
       key: const Key('overview'),
       padding: const EdgeInsets.all(AppSpacing.sm),
       children: [
@@ -162,9 +164,6 @@ class _DetailPageState extends State<DetailPage> {
           ),
         if (d.asks.isNotEmpty)
           AsksView(asks: d.asks, onSend: _ask, loadShot: _shots),
-        if (d.card.actions.where((a) => a.id == 'send').firstOrNull
-            case final send?)
-          NoteBox(action: send, onSend: _note),
         if (lesson != null)
           ListTile(
             key: const Key('lesson'),
@@ -173,6 +172,16 @@ class _DetailPageState extends State<DetailPage> {
             subtitle: Text('${lesson.mistake}\n${lesson.evidence}'),
           ),
         if (umbrella != null) UmbrellaView(detail: umbrella),
+      ],
+    );
+    if (send == null) return list;
+    return Column(
+      children: [
+        Expanded(child: list),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+          child: NoteBox(action: send, onSend: _note),
+        ),
       ],
     );
   }
