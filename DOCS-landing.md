@@ -101,6 +101,14 @@ the "session already pushed" path) and before the note closes, Ship runs the rep
   Now the session gets a fix turn (red tails, "fix them yourself: commit, rebase, push, deploy"), same bounce and counter
   (`ship_fixes`, 2) as a refused commit; the third time is Needs you. `ask_grants` could not bound it: a finished turn
   clears it.
+- **Deploy red after the push (T2050).** `DeployFailedError` (exit N or timeout) no longer waits for a Retry click: the
+  session gets a fix turn with the deploy output and "fix it yourself: bump and tag the changed package, push,
+  redeploy, read the result" (a deploy check like "X changed after <tag>: bump and release" is its job, `DEPLOY` in
+  `prompts/standing.py`). The implement drive drops `pushed.json`, so its commits and tag ship as pushed work and the
+  deploy runs again. 2 fix turns per Start (`deploy_fixes`, `shipfix.MAX_DEPLOY_FIXES`; Start, Retry and a note clear
+  it), then Needs you; its text leads with the deploy's own `FAIL` lines when the 600-char tail would cut them. A
+  phone wait (`appfix.phone_wait`) comes first; an umbrella child, a "declares no deploy" failure or a blocked pull
+  (T2007) get no fix turn.
 - **Umbrella card.** Children that are pushed but not deployed are listed apart from children that need kuhy:
   `3 of 7 children need you: a (why); b. 4 pushed, not deployed: c (declares no deploy: command in CLAUDE.md); ...`.
 - **Self-healing.** The implement prompt (`prompts/standing.py`, `DEPLOY`) tells a session to add the line when the repo

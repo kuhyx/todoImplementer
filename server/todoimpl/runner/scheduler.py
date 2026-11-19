@@ -29,9 +29,11 @@ FINAL = ("shipped", "closed", "cancelled")
 COUNTERS = (
     "failure_tail", "live_fixes", "check_fixes", "nudges", "nudge", "failed_stage", "resume_stage",
     "resettle", "retries", "crash_retries", "r_continues", "r_continue", "tagless_retry", "fresh",
-    "ship_fixes", "reship", "hands_nudged", "ask_grants", "ask_grant_total", "ask_forms", "ask_form_total",
-    "part_nudges", "ship_resumes", "phone_update",
+    "ship_fixes", "deploy_fixes", "reship", "hands_nudged", "ask_grants", "ask_grant_total", "ask_forms",
+    "ask_form_total", "part_nudges", "ship_resumes", "phone_update",
 )  # fmt: skip
+RESET = "live_fixes check_fixes nudges ship_fixes deploy_fixes reship hands_nudged".split()  # noqa: SIM905
+RESET += ["ask_grants", "ask_grant_total", "ask_forms", "ask_form_total"]  # Start and Retry reset these
 
 
 class RunnerError(Exception):
@@ -169,9 +171,7 @@ class Scheduler(PhoneEngine):
         elif st.stage == retry.PAUSED:
             st.resume_at = None
         st.error, st.last_tag, st.assignee = None, None, "claude"
-        for key in ("live_fixes", "check_fixes", "nudges", "ship_fixes", "reship", "hands_nudged"):
-            st.extra.pop(key, None)
-        for key in ("ask_grants", "ask_grant_total", "ask_forms", "ask_form_total"):
+        for key in RESET:
             st.extra.pop(key, None)
 
     def send(self, card: str, text: str) -> None:  # noqa: D102

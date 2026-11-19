@@ -219,7 +219,8 @@ def _shipping(d: Driver) -> str | None:
         shipfix.wait_for_edits(st, blocked, d.ctx.now())
     except DeployFailedError as failed:  # pushed, not deployed: maybe only because the phone is away
         appfix.phone_wait(st, failed, d.ctx.now())
-        raise
+        d.activity(shipfix.deploy_fix(st, failed))  # raises `failed` when kuhy is needed
+        return "implement"
     sha = st.ship["commit"]
     if sha:
         st.head_sha = sha

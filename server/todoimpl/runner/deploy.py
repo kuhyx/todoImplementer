@@ -36,6 +36,15 @@ UNIT_MAX = 14400.0  # the unit's RuntimeMaxSec: it may queue behind gates; above
 WAIT = UNIT_MAX + 120.0  # the server stops waiting once the unit cannot be running any more
 POLL = 1.0
 TAIL = 600
+FIX_TAIL = 1800  # of the deploy output the fix turn is briefed with
+FAIL_LINES, FAIL_WIDTH = (
+    3,
+    200,
+)  # the deploy's own FAIL lines that lead the text when the shown tail cuts them
+FIX_ASK = (
+    "Fix it yourself: bump and tag the changed package, push, redeploy, read the result "
+    "(you have permission; a check like 'X changed after <tag>' wants a version bump and a release)."
+)
 LINE = re.compile(r"^[ \t]*[-*][ \t]+deploy:[ \t]*`([^`\n]+)`", re.IGNORECASE)
 LINK_HOPS = 5  # CLAUDE.md -> AGENTS.md is one hop; a few more cover a chain, a loop ends here
 SYMLINK_MODE = "120000"  # git tree mode of a symlink
@@ -47,9 +56,23 @@ _run = subprocess.run  # the one place systemd-run and systemctl are called: tes
 class DeployFailedError(NeedsYouError):
     """The deploy command ran and failed; `exit_code` is its exit status (None: it timed out)."""
 
-    def __init__(self, text: str, exit_code: int | None) -> None:  # noqa: D107
+    def __init__(self, text: str, exit_code: int | None, tail: str = "") -> None:  # noqa: D107
         super().__init__(text, "run_failed")
         self.exit_code = exit_code
+        self.tail = tail
+
+    @classmethod
+    def build(cls, exit_code: int | None, tail: str) -> DeployFailedError:
+        """Return the failure; its text leads with the FAIL lines the shown tail would cut (T2050)."""
+        why = "timed out" if exit_code is None else f"exit {exit_code}"
+        cut = [ln.strip()[:FAIL_WIDTH] for ln in tail[:-TAIL].splitlines() if "FAIL" in ln]
+        lead = f"{' | '.join(cut[:FAIL_LINES])} ... " if cut else ""
+        return cls(f"{PREFIX}: deploy failed ({why}): {lead}{tail[-TAIL:]}", exit_code, tail)
+
+    @property
+    def output(self) -> str:
+        """The brief for the session's fix turn: what the deploy printed and what to do about it."""
+        return f"{self.text}\n\n{self.tail[-FIX_TAIL:]}\n\n{FIX_ASK}"
 
 
 def declared(text: str) -> str | None:
@@ -221,6 +244,4 @@ def run(wt: Path, run_dir: Path, card: str, repo: str | None, command: str | Non
         if deployheal.blocked(result.tail) and _heal(repo, result.tail, healed=healed):
             healed = True
             continue
-        why = "timed out" if result.exit_code is None else f"exit {result.exit_code}"
-        msg = f"{PREFIX}: deploy failed ({why}): {result.tail[-TAIL:]}"
-        raise DeployFailedError(msg, result.exit_code)
+        raise DeployFailedError.build(result.exit_code, result.tail)

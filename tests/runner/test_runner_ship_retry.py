@@ -6,6 +6,8 @@ from schedfakes import CARD, IMPL, LIVE_OK, PLAN, boot, reply, wait_stage
 from todoimpl.board import state as store
 from todoimpl.runner.scheduler import Scheduler
 
+SPENT = {"deploy_fixes": 2}  # T2050 fix turns used up: these tests are about the red state
+
 
 def _booted(world: Env, monkeypatch: pytest.MonkeyPatch) -> tuple[Scheduler, FakeClient]:
     sched, client = boot(world, PLAN, IMPL, LIVE_OK, done_check="test -f hello.txt")
@@ -26,7 +28,7 @@ def test_t1961_retry_after_a_failed_deploy_ships_again_by_itself_and_never_pushe
     sched, client = _booted(world, monkeypatch)
     monkeypatch.setenv("DEPLOY_EXIT", "3")
     try:
-        sched.start(CARD, auto_ship=True)
+        sched.start(CARD, auto_ship=True, extra=SPENT)
         st = wait_stage(world, sched, "failed")
         assert str(st.error).startswith("pushed, not deployed: deploy failed (exit 3)")
         assert client.closed == []
@@ -48,7 +50,7 @@ def test_t1968_a_restart_during_the_deploy_goes_on_to_the_deploy_instead_of_fail
     sched, client = _booted(world, monkeypatch)
     monkeypatch.setenv("DEPLOY_EXIT", "3")
     try:
-        sched.start(CARD, auto_ship=True)
+        sched.start(CARD, auto_ship=True, extra=SPENT)
         st = wait_stage(world, sched, "failed")
     finally:
         sched.close()
@@ -71,7 +73,7 @@ def test_t1970_a_note_after_a_failed_deploy_is_new_work_that_ships_and_deploys_t
     monkeypatch.setenv("DEPLOY_EXIT", "3")
     more = ({"_fake": "write", "path": "more.txt", "text": "more\n"}, *reply("C1: done\n\nD: done"))
     try:
-        sched.start(CARD, auto_ship=True)
+        sched.start(CARD, auto_ship=True, extra=SPENT)
         wait_stage(world, sched, "failed")
         monkeypatch.setenv("DEPLOY_EXIT", "0")
         world.script("abcd1234", *more)
