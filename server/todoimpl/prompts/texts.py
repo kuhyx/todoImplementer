@@ -8,6 +8,7 @@ from todoimpl.newtask import images
 
 from . import phone, standing
 from .kind import HINTS, detect_kind
+from .research import research
 from .umbrella import manager
 
 if TYPE_CHECKING:
@@ -203,6 +204,7 @@ STAGES: dict[str, Callable[[PromptContext], str]] = {
     "resume_after_kill": resume_after_kill,
     "fresh_after_idle": fresh_after_idle,
     "manager": manager,
+    "research": research,
 }
 
 

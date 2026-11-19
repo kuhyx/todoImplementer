@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 from todoimpl.errors import marks
 from todoimpl.repotask import files
+from todoimpl.triage.research import ResearchDriver, run_stage
 from todoimpl.umbrella import bounce
 from todoimpl.umbrella.note import is_umbrella
 from todoimpl.umbrella.run import run as run_umbrella
@@ -70,6 +71,8 @@ def _plan(d: Driver) -> str | None:
 def _implement(d: Driver) -> str | None:
     if is_umbrella(d.item.body):  # the rounds of an umbrella note (umbrella/run.py)
         return run_umbrella(d)  # type: ignore[arg-type]
+    if isinstance(d, ResearchDriver):  # a note of URLs: report and choices (triage/research.py)
+        return run_stage(d)
     tail = str(d.state.extra.get("failure_tail", ""))
     res = d.turn("implement", "fix" if tail else "implement", failure_tail=tail)
     if tiering.gave_up(d, res):  # the cheap tier hands over: the same stage again, now on Opus

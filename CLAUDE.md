@@ -13,6 +13,7 @@ Phone over mobile data (Host-based device gate, pairing QR, cookie, device store
 Native Flutter app (phone + PC, Firebase RTDB relay, FCM pings, Astro retirement): `DOCS-native-app.md`; relay kinds,
 nodes and guards: `DOCS-native-app-relay.md`.
 App errors become tickets (contract, sources, start gate, ship policy, waiting for the phone): `DOCS-errors.md`.
+Notes with no repo (Haiku triage: new_repo, existing_repo, all_repos, research, manual; new repos; research cards): `DOCS-triage.md`.
 
 ## Commands
 

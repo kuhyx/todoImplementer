@@ -41,6 +41,8 @@ def plan_turn(d: Driver, role: str) -> Turn:
     st = d.state
     if role != IMPLEMENT:
         return Turn()
+    if st.extra.get("research"):  # reading and summarising: Sonnet at medium effort, no free workers
+        return Turn("sonnet", "", "medium")
     if "tier" not in st.extra:
         st.extra["tier"] = "cheap" if tier.is_cheap(d.item.title, d.item.body, d.item.parts) else "normal"
     if not _cheap(d):

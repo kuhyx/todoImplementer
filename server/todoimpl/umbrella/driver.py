@@ -6,6 +6,8 @@ from dataclasses import replace
 from typing import TYPE_CHECKING
 
 from todoimpl.runner.pipeline import Ctx, Driver
+from todoimpl.triage.label import RESEARCH, label_of
+from todoimpl.triage.research import ResearchDriver
 
 from .children import Fan, make_fan
 from .note import is_umbrella
@@ -34,7 +36,10 @@ class UmbrellaDriver(Driver):
 def driver_for(ctx: Ctx, state: RunState, item: Item) -> Driver:
     """Return the Driver of a note: the umbrella one for an umbrella, else the normal one."""
     if not is_umbrella(item.body):
-        return Driver(ctx, state, item)
+        research = (
+            item.repo is None and label_of(ctx.run_dir) == RESEARCH
+        )  # a note of URLs: no repo, no worktree
+        return (ResearchDriver if research else Driver)(ctx, state, item)
     fan = make_fan(ctx.run_dir)
     ctx.register(fan)  # the engine cancels or detaches the whole fan
     driver = UmbrellaDriver(replace(ctx, register=fan.slot("manager")), state, item)

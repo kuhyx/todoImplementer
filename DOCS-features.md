@@ -16,6 +16,9 @@
 |---|---|---|
 | Board | open `/` -> four columns Backlog / Running / Needs you / Done (a shipping card is in Running) | every open todo item is one card, grouped by repo, kuhy's own notes above Claude-made ones in each column; GET `/api/board` matches `contracts/board.schema.json` |
 | Yours lane | notes with no `repo` (the board reads them with `list_tasks(no_repo: true)`, T2058) | shown in "Yours", never startable; a note added in the todo app is a Backlog card on the next refresh (2 s after the last fetch ended) |
+| Triage | a note with no `repo` and no run; `tests/triage` | Haiku labels it once per text (`<run dir>/triage.json`): `existing_repo` sets the note's repo (the card joins that repo's), `all_repos` rewrites the note into an umbrella (one child per repo whose clone has the literal), `new_repo` and `research` become Backlog cards with Start, `manual` stays Yours; the card shows the label as an icon (DOCS-triage.md) |
+| New repo | Start on a `new_repo` card | creates private `kuhyx/<name>`, pushes a scaffold, clones it to `~/src/<name>`, sets the note's repo, starts the repo's card (`newrepo.json` resumes a cut run; a failure is a failed run with Retry) |
+| Research | Start on a `research` card | Sonnet session with no repo writes `research.md` (drawer report), ends on one Make note / Skip choice per suggested action; picked actions become todo notes, the note closes |
 | Start | card -> Start (POST `/api/task/<id>/start`) | card leaves Backlog; at most 3 run at once, the rest are queued |
 | Spec Q&A | card in Needs you with `❓ Qn` cards -> answer -> Spec OK | answers reach the session, Plan starts |
 | Live feed | open a card drawer (GET `/api/live?id=<id>`, SSE) | first frame is a stage snapshot, then activity/stage/cost events |

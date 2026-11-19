@@ -136,3 +136,13 @@ def test_t2070_the_loop_survives_a_failing_tick(
     monkeypatch.setattr(run.service, "tick", fake_tick)
     run.service.watch()
     assert done.wait(5)
+
+
+def test_t2070_a_note_of_urls_is_labelled_research_and_startable(rig: Rig, triage: Make) -> None:
+    card = rig.note("https://paulgraham.com/google.html", repo=None)
+    triage({"label": "research", "reason": "an article"}).service.tick()
+    rig.backend.cache.refresh()
+    shown = rig.card(card)
+    assert (shown["triage"], shown["status"], actions(shown)["start"]) == ("research", "backlog", True)
+    rig.backend.start(card)  # the plain scheduler path: the research driver is picked by the label
+    assert ("start", card, None) in rig.scheduler.calls
