@@ -41,7 +41,11 @@ def board_fetch(
 
     def fetch() -> list[CardTask]:
         notes = client.list_tasks(full=True)
-        notes += registry.notes(client, root, {n.id[:8] for n in notes})  # repo-less umbrellas
+        # Repo-less notes (kuhy's ideas) are cards in the Yours lane (T2048); an older server that ignores
+        # `no_repo` answers with the repo notes again, so a note counts once.
+        seen = {n.id for n in notes}
+        notes += [n for n in client.list_tasks(full=True, no_repo=True) if n.id not in seen]
+        notes += registry.notes(client, root, {n.id[:8] for n in notes})  # repo-less umbrellas not listed
         cards = group_cards(notes, lambda card: legacy.older(root, card), released_in(root))
         cards += closed.cards({note.id[:8] for note in notes}, {card.id for card in cards})
         if run_titles is not None:

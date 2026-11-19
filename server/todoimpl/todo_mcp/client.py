@@ -21,7 +21,10 @@ _UPDATE_FIELDS = frozenset({"title", "body", "done_check", "priority", "status",
 
 
 class TodoClient:
-    """Every non-success raises ``TodoError``; notes without a repo are invisible to list/search."""
+    """Every non-success raises ``TodoError``; notes without a repo are invisible to list/search.
+
+    ``list_tasks(no_repo=True)`` is the one way to list them (the server's `no_repo` argument).
+    """
 
     def __init__(  # noqa: D107
         self, url: str, token: str, timeout: float = 20.0, clock: Callable[[], float] = time.monotonic
@@ -49,10 +52,15 @@ class TodoClient:
         return cls(env.get("TODOIMPL_MCP_URL") or DEFAULT_URL, token)
 
     def list_tasks(
-        self, status: str | None = None, repo: str | None = None, *, full: bool = False
+        self, status: str | None = None, repo: str | None = None, *, full: bool = False, no_repo: bool = False
     ) -> list[Task]:
-        """Open notes by default; ``full=True`` adds body and done_check via get_task."""
+        """Open notes by default; ``full=True`` adds body and done_check via get_task.
+
+        ``no_repo=True`` lists the notes that have no repo instead (kuhy's ideas, the board's Yours lane).
+        """
         args: dict[str, object] = {}
+        if no_repo:
+            args["no_repo"] = True
         if status is not None:
             args["status"] = to_wire(status)
         if repo is not None:

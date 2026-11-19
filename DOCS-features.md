@@ -15,7 +15,7 @@
 | feature | how to reach it | expected outcome |
 |---|---|---|
 | Board | open `/` -> five columns Backlog / Running / Needs you / Ready to ship / Done | every open todo item is one card, grouped by repo, kuhy's own notes above Claude-made ones in each column; GET `/api/board` matches `contracts/board.schema.json` |
-| Yours lane | notes with no `repo` | shown in "Yours", never startable |
+| Yours lane | notes with no `repo` (the board reads them with `list_tasks(no_repo: true)`, T2048) | shown in "Yours", never startable; a note added in the todo app is a Backlog card on the next refresh (4 s after the last fetch ended) |
 | Start | card -> Start (POST `/api/task/<id>/start`) | card leaves Backlog; at most 3 run at once, the rest are queued |
 | Spec Q&A | card in Needs you with `❓ Qn` cards -> answer -> Spec OK | answers reach the session, Plan starts |
 | Live feed | open a card drawer (GET `/api/live?id=<id>`, SSE) | first frame is a stage snapshot, then activity/stage/cost events |

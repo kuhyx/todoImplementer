@@ -32,8 +32,9 @@ a notification event before the answer, like a streaming server; default plain J
 Tools (same arguments, validation and texts as the real server): add_task, list_tasks, get_task,
 update_task, close_task, search_tasks. Statuses on the wire are ``todo|in_progress|done|abandoned``.
 Without a valid bearer token every POST answers 401. Behaviour pinned from the real server:
-list_tasks never returns notes without ``repo``; add_task appends a ``## title`` section to the
-repo's oldest open note; errors are ``isError`` results whose text starts with ``error: ``.
+list_tasks never returns notes without ``repo`` unless called with ``no_repo: true`` (then only those);
+add_task appends a ``## title`` section to the repo's oldest open note;
+errors are ``isError`` results whose text starts with ``error: ``.
 """
 
 from __future__ import annotations

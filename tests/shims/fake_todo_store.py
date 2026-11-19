@@ -187,6 +187,8 @@ class FakeStore:
         wanted = (
             {"todo", "in_progress"} if raw in (None, "open") else set(_STATUSES) if raw == "all" else {raw}
         )
+        if args.get("no_repo") is True:  # the real server's repo-less listing (ideas), same status filter
+            return self._lines([n for n in self.notes.values() if not n.repo and n.status in wanted])
         hits = [n for n in self.notes.values() if n.repo and n.status in wanted and repo in (None, n.repo)]
         return self._lines(hits)
 

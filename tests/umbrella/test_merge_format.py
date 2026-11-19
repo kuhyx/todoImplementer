@@ -66,14 +66,14 @@ def backend(fake: FakeTodoMcp, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
     )
 
 
-def test_a_repo_less_umbrella_is_invisible_to_the_mcp_list_but_the_merge_ledger_brings_it_to_the_board(
+def test_t2048_a_repo_less_umbrella_is_listed_and_the_merge_ledger_adds_no_second_card(
     fake: FakeTodoMcp, backend: ServiceBackend
 ) -> None:
     text = umbrella_text("Make the repos text-free", CARDS)
     title, body = text.split("\n", 1)
     note_id = fake.seed(None, title.removeprefix("# "), body)
     backend.cache.refresh()
-    assert [c["id"] for c in backend.board()["tasks"]] == []  # list_tasks never returns a note without a repo
+    (card,) = backend.board()["tasks"]  # list_tasks(no_repo) brings it with no ledger entry
     MergeStore(run_root()).update(lambda s: s.created.update({"fp": {"id": note_id, "titles": []}}))
     backend.cache.refresh()
     (card,) = backend.board()["tasks"]

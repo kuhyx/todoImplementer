@@ -40,8 +40,8 @@ Tier: cheap
   stands). A member's `done_check:` line arrives renamed `member done_check:`; inside an umbrella it is the child's
   own check, so both spellings are read.
 - **Discovery.** The todo MCP's `list_tasks` and `search_tasks` return repo tasks only (`repoTasksOnly` in the
-  todo app), so a repo-less umbrella never shows up in the board's note list, and the old "no repo = Yours lane"
-  path cannot be reached by an MCP note. `umbrella/registry.py` adds the open umbrellas named by (1) the merge
+  todo app); `list_tasks(no_repo: true)` (T2048) lists the repo-less ones, and the board reads both, so a
+  repo-less umbrella is listed like any note. `umbrella/registry.py` still adds the open umbrellas named by (1) the merge
   ledger `<run root>/merge.json` `created` (a merged umbrella reaches the board with no step by kuhy) and (2)
   `~/.config/todoImplementer/umbrellas.txt` (`$TODOIMPL_UMBRELLAS`; one id per line, `#` comments) for one made by
   hand. Each is fetched with `get_task`. A note with a repo needs no entry.
