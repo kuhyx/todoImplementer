@@ -18,6 +18,10 @@ _clock = time.monotonic
 _MAPS: dict[tuple[Path, tuple[Path, ...], tuple[Path, ...]], tuple[float, dict[str, Path]]] = {}
 _ORIGIN = re.compile(r'\[remote "origin"\][^\[]*?^\s*url\s*=\s*(\S+)', re.MULTILINE)
 _SLUG = re.compile(r"[/:]([^/:\s]+)/([^/\s]+?)(?:\.git)?/?$")
+# A hosted remote only (https/ssh URL or scp-like `git@host:`): a local bare path names no owner.
+_HOSTED = re.compile(r"(?:[a-z+]+://(?:[^@/\s]+@)?[^/\s]+/|[^@/\s]+@[^:/\s]+:)([^/\s]+)/([^/\s]+?)/?$")
+_CANON: dict[tuple[object, ...], tuple[float, str]] = {}
+_ENV = ("TODOIMPL_SRC", "TODOIMPL_REPO_ROOTS", "TODOIMPL_REPO_PATHS")  # what repo_path reads
 
 
 def _origin_url(clone: Path) -> str | None:
@@ -120,6 +124,31 @@ def repo_path(repo: str, src_root: Path | None = None) -> Path:
     if direct.exists() and ("/" not in repo or _origin_url(direct) is None or _origin_matches(direct, repo)):
         return direct
     return _lookup(base, full) or direct
+
+
+def _origin_name(clone: Path) -> str | None:
+    """Return the clone's origin as `owner/name` in the URL's own case; a local-path origin has none."""
+    url = _origin_url(clone)
+    found = None if url is None else _HOSTED.match(url)
+    return None if found is None else f"{found.group(1)}/{found.group(2)}"
+
+
+def canonical(repo: str, src_root: Path | None = None) -> str:
+    """Return the real `owner/name` of a repo: the origin of the checkout it runs in (T2272).
+
+    A name guessed from a folder (`kuhyx/cleanup-plate` for ~/src/cleanup-plate, whose origin is
+    `Sepci0/cleanup-plate`) and every case spelling collapse onto that origin. A repo with no checkout, or
+    whose checkout has no hosted origin, keeps its name. Answers are kept for REFRESH_S.
+    """
+    key = (repo, src_root, Path.home(), *(os.environ.get(name) for name in _ENV))
+    now = _clock()
+    cached = _CANON.get(key)
+    if cached is not None and now - cached[0] < REFRESH_S:
+        return cached[1]
+    path = repo_path(repo, src_root)
+    real = (_origin_name(path) if is_clone_of(path, repo) else None) or repo
+    _CANON[key] = (now, real)
+    return real
 
 
 def is_clone_of(path: Path, repo: str) -> bool:

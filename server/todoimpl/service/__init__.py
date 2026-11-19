@@ -17,6 +17,7 @@ from todoimpl.todo_mcp.client import TodoClient
 from todoimpl.triage.label import label_of
 from todoimpl.umbrella import registry
 
+from . import repoalias
 from .backend import ServiceBackend
 from .cache import TaskCache
 from .cards import CardTask
@@ -48,6 +49,7 @@ def board_fetch(
         # `no_repo` answers with the repo notes again, so a note counts once.
         seen = {n.id for n in notes}
         notes += [n for n in client.list_tasks(full=True, no_repo=True) if n.id not in seen]
+        notes = repoalias.heal(client, notes)  # one name per real repo: its checkout's origin (T2272)
         notes += registry.notes(client, root, {n.id[:8] for n in notes})  # repo-less umbrellas not listed
         foldasks.fold_all(root, notes)  # answers from a former `-1` card, once (T2114)
         cards = group_cards(notes, lambda card: legacy.older(root, card), released_in(root))

@@ -59,6 +59,14 @@ Needs you (`run_failed`, Retry works) with gh's error. Absolute-path repos still
 Sessions work in their own worktree off the resolved checkout; Ship, closing and deploy run there too, so claude-config
 deploys with a pull in `~/.claude` (`- deploy:` line of its CLAUDE.md: a ff-only pull there).
 
+One name per real repo (T2272): `repos.canonical` names a repo by the hosted origin of the checkout it runs in
+(the URL's own case). feedback_inbox filed `kuhyx/cleanup-plate`, a repo that does not exist, for ~/src/cleanup-plate,
+whose origin is `Sepci0/cleanup-plate`; the board listed both and gave each a card. Now the board fetch rewrites an
+open note filed under another owner/name through `update_task` (so `list_tasks(repo=)` finds it), shows closed notes
+and shipped runs under the origin (one Done card per repo: the real name's own run dir, else the newest), and the
+New task form files a typed alias under the origin. A repo with no checkout, or a checkout with no hosted origin
+(a local bare path, no remote), keeps its name. Answers are kept 10 min.
+
 ## Rebase on every drive (`runner/worktree.py`, T1864)
 
 `attach` runs at the start of each drive: fetch, then `git rebase --autostash origin/<base>` in a reused worktree,

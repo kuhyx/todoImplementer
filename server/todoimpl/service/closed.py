@@ -12,10 +12,13 @@ import logging
 from typing import TYPE_CHECKING
 
 from todoimpl.board.parse import StateError
+from todoimpl.board.repos import canonical
 from todoimpl.board.state import FILE, load
 from todoimpl.board.status import CYCLE_ENDS, DONE_STAGES, MANUAL_STAGE
+from todoimpl.repotask.ids import norm, repo_card_id
 from todoimpl.todo_mcp.items import Item
 
+from . import repoalias
 from .cards import CardTask, card_tasks
 
 if TYPE_CHECKING:
@@ -42,7 +45,10 @@ class ClosedNotes:
 
         `on_board` = the card ids already shown: a shipped repo task is a Done card only when none is open.
         """
-        found: list[CardTask] = [card for card in self._repo_cards() if card.id not in on_board]
+        board = set(on_board)
+        found = [
+            c for c in self._repo_cards() if c.id not in board and repo_card_id(c.repo or "") not in board
+        ]
         for id8 in sorted(self._shipped_ids() - open_ids):
             if id8 not in self._cards:
                 try:
@@ -50,7 +56,7 @@ class ClosedNotes:
                 except Exception as exc:  # noqa: BLE001 - one unreachable closed note must not blank the board
                     log.warning("closed note %s not fetched: %s", id8, exc)
                     continue
-            found.extend(self._cards[id8])
+            found.extend(repoalias.card(card) for card in self._cards[id8])
         return found
 
     def _shipped_ids(self) -> set[str]:
@@ -75,8 +81,12 @@ class ClosedNotes:
         return ids
 
     def _repo_cards(self) -> list[CardTask]:
-        """Done cards of repo tasks whose last cycle shipped; the run dir holds all there is to know."""
-        found: list[CardTask] = []
+        """Done cards of repo tasks whose last cycle shipped; the run dir holds all there is to know.
+
+        Run dirs of one real repo under two names (T2272) give one card: the real name's own dir, else the
+        newest run.
+        """
+        found: dict[str, tuple[tuple[bool, float], CardTask]] = {}
         for directory in sorted(self._root.iterdir()) if self._root.is_dir() else []:
             if not (directory / FILE).is_file():
                 continue
@@ -86,9 +96,13 @@ class ClosedNotes:
                 continue
             if run is None or run.stage not in CYCLE_ENDS or not run.extra.get("repotask") or not run.repo:
                 continue
-            title = str(run.extra.get("repotask_title") or run.repo)
-            item = Item(
-                directory.name.partition("-")[0], 0, title, run.note_body or "", run.repo, "done", None
-            )
-            found.append(CardTask(directory.name, title, item.body, run.repo, "done", "medium", None, item))
-        return found
+            repo = canonical(run.repo)
+            title = str(run.extra.get("repotask_title") or repo)
+            item = Item(directory.name.partition("-")[0], 0, title, run.note_body or "", repo, "done", None)
+            rank, key = (directory.name == repo_card_id(repo), run.updated), norm(repo)
+            if key not in found or rank > found[key][0]:
+                found[key] = (
+                    rank,
+                    CardTask(directory.name, title, item.body, repo, "done", "medium", None, item),
+                )
+        return [card for _, card in found.values()]

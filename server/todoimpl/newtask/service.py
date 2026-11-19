@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import time
 import uuid
+from dataclasses import replace
 from typing import TYPE_CHECKING
 
+from todoimpl.board.repos import canonical
 from todoimpl.http.backend import BackendError
 from todoimpl.service.cards import card_tasks
 from todoimpl.todo_mcp.model import TodoError, upstream_text
@@ -30,6 +32,12 @@ _PAUSE_S = 0.5
 
 def _fresh_folder() -> str:
     return str(uuid.uuid4())  # the todo renderer only needs [A-Za-z0-9_-]+, never the note id
+
+
+def _real(task: NewTask) -> NewTask:
+    """Return the task under its repo's real name, so a folder-guessed owner never files a twin (T2272)."""
+    real = canonical(task.repo)
+    return task if real == task.repo else replace(task, repo=real)
 
 
 def _holds(card: CardTask, note8: str, title: str) -> bool:
@@ -62,6 +70,7 @@ class NewTaskService:
 
     def add(self, task: NewTask, *, checked: bool = False) -> str:
         """Add the section (refusing a twin unless `checked` by adopt) and return its note id8."""
+        task = _real(task)
         try:
             if not checked:
                 self._refuse_twin(task)
@@ -82,6 +91,7 @@ class NewTaskService:
 
         Never the in-flight board fetch, which may predate the add (T2046): a read of the repo alone.
         """
+        task = _real(task)
         for attempt in range(_LOOKUPS + 1):
             if attempt > 1:
                 time.sleep(_PAUSE_S)
@@ -103,6 +113,7 @@ class NewTaskService:
         title that is not its own is a twin: BackendError conflict. None when the title is new (or its card
         never shows). One repo listing, so a batch does not pay one per check.
         """
+        task = _real(task)
         try:
             notes = self._client.list_tasks(repo=task.repo, full=True)
         except TodoError as exc:
