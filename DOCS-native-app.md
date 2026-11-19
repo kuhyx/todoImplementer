@@ -25,6 +25,7 @@ needs him. One Flutter codebase on both screens also ends the duplicate UI once 
 | Notifications | v1. FCM data-only ping from the PC; events: a card enters Needs you, a run fails (a ready card ships itself, so it pings nothing). Icon + count, no text |
 | Icon | Shared family (skill `app-icon`): charcoal field, `#B8862E` glyph of a card with a check and a play arrow |
 | Repo | Public (kuhyx/todoImplementer); release APK built and signed by CI on every push |
+| CI Firebase secret | `TODOIMPL_FIREBASE_JSON` must carry `webClientId` (plus apiKey, databaseUrl, uid): CI has no `~/src/todo` fallback, and an empty id fails the release job |
 | Retirement | Astro `web/` and `agents.kuhy.duckdns.org` stay until every flow in this file's done list passes on the phone with Wi-Fi off; then both go |
 
 ## Done criteria
