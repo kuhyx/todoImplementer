@@ -8,11 +8,11 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from todoimpl.errors.marks import signatures
-from todoimpl.umbrella.note import is_umbrella
 
 from .actions import actions
 from .badges import tier_badges
 from .needs import needs
+from .norepo import is_yours
 from .parts import is_repo_task, kuhys, manual_ask, parts_of
 from .status import SHIP_STEP, Status, column, compute
 from .types import Limit, fmt_when
@@ -92,7 +92,7 @@ def _assignee(task: TaskLike, run: RunState | None) -> str:
         return "human"
     if run is not None:
         return run.assignee
-    return "human" if task.repo is None and not is_umbrella(task.body) else "claude"
+    return "human" if is_yours(task) else "claude"
 
 
 def build_card(task: TaskLike, run: RunState | None, ctx: Context) -> dict[str, Any]:
@@ -143,6 +143,8 @@ def build_card(task: TaskLike, run: RunState | None, ctx: Context) -> dict[str, 
     }
     if status == Status.YOURS and kuhys(task.title, getattr(task, "parts", ())):
         card["current"] = manual_ask(task)  # what kuhy must do, never "no repo" on a card that has one
+    if (label := getattr(task, "triage", None)) is not None:
+        card["triage"] = label  # an icon on the card (DOCS-triage.md)
     if errors := len(signatures(task.body)):  # tickets of the errors loop on this card (a badge)
         card["app_error"] = errors
     if (umbrella := card_view(task, run)) is not None:

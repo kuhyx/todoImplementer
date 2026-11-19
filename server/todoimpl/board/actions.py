@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 from todoimpl.umbrella.note import is_umbrella
 
 from .needs import needs
+from .norepo import is_yours
 from .parts import kuhys
 from .status import Status
 from .types import MANUAL_REASON, fmt_when
@@ -60,11 +61,7 @@ def _missing(repo_missing: str | None, block: str | None) -> str | None:
 
 def _start_block(task: TaskLike, block: str | None, repo_missing: str | None) -> str | None:
     """Return why a first start cannot succeed."""
-    return (
-        "note has no repo"
-        if task.repo is None and not is_umbrella(task.body)
-        else _missing(repo_missing, block)
-    )
+    return "note has no repo" if is_yours(task) else _missing(repo_missing, block)
 
 
 def _gate(label: str, action_id: str, reason: str | None, *, confirm: bool = False) -> Action:

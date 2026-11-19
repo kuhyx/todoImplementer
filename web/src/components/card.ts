@@ -1,4 +1,4 @@
-import type { NeedsCategory, Status, TaskCard } from "@/lib/schemas-common";
+import type { NeedsCategory, Status, TaskCard, TriageLabel } from "@/lib/schemas-common";
 
 /** One board card. Every word comes from the server's card; the status label is display text for the enum only. */
 import { icon, type IconName } from "@/components/icons";
@@ -50,6 +50,15 @@ export function tierBadges(card: TaskCard): HTMLElement[] {
   return TIER_ORDER.filter((name) => card.tier[name]).map((name) =>
     h("span", { attrs: { "aria-label": TIER_LABEL[name], "data-tier": name, role: "img", title: TIER_LABEL[name] }, class: "tier-badge" }, icon(name)),
   );
+}
+
+const TRIAGE_ICON = { all_repos: "all", existing_repo: "folder", manual: "person", new_repo: "plus", research: "search" } as const satisfies Record<TriageLabel, IconName>;
+const TRIAGE_NAME: Record<TriageLabel, string> = { all_repos: "All repos", existing_repo: "Existing repo", manual: "Yours", new_repo: "New repo", research: "Research" };
+
+/** Icon-only triage label of a card that had no repo: the label is the server's, the words are tooltip and aria-label only. */
+export function triageBadge(card: TaskCard): HTMLElement[] {
+  const label = card.triage;
+  return label === undefined ? [] : [h("span", { attrs: { "aria-label": TRIAGE_NAME[label], "data-triage": label, role: "img", title: TRIAGE_NAME[label] }, class: "tier-badge" }, icon(TRIAGE_ICON[label]))];
 }
 
 const CATEGORY_LABEL: Record<NeedsCategory, string> = {
@@ -104,6 +113,7 @@ export function renderCard(card: TaskCard, now: number, shouldShowRepo = false):
       statusChip(card.status),
       routeChip(card),
       ...tierBadges(card),
+      ...triageBadge(card),
       card.app_error !== undefined && badge("issue", "App error", card.app_error, { "data-app-error": "" }),
       h("span", { class: "card-prio", text: card.priority }),
     ),

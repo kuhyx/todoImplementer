@@ -40,7 +40,7 @@ types:
 # One pytest call per test dir (each well under the 60 s per-command cap), each writing its own coverage
 # file; `coverage` merges them and still enforces fail_under = 100 over server/, scripts/, deploy/ and mcp/.
 # Run one chunk with `make test-board`; all of them, then the gate, with `make test`.
-CHUNKS := asks errors resilience gateway apikey credits board http relay sessions service todo_mcp lessons usage prompts tokens tokens_audit tokens_api mcp_server deploy merge \
+CHUNKS := asks errors resilience gateway apikey credits board http relay sessions service todo_mcp lessons usage triage prompts tokens tokens_audit tokens_api mcp_server deploy merge \
 	runner runner_mid runner_flow runner_ship runner_tail umbrella umbrella_flow repotask repotask_flow root
 CHUNK_PATH_root := tests/test_*.py
 CHUNK_PATH_umbrella := tests/umbrella --ignore-glob='tests/umbrella/test_flow_*'

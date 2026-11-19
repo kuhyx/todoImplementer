@@ -31,6 +31,7 @@ class CardTask:
     done_check: str | None
     item: Item
     created_by: str = "kuhy"
+    triage: str | None = None  # the label of a repo-less note (triage.json), set by the board fetch
 
     @property
     def parts(self) -> tuple[Part, ...]:

@@ -10,8 +10,8 @@ from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from todoimpl.errors.marks import PHONE
-from todoimpl.umbrella.note import is_umbrella
 
+from .norepo import is_yours
 from .parts import kuhys
 
 if TYPE_CHECKING:
@@ -81,9 +81,7 @@ def compute(  # noqa: PLR0911 - one return per rule of the spec table
         return Status.DONE
     if task.status == "abandoned" or (run is not None and run.stage == "cancelled"):
         return Status.CANCELLED
-    if kuhys(task.title, getattr(task, "parts", ())) or (
-        run is None and task.repo is None and not is_umbrella(task.body)
-    ):
+    if kuhys(task.title, getattr(task, "parts", ())) or (run is None and is_yours(task)):
         return Status.YOURS
     if run is None:
         return Status.BACKLOG

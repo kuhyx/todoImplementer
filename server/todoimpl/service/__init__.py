@@ -3,16 +3,18 @@
 from __future__ import annotations
 
 import importlib
+from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from todoimpl.board.state import run_root
+from todoimpl.board.state import run_dir, run_root
 from todoimpl.credits import ledger
 from todoimpl.errors.loop import ErrorLoop
 from todoimpl.http.main import REPO, git_build_id
 from todoimpl.repotask import legacy
 from todoimpl.runner.autocheck import AutoCloser
 from todoimpl.todo_mcp.client import TodoClient
+from todoimpl.triage.label import label_of
 from todoimpl.umbrella import registry
 
 from .backend import ServiceBackend
@@ -47,6 +49,11 @@ def board_fetch(
         notes += [n for n in client.list_tasks(full=True, no_repo=True) if n.id not in seen]
         notes += registry.notes(client, root, {n.id[:8] for n in notes})  # repo-less umbrellas not listed
         cards = group_cards(notes, lambda card: legacy.older(root, card), released_in(root))
+        # A repo-less note's triage label (a file in its run dir) rides on its card.
+        cards = [
+            replace(c, triage=found) if c.repo is None and (found := label_of(run_dir(root, c.id))) else c
+            for c in cards
+        ]
         cards += closed.cards({note.id[:8] for note in notes}, {card.id for card in cards})
         if run_titles is not None:
             run_titles.update(card_titles(cards))
@@ -98,6 +105,7 @@ def build_backend(
     from todoimpl.merge.service import MergeService  # noqa: PLC0415 - merge.apply imports service.cards
     from todoimpl.newtask.service import NewTaskService  # noqa: PLC0415 - it imports service.cards
     from todoimpl.runner.limitprobe import LimitProbe  # noqa: PLC0415 - runner imports the service view
+    from todoimpl.triage.service import TriageService  # noqa: PLC0415 - it imports service.cards
 
     monitor = KeyMonitor(client, after_write=cache.poke)
     probe = LimitProbe(root)
@@ -110,9 +118,11 @@ def build_backend(
     new_tasks = NewTaskService(client, cache)
     backend.new_task_service = new_tasks
     backend.ask_service = AskService(cache, scheduler, root)
+    backend.triage_service = TriageService(client, cache, root)
     if refresh:
         cache.start()
         backend.ask_service.start()  # 24 h auto-adopt of reversible choices
+        backend.triage_service.start()  # labels notes without a repo (DOCS-triage.md)
         monitor.start()  # first check runs on its own thread: a slow network never delays startup
         probe.start()
         gateway.start()  # a dead gateway only makes its reading `down`

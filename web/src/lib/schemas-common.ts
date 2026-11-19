@@ -158,6 +158,9 @@ export const repoPart = z.strictObject({
   title: z.string().min(1),
 });
 
+/** What triage decided about a note that had no repo (common.schema.json task_card.triage). */
+export const TRIAGE_LABELS = ["new_repo", "existing_repo", "all_repos", "research", "manual"] as const;
+
 export const taskCard = z.strictObject({
   actions,
   app_error: z.number().int().min(1).optional(),
@@ -179,6 +182,7 @@ export const taskCard = z.strictObject({
   status,
   tier: tierFlags,
   title: z.string().min(1),
+  triage: z.enum(TRIAGE_LABELS).optional(),
   umbrella: umbrellaCounts.optional(),
   updated: epoch.nullable(),
   waits_on: itemId.nullable().optional(),
@@ -192,6 +196,7 @@ export type RepoPart = z.infer<typeof repoPart>;
 export type TaskCard = z.infer<typeof taskCard>;
 export type UmbrellaCounts = z.infer<typeof umbrellaCounts>;
 export type NeedsCategory = (typeof NEEDS_CATEGORIES)[number];
+export type TriageLabel = (typeof TRIAGE_LABELS)[number];
 export type ColumnId = z.infer<typeof column>;
 export type Status = z.infer<typeof status>;
 

@@ -15,7 +15,7 @@ from todoimpl.board.card import Context, build_card
 from todoimpl.board.diff import worktree_diff
 from todoimpl.board.state import load, load_runs, run_dir
 from todoimpl.board.types import Credits, Limit
-from todoimpl.credits import marks, route, setting
+from todoimpl.credits import marks, route
 from todoimpl.http.backend import ERROR_CODES, BackendError
 from todoimpl.lessons import LessonError, approve, draft_lesson, latest_lesson, run_skills
 from todoimpl.repotask.files import overlay as ticks_overlay
@@ -27,6 +27,7 @@ from todoimpl.usage import limit_state
 from todoimpl.usage.interventions import record
 
 from . import permission, shots, tracking
+from .settings import credits_fallback as _credits_fallback
 from .wont import wont as _wont
 
 if TYPE_CHECKING:
@@ -39,6 +40,7 @@ if TYPE_CHECKING:
     from todoimpl.merge.service import MergeService
     from todoimpl.newtask.service import NewTaskService
     from todoimpl.runner.limitprobe import LimitProbe
+    from todoimpl.triage.service import TriageService
 
     from .cache import TaskCache
     from .scheduling import SchedulerLike
@@ -88,6 +90,7 @@ class ServiceBackend:
         self.merge_service: MergeService | None = None  # set by build_backend; the http layer looks for it
         self.ask_service: AskService | None = None  # POST /api/task/<id>/ask/<verb>
         self.new_task_service: NewTaskService | None = None  # POST /api/new-task
+        self.triage_service: TriageService | None = None  # labels repo-less notes (DOCS-triage.md)
 
     def _context(self) -> Context:
         now = self._clock()
@@ -154,6 +157,7 @@ class ServiceBackend:
     umbrella = tracking.umbrella  # GET /api/umbrella/<id8>
     worker_log = tracking.worker_log  # the tail of a child's newest worker log
     wont = _wont  # Won't do click (T2045)
+    set_credits_fallback = _credits_fallback  # POST /api/settings/credits-fallback
 
     def subscribe(self, id8: str) -> Iterator[dict[str, Any]]:
         """Live events of one task; stage/done carry the freshly computed card fields (live.schema.json)."""
@@ -230,11 +234,6 @@ class ServiceBackend:
     def cancel(self, id8: str) -> None:
         """Cancel click."""
         self._click(id8, "cancel", lambda: self.scheduler.cancel(id8))
-
-    def set_credits_fallback(self, *, enabled: bool) -> dict[str, Any]:
-        """POST /api/settings/credits-fallback: store the global setting, return the fresh credits object."""
-        setting.set_enabled(value=enabled)
-        return route.view(self.root, self._clock())
 
     def go(self, id8: str) -> None:
         """Go click: run the card's one-line command as kuhy, rerun the blocked stage on exit 0."""
