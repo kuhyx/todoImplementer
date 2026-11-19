@@ -113,10 +113,8 @@ def issue_groups(run_dir: Path) -> dict[str, Any]:
 
 def eta(kids: list[dict[str, Any]], width: int) -> dict[str, Any]:
     """Estimate the time left: ceil(children left / width) times the median time a finished child took."""
-    took = [
-        k["elapsed"] for k in kids if k["status"] in ("done", "ready_to_ship") and k["elapsed"] is not None
-    ]
-    left = sum(k["status"] not in ("done", "ready_to_ship") for k in kids)
+    took = [k["elapsed"] for k in kids if k["status"] == "done" and k["elapsed"] is not None]
+    left = sum(k["status"] != "done" for k in kids)
     running = sum(k["status"] in ("working", "queued", "shipping") for k in kids)
     wide = max(1, width, running)
     median = statistics.median(took) if took else None

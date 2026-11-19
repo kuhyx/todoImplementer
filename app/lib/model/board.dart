@@ -9,8 +9,8 @@ import 'package:todo_implementer/model/json.dart';
 
 export 'package:todo_implementer/model/card_parts.dart';
 
-/// The five board columns, in board order.
-const columnIds = ['backlog', 'running', 'needs_you', 'ready', 'done'];
+/// The four board columns, in board order.
+const columnIds = ['backlog', 'running', 'needs_you', 'done'];
 
 /// One board card (`common.schema.json#/$defs/task_card`).
 @immutable
@@ -114,7 +114,7 @@ class BoardColumn {
   /// Creates the header.
   const new(this.id, this.label, this.count);
 
-  /// `backlog`, `running`, `needs_you`, `ready`, `done`.
+  /// `backlog`, `running`, `needs_you`, `done`.
   final String id;
 
   /// Spoken label.

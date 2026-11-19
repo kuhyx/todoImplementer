@@ -84,7 +84,7 @@ class Scheduler(PhoneEngine):
         (self._active.add if active else self._active.discard)(card)
 
     auto_start = closing.auto_start  # a closing run when the item has none; False when one exists
-    close_item = closing.close  # the Close click on a Ready-to-close run (`close` is the Engine's shutdown)
+    close_item = closing.close  # the Close click on a held closing run (`close` is the Engine's shutdown)
     phone_update_start = appfix.restart  # a pushed fix whose deploy waits for the phone: Ship again
     start_when_free = whenfree.arm  # a handoff onto a held card: it starts when its Ship completes
     after_recover = whenfree.recover  # a Ship that completed across a restart still starts its handoff
@@ -217,7 +217,7 @@ class Scheduler(PhoneEngine):
         with self._cv:
             st = self._idle(card)
             if st.stage != "gate" or st.closing:
-                msg = "Ship is offered only at Ready to ship"
+                msg = "Ship is offered only at the gate (a held run)"
                 raise RunnerError(msg, "disabled")
             st.stage = "shipping"
             st.extra.pop("ship_resumes", None)

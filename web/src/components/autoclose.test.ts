@@ -1,7 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
-import { idleBar, renderAction } from "@/components/action-bar";
-import { autoBadge, renderCard, statusChip } from "@/components/card";
+import { autoBadge, renderCard } from "@/components/card";
 import { renderHead } from "@/components/drawer-sections";
 import { renderUsage } from "@/components/usage-strip";
 import { board as boardSchema } from "@/lib/schemas";
@@ -11,7 +10,7 @@ import { preset } from "@/test/fixture-presets";
 import { makeBoard, makeCards, NOW } from "@/test/fixtures";
 
 const base = makeCards()[0]!;
-const closing = { ...base, ...preset("ready_to_close", true), auto_start: { passed_at: NOW - 120, reason: "done_check" as const } };
+const closing = { ...base, ...preset("shipping", true), auto_start: { passed_at: NOW - 120, reason: "done_check" as const } };
 const waiting = { ...base, auto: "waiting for a pass" };
 
 describe("auto close on the board", () => {
@@ -29,7 +28,6 @@ describe("auto close on the board", () => {
     const done = { ...closing, ...preset("done", true) };
     expect(renderCard(done, NOW).querySelector(".card-badge")?.textContent).toBe(text);
     expect(autoBadge(base)).toBeNull();
-    expect(statusChip("ready_to_close").textContent).toBe("Ready to close");
   });
 
   it("shows the badge and the auto note in the drawer head", () => {
@@ -37,16 +35,6 @@ describe("auto close on the board", () => {
     expect(head.textContent).toContain("auto: done_check passed at");
     expect(renderHead(makeDetail(waiting)).querySelector(".drawer-auto")?.textContent).toBe("auto: waiting for a pass");
     expect(renderHead(makeDetail(base)).querySelector(".drawer-auto")).toBeNull();
-  });
-
-  it("offers Close as the primary button and never Ship on a Ready-to-close card", () => {
-    const ids = closing.actions.map((action) => action.id);
-    expect(ids).toContain("close");
-    expect(ids).not.toContain("ship");
-    const host = { activate: vi.fn(), cancelConfirm: vi.fn(), state: idleBar };
-    const close = closing.actions.find((action) => action.id === "close")!;
-    const element = renderAction(close, host, closing.id);
-    expect(element.querySelector("button")?.className).toContain("primary");
   });
 
   it("names the switch in the header from the board's auto_close flag", () => {

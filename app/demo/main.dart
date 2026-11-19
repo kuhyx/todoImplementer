@@ -178,10 +178,10 @@ final Json _board = {
     ),
     _card(
       40,
-      'ready',
-      'ready_to_ship',
+      'running',
+      'shipping',
       'Show sync status in the header',
-      actions: [_action('ship', confirm: true), _action('copy-resume')],
+      actions: [_action('copy-resume')],
       cost: 2.1,
     ),
   ],

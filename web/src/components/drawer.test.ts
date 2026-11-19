@@ -114,7 +114,7 @@ describe("live stream", () => {
     expect(q("[data-slot=send]").hidden).toBe(true);
     source.emit("cost", { cost_usd: 9.5, type: "cost" });
     expect(changed).toHaveBeenCalledTimes(1);
-    source.emit("done", { status: "ready_to_ship", type: "done" });
+    source.emit("done", { status: "shipping", type: "done" });
     expect(changed).toHaveBeenCalledTimes(2);
     expect(q(".feed-state").textContent).toBe("stream ended");
   });

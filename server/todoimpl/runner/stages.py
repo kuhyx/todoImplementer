@@ -12,7 +12,7 @@ from todoimpl.umbrella import bounce
 from todoimpl.umbrella.note import is_umbrella
 from todoimpl.umbrella.run import run as run_umbrella
 
-from . import appfix, phone, shipfix, tiering
+from . import appfix, hold, phone, shipfix, tiering
 from .checks import SENTENCE_NOTE, discover, record, run_all
 from .closing import closing_stage
 from .deploy import DeployFailedError
@@ -172,7 +172,8 @@ def _checks(d: Driver) -> str | None:
         st.auto_ship = st.auto_ship or child
         ticked = files.ticked(d.ctx.run_dir, d.item) if d.item.parts else []
         own = marks.ships_itself(st, ticked, d.item.body)  # an app-error fix needs no done_check to ship
-        return "shipping" if child or (st.auto_ship and (d.item.done_check or own)) else "gate"
+        auto = child or (st.auto_ship and (d.item.done_check or own))
+        return "gate" if hold.held() and not auto else "shipping"  # T2060: no click, every card ships
     tail = bounce.red_tail(
         st, "\n\n".join(f"== {r.name}: {r.command} (exit {r.exit_code})\n{r.tail}" for r in red)
     )

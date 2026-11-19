@@ -1,4 +1,4 @@
-"""Steps 3, 4 and 5: board and start, parallel runs to ready_to_ship, ship and its consequences."""
+"""Steps 3, 4 and 5: board and start, parallel runs, each green card ships itself (T2060), then the checks."""
 
 from __future__ import annotations
 
@@ -92,24 +92,20 @@ def step3_board_and_start(state: State) -> None:
         fail(f"page carries csrf metas {metas}: the page reads the first, it must be the one real token")
 
 
-def check_ready(state: State, api: Client) -> None:
-    """Each ready card has plan.md, live_check.md and a non-empty green checks tail."""
+def check_ready(state: State) -> None:
+    """Each card that reached the gate left plan.md and live_check.md (the card may be shipped by now)."""
     for card, title in state.cards.items():
         run = state.path / "root" / card
         for name in ("plan.md", "live_check.md"):
             if not (run / name).is_file() or not (run / name).read_text(encoding="utf-8").strip():
                 fail(f"{title}: {run / name} missing or empty")
-        checks = api.get(f"/api/task/{card}").get("checks") or {}
-        tails = [r["tail"] for r in checks.get("results", []) if r["tail"].strip()]
-        if not checks.get("passed") or not tails:
-            fail(f"{title}: checks not green with a tail: {checks}")
-        say(state, 4, f"{title}: plan.md, live_check.md, checks tail {tails[-1]!r}")
+        say(state, 4, f"{title}: plan.md and live_check.md written")
 
 
 def step4_wait_ready(state: State) -> None:
-    """Poll until every card is ready_to_ship; record the peak of concurrent runs."""
+    """Poll until every card ships (or is shipped); record the peak of concurrent runs."""
     api = Client(state.port)
-    say(state, 4, "waiting for every card to reach ready_to_ship")
+    say(state, 4, "waiting for every card to reach shipping")
     end = time.monotonic() + SLICE
     while True:
         board = api.get("/api/board")
@@ -120,7 +116,7 @@ def step4_wait_ready(state: State) -> None:
         if stuck:
             dump(state, "board-stuck.json", board)
             fail("; ".join(f"{t['title']} is {t['status']}: {t.get('needs')}" for t in stuck))
-        if all(t["status"] == "ready_to_ship" for t in tasks):
+        if all(t["status"] in ("shipping", "done") for t in tasks):  # no Ready column, no click (T2060)
             break
         if time.monotonic() > end:
             save(state)
@@ -132,7 +128,7 @@ def step4_wait_ready(state: State) -> None:
         fail(f"{state.peak} runs at once, the cap is {MAX_PARALLEL}")
     if not state.real_claude and len(state.cards) > 1 and state.peak < 2:
         fail(f"runs did not overlap (peak {state.peak}); they are not parallel")
-    check_ready(state, api)
+    check_ready(state)
 
 
 def git_out(*args: str) -> str:
@@ -171,17 +167,12 @@ def verify_shipped(state: State) -> None:
 
 
 def step5_ship(state: State) -> None:
-    """Click Ship on each card (one at a time, like kuhy), wait until done, then verify the world."""
+    """Wait until every card has shipped on its own (no Ship click), then verify the world."""
     api = Client(state.port)
     end = time.monotonic() + SLICE
     for card, title in state.cards.items():
         if card in state.shipped:
             continue
-        if api.request("GET", f"/api/task/{card}")[0] == 404:  # shipped by an earlier run of this step
-            state.shipped.append(card)
-            continue
-        say(state, 5, f"POST /api/task/{card}/ship ({title})")
-        api.post(f"/api/task/{card}/ship")
         while True:
             code, body = api.request("GET", f"/api/task/{card}")
             if code == 404:  # closing the note's last open item drops the note from the open list

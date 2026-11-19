@@ -21,9 +21,9 @@
     },
     "columns": {
       "type": "array",
-      "description": "Always the five columns in this order: backlog, running, needs_you, ready, done.",
-      "minItems": 5,
-      "maxItems": 5,
+      "description": "Always the four columns in this order: backlog, running, needs_you, done.",
+      "minItems": 4,
+      "maxItems": 4,
       "items": {
         "type": "object",
         "properties": {

@@ -23,23 +23,23 @@ they mean. Lessons from the predecessor are in `DOCS-lessons.md`.
   Live check verdict (kuhy, 2026-11-07): one done criterion is enough: the run goes on to Checks and the open ones
   become one follow-up note (retried on a timer, never Needs you, no turn spent). Every start judges failed live checks
   again from their stored report, so a rule change reaches old runs. Least effort lists question cards first.
-- **Q5** Automatic: everything up to Gate. Only kuhy's click: Ship, Spec OK (also Start, Cancel,
-  lesson approval). CHANGE 2026-11-08: a done_check note started with "Auto-ship when checks pass" ticked (off by
-  default, kept by Retry and Hand back) skips the Gate and ships itself; a run with no diff then closes the note
-  without a push. CHANGE 2026-11-09: sessions land their own work (DOCS-landing.md). Never force-push; never edit kuhy's checkout.
+- **Q5** Automatic: everything up to and including Ship. kuhy's clicks: Spec OK, Start, Cancel, lesson approval.
+  CHANGE 2026-11-19 (T2060): no Ship click, no Ready to ship column: a green card ships itself (DOCS-landing.md,
+  "Ship by itself"); the 2026-11-08 Auto-ship tick is gone. CHANGE 2026-11-09: sessions land their own work
+  (DOCS-landing.md). Never force-push; never edit kuhy's checkout.
 - **Q6** Headless `claude -p` with stream-json, resume by session id, live feed (SSE), a Send-to-Claude box, a "copy
   resume command" button (`cd <worktree> && claude --resume <id>`); never open a terminal on :0.
 - **Q7** No cap on concurrent runs (kuhy, 2026-11-05: the tool exists to run many at once): every Start drives at once. Opus implements (cheap notes: Opus manager, `DOCS-tiers.md`), Sonnet specs, Haiku classifies. A plan limit pauses
   all runs and resumes at `resetsAt`, or goes on the free API credits (`DOCS-credits.md`); never overage. Cost per task.
 - **Q8** Lessons go to `~/.claude/skills/*` via `skill_lesson.py add`, only after kuhy approves a lesson drafted on
   each gate rejection. The UI shows which skills a run loaded. No skills inside this repo.
-- **Q9** Board columns Backlog / Running / Needs you / Ready to ship / Done; a card per task, grouped or filtered by
+- **Q9** Board columns Backlog / Running / Needs you / Done (a shipping card is in Running); a card per task, grouped or filtered by
   repo; click opens a side drawer (live feed, plan, diff, live-check report, checks, actions). Tokens from `@kuhyx/web-ui` and the
   unified-design-system warm palette; no invented colours; looks unlike the predecessor's list UI.
 - **Q10** Assignee `human` or `claude`. A note with no `repo` is in kuhy's Yours lane. Claude can hand a task to kuhy,
   naming exactly what it needs (needs kind `handed_to_you`).
 - **Q11** Done = open the page, see every open note grouped by repo, start at least 3, they run in parallel worktrees with live
-  feeds, each reaches Ready to ship with plan + a live-check report + green checks; Ship pushes and closes.
+  feeds, each ships itself with plan + a live-check report + green checks: it pushes and closes.
 - **Q12/Q15** Public without VPN: per-device cookie from a pairing QR (no OAuth client; `DOCS-phone.md`);
   the server binds 127.0.0.1, checks Origin and a CSRF token on every POST; Caddy rate limit.
   Secrets in `~/.config/todoImplementer/` mode 0600. A handoff script covers the OAuth client (no API exists).
@@ -68,13 +68,10 @@ resting stages; the rest are work stages. "auto" = no click; "click" = kuhy. Clo
 | implement | live_check | implementer's turn ends with tag D and its self-check | auto |
 | live_check | checks | report written (what was run, what was seen per criterion) | auto |
 | live_check | implement | report says a criterion is not met, fix attempt left (max 2) | auto |
-| checks | gate | all checks green | auto |
-| checks | shipping | all checks green, `auto_ship` set and the note has a done_check | auto |
+| checks | shipping | all checks green (no rest at `gate` since T2060) | auto |
 | checks | implement | checks red, fix attempt left (max 2) | auto |
 | checks | failed | checks still red after the attempts | auto |
-| gate | shipping | ship | click |
-| gate | implement | send (kuhy rejects with a note; lesson drafted) | click |
-| shipping | shipped | push + close_task done (auto-ship with no diff: close_task only) | auto |
+| shipping | shipped | push + close_task done (no diff with auto_ship: close_task only) | auto |
 | shipping | failed | rebase conflict, red recheck, push refused | auto |
 | any work stage | paused_limit | plan limit seen; `resume_at` = resetsAt | auto |
 | paused_limit | stage before | `resume_at` passed | auto |
@@ -97,9 +94,8 @@ first match wins:
 | 1b | todo status abandoned, or stage cancelled (Cancel abandons the note when no other section is open) | cancelled | done |
 | 2 | no run and repo null | yours | backlog |
 | 3 | no run | backlog | backlog |
-| 5 | stage gate | ready_to_ship (ready_to_close for a closing run) | ready |
 | 6 | stage failed, or `error` set, or `last_tag` in Q/A while not live, or stage spec_wait | needs_you | needs_you |
-| 7 | stage shipping | shipping | running |
+| 7 | stage shipping (or a legacy `gate`) | shipping | running |
 | 8 | stage paused_limit, or limit active and not live | paused_limit | running |
 | 9 | work stage and live | working | running |
 | 10 | work stage, not live | queued | running |
@@ -115,11 +111,9 @@ Server-computed per card as `{id, label, enabled, reason}`; a disabled action al
 decides. `start` enabled when status is backlog or cancelled, the note has a repo, and no usage limit holds (free
 credits taking over is no hold; a MANUAL WORK REQUIRED title is human work: disabled; board `slots` is just `{used}`);
 `spec-answers` when a question is open; `spec-ok` when every question is answered; `send` while a session exists and the
-stage is not final (`shipped`, `closed`, `cancelled`), including `failed` and stalled runs but never a closing run; `ship`
-only at Ready to ship; `close` only at Ready to close; `cancel` on any status whose stage is not final; `lesson-approve`
+stage is not final (`shipped`, `closed`, `cancelled`), including `failed` and stalled runs but never a closing run; `cancel` on any status whose stage is not final; `lesson-approve`
 when a lesson is drafted; `copy-resume` (carries `value`, no POST) when a session id exists; `go`, `copy-fix` (carries `value`, no POST) and `rerun` on a permission block (below).
-Start/Restart carry `option` `auto_ship` (a checkbox sent as `{auto_ship: bool}`), disabled without a done_check;
-Retry and Hand back send `{}` and keep the stored choice.
+No `ship`, `close` or `auto_ship` option is offered (T2060); Start, Retry and Hand back send `{}`.
 
 ## Permission blocks heal themselves
 
@@ -235,7 +229,7 @@ todoimpl.tokens.ingest --budget 45` (a unit file in `deploy/`, not installed). T
 `GET /api/usage` carries `autonomy` (`contracts/autonomy.schema.json`), shown on the usage page tab Autonomy. Four metrics, each with value, target, direction and a per-ISO-week series; Ship is not an
 intervention.
 
-- `done_unassisted` (up, target 100 %): finished cards (Ready to ship, shipping, Done) with no recorded intervention.
+- `done_unassisted` (up, target 100 %): finished cards (shipping, Done) with no recorded intervention.
 - `permission_asks` (down, 0): A: turns whose line asks for a permission or approval (`usage/asks.py`).
 - `questions_asked` (down, 0): spec question cards plus the questions of free Q: turns.
 - `criteria_failed` (down, 0): open plus deferred criteria of a settled live check (`extra.partial`, else the report).

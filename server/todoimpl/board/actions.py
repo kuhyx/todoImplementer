@@ -24,18 +24,7 @@ if TYPE_CHECKING:
 FINAL_STAGES = ("shipped", "closed", "cancelled")
 NO_NOTES = "closing runs take no notes; Start again or Cancel"
 ABANDONED = "the note is abandoned: auto close no longer polls its done_check"
-AUTO_SHIP = "Auto-ship when checks pass"
 WONT = (Status.BACKLOG, Status.CANCELLED, Status.YOURS, Status.NEEDS_YOU)  # no turn runs: Won't do drops it
-
-
-@dataclass(frozen=True)
-class Option:
-    """A checkbox sent with its action's click; `reason` is set exactly when it is disabled."""
-
-    id: str
-    label: str
-    enabled: bool = True
-    reason: str | None = None
 
 
 @dataclass(frozen=True)
@@ -48,10 +37,9 @@ class Action:
     reason: str | None = None
     confirm: bool = False
     value: str | None = None
-    option: Option | None = None
 
     def to_dict(self) -> dict[str, object]:
-        """Return the contract object (confirm/value/option only when set)."""
+        """Return the contract object (confirm/value only when set)."""
         out: dict[str, object] = {
             "id": self.id,
             "label": self.label,
@@ -62,8 +50,6 @@ class Action:
             out["confirm"] = True
         if self.value is not None:
             out["value"] = self.value
-        if self.option is not None:
-            out["option"] = vars(self.option).copy()
         return out
 
 
@@ -147,7 +133,7 @@ def _primary(  # noqa: PLR0911 - one branch per status keeps the table readable
     if status in (Status.BACKLOG, Status.CANCELLED):
         label = "Restart" if status == Status.CANCELLED else "Start"
         reason = _start_block(task, block, repo_missing)
-        return [Action("start", label, reason is None, reason, option=_auto_ship(task))]
+        return [Action("start", label, reason is None, reason)]
     if status in (Status.QUEUED, Status.WORKING):
         return [cancel]
     if status == Status.SHIPPING:
@@ -156,10 +142,6 @@ def _primary(  # noqa: PLR0911 - one branch per status keeps the table readable
         return [cancel]
     if status == Status.WAITING_PHONE_UPDATE:  # Retry deploys now, the phone watcher does it when it attaches
         return [_gate("Retry", "start", _missing(repo_missing, block)), cancel]
-    if status == Status.READY_TO_SHIP:
-        return [_gate("Ship", "ship", _ship_block(run), confirm=True), cancel]
-    if status == Status.READY_TO_CLOSE:
-        return [Action("close", "Close", confirm=True), cancel]
     if status == Status.NEEDS_YOU and run is not None:
         return _needs_you(run, block, repo_missing, cancel)
     return []
@@ -190,13 +172,6 @@ def _needs_you(run: RunState, block: str | None, repo_missing: str | None, cance
     return [cancel]
 
 
-def _auto_ship(task: TaskLike) -> Option:
-    """Return the Auto-ship checkbox of Start/Restart: only a done_check note can ship itself."""
-    if task.done_check is None and not is_umbrella(task.body):  # an umbrella's children bring their own
-        return Option("auto_ship", AUTO_SHIP, enabled=False, reason="the note has no done_check")
-    return Option("auto_ship", AUTO_SHIP)
-
-
 def _permission(run: RunState, block: str | None, cancel: Action) -> list[Action]:
     """Go runs the one-liner and reruns; Copy and Done-rerun cover a terminal command; no command = Retry."""
     perm = run.extra.get("permission")
@@ -207,15 +182,6 @@ def _permission(run: RunState, block: str | None, cancel: Action) -> list[Action
     tty = bool(perm.get("tty"))
     go = _gate("Go", "go", "needs a terminal: copy it" if tty else block)
     return [go, Action("copy-fix", "Copy", value=command), _gate("Done, rerun", "rerun", block), cancel]
-
-
-def _ship_block(run: RunState | None) -> str | None:
-    """Return what stops Ship from succeeding (missing worktree, red checks)."""
-    if run is None or not run.worktree:
-        return "no worktree to ship"
-    if run.checks is not None and not run.checks.get("passed", True):
-        return "checks are red"
-    return None
 
 
 def _session(run: RunState, status: Status, block: str | None) -> list[Action]:

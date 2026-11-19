@@ -31,7 +31,6 @@ IconData columnIcon(String id) => switch (id) {
   'backlog' => Icons.inbox_outlined,
   'running' => Icons.autorenew,
   'needs_you' => Icons.front_hand_outlined,
-  'ready' => Icons.rocket_launch_outlined,
   'done' => Icons.check_circle_outline,
   _ => Icons.view_column_outlined,
 };
@@ -72,7 +71,6 @@ IconData codeIcon(String code) => switch (code) {
 Color statusColor(String status) => switch (status) {
   'needs_you' || 'waiting_phone_update' => AppPalette.warning,
   'working' || 'shipping' || 'queued' => AppPalette.accent,
-  'ready_to_ship' || 'ready_to_close' => AppPalette.success,
   'paused_limit' => AppPalette.danger,
   _ => AppPalette.mutedOnDark,
 };

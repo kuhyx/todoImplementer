@@ -69,7 +69,7 @@ describe("renderCard", () => {
     if (paused === undefined || idle === undefined) throw new Error("fixture");
     expect(renderCard(paused, NOW).textContent).toMatch(/resumes in 3 h 0 min \(\d\d:\d\d\)/v);
     expect(renderCard(idle, NOW).textContent).not.toContain("$");
-    expect(statusChip("ready_to_ship").textContent).toBe("Ready to ship");
+    expect(statusChip("shipping").textContent).toBe("Shipping");
   });
 
   it("renders markup in a title as text", () => {
@@ -82,9 +82,9 @@ describe("renderCard", () => {
 });
 
 describe("renderBoard", () => {
-  it("draws five columns with counts and groups by repo", () => {
+  it("draws four columns with counts and groups by repo", () => {
     const root = mount(renderBoard(buildView(board, DEFAULT_STATE), DEFAULT_STATE, NOW, handlers()));
-    expect([...root.querySelectorAll(".col")].map((c) => c.getAttribute("data-col"))).toEqual(["backlog", "running", "needs_you", "ready", "done"]);
+    expect([...root.querySelectorAll(".col")].map((c) => c.getAttribute("data-col"))).toEqual(["backlog", "running", "needs_you", "done"]);
     expect(root.querySelectorAll(".card")).toHaveLength(38);
     expect(root.querySelector('.col[data-col="backlog"] .group-name')).toBeNull();
     expect(root.querySelector('.col[data-col="needs_you"] .card-meta')?.textContent).toMatch(/ · /v);

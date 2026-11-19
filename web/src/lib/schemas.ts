@@ -26,7 +26,7 @@ export const board = z.strictObject({
   build: z.string().min(1),
   columns: z
     .array(z.strictObject({ count: z.number().int().min(0), id: column, label: z.string().min(1) }))
-    .length(5),
+    .length(4),
   error: apiError.nullable().optional(),
   generated_at: epoch,
   limit,

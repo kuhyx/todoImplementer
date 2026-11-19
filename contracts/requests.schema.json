@@ -39,12 +39,12 @@
     "ship": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Ship click: rebase, recheck, commit, push, close note."
+      "description": "Ship click (none offered since T2060; a card ships itself): rebase, recheck, commit, push, close note."
     },
     "close": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Close click (closing runs at Ready to close): re-run the done_check, then close_task."
+      "description": "Close click (a closing run held at the gate; the board offers none since T2060): re-run the done_check, then close_task."
     },
     "cancel": {"type": "object", "additionalProperties": false},
     "go": {

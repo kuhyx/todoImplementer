@@ -44,14 +44,14 @@ def _child(directory: Any, cid: str, stage: str, **fields: Any) -> RunState:
 
 def test_the_track_validates_and_counts_children_rounds_and_needs(rig: Rig) -> None:
     card, directory = _umbrella(rig)
-    _child(directory, "aaaa1111-0", "gate", started_at=100.0, updated=1900.0)
+    _child(directory, "aaaa1111-0", "shipped", started_at=100.0, updated=1900.0)
     _child(directory, "bbbb2222-0", "failed", error="boom", started_at=200.0, updated=300.0)
     track = rig.backend.umbrella(card)
     assert track is not None
     validate("track", track)
     assert (track["id"], track["stage"], track["needs"]) == (card, "implement", 1)
     assert track["counts"]["total"] == 3
-    assert track["counts"]["ready"] == 1
+    assert track["counts"]["done"] == 1
     assert track["rounds"][0]["children"][0]["repo"] == "kuhyx/alpha"
     assert (track["rounds"][0]["started"], track["rounds"][0]["ended"]) == (100.0, 700.0)
     assert track["round"] is None
@@ -59,9 +59,9 @@ def test_the_track_validates_and_counts_children_rounds_and_needs(rig: Rig) -> N
     assert track["kids"][2]["elapsed"] is None  # not started
 
 
-def test_elapsed_runs_for_a_working_child_and_stops_at_the_gate(rig: Rig) -> None:
+def test_elapsed_runs_for_a_working_child_and_stops_when_shipped(rig: Rig) -> None:
     card, directory = _umbrella(rig)
-    _child(directory, "aaaa1111-0", "gate", started_at=100.0, updated=1900.0)
+    _child(directory, "aaaa1111-0", "shipped", started_at=100.0, updated=1900.0)
     _child(directory, "bbbb2222-0", "implement", started_at=NOW - 50)
     rig.backend._clock = lambda: NOW
     track = rig.backend.umbrella(card)
@@ -73,7 +73,7 @@ def test_elapsed_runs_for_a_working_child_and_stops_at_the_gate(rig: Rig) -> Non
 def test_the_eta_is_the_median_finished_child_times_the_batches_left(rig: Rig) -> None:
     card, directory = _umbrella(rig)
     assert rig.backend.umbrella(card)["eta"]["seconds"] is None  # type: ignore[index]
-    _child(directory, "aaaa1111-0", "gate", started_at=0.0, updated=1800.0)
+    _child(directory, "aaaa1111-0", "shipped", started_at=0.0, updated=1800.0)
     track = rig.backend.umbrella(card)
     assert track is not None
     assert track["eta"] == {"seconds": 1800.0, "done": 1, "left": 2, "median": 1800.0, "width": 2}

@@ -4,8 +4,8 @@
     run_flow.py step 1 [--real-claude]  scratch HOME, repo, bare origin, fake todo MCP seeded with 3 items
     run_flow.py step 2                  start `python -m todoimpl.http.main` detached, poll /version
     run_flow.py step 3                  GET /api/board (3 cards in Backlog), POST start on all, live feed
-    run_flow.py step 4                  wait for ready_to_ship on all (<= 3 at once; plan, live_check, checks)
-    run_flow.py step 5                  POST ship on each: remote commits with Todo trailers, notes done
+    run_flow.py step 4                  wait for every card to ship (<= 3 at once; plan, live_check, checks)
+    run_flow.py step 5                  wait for each ship: remote commits with Todo trailers, notes done
     run_flow.py step 6                  stop all, keep artefacts in ~/data/claude-scratch/e2e, rm work dir
     run_flow.py status | step 3-5       state of the run in progress | consecutive steps
 

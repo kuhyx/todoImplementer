@@ -17,9 +17,9 @@ describe("header", () => {
     const head = renderHead(makeTrack(), NOW);
     const segments = all(head, ".t-bar > i").map((s) => s.dataset.bucket);
     expect(segments).toHaveLength(11);
-    expect(segments.slice(0, 3)).toEqual(["done", "done", "ready"]);
+    expect(segments.slice(0, 3)).toEqual(["done", "done", "running"]);
     expect(head.querySelector(".t-bar")?.getAttribute("aria-label")).toBe("2 of 11 done");
-    expect(all(head, "[data-bucket].t-stat").map((s) => s.dataset.bucket)).toEqual(["done", "ready", "running", "queued", "failed"]);
+    expect(all(head, "[data-bucket].t-stat").map((s) => s.dataset.bucket)).toEqual(["done", "running", "queued", "failed"]);
     expect(head.querySelector("[data-needs] .t-num")?.textContent).toBe("1");
   });
 
@@ -93,9 +93,9 @@ describe("child rows", () => {
     const rows = all(list, ".t-kid");
     expect(rows).toHaveLength(6);
     const beta = rows[1]!;
-    expect(beta.dataset.status).toBe("ready_to_ship");
+    expect(beta.dataset.status).toBe("shipping");
     expect(beta.querySelector(".t-repo")?.textContent).toBe("kuhyx/beta");
-    expect(beta.querySelector("[data-stage]")?.getAttribute("data-stage")).toBe("gate");
+    expect(beta.querySelector("[data-stage]")?.getAttribute("data-stage")).toBe("shipping");
     expect(beta.querySelector('[aria-label^="Elapsed"]')?.textContent).toBe("40m");
     expect(beta.querySelector('[aria-label^="Free-model issues"] .t-num')?.textContent).toBe("3");
     expect(beta.querySelector('[aria-label^="Worker runs "] .t-num')?.textContent).toBe("3");

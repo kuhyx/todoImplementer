@@ -31,7 +31,7 @@ def test_t1914_a_section_run_in_flight_keeps_its_card_and_leaves_the_repo_run(ri
     older_run(rig, f"{note}-0", "gate")
     cards = {c["id"]: c for c in rig.backend.board()["tasks"]}
     assert set(cards) == {f"{note}-0", repo_card_id(repo)}
-    assert cards[f"{note}-0"]["status"] == "ready_to_ship"  # the old run still waits for its Ship click
+    assert cards[f"{note}-0"]["status"] == "shipping"  # the old run ships by itself (T2060)
     parts = cards[repo_card_id(repo)]["parts"]
     assert sorted((p["id"], p["state"]) for p in parts) == [(f"{note}-0", "held"), (f"{note}-1", "todo")]
     task = rig.backend.task(repo_card_id(repo))

@@ -53,7 +53,7 @@
     },
     "rate_metric": {
       "type": "object",
-      "description": "Percent of finished cards (Ready to ship or Done) that needed no intervention; value is null until a card finished.",
+      "description": "Percent of finished cards (shipped or Done) that needed no intervention; value is null until a card finished.",
       "properties": {
         "value": {
           "type": [

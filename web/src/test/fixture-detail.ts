@@ -37,7 +37,7 @@ const PATCH = [
 
 export function makeDetail(card: TaskCard): TaskDetail {
   const isNeedsSpec = card.needs?.kind === "spec_questions";
-  const isWorked = card.column === "ready" || card.column === "done" || card.status === "working";
+  const isWorked = card.column === "done" || card.status === "shipping" || card.status === "working";
   return {
     ask_items: [],
     asks: [],
@@ -59,7 +59,7 @@ export function makeDetail(card: TaskCard): TaskDetail {
     done_check: isWorked ? "make check" : null,
     error: null,
     lesson:
-      card.column === "ready"
+      card.status === "shipping"
         ? { evidence: "kuhy rejected the first push", id: "l1", mistake: "Skipped the red test", rule: "Show the red run first.", skill: "build-web-ui", state: "drafted" }
         : null,
     live_check: isWorked

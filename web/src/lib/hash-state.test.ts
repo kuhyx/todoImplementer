@@ -4,7 +4,7 @@ import { DEFAULT_STATE, formatHash, parseHash } from "@/lib/hash-state";
 
 describe("hash state", () => {
   it("round-trips a full state", () => {
-    const state = { col: "ready", q: "fix it", repo: "utils", sort: "cost", task: "17a1b2c3-0", umbrella: "2d0704cd-0" } as const;
+    const state = { col: "running", q: "fix it", repo: "utils", sort: "cost", task: "17a1b2c3-0", umbrella: "2d0704cd-0" } as const;
     expect(parseHash(formatHash(state))).toEqual(state);
   });
 

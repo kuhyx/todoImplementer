@@ -1,9 +1,10 @@
 """FCM pings on board changes (DOCS-native-app-relay.md "Notifications").
 
 After each board publish the worker compares the old and the new board: a card that newly sits in Needs you
-(category other than `auto`), newly is ready_to_ship, or newly has a failed run or failed checks raises one
-ping. Changes inside COALESCE_S share one ping. The ping goes to every presence/clients/* entry with an `fcm`
-token and holds counts only (relay-nodes.schema.json#/$defs/ping). Failures land on the board banner (NOTIFY).
+(category other than `auto`), or newly has a failed run or failed checks, raises one ping. A card that is
+ready ships by itself (T2060), so it earns none. Changes inside COALESCE_S share one ping. The ping goes to
+every presence/clients/* entry with an `fcm` token and holds counts only (relay-nodes.schema.json ping).
+Failures land on the board banner (NOTIFY).
 """
 
 from __future__ import annotations
@@ -60,8 +61,6 @@ def marks(card: dict[str, Any]) -> set[str]:
     out: set[str] = set()
     if card.get("column") == "needs_you" and needs.get("category") != "auto":
         out.add("needs_you")
-    if card.get("status") == "ready_to_ship":
-        out.add("ready")
     if needs.get("kind") in FAILED:
         out.add("failed")
     return out
@@ -77,7 +76,7 @@ def fresh(old: object, new: object) -> bool:
 
 def ping(board: object, now_ms: int) -> dict[str, str]:
     """Return the FCM data payload: counts only, all strings (FCM data values are strings)."""
-    totals = dict.fromkeys(("needs_you", "ready", "failed"), 0)
+    totals = dict.fromkeys(("needs_you", "failed"), 0)
     for card in cards(board).values():
         for mark in marks(card):
             totals[mark] += 1

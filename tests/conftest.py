@@ -14,6 +14,12 @@ def _direct_turn_launch(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture(autouse=True)
+def _hold_the_gate(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Rest runs at the gate as before T2060, so tests drive Ship by hand; tests of the new rule unset it."""
+    monkeypatch.setenv("TODOIMPL_HOLD_GATE", "1")
+
+
+@pytest.fixture(autouse=True)
 def _no_real_credits_inputs(
     tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch
 ) -> None:

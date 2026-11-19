@@ -22,7 +22,7 @@ needs him. One Flutter codebase on both screens also ends the duplicate UI once 
 | Transport | Firebase RTDB relay, root `todoimpl/v1-e2e`, Google sign-in, one uid, E2E sealed with the shared crdt-sync password |
 | Relay code | The shared package `~/src/utils/rtdb_relay/` (Python worker half, Dart client half), extracted from the tutor. Its API: `~/src/utils/rtdb_relay/README.md`. This repo only adds the todoImplementer kinds and nodes |
 | Server deps | Runtime gains exact-pinned `httpx`, `crdt-sync` and `rtdb_relay` (was stdlib only) |
-| Notifications | v1. FCM data-only ping from the PC; events: a card enters Needs you, enters Ready to ship, a run fails. Icon + count, no text |
+| Notifications | v1. FCM data-only ping from the PC; events: a card enters Needs you, a run fails (a ready card ships itself, so it pings nothing). Icon + count, no text |
 | Icon | Shared family (skill `app-icon`): charcoal field, `#B8862E` glyph of a card with a check and a play arrow |
 | Repo | Public (kuhyx/todoImplementer); release APK built and signed by CI on every push |
 | Retirement | Astro `web/` and `agents.kuhy.duckdns.org` stay until every flow in this file's done list passes on the phone with Wi-Fi off; then both go |

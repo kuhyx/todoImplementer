@@ -77,9 +77,9 @@ def test_disabled_action_needs_a_reason() -> None:
     validate("common", {**action, "reason": "not at the gate"}, "action")
 
 
-def test_board_has_five_columns() -> None:
+def test_board_has_four_columns() -> None:
     board = fixture("board")
-    board["columns"] = board["columns"][:4]
+    board["columns"] = board["columns"][:3]
     with pytest.raises(ValidationError):
         validate("board", board)
 
@@ -140,7 +140,7 @@ LIVE_EVENTS = [
         "actions": [],
     },
     {"type": "cost", "cost_usd": 0.5},
-    {"type": "done", "status": "ready_to_ship"},
+    {"type": "done", "status": "shipping"},
 ]
 
 

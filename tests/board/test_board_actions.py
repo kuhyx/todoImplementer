@@ -116,21 +116,6 @@ def test_t1850_run_on_credits_action_is_gone() -> None:
     assert got["send"].reason.startswith("usage limit until")  # type: ignore[union-attr]
 
 
-def test_ship_enabled_only_with_worktree_and_green_checks() -> None:
-    good = run(stage="gate", worktree="/w", checks={"passed": True})
-    ship = acts(S.READY_TO_SHIP, good)["ship"]
-    assert (ship.enabled, ship.confirm) == (True, True)
-    assert acts(S.READY_TO_SHIP, run(stage="gate"))["ship"].reason == "no worktree to ship"
-    red = run(stage="gate", worktree="/w", checks={"passed": False})
-    assert acts(S.READY_TO_SHIP, red)["ship"].reason == "checks are red"
-    assert acts(S.READY_TO_SHIP, None)["ship"].reason == "no worktree to ship"
-
-
-def test_ready_to_ship_reject_is_enabled() -> None:
-    state = run(stage="gate", worktree="/w", session_id="s")
-    assert acts(S.READY_TO_SHIP, state)["send"].enabled
-
-
 def test_spec_questions_actions() -> None:
     qs = [SpecQuestion("Q1", "a"), SpecQuestion("Q2", "b"), SpecQuestion("Q3", "c", answer="x")]
     got = acts(S.NEEDS_YOU, run(stage="spec_wait", spec_questions=qs))
@@ -166,7 +151,7 @@ def test_needs_you_without_a_run_offers_only_wont() -> None:
 
 
 def test_t2045_wont_rests_only_on_cards_no_turn_works_on() -> None:
-    for status in (S.QUEUED, S.WORKING, S.SHIPPING, S.PAUSED_LIMIT, S.READY_TO_SHIP, S.DONE):
+    for status in (S.QUEUED, S.WORKING, S.SHIPPING, S.PAUSED_LIMIT, S.DONE):
         assert "wont" not in acts(status, run(worktree="/w")), status
     for status in (S.BACKLOG, S.CANCELLED):
         assert acts(status, None)["wont"].confirm
@@ -178,9 +163,9 @@ def test_cancelled_run_cannot_be_sent_to() -> None:
 
 def test_lesson_approve_only_when_drafted() -> None:
     drafted = run(stage="gate", worktree="/w", lesson={"state": "drafted"})
-    assert acts(S.READY_TO_SHIP, drafted)["lesson-approve"].enabled
+    assert acts(S.SHIPPING, drafted)["lesson-approve"].enabled
     approved = run(stage="gate", worktree="/w", lesson={"state": "approved"})
-    assert "lesson-approve" not in acts(S.READY_TO_SHIP, approved)
+    assert "lesson-approve" not in acts(S.SHIPPING, approved)
 
 
 def test_to_dict_omits_unset_extras() -> None:
@@ -224,3 +209,10 @@ def test_every_combination_is_contract_valid_and_honest(
             assert a.enabled == (a.reason is None)
             if a.id == "start" and a.enabled:
                 assert not limit.holds
+
+
+def test_t2060_no_status_offers_ship_or_close_or_the_auto_ship_tick() -> None:
+    for status in S:
+        got = acts(status, run(stage="gate", worktree="/w", checks={"passed": True}, session_id="s"))
+        assert not {"ship", "close"} & set(got), status
+        assert all("option" not in a.to_dict() for a in got.values()), status

@@ -1,7 +1,7 @@
 """Moved work starts on an event: a handoff onto a held repo card starts its next cycle when Ship completes.
 
 kuhy (2026-11-18): a session moved to the board (POST /api/sessions/handoff) lands as a part on the repo's one
-card. When that card is held (a run working, at Ready to ship, on spec questions, paused or shipping), its
+card. When that card is held (a run working, on spec questions, paused or shipping), its
 Start is refused. Instead of waiting for a click, the handoff arms `<run dir>/start-when-free.json`; when that
 run ships and the card is back in Backlog, the Scheduler presses Start itself, like a click (no auto-ship).
 Cards with no pending handoff keep "never starts by itself" (DOCS-repotask.md, Cycles).

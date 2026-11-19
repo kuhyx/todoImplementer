@@ -63,8 +63,6 @@ def current_line(  # noqa: PLR0911 - one return per status
         Status.CANCELLED: "cancelled",
         Status.SHIPPING: "pushing and closing the note",
         Status.WAITING_PHONE_UPDATE: "wait for phone to connect, then update the app",
-        Status.READY_TO_SHIP: "waiting for your Ship click",
-        Status.READY_TO_CLOSE: "done_check re-run green: waiting for your Close click",
         Status.DONE: "done",
     }[status]
 

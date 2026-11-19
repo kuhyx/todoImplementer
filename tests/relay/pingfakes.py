@@ -22,13 +22,13 @@ def needs(kind: str = "claude_question", category: str = "questions") -> dict[st
 
 
 def board(*cards: dict[str, Any]) -> dict[str, Any]:
-    columns = ("backlog", "running", "needs_you", "ready", "done")
+    columns = ("backlog", "running", "needs_you", "done")
     return {"columns": [{"id": c, "items": [x for x in cards if x["column"] == c]} for c in columns]}
 
 
 ASKING = card("a", "needs_you", "needs_you", needs())
 AUTO = card("b", "needs_you", "needs_you", needs(category="auto"))
-READY = card("c", "ready", "ready_to_ship")
+SHIPPING = card("c", "running", "shipping")  # a green card ships itself (T2060): it never pings
 FAILED = card("d", "needs_you", "needs_you", needs("run_failed", "action"))
 
 

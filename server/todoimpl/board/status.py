@@ -34,8 +34,6 @@ class Status(StrEnum):
     SHIPPING = "shipping"
     WAITING_PHONE_UPDATE = "waiting_phone_update"
     NEEDS_YOU = "needs_you"
-    READY_TO_SHIP = "ready_to_ship"
-    READY_TO_CLOSE = "ready_to_close"
     DONE = "done"
 
 
@@ -45,7 +43,6 @@ class Column(StrEnum):
     BACKLOG = "backlog"
     RUNNING = "running"
     NEEDS_YOU = "needs_you"
-    READY = "ready"
     DONE = "done"
 
 
@@ -59,8 +56,6 @@ _COLUMNS = {
     Status.SHIPPING: Column.RUNNING,
     Status.WAITING_PHONE_UPDATE: Column.RUNNING,
     Status.NEEDS_YOU: Column.NEEDS_YOU,
-    Status.READY_TO_SHIP: Column.READY,
-    Status.READY_TO_CLOSE: Column.READY,
     Status.DONE: Column.DONE,
 }
 
@@ -93,11 +88,9 @@ def compute(  # noqa: PLR0911 - one return per rule of the spec table
         return Status.BACKLOG
     if run.assignee == "human" and not run.error:
         return Status.YOURS
-    if run.stage == "gate":
-        return Status.READY_TO_CLOSE if run.closing else Status.READY_TO_SHIP
     if (resting := _resting(run, live)) is not None:
         return resting
-    if run.stage == "shipping":
+    if run.stage in ("shipping", "gate"):  # no card rests at the gate: it ships or closes at once (T2060)
         return Status.SHIPPING
     if run.stage == "paused_limit" or (limit_until is not None and not live):
         return Status.PAUSED_LIMIT

@@ -52,7 +52,7 @@ describe("drawer sections", () => {
   });
 
   it("lesson block shows the draft and its action", () => {
-    const detail = makeDetail(byStatus("ready_to_ship"));
+    const detail = makeDetail(byStatus("shipping"));
     const element = renderLesson(detail, () => document.createElement("b"));
     expect(element?.textContent).toContain("Skipped the red test");
     expect(element?.querySelector("b")).not.toBeNull();

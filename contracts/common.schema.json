@@ -13,10 +13,10 @@
       "description": "Run stage as written by the runner. See DOCS-spec.md for transitions."
     },
     "status": {
-      "enum": ["backlog", "yours", "cancelled", "queued", "working", "paused_limit", "shipping", "waiting_phone_update", "needs_you", "ready_to_ship", "ready_to_close", "done"],
+      "enum": ["backlog", "yours", "cancelled", "queued", "working", "paused_limit", "shipping", "waiting_phone_update", "needs_you", "done"],
       "description": "THE single status, computed on the server by board.status.compute. Never recomputed in the page."
     },
-    "column": {"enum": ["backlog", "running", "needs_you", "ready", "done"]},
+    "column": {"enum": ["backlog", "running", "needs_you", "done"]},
     "needs_kind": {
       "enum": [
         "spec_questions",

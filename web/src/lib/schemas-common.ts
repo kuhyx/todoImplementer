@@ -16,9 +16,9 @@ export const STAGES = [
 ] as const;
 export const STATUSES = [
   "backlog", "yours", "cancelled", "queued", "working", "paused_limit", "shipping", "waiting_phone_update", "needs_you",
-  "ready_to_ship", "ready_to_close", "done",
+  "done",
 ] as const;
-export const COLUMN_IDS = ["backlog", "running", "needs_you", "ready", "done"] as const;
+export const COLUMN_IDS = ["backlog", "running", "needs_you", "done"] as const;
 export const NEEDS_KINDS = [
   "spec_questions", "spec_ok", "claude_question", "claude_action", "phone", "checks_failed", "run_failed", "handed_to_you", "permission",
 ] as const;
@@ -140,7 +140,6 @@ export const umbrellaCounts = z.strictObject({
   failed: z.number().int().min(0),
   issues: z.number().int().min(0),
   queued: z.number().int().min(0),
-  ready: z.number().int().min(0),
   round: z.number().int().min(0),
   running: z.number().int().min(0),
   total: z.number().int().min(0),

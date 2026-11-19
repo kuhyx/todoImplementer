@@ -7,6 +7,9 @@ import { settle, stubFetch } from "@/test/net";
 
 useDrawerHarness();
 
+/** A confirm button the board no longer offers (T2060); the drawer still draws any action the contract names. */
+const SHIP = { confirm: true, enabled: true, id: "ship" as const, label: "Ship", reason: null };
+
 describe("actions", () => {
   it("renders every server action and disables with the reason", async () => {
     const c = { ...card("backlog"), actions: [{ enabled: false, id: "start" as const, label: "Start", reason: "3 runs are already going" }] };
@@ -17,7 +20,7 @@ describe("actions", () => {
   });
 
   it("confirm -> pending in the same tick -> loader after 1 s -> server truth", async () => {
-    const c = card("ready_to_ship");
+    const c = { ...card("working"), actions: [SHIP] };
     const done = { ...c,  actions: [], column: "done" as const, status: "done" as const  };
     let state = c;
     await open(c, {
@@ -47,7 +50,7 @@ describe("actions", () => {
   });
 
   it("Escape in the confirm step backs out without closing", async () => {
-    const c = card("ready_to_ship");
+    const c = { ...card("working"), actions: [SHIP] };
     await open(c);
     q("[data-action=ship]").click();
     q(".drawer").dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "Escape" }));
@@ -184,7 +187,7 @@ describe("send and spec answers", () => {
   });
 
   it("approves the drafted lesson by id", async () => {
-    const c = card("ready_to_ship");
+    const c = { ...card("shipping"), actions: [{ enabled: true, id: "lesson-approve" as const, label: "Approve", reason: null }] };
     await open(c, { [`POST /api/task/${c.id}/lesson-approve`]: { ok: true, task: c } });
     q("[data-action=lesson-approve]").click();
     await settle(0);

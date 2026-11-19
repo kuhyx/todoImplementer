@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from todoimpl.umbrella.sched import start_stage
 
-from . import deploy
+from . import deploy, hold
 
 if TYPE_CHECKING:
     from todoimpl.board.state import RunState
@@ -46,5 +46,6 @@ def restart_stage(st: RunState, item: Item) -> str:
     ):  # Ship is idempotent (pushed.json, origin): it goes on, no second click
         return "shipping"
     fresh = start_stage(item.body, st, "plan" if st.extra.get("spec_ok") or not needs_spec(item) else "spec")
-    resumed = "gate" if failed in ("shipping", "gate") else failed  # a failed Ship goes back to the gate
-    return str(resumed) if resumed in (*RESUMABLE, "gate") else fresh
+    if failed in ("shipping", "gate"):  # a failed Ship goes again: back to the gate only where one is held
+        return "gate" if hold.held() else "shipping"
+    return str(failed) if failed in RESUMABLE else fresh

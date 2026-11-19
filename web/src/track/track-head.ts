@@ -5,10 +5,9 @@ import { type IconName } from "@/components/icons";
 import { h } from "@/lib/dom";
 import { formatSpan, restingStat, stat } from "@/track/track-kit";
 
-type Bucket = "done" | "failed" | "queued" | "ready" | "running";
+type Bucket = "done" | "failed" | "queued" | "running";
 const BUCKETS: readonly [Bucket, IconName, string][] = [
   ["done", "check", "Done"],
-  ["ready", "ready", "Ready to ship"],
   ["running", "running", "Running"],
   ["queued", "queued", "Queued"],
   ["failed", "failed", "Failed"],

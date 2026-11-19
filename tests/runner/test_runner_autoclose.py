@@ -68,7 +68,7 @@ def test_close_with_the_check_green_closes_the_item_and_keeps_the_badge(world: E
         assert sched.auto_start(CARD, 123.0)
         assert not sched.auto_start(CARD, 124.0)
         wait_stage(world, sched, "gate", tag="D")
-        with pytest.raises(RunnerError, match="only at Ready to ship"):
+        with pytest.raises(RunnerError, match="only at the gate"):
             sched.ship(CARD)
         sched.close_item(CARD)
         st = state(world)
@@ -78,7 +78,7 @@ def test_close_with_the_check_green_closes_the_item_and_keeps_the_badge(world: E
         assert "Closing turn: C1: marker exists" in client.closed[0][1]
         with pytest.raises(RunnerError, match="already closed"):
             sched.cancel(CARD)
-        with pytest.raises(RunnerError, match="only at Ready to close"):
+        with pytest.raises(RunnerError, match="only at the gate"):
             sched.close_item(CARD)
     finally:
         sched.close()

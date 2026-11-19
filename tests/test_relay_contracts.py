@@ -106,7 +106,7 @@ def test_relay_tree_snapshot_nodes_reuse_the_http_shapes() -> None:
 
 
 def test_ping_is_counts_only_strings() -> None:
-    ping = {"v": "1", "needs_you": "2", "ready": "0", "failed": "1", "at": "1794864361000"}
+    ping = {"v": "1", "needs_you": "2", "failed": "1", "at": "1794864361000"}
     validate("relay-nodes", ping, "ping")
     for bad in ({**ping, "title": "x"}, {**ping, "needs_you": 2}):
         with pytest.raises(ValidationError):

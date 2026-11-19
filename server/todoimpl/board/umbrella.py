@@ -23,13 +23,12 @@ _BUCKETS = {
     "queued": "running",
     "shipping": "running",
     "paused_limit": "running",
-    "ready_to_ship": "ready",
     "backlog": "queued",
 }
 
 
 def bucket(status: str) -> str:
-    """Return the card counter a child's status feeds: done, running, ready, queued or failed."""
+    """Return the card counter a child's status feeds: done, running, queued or failed."""
     return _BUCKETS.get(status, "failed")
 
 
@@ -70,7 +69,7 @@ def card_view(task: TaskLike, run: RunState | None) -> dict[str, Any] | None:
 
 def counts(rows: list[dict[str, Any]], record: dict[str, Any]) -> dict[str, Any]:
     """Return the `umbrella_counts` object: children per bucket, the next width, rounds done, issues."""
-    found = dict.fromkeys(("done", "running", "ready", "queued", "failed"), 0)
+    found = dict.fromkeys(("done", "running", "queued", "failed"), 0)
     for row in rows:
         found[bucket(str(row["status"]))] += 1
     return {

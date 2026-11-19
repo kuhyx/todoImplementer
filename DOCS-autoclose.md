@@ -1,7 +1,7 @@
 # Auto close
 
 When an open item's trusted `done_check` starts passing on its own, todoImplementer starts a **closing run**
-without a click. That run rests at the gate, and kuhy's Close click closes the item.
+without a click. The run closes the item itself (T2060); there is no Close click.
 Code: `server/todoimpl/runner/autocheck.py` (the poll) and `runner/closing.py` (the stage, auto-start and Close).
 
 ## Switch, trust, poll
@@ -54,13 +54,14 @@ Code: `server/todoimpl/runner/autocheck.py` (the poll) and `runner/closing.py` (
   - One Sonnet turn runs with role `closing`. Its working directory is the repo main checkout, `Edit`, `Write` and
     `NotebookEdit` are denied, and the prompt forbids edits.
   - Then the server re-runs the check itself, with the 600 s timeout.
-  - Green: the run goes to `gate` with status `ready_to_close` and the actions Close and Cancel. Ship is never offered.
+  - Green: the run closes the item at once (below); no gate, no Close button, no Ship.
   - Red: the run fails with `checks_failed`.
-- **Close.**
-  - Close re-runs the check once, with the 60 s timeout, inside the request.
-  - Green: `close_task` runs with the evidence (the check and its output tail, plus the closing turn's reply), and
-    the stage becomes `closed` (status `done`).
-  - Red, or the todo app refuses: the run goes to `failed` and the item stays open.
+- **Close** (`closing_stage`, no click).
+  - Green re-run: `close_task` runs with the evidence (the check and its output tail, plus the closing turn's
+    reply), and the stage becomes `closed` (status `done`).
+  - The todo app refuses: the run goes to `failed` ("Closing the item failed: ...") and the item stays open.
+  - A run found at `gate` when the server starts (an older server left it) closes at once without a second turn
+    (`close_only`).
 - **After a failure.** Start restarts into `closing`, but only while the latest poll saw the check pass. Send is
   disabled with "closing runs take no notes; Start again or Cancel".
 - **Cancel.** Cancel abandons the note when no other section is open; the poll then skips it, and Restart is

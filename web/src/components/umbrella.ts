@@ -8,11 +8,10 @@ import { h } from "@/lib/dom";
 import { routes } from "@/lib/routes";
 import { trackLink } from "@/track/track-link";
 
-type Bucket = "done" | "failed" | "queued" | "ready" | "running";
+type Bucket = "done" | "failed" | "queued" | "running";
 const BUCKETS: readonly [Bucket, IconName, string][] = [
   ["done", "check", "Done"],
   ["running", "running", "Running"],
-  ["ready", "ready", "Ready to ship"],
   ["queued", "queued", "Queued"],
   ["failed", "failed", "Failed"],
 ];
@@ -24,8 +23,6 @@ export const STATUS_ICON: Record<Status, IconName> = {
   needs_you: "failed",
   paused_limit: "queued",
   queued: "queued",
-  ready_to_close: "ready",
-  ready_to_ship: "ready",
   shipping: "running",
   waiting_phone_update: "queued",
   working: "running",

@@ -66,6 +66,7 @@ belongs to the browser device gate and goes away with it.
 
 The ten task actions: `start`, `spec-answers`, `spec-ok`, `send`, `ship`, `close`, `cancel`, `lesson-approve`,
 `go`, `rerun` (kind = `task_` + the action with `-` turned to `_`). `new_task` then starts the card, as the route does.
+Since T2060 no card offers `ship` or `close` (a green card ships itself), so those two kinds answer `disabled`.
 
 Read kinds (lane `read`, up to 4 at once). The GET routes that a `snap` node does not cover:
 
@@ -103,7 +104,7 @@ that fails without it.
 3. **Sealed only.** A `req` without `_e2e`, or whose blob does not open with the key and its own path as AAD, gets
    `unsealed` (written sealed) and is never dispatched. No plaintext fallback.
 4. **Same rules as a click.** Write kinds go through the same dispatcher as the HTTP routes: the card must offer the
-   action and it must be enabled, `auto_ship` must be offered, ids must match `CARD_ID`, shot names `SHOT_NAME`.
+   action and it must be enabled, an `auto_ship` option (if offered) must be enabled, ids must match `CARD_ID`, shot names `SHOT_NAME`.
    A test runs every kind through both transports against one fake backend and compares the replies.
 5. **Once per rid.** The done-log answers a replayed rid from its record; `sent_at` older than 24 h is `expired`.
 6. **Rate cap.** More than 30 write requests in a minute: `rate_limited` until the minute passes.
@@ -120,8 +121,7 @@ keystore, never in a repo.
 ## Notifications (FCM)
 
 1. The worker keeps the last board snapshot it published. After each publish it compares cards: a card that newly
-   has column `needs_you` with `needs.category` other than `auto`, a card that newly has status `ready_to_ship`, and
-   a card whose `needs.kind` newly is `run_failed` or `checks_failed`.
+   has column `needs_you` with `needs.category` other than `auto`, and a card whose `needs.kind` newly is `run_failed` or `checks_failed`.
 2. Any such change sends one data-only FCM message (HTTP v1 API) to every `presence/clients/*` entry with a non-null
    `fcm` token, coalesced over 2 s. Payload: `relay-nodes.schema.json#/$defs/ping`, counts only, no titles, no ids.
 3. The app shows one notification on channel `attention_v1` (ids are versioned; a change means a new id): the app

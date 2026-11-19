@@ -59,7 +59,7 @@ describe("ti-app", () => {
     expect(q(".toolbar").hidden).toBe(true);
     app.remove();
     await mountApp();
-    expect(document.querySelectorAll(".col")).toHaveLength(5);
+    expect(document.querySelectorAll(".col")).toHaveLength(4);
     expect(q(".toolbar").hidden).toBe(false);
     expect(q(".usage").textContent).toContain("Today $12.37");
     expect(q(".usage").textContent).toContain("abc1234");
@@ -111,29 +111,29 @@ describe("ti-app", () => {
   });
 
   it("restores state from the hash on load and on hashchange", async () => {
-    await mountApp("#col=ready&repo=utils");
+    await mountApp("#col=running&repo=utils");
     expect(q<HTMLSelectElement>("select[name=repo]").value).toBe("utils");
-    expect(q(".col[data-active]").getAttribute("data-col")).toBe("ready");
+    expect(q(".col[data-active]").getAttribute("data-col")).toBe("running");
     history.replaceState(null, "", "/#col=done");
     globalThis.dispatchEvent(new HashChangeEvent("hashchange"));
     expect(q(".col[data-active]").getAttribute("data-col")).toBe("done");
   });
 
   it("opens the drawer from a card, pushes history and closes back to the board", async () => {
-    await mountApp("#col=ready");
+    await mountApp("#col=running");
     const push = vi.spyOn(history, "pushState");
     q(`.card[data-id="${READY}"]`).click();
     expect(push).toHaveBeenCalled();
-    expect(location.hash).toBe(`#col=ready&task=${READY}`);
+    expect(location.hash).toBe(`#col=running&task=${READY}`);
     expect(q("ti-drawer").hidden).toBe(false);
     await settle(0);
     expect(q("#drawer-title").textContent).toBe("Widget shows next three tasks");
     q(".drawer-bar .btn:last-child").click();
-    expect(location.hash).toBe("#col=ready");
+    expect(location.hash).toBe("#col=running");
     expect(q("ti-drawer").hidden).toBe(true);
     q(`.card[data-id="${READY}"]`).click();
     expect(q("ti-drawer").hidden).toBe(false);
-    history.replaceState(null, "", "/#col=ready");
+    history.replaceState(null, "", "/#col=running");
     globalThis.dispatchEvent(new HashChangeEvent("hashchange"));
     expect(q("ti-drawer").hidden).toBe(true);
     globalThis.dispatchEvent(new HashChangeEvent("hashchange"));
@@ -179,7 +179,7 @@ describe("ti-app", () => {
       get() { return offsets.get(this as Element) ?? 0; },
       set(value: number) { offsets.set(this as Element, value); },
     });
-    await mountApp("#col=ready");
+    await mountApp("#col=running");
     const card = q(`.card[data-id="${READY}"]`);
     card.focus();
     q(".col[data-active] .col-body").scrollTop = 40;

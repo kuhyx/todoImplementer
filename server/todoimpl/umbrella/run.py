@@ -174,7 +174,7 @@ class Umbrella:
         return self.settle()
 
     def settle(self) -> str | None:
-        """Close the note when every child is done; else rest at the gate, pause, or ask kuhy."""
+        """Close the note when every child is done; else pause or ask kuhy."""
         d = self.d
         found, _ = rows(self.run_dir, d.state, live=False, limit_until=None)
         if not found:
@@ -182,7 +182,7 @@ class Umbrella:
             raise NeedsYouError(msg, "run_failed")
         states = {r["id"]: child_state(self.run_dir, r["id"]) for r in found}
         self._pause(states)
-        needy = [r for r in found if r["status"] not in ("done", "ready_to_ship")]
+        needy = [r for r in found if r["status"] != "done"]
         unverified = [r for r in found if r["status"] == "done" and bounce.unverified(states[r["id"]])]
         if needy or unverified:  # T1953: say what each child waits for; T1955: done needs green checks
             last = {str(row.get("child")): str(row.get("symptom", "")) for row in issues.read(self.run_dir)}
@@ -191,9 +191,7 @@ class Umbrella:
             held = [(r["repo"], why) for r, why in what if bounce.undeployed(states[r["id"]])]  # T1967
             need = [(r["repo"], why) for r, why in what if not bounce.undeployed(states[r["id"]])]
             raise NeedsYouError(bounce.summary(len(found), need, held), "run_failed")
-        if all(r["status"] == "done" for r in found):
-            return self._close(states)
-        return "gate"
+        return self._close(states)
 
     def _pause(self, states: dict[str, store.RunState | None]) -> None:
         """Pause the umbrella when a child waits on the plan limit or a retry timer."""

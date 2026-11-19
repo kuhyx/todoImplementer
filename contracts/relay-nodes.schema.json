@@ -102,11 +102,10 @@
       "properties": {
         "v": {"const": "1"},
         "needs_you": {"type": "string", "pattern": "^[0-9]{1,4}$"},
-        "ready": {"type": "string", "pattern": "^[0-9]{1,4}$"},
         "failed": {"type": "string", "pattern": "^[0-9]{1,4}$"},
         "at": {"type": "string", "pattern": "^[0-9]{13}$"}
       },
-      "required": ["v", "needs_you", "ready", "failed", "at"],
+      "required": ["v", "needs_you", "failed", "at"],
       "additionalProperties": false
     }
   }

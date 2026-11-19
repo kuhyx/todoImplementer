@@ -59,8 +59,7 @@
   overflow-wrap: anywhere;
 }
 
-.t-kid[data-status="done"] .t-kid-main > .u-badge:first-child,
-.t-kid[data-status="ready_to_ship"] .t-kid-main > .u-badge:first-child {
+.t-kid[data-status="done"] .t-kid-main > .u-badge:first-child {
   color: var(--success);
 }
 

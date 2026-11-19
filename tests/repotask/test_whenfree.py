@@ -29,7 +29,7 @@ def cycle_of(rig: Rig, card: str, cycle: int, timeout: float = 30.0) -> store.Ru
 
 
 def at_gate(rig: Rig) -> tuple[str, str]:
-    """Bring a repo card to Ready to ship with one ticked part and two open ones; return (card, note A)."""
+    """Bring a repo card to the gate with one ticked part and two open ones; return (card, note A)."""
     _, card, first, _ = seed(rig)
     rig.script(card, PLAN, IMPL, *NUDGED, LIVE)
     tick_before_start(rig, card, f"{first}-0")

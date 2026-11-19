@@ -9,12 +9,11 @@ from todoimpl.board.needs import needs
 from todoimpl.board.state import SpecQuestion
 from todoimpl.board.status import Column, Status, column, compute
 
-W, Q, P, N, R, D, Y, S, C = (
+W, Q, P, N, D, Y, S, C = (
     Status.WORKING,
     Status.QUEUED,
     Status.PAUSED_LIMIT,
     Status.NEEDS_YOU,
-    Status.READY_TO_SHIP,
     Status.DONE,
     Status.YOURS,
     Status.SHIPPING,
@@ -29,7 +28,7 @@ CLAUDE: dict[str, tuple[Status, ...]] = {
     "live_check": WORK,
     "checks": WORK,
     "spec_wait": (N,) * 4,
-    "gate": (R,) * 4,
+    "gate": (S,) * 4,  # T2060: nothing rests at the gate, a legacy one is shown shipping
     "shipping": (S,) * 4,
     "shipped": (D,) * 4,
     "closing": WORK,
@@ -102,7 +101,7 @@ def test_manual_work_note_is_yours_with_or_without_a_repo_and_a_run() -> None:
 
 
 def test_gate_wins_over_limit_because_shipping_needs_no_claude() -> None:
-    assert compute(Note(), run(stage="gate"), False, 5.0) == Status.READY_TO_SHIP
+    assert compute(Note(), run(stage="gate"), False, 5.0) == Status.SHIPPING
 
 
 @pytest.mark.parametrize("stage", STAGES)
@@ -133,8 +132,6 @@ def test_columns() -> None:
         Status.SHIPPING: "running",
         Status.NEEDS_YOU: "needs_you",
         Status.WAITING_PHONE_UPDATE: "running",
-        Status.READY_TO_SHIP: "ready",
-        Status.READY_TO_CLOSE: "ready",
         Status.DONE: "done",
     }
 

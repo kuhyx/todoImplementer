@@ -14,7 +14,7 @@ import { makeBoard, makeCards, NOW } from "@/test/fixtures";
 import { installEventSource, settle, stubFetch } from "@/test/net";
 import { trackHref, trackLink } from "@/track/track-link";
 
-const COUNTS = { done: 1, failed: 0, issues: 0, queued: 2, ready: 0, round: 1, running: 1, total: 4, width: 2 };
+const COUNTS = { done: 1, failed: 0, issues: 0, queued: 2, round: 1, running: 1, total: 4, width: 2 };
 
 function cards() {
   const [first, ...rest] = makeCards();

@@ -40,12 +40,11 @@ def runs() -> dict[str, object]:
 def test_board_groups_validates_and_counts() -> None:
     out = board.build_board(notes(), runs(), ctx(live=("bbbbbbbb-0",)), "abc1234")  # type: ignore[arg-type]
     validate("board", out)
-    assert [t["title"] for t in out["tasks"]] == ["backlog", "no repo", "running", "ask", "ready", "closed"]
+    assert [t["title"] for t in out["tasks"]] == ["backlog", "no repo", "running", "ready", "ask", "closed"]
     assert [(c["id"], c["count"]) for c in out["columns"]] == [
         ("backlog", 2),
-        ("running", 1),
+        ("running", 2),  # T2060: the card at the gate is shipping, not in a Ready column
         ("needs_you", 1),
-        ("ready", 1),
         ("done", 1),
     ]
     assert out["repos"] == ["alpha", "beta"]
@@ -136,7 +135,6 @@ def test_current_lines() -> None:
         (Status.NEEDS_YOU, run(error="boom"), "boom"),
         (Status.BACKLOG, None, "not started"),
         (Status.YOURS, run(assignee="human"), "assigned to you"),
-        (Status.READY_TO_SHIP, run(), "waiting for your Ship click"),
         (Status.DONE, None, "done"),
     ]
     for status, state, line in cases:

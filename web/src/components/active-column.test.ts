@@ -22,7 +22,7 @@ afterEach(() => {
 describe("active column with no tab in the hash", () => {
   it("[T601] opens the first non-empty column when Needs you is empty", () => {
     expect(draw(["backlog", "done"], "")).toBe("backlog");
-    expect(draw(["ready", "done"], "")).toBe("ready");
+    expect(draw(["running", "done"], "")).toBe("running");
   });
 
   it("prefers Needs you when it has cards, and Backlog when the board is empty", () => {
@@ -32,7 +32,7 @@ describe("active column with no tab in the hash", () => {
 
   it("lets an explicit hash choice win, even on an empty column", () => {
     expect(draw(["backlog"], "#col=needs_you")).toBe("needs_you");
-    expect(draw(["backlog", "ready"], "#col=ready")).toBe("ready");
+    expect(draw(["backlog", "running"], "#col=running")).toBe("running");
   });
 
   it("leaves the chosen column out of the default hash state", () => {

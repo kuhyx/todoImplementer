@@ -140,7 +140,6 @@
 }
 
 .u-badge[data-bucket="done"],
-.u-badge[data-bucket="ready"],
 .u-round[data-doubled="true"],
 .u-row[data-status="done"] > .u-badge:first-child {
   color: var(--success);

@@ -73,8 +73,8 @@ Round width `w` starts at 1. Each round:
    works), it was free, and its checks are green. `fixed` (the manager did the edits) never counts. If every child of the round counts, `w` doubles for the next round; otherwise it stays.
 6. Each child then goes through its own pipeline in its own thread, while the next round starts: `escalate` -> one
    higher-effort Opus implement attempt (with `prompts/tier.escalated`); red checks -> a fix turn (the usual `check_fixes` path);
-   otherwise Live check -> Checks -> Ship: every child auto-ships when its checks pass, with or without a `done_check`
-   (kuhy, 2026-11-10: shipping is the umbrella's job; T1923), and a child left at its gate ships on the next drive,
+   otherwise Live check -> Checks -> Ship: every child ships when its checks pass, with or without a `done_check`
+   (kuhy, 2026-11-10: T1923; since 2026-11-19 every card does, T2060), and a child left at its gate by an older server ships on the next drive,
    and so does a child whose Ship a restart cut (T1905, T1988). Children are normal runs of their repo: `Todo: <source
    id8>` trailer, rebase, gate, push, `DOCS-landing.md` rules. They run on the normal tier (`extra.tier = normal`), never the cheap one.
 
@@ -152,8 +152,8 @@ wrong, action = what changed in the prompt or context). Only then may the manage
 
 ## The card and the drawer
 
-One card: the usual status (rules unchanged: working, ready to ship, needs you...). The card's `umbrella` object
-(`common.schema.json` `umbrella_counts`): `done`, `running`, `ready`, `queued`, `failed`, `total`, `width`, `round`,
+One card: the usual status (rules unchanged: working, shipping, needs you...). The card's `umbrella` object
+(`common.schema.json` `umbrella_counts`): `done`, `running`, `queued`, `failed`, `total`, `width`, `round`,
 `issues`. The page shows one icon plus number per non-empty bucket, the next round width and the issue count; no
 words (names live in `aria-label` and `title`). The drawer (`umbrella_detail` in the task response) lists the
 round widths, marking the rounds that doubled, and a row per child: its own server-computed status icon, repo,
@@ -162,11 +162,12 @@ round, verdict icon, free-worker icon, issue count and its error text. Child row
 
 ## Actions
 
-- **Start / Retry:** Start (auto-ship option always enabled: the children bring their own `done_check`). Retry on a
+- **Start / Retry:** Start (no options; the children bring their own `done_check`). Retry on a
   failed umbrella also restarts the failed, cancelled or asking children at the stage they stopped in
   (`extra.retry_children`).
-- **Ship** at Ready to ship ships every child at its gate, each through the normal Ship path (squash, rebase, gate,
-  push, tick). A child that fails there fails the umbrella with "N of M children need you".
+- **Ship** is no click (T2060): every child ships at its gate through the normal Ship path (squash, rebase, gate,
+  push, tick). A child that fails there fails the umbrella with "N of M children need you". The umbrella has no
+  Ready to ship rest: once every child is done the note closes, else the umbrella pauses or asks.
 - **Cancel** stops the manager and every child turn (`children.Fan`, one handle for all) and cancels the umbrella;
   Restart resumes cancelled children.
 - **Send** reaches the next manager turn as a note; a child that ends on a `Q:` or `A:` is treated as needing kuhy.
@@ -198,6 +199,6 @@ workers of a round start only for claimed children, so a blocked repo is never e
 - Umbrella stage reuses `implement`/`shipping`; no new stage enum.
 - Doubling judged on the server's own checks run right after the manager; the child's Checks stage reruns later.
 - Children without a `Scan` count sort after those with one.
-- One Ship click ships all ready children; no per-child Ship button.
+- No Ship click anywhere: each child ships itself, the umbrella closes when all are done.
 - A child's commit carries `Todo: <umbrella id8>` (its run id's note part): the source section was cut by the merge.
 - The round's own checks run at most 3 at a time (`rounds.MAX_CHECKS`): parallel `make test` runs OOM each other.

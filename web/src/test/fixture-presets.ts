@@ -58,31 +58,6 @@ export function preset(status: TaskCard["status"], hasRepository: boolean): Pres
     case "queued": {
       return { actions: [CANCEL], column: "running", current: "waiting to start", needs: null, stage: "implement", status };
     }
-    case "ready_to_close": {
-      return {
-        actions: [{ confirm: true, enabled: true, id: "close", label: "Close", reason: null }, CANCEL],
-        column: "ready",
-        current: "done_check re-run green: waiting for your Close click",
-        needs: null,
-        stage: "gate",
-        status,
-      };
-    }
-    case "ready_to_ship": {
-      return {
-        actions: [
-          { confirm: true, enabled: true, id: "ship", label: "Ship", reason: null },
-          SEND,
-          RESUME,
-          { enabled: true, id: "lesson-approve", label: "Approve lesson", reason: null },
-        ],
-        column: "ready",
-        current: "checks green, ready for your click",
-        needs: null,
-        stage: "gate",
-        status,
-      };
-    }
     case "shipping": {
       return { actions: [], column: "running", current: "rebasing on origin/main", needs: null, stage: "shipping", status };
     }

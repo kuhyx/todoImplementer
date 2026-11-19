@@ -10,7 +10,7 @@ const backlog = (view: ReturnType<typeof buildView>) => view.find((c) => c.id ==
 describe("buildView", () => {
   it("puts every card in the server's column and keeps counts", () => {
     const view = buildView(board, DEFAULT_STATE);
-    expect(view.map((c) => c.id)).toEqual(["backlog", "running", "needs_you", "ready", "done"]);
+    expect(view.map((c) => c.id)).toEqual(["backlog", "running", "needs_you", "done"]);
     expect(view.map((c) => c.shown)).toEqual(board.columns.map((c) => c.count));
     expect(view.flatMap((c) => c.groups.flatMap((g) => g.cards))).toHaveLength(38);
   });

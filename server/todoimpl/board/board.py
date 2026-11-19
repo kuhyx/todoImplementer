@@ -24,7 +24,6 @@ COLUMNS = (
     ("backlog", "Backlog"),
     ("running", "Running"),
     ("needs_you", "Needs you"),
-    ("ready", "Ready to ship"),
     ("done", "Done"),
 )
 
@@ -61,7 +60,7 @@ def _ask_order(card: dict[str, Any]) -> tuple[int, int, float]:
 def build_board(
     tasks: Sequence[TaskLike], runs: dict[str, RunState], ctx: Context, build: str
 ) -> dict[str, Any]:
-    """Return the /api/board object: every note as a card, grouped by the five fixed columns."""
+    """Return the /api/board object: every note as a card, grouped by the four fixed columns."""
     built = [(build_card(task, runs.get(task.id), ctx), task.created_by == "claude") for task in tasks]
     order = [key for key, _ in COLUMNS]
     # Inside a column kuhy's own notes come first, then the Needs-you order.

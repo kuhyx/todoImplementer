@@ -58,7 +58,7 @@ the board cache, never the in-flight board fetch, which may predate the add: T20
 200 characters; body = `### what`, `### where`, `### done`, `### verify`, `### read first` with the transcript
 path, kuhy's last prompt and the end of the last reply quoted line by line so no line can start a card, a fence or
 a `done_check:`), presses the card's Start as `POST /api/new-task` does, and marks the session done in the marks
-file. When a run holds the card (it is working, at Ready to ship, on spec questions or shipping) and Start is
+file. When a run holds the card (it is working, on spec questions or shipping) and Start is
 refused, the card starts by itself the moment that run ships (`start_when_free`, DOCS-repotask.md, "Cycles").
 A create that fails mid-batch, or a card that never shows, reports `Moved n of m` and marks only the sessions
 whose card started; a rerun adopts the rest. The answer is the usual

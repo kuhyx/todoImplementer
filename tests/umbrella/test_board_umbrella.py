@@ -49,20 +49,12 @@ def test_an_umbrella_without_a_repo_is_backlog_not_yours() -> None:
 
 def test_umbrella_runs_follow_the_normal_rules() -> None:
     assert compute(Umb(), run(stage="implement"), True, None) == Status.WORKING  # noqa: FBT003
-    assert compute(Umb(), run(stage="gate"), False, None) == Status.READY_TO_SHIP  # noqa: FBT003
+    assert compute(Umb(), run(stage="gate"), False, None) == Status.SHIPPING  # noqa: FBT003
 
 
-def test_start_is_offered_without_a_repo_and_auto_ship_is_enabled() -> None:
+def test_start_is_offered_without_a_repo() -> None:
     (start, *_) = actions(Umb(), None, Status.BACKLOG, Limit(), now=NOW)
     assert (start.id, start.enabled, start.reason) == ("start", True, None)
-    assert start.option is not None
-    assert start.option.enabled
-
-
-def test_ship_is_enabled_at_the_gate_with_the_run_dir_as_worktree() -> None:
-    gate = run(stage="gate", worktree="/x/run")
-    ship = next(a for a in actions(Umb(), gate, Status.READY_TO_SHIP, Limit(), now=NOW) if a.id == "ship")
-    assert ship.enabled
 
 
 def test_buckets() -> None:
@@ -73,8 +65,7 @@ def test_buckets() -> None:
         "running",
         "running",
     ]
-    assert [bu.bucket(s) for s in ("ready_to_ship", "backlog", "needs_you", "yours", "cancelled")] == [
-        "ready",
+    assert [bu.bucket(s) for s in ("backlog", "needs_you", "yours", "cancelled")] == [
         "queued",
         "failed",
         "failed",
@@ -94,15 +85,14 @@ def test_counts_come_from_the_note_before_any_run() -> None:
 
 
 def test_counts_come_from_the_rows_of_a_run() -> None:
-    rows = _rows("done", "working", "working", "ready_to_ship", "needs_you", "backlog")
+    rows = _rows("done", "working", "working", "shipping", "needs_you", "backlog")
     rows[1]["issues"] = 2
     rows[4]["issues"] = 1
     record = {"width": 4, "rounds": [{"n": 1}, {"n": 2}]}
     state = run(extra={bu.VIEW: {"rows": rows}, "umbrella": record})
     assert bu.card_view(Umb(), state) == {
         "done": 1,
-        "running": 2,
-        "ready": 1,
+        "running": 3,
         "queued": 1,
         "failed": 1,
         "total": 6,

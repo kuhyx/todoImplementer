@@ -12,7 +12,7 @@ import { contractValidator } from "@/test/contract-ajv";
 import { makeDetail } from "@/test/fixture-detail";
 import { makeCards, NOW } from "@/test/fixtures";
 
-const COUNTS = { done: 1, failed: 0, issues: 3, queued: 2, ready: 1, round: 2, running: 1, total: 5, width: 4 };
+const COUNTS = { done: 1, failed: 0, issues: 3, queued: 2, round: 2, running: 1, total: 5, width: 4 };
 const ROW: UmbrellaRow = {
   cost_usd: 0.5,
   error: null,
@@ -68,10 +68,10 @@ describe("umbrella progress on the card", () => {
   it("shows one icon and number per non-empty bucket, the width and the issue count, without words", () => {
     const line = umbrellaProgress(COUNTS);
     const buckets = [...line.querySelectorAll("[data-bucket]")].map((node) => node.getAttribute("data-bucket"));
-    expect(buckets).toEqual(["done", "running", "ready", "queued"]);
+    expect(buckets).toEqual(["done", "running", "queued"]);
     expect(line.querySelector('[data-bucket="failed"]')).toBeNull();
-    expect(line.textContent).toBe("111243");
-    expect(line.querySelectorAll("svg")).toHaveLength(6);
+    expect(line.textContent).toBe("11243");
+    expect(line.querySelectorAll("svg")).toHaveLength(5);
     expect(line.querySelector('[aria-label="Round width 4"]')).not.toBeNull();
     expect(line.querySelector('[aria-label="Free-model issues 3"]')).not.toBeNull();
   });

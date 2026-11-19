@@ -4,7 +4,7 @@ import asyncio
 from typing import Any
 
 import pytest
-from pingfakes import ASKING, AUTO, FAILED, PHONE, READY, WEB, FakeSender, board, card, needs, with_clients
+from pingfakes import ASKING, AUTO, FAILED, PHONE, SHIPPING, WEB, FakeSender, board, card, needs, with_clients
 from rtdb_relay.tests._fake_rtdb import FakeRtdb
 from todoimpl.relay import pinger
 from todoimpl.relay.fcm import BadKeyError, FcmError, UnregisteredError
@@ -25,13 +25,13 @@ def _no_wait(monkeypatch: pytest.MonkeyPatch) -> None:
         (board(), board(ASKING), True),  # a new card straight into Needs you
         (board(ASKING), board(ASKING), False),  # still there: no second ping
         (board(card("b")), board(AUTO), False),  # the server heals auto itself
-        (board(card("c", "running", "working")), board(READY), True),
+        (board(card("c", "running", "working")), board(SHIPPING), False),  # T2060: no ready ping
         (
             board(ASKING),
             board(card("a", "needs_you", "needs_you", needs("run_failed", "action")), FAILED),
             True,
         ),
-        (board(READY), board(card("c", "done", "done")), False),
+        (board(SHIPPING), board(card("c", "done", "done")), False),
         ({"columns": "odd"}, {"columns": [{"id": "x"}, 3, {"items": [7, {"id": 5}]}]}, False),
     ],
 )
@@ -40,10 +40,9 @@ def test_fresh(old: Any, new: Any, fires: bool) -> None:
 
 
 def test_ping_holds_counts_only() -> None:
-    assert pinger.ping(board(ASKING, AUTO, READY, FAILED), 1_800_000_000_123) == {
+    assert pinger.ping(board(ASKING, AUTO, SHIPPING, FAILED), 1_800_000_000_123) == {
         "v": "1",
         "needs_you": "2",
-        "ready": "1",
         "failed": "1",
         "at": "1800000000123",
     }
@@ -70,12 +69,12 @@ def test_changes_coalesce_into_one_ping_to_every_token(fake: FakeRtdb) -> None:
         fake,
         out,
         (board(card("a")), board(ASKING)),
-        (board(ASKING), board(ASKING, READY)),
-        (board(ASKING, READY), board(ASKING, READY)),
+        (board(ASKING), board(ASKING, SHIPPING)),
+        (board(ASKING, SHIPPING), board(ASKING, SHIPPING)),
         now=1_800_000_000.5,
     )
     assert sorted(t for t, _ in out.sent) == [PHONE, WEB]
-    assert {d["needs_you"] + d["ready"] for _, d in out.sent} == {"11"}
+    assert {d["needs_you"] for _, d in out.sent} == {"1"}
     assert out.sent[0][1]["at"] == "1800000000500"
 
 
@@ -92,7 +91,7 @@ def test_a_failing_send_goes_on_the_banner_and_a_good_one_clears_it(fake: FakeRt
     pinged(fake, out, (board(), board(ASKING)))
     assert NOTIFY.cause == "FCM said 503"
     out.error = None
-    pinged(fake, out, (board(), board(READY)))
+    pinged(fake, out, (board(), board(FAILED)))
     assert NOTIFY.cause is None
     assert NOTIFY.alert(0) is None
 

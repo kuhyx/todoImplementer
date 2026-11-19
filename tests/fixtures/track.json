@@ -5,7 +5,7 @@
   "status": "working",
   "stage": "implement",
   "resting": null,
-  "counts": {"done": 2, "running": 3, "ready": 1, "queued": 4, "failed": 1, "total": 11, "width": 4, "round": 3, "issues": 5},
+  "counts": {"done": 2, "running": 4, "queued": 4, "failed": 1, "total": 11, "width": 4, "round": 3, "issues": 5},
   "needs": 1,
   "round": {"n": 4, "width": 4, "started": 1794324000.0, "step": "manager", "ids": ["2d0704cd-8", "2d0704cd-9", "2d0704cd-10", "2d0704cd-11"]},
   "rounds": [
@@ -28,7 +28,7 @@
       "log": true, "attempts": 1, "killed": 0, "error": null
     },
     {
-      "id": "2d0704cd-2", "repo": "kuhyx/beta", "title": "Make beta text-free", "status": "ready_to_ship", "stage": "gate",
+      "id": "2d0704cd-2", "repo": "kuhyx/beta", "title": "Make beta text-free", "status": "shipping", "stage": "shipping",
       "round": 2, "verdict": "fixed", "free": true, "elapsed": 2400.0, "issues": 3,
       "last_issue": {"phase": "permission", "model": "free-best", "symptom": "Bash(git status) was denied", "ts": 1794321500.0},
       "resting": null, "log": true, "attempts": 3, "killed": 1, "error": null

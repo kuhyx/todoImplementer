@@ -1,4 +1,4 @@
-"""Closing runs: a passing trusted done_check, one read-only Sonnet turn, then kuhy's Close click.
+"""Closing runs: a passing trusted done_check, one read-only Sonnet turn, then the close, no click (T2060).
 
 No plan, no implement, no worktree, no Ship; the repo's main checkout is never edited.
 """
@@ -13,6 +13,7 @@ from todoimpl.board.parse import StateError
 from todoimpl.board.state import RunState
 from todoimpl.todo_mcp.model import TodoError
 
+from . import hold
 from .autocheck import POLL_TIMEOUT, note_red
 from .checks import record, run_check
 from .files import NeedsYouError
@@ -23,6 +24,7 @@ if TYPE_CHECKING:
     from .pipeline import Driver
     from .scheduler import Scheduler
 
+CLOSE_ONLY = "close_only"  # a restart found the run at the gate: close it, no second turn
 EVIDENCE_LINES = 8
 REPLY_CHARS = 600
 
@@ -35,11 +37,12 @@ def _recheck(d: Driver, timeout: float) -> CheckResult:
 
 
 def closing_stage(d: Driver) -> str | None:
-    """Run the closing turn, then the server's own re-run of the check decides: green rests at the gate."""
+    """Run the closing turn, then the server's own re-run of the check decides: green closes the item."""
     if not d.item.done_check:
         msg = "The item no longer has a done_check: a closing run needs one"
         raise NeedsYouError(msg, "run_failed")
-    d.turn("closing", "closing")
+    if not d.state.extra.pop(CLOSE_ONLY, False):  # a run found at the gate already had its turn
+        d.turn("closing", "closing")
     result = _recheck(d, d.ctx.check_timeout)
     d.activity(f"done_check re-run: exit {result.exit_code}")
     if not result.passed:
@@ -47,7 +50,16 @@ def closing_stage(d: Driver) -> str | None:
         note_red(d.ctx.root, d.state.task_id, d.ctx.now())
         msg = f"The done_check is red again ({why}): nothing was closed"
         raise NeedsYouError(msg, "checks_failed")
-    return "gate"
+    if hold.held():
+        return "gate"  # the suite's Close click closes it
+    reply = str(d.state.extra.get("last_reply", ""))
+    try:
+        d.ctx.client.close_task(d.state.task_id, evidence(result, reply, d.ctx.now()))
+    except TodoError as exc:
+        msg = f"Closing the item failed: {exc}"
+        raise NeedsYouError(msg, "run_failed") from exc
+    d.state.extra["closed_at"] = d.ctx.now()
+    return "closed"
 
 
 def evidence(result: CheckResult, reply: str, now: float) -> str:
@@ -87,7 +99,7 @@ def close(sched: Scheduler, card: str) -> None:
     with sched._cv:  # noqa: SLF001
         st = sched.idle(card)
         if st.stage != "gate" or not st.closing:
-            msg = "Close is offered only at Ready to close"
+            msg = "Close is offered only at the gate (a held closing run)"
             raise RunnerError(msg, "disabled")
         sched.mark_active(card, active=True)
     try:

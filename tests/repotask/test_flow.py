@@ -41,7 +41,7 @@ def test_t1912_ship_closes_only_the_ticked_parts_and_names_their_notes(rig: Rig)
     assert "Repo task: ONE run" in prompt
     assert f"[{first}-0] alpha" in prompt
     assert f"[{second}-0] gamma note" in prompt
-    assert rig.backend.board()["tasks"][0]["status"] == "ready_to_ship"
+    assert rig.backend.board()["tasks"][0]["status"] == "shipping"
     rig.sched.ship(card)
     rig.wait(card, {"shipped"})
     notes = rig.fake.store.notes

@@ -1,4 +1,4 @@
-"""Closing runs on the board: Ready to close, Close instead of Ship, check-gated restarts, the auto note."""
+"""Closing runs on the board: no Close click (T2060), check-gated restarts, the auto note."""
 
 from dataclasses import replace
 
@@ -33,19 +33,12 @@ def ids(
     return [(a.id, a.enabled) for a in found]
 
 
-def test_a_closing_gate_is_ready_to_close_in_the_ready_column_and_closed_is_done() -> None:
+def test_t2060_a_closing_run_is_never_ready_to_close_and_closed_is_done() -> None:
     gate = closing(stage="gate")
-    assert compute(Note(), gate, live=False, limit_until=None) == Status.READY_TO_CLOSE
-    assert column(Status.READY_TO_CLOSE) == Column.READY
-    assert compute(Note(), run(stage="gate"), live=False, limit_until=None) == Status.READY_TO_SHIP
+    assert compute(Note(), gate, live=False, limit_until=None) == Status.SHIPPING
+    assert column(Status.SHIPPING) == Column.RUNNING
     assert compute(Note(), closing(stage="closed"), live=False, limit_until=None) == Status.DONE
-
-
-def test_ready_to_close_offers_close_and_cancel_never_ship() -> None:
-    found = ids(Status.READY_TO_CLOSE, closing(stage="gate", session_id="s1"))
-    assert ("close", True) in found
-    assert ("cancel", True) in found
-    assert all(a != "ship" for a, _ in found)
+    assert "ready" not in {c.value for c in Column}
 
 
 def test_send_is_refused_on_every_closing_run_with_the_fixed_reason() -> None:
@@ -91,8 +84,6 @@ def test_card_carries_the_auto_start_badge_and_the_auto_note_only_on_backlog_car
     done = build_card(Note(), closing(stage="closed"), on)
     validate("common", done, "task_card")
     assert (done["status"], done["auto"], done["auto_start"]) == ("done", None, AUTO)
-    ready = build_card(Note(), closing(stage="gate"), on)
-    assert ready["current"] == "done_check re-run green: waiting for your Close click"
 
 
 def test_board_header_says_whether_auto_close_is_on() -> None:

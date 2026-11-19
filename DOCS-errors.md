@@ -73,7 +73,7 @@ reset (`gate.py`). First that holds is the card's `reason`:
    cheap for that cycle).
 
 A card starts only when it has no run, or its run is `shipped` (the next cycle: a cycle never starts by itself
-otherwise). A card at work, failed, at its gate or cancelled is left alone. At most one card starts per tick, so a
+otherwise). A card at work, shipping, failed or cancelled is left alone. At most one card starts per tick, so a
 burst cannot overshoot. A ticket starts at most three times (`starts` in the ledger): a part the session never
 ticks must not loop. The start is `Scheduler.start(card, auto_ship=True, extra={app_error: {reason, keys, at}})`.
 The per-repo lock (`DOCS-repotask.md`) keeps a second run of the same repo (an umbrella child, an older section
@@ -87,9 +87,9 @@ documents `app_error`, `phone_update` and `phone_tries`.
 
 - They answer to no one like an umbrella child (`umbrella/bounce.py`, `runner/grant.py`: `marks.unattended`): a
   `Q:` or `A:` goes back to work with the reply as the brief, red checks get five fix turns.
-- When the checks are green the run ships without a `done_check` (`stages._checks`), **only when every ticked part
-  is an error part** (`marks.ships_itself`). A part of kuhy's own that the session also ticked keeps the run at
-  Ready to ship for his click. Ship deploys per the repo's `deploy:` line (`DOCS-landing.md`).
+- When the checks are green the run ships (`stages._checks`) and deploys per the repo's `deploy:` line
+  (`DOCS-landing.md`). Since 2026-11-19 (T2060) every card ships itself, so a part of kuhy's own that the session
+  also ticked no longer holds the run for his click (`marks.ships_itself` only matters where a gate is held).
 - After the push and the deploy, `appfix.shipped` marks the ledger entries of the ticked parts `shipped` with the
   commit and time.
 

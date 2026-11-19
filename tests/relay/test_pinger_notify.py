@@ -18,9 +18,7 @@ def test_notify_test_pings_only_the_asking_device(fake: FakeRtdb) -> None:
     with_clients(fake)
     out = FakeSender()
     assert notify_test(fake, out, "p1", board(ASKING)) == {}
-    assert out.sent == [
-        (PHONE, {"v": "1", "needs_you": "1", "ready": "0", "failed": "0", "at": "0000000001000"})
-    ]
+    assert out.sent == [(PHONE, {"v": "1", "needs_you": "1", "failed": "0", "at": "0000000001000"})]
 
 
 @pytest.mark.parametrize(

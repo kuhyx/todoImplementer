@@ -55,9 +55,9 @@ const ROWS: readonly Row[] = [
   ["design-system", "Palette check covers Tkinter", "needs_you", "medium", 0.35, 2000],
   ["sleep-tracker", "Store naps as a separate series", "needs_you", "low", 0.12, 1500],
   ["foss-audit", "Licence column links the licence text", "needs_you", "medium", 1.4, 90],
-  ["todo", "Widget shows next three tasks", "ready_to_ship", "high", 4.51, 600],
-  ["utils", "Dependency freshness explains the carve-out", "ready_to_ship", "medium", 2.9, 1800],
-  ["flutter-web-drive", "Tap by semantics label prefix", "ready_to_ship", "low", 1.77, 4000],
+  ["todo", "Widget shows next three tasks", "shipping", "high", 4.51, 600],
+  ["utils", "Dependency freshness explains the carve-out", "shipping", "medium", 2.9, 1800],
+  ["flutter-web-drive", "Tap by semantics label prefix", "shipping", "low", 1.77, 4000],
   ["vmbox", "Snapshot before pacman test", "done", "medium", 2.1, 90_000],
   ["linux-configuration", "Timer unit for night lockdown", "done", "high", 5, 200_000],
   ["agent-ready", "llms.txt generated from routes", "done", "low", 0.88, 360_000],
@@ -101,12 +101,11 @@ const LABELS = {
   backlog: "Backlog",
   done: "Done",
   needs_you: "Needs you",
-  ready: "Ready to ship",
   running: "Running",
 };
 
 export function makeBoard(cards: TaskCard[] = makeCards()): Board {
-  const ids = ["backlog", "running", "needs_you", "ready", "done"] as const;
+  const ids = ["backlog", "running", "needs_you", "done"] as const;
   const names = cards.map((card) => card.repo).filter((repo) => repo !== null);
   const repos = [...new Set(names)].toSorted((a, b) => a.localeCompare(b));
   return {

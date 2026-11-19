@@ -58,7 +58,7 @@ def test_spec_stage_grills_takes_answers_and_waits_for_spec_ok(world: Env) -> No
         st = wait_stage(world, sched, "spec_wait")
         assert st.spec_questions[0].answer == "hello.txt"
         assert world.calls()[1]["resume"] == st.sessions["spec"]["session_id"]
-        with pytest.raises(RunnerError, match="only at Ready to ship"):
+        with pytest.raises(RunnerError, match="only at the gate"):
             sched.ship(CARD)
         sched.spec_ok(CARD)
         st = wait_stage(world, sched, "gate")

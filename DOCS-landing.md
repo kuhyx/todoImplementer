@@ -29,7 +29,7 @@ to commit|push|merge, press Retry, send a `LONG:`, write ... by hand, run ... yo
 off-limits ...) or any ask for something Claude can run itself (a command, a deploy such as `deploy-todoimpl`, a restart,
 sudo, a push, a write under ~ outside ~/src/<repo>; T2006) resumes the same session with a fixed `(runner) Granted: do it yourself ... run it,
 then rerun the card's checks` note and a feed line `auto-granted, the session resumes: <ask>`. Never granted: asks only
-kuhy can answer (phone, Pixel, plug, tap, screen, screenshot, audio, a Ship click, a password, login, token or secret, a decision such
+kuhy can answer (phone, Pixel, plug, tap, screen, screenshot, audio, a password, login, token or secret, a decision such
 as "which ..." or "do you want ...") and a reply with an `ask` block holding a `choice` or `screenshot`. Bounds: once per
 stage (`extra["ask_grants"]`, cleared when a turn ends on anything but `A:`) and twice per run (`extra["ask_grant_total"]`,
 cleared by Start, Retry and a note from kuhy). The count is saved before the granted turn starts, so a restart cannot
@@ -44,6 +44,23 @@ keeps its old base, so the drawer diff still shows it. A conflict is left as git
 `extra["rebase_conflict"]` makes every prompt carry "the worktree was rebased onto <ref> and has conflicts: resolve
 them first" until HEAD contains the ref again. No rebase in the Ship drive or while an adopted turn is still editing
 (T1866); Ship refuses a tree with unresolved conflicts instead of committing the markers.
+
+## Ship by itself (kuhy, 2026-11-19; `runner/hold.py`, T2060)
+
+kuhy: "Ready to ship category and column is stupid if it is ready to ship just ship automatically". A card whose
+plan, live check and checks are green goes from `checks` straight to `shipping` (squash, rebase, gate, push ff-only,
+deploy per the repo's `deploy:` line, close), and a closing run closes its note as soon as its own re-run is green.
+No click, no `Ready to ship` / `Ready to close` status or column; `shipping` shows in Running.
+
+- **Restart.** A run found at `gate` when the server starts (an older server left it) is queued in `shipping`, a
+  closing one in `closing` with `close_only` (no second Sonnet turn): `runner/recovery.py`.
+- **Failure.** Any Ship or deploy failure takes the paths below and in `DOCS-errors.md` (Needs you with Retry,
+  the session fix turns, "pushed, not deployed"). Retry of a failed Ship goes to `shipping`, never to a rest.
+- **No buttons.** The board offers no Ship, Close or Auto-ship tick; the `ship` and `close` routes and relay kinds
+  stay and answer `disabled`. A stuck card is a failed one: Retry.
+- **FCM.** The "ready" ping is gone (`DOCS-native-app-relay.md`).
+- **Test seam.** `TODOIMPL_HOLD_GATE=1` brings the old rest at `gate` back. Only the test suite sets it
+  (`tests/conftest.py`), to drive Ship by hand; `tests/runner/test_runner_ship_all.py` runs the real rule.
 
 ## Ship (`runner/ship.py`, T1865)
 

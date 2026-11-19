@@ -136,7 +136,7 @@ Dry run by default (reads only, prints the plan and counts); `--apply` writes. N
 Dry run on the real todo app (2026-11-10, read only): the first run found 1 repo with more than one note (4 notes,
 3 to merge, none skipped); a few minutes later the same run found 0 (someone merged them meanwhile). 18 open repo
 notes in 18 repos, 48 open parts. Live board through the new grouping: 58 cards in 27 repos; 7 repos still show more
-than one card because 7 older section runs are working or at Ready to ship (they fold as they rest).
+than one card because 7 older section runs are working or shipping (they fold as they rest).
 
 ## kuhy's own task from the board: `POST /api/new-task`
 
@@ -172,7 +172,7 @@ and the line names the copy (`images.copy_into`). Every turn gets the images roo
 
 - Part key = the section card id; `Todo:` trailer per note of the ticked parts (not per part).
 - A cycle ends at Ship; the next cycle needs a Start click (no auto-continue), unless a handoff waits on it.
-- Held = a run that is working, at Ready to ship or paused by the plan limit; `failed` and `spec_wait` count as
+- Held = a run that is working, shipping or paused by the plan limit; `failed` and `spec_wait` count as
   resting and fold at once (kuhy's brief: "keep going until they reach a resting stage, then fold"). Nothing is
   cancelled for kuhy.
 - Done `## [x]` sections are dropped by the migration (their record stays in the closed note's evidence).

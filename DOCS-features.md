@@ -14,7 +14,7 @@
 
 | feature | how to reach it | expected outcome |
 |---|---|---|
-| Board | open `/` -> five columns Backlog / Running / Needs you / Ready to ship / Done | every open todo item is one card, grouped by repo, kuhy's own notes above Claude-made ones in each column; GET `/api/board` matches `contracts/board.schema.json` |
+| Board | open `/` -> four columns Backlog / Running / Needs you / Done (a shipping card is in Running) | every open todo item is one card, grouped by repo, kuhy's own notes above Claude-made ones in each column; GET `/api/board` matches `contracts/board.schema.json` |
 | Yours lane | notes with no `repo` (the board reads them with `list_tasks(no_repo: true)`, T2058) | shown in "Yours", never startable; a note added in the todo app is a Backlog card on the next refresh (2 s after the last fetch ended) |
 | Start | card -> Start (POST `/api/task/<id>/start`) | card leaves Backlog; at most 3 run at once, the rest are queued |
 | Spec Q&A | card in Needs you with `❓ Qn` cards -> answer -> Spec OK | answers reach the session, Plan starts |
@@ -22,8 +22,8 @@
 | Send to Claude | drawer -> text box -> Send (POST `.../send`) | text is the next turn of the same session; on a Needs-you card with no session yet it restarts the run with the text as kuhy's note |
 | Resume command | drawer -> "copy resume command" | `cd <worktree> && claude --resume <id>` on the clipboard |
 | Plan + live check | automatic after Start | `plan.md` and `live_check.md` in the run dir; checks tail in `/api/task/<id>` |
-| Gate | card in Ready to ship -> drawer | plan, diff, live-check report, checks tail; Ship and Send offered |
-| Ship | drawer -> Ship (POST `.../ship`) | one commit with `Todo: <id8>` trailer pushed to origin, section marked `## [x]`, note closed with its last item, worktree removed |
+| Gate | a green card (plan, live check, checks) | no rest and no click (T2060): the card goes straight to Ship, shown as Shipping in Running |
+| Ship | automatic at the gate | one commit with `Todo: <id8>` trailer pushed to origin, section marked `## [x]`, note closed with its last item, worktree removed |
 | Cheap tier | note with a `Tier: cheap` line or the title `text-free (textgate-rework)` | implement role runs on Sonnet (free models via claude-free on public repos, else alone), `ESCALATE:` or a failed turn moves it to Opus once; card icons for cheap / free / escalated (`DOCS-tiers.md`) |
 | Cancel | drawer action | run stops, run dir kept |
 | New task | toolbar + -> repo (board repos or typed `owner/name`), title, details, any files (picker/camera, paste, drop; 100 MB each, 500 MB total) -> create (POST `/api/upload` per file, then `/api/new-task`) | a `## title` section in the repo's note links the files on dufs (images inline), the repo card starts (or keeps working) and opens; sessions read run-dir copies of the files (`DOCS-repotask.md`) |
@@ -41,7 +41,7 @@
 | id | goal | command | last green |
 |---|---|---|---|
 | F1 | board view: every open item is a Backlog card grouped by repo | `tests/e2e/run_flow.py step 1-3` (step 3 starts with the board asserts) | never (server wiring unfinished, 2026-11-05) |
-| F2 | start x3: three cards run in parallel worktrees to ready_to_ship (<= 3 at once, plan.md + live_check.md + checks tail) | `tests/e2e/run_flow.py step 3-4` (rerun step 4 on exit 3) | never |
+| F2 | start x3: three cards run in parallel worktrees and ship themselves (<= 3 at once, plan.md + live_check.md) | `tests/e2e/run_flow.py step 3-4` (rerun step 4 on exit 3) | never |
 | F3 | spec Q&A: questions as cards, answers, Spec OK starts Plan | no e2e yet (needs a seeded note without done_check + a scripted grilling turn); unit gates: `capped.sh uv run --frozen pytest -q tests/board/test_board_actions.py tests/prompts -k spec` | gap |
 | F4 | live feed: SSE opens with a stage snapshot while runs work | `tests/e2e/run_flow.py step 3` (reads the first `/api/live` frame) | never |
 | F5 | ship: commits with trailers on the bare remote, notes closed in the fake MCP, worktrees removed | `tests/e2e/run_flow.py step 5` then `step 6` to tear down | never |

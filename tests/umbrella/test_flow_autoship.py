@@ -62,12 +62,13 @@ def test_t1923_a_child_left_at_its_gate_ships_on_the_next_drive(
     monkeypatch.setitem(stages.HANDLERS, "checks", old_checks)
     try:
         sched.start(CARD)
-        st = at_rest(world, sched, "gate")
+        st = at_rest(world, sched, "failed")  # no umbrella rests at its gate any more (T2060)
     finally:
         sched.close()
     monkeypatch.setitem(stages.HANDLERS, "checks", new_checks)  # not undo(): it drops the world's env
-    st.stage = "implement"  # the live umbrella still had rounds to run when its children reached the gate
+    st.stage, st.error = "gate", None  # where the server before T2060 left the umbrella
     store.save(world.root / CARD, st)
+    monkeypatch.delenv("TODOIMPL_HOLD_GATE")  # the server that starts now holds nothing at a gate
     again = Scheduler(client, world.root, check_timeout=20)  # recovery requeues the umbrella
     try:
         at_rest(world, again, "shipped")

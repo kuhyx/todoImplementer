@@ -23,7 +23,7 @@ void main() {
     ];
     expect(actions.map(actionIcon).toSet(), hasLength(actions.length));
     expect(actionIcon('x'), Icons.help_outline);
-    expect(columnIds.map(columnIcon).toSet(), hasLength(5));
+    expect(columnIds.map(columnIcon).toSet(), hasLength(4));
     expect(columnIcon('x'), Icons.view_column_outlined);
     expect(BoardSort.values.map(sortIcon).toSet(), hasLength(5));
     const needs = ['questions', 'criteria', 'action', 'auto', 'phone'];
@@ -45,10 +45,9 @@ void main() {
     const statuses = [
       'needs_you',
       'working',
-      'ready_to_ship',
       'paused_limit',
       'backlog',
     ];
-    expect(statuses.map(statusColor).toSet(), hasLength(5));
+    expect(statuses.map(statusColor).toSet(), hasLength(4));
   });
 }

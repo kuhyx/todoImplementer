@@ -83,7 +83,7 @@ def test_t1224_retry_resumes_the_failed_stage_not_the_plan(world: Env) -> None:
         sched.close()
 
 
-def test_t1225_retry_of_a_failed_ship_goes_back_to_ready_to_ship(world: Env) -> None:
+def test_t1225_retry_of_a_failed_ship_goes_back_to_the_gate(world: Env) -> None:
     sched, _ = boot(world, done_check="true")
     run = RunState(task_id=CARD, stage="failed", error="push refused", extra={"failed_stage": "shipping"})
     store.save(world.root / CARD, run)

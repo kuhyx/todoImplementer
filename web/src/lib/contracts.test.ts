@@ -59,8 +59,8 @@ describe("contract mirror", () => {
     const disabledNoReason = { enabled: false, id: "ship", label: "Ship", reason: null };
     expect(contractValidator("common", "action")(disabledNoReason)).toBe(false);
     expect(action.safeParse(disabledNoReason).success).toBe(false);
-    const fourColumns = { ...makeBoard(), columns: makeBoard().columns.slice(0, 4) };
-    expect(agree("board", board, fourColumns)).toEqual([false, false]);
+    const threeColumns = { ...makeBoard(), columns: makeBoard().columns.slice(0, 3) };
+    expect(agree("board", board, threeColumns)).toEqual([false, false]);
     const extra = { ...makeBoard(), surprise: 1 };
     expect(agree("board", board, extra)).toEqual([false, false]);
     expect(agree("version", version, { build: "", version: "1" })).toEqual([false, false]);

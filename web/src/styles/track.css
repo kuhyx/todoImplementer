@@ -88,11 +88,6 @@ ti-track[data-stale] > :not(.t-top) {
   background: var(--success);
 }
 
-.t-bar > i[data-bucket="ready"] {
-  background: var(--success);
-  opacity: 0.55;
-}
-
 .t-bar > i[data-bucket="running"] {
   background: var(--accent);
 }
@@ -120,8 +115,7 @@ ti-track[data-stale] > :not(.t-top) {
   font-variant-numeric: tabular-nums;
 }
 
-.t-stat[data-bucket="done"],
-.t-stat[data-bucket="ready"] {
+.t-stat[data-bucket="done"] {
   color: var(--success);
 }
 

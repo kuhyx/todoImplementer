@@ -61,7 +61,7 @@ def test_the_drawer_lists_child_rows_rounds_and_issue_counts(rig: Rig) -> None:
     run = rig.run(card_id, "implement", worktree=str(rig.root / card_id), cost_usd=1.0)
     run.extra["umbrella"] = _record()
     save(run_dir(rig.root, card_id), run)
-    child = RunState(task_id="aaaa1111-0", stage="gate", cost_usd=0.25)
+    child = RunState(task_id="aaaa1111-0", stage="shipping", cost_usd=0.25)
     child.extra.update(verdict={"kind": "fixed", "detail": "x"}, free=True, umbrella_round=1)
     save(child_dir(run_dir(rig.root, card_id), "aaaa1111-0"), child)
     issues.append(run_dir(rig.root, card_id), 5.0, "kuhyx/alpha", "edit", "bad edit", "redid", fixed=True)
@@ -71,7 +71,7 @@ def test_the_drawer_lists_child_rows_rounds_and_issue_counts(rig: Rig) -> None:
     validate("task", detail)
     rows = {r["id"]: r for r in detail["umbrella"]["rows"]}
     assert (rows["aaaa1111-0"]["status"], rows["aaaa1111-0"]["verdict"], rows["aaaa1111-0"]["issues"]) == (
-        "ready_to_ship",
+        "shipping",
         "fixed",
         1,
     )
@@ -79,7 +79,7 @@ def test_the_drawer_lists_child_rows_rounds_and_issue_counts(rig: Rig) -> None:
     assert (detail["umbrella"]["width"], detail["umbrella"]["round"]) == (2, 1)
     card = detail["card"]
     assert card["cost_usd"] == 1.25
-    assert (card["umbrella"]["ready"], card["umbrella"]["queued"], card["umbrella"]["issues"]) == (1, 1, 1)
+    assert (card["umbrella"]["running"], card["umbrella"]["queued"], card["umbrella"]["issues"]) == (1, 1, 1)
     validate("board", rig.backend.board())
 
 
