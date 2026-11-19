@@ -13,7 +13,6 @@ from dataclasses import replace
 from typing import TYPE_CHECKING
 
 from todoimpl.board.repos import canonical
-from todoimpl.repotask.ids import norm
 from todoimpl.todo_mcp.model import TodoError
 
 if TYPE_CHECKING:
@@ -26,22 +25,21 @@ log = logging.getLogger("todoimpl.service")
 
 
 def heal(client: TodoClient, notes: list[Task]) -> list[Task]:
-    """Return the notes under their real repo; a note filed under another owner/name is rewritten once.
+    """Return the notes under their real repo; a note filed under another spelling is rewritten once.
 
-    A case-only difference is fixed in memory alone. A failed write keeps the real name on the board and is
+    Case too: the todo app's repo filter is exact. A failed write keeps the real name on the board and is
     tried again on the next fetch.
     """
     out: list[Task] = []
     for note in notes:
-        real = canonical(note.repo) if note.repo else note.repo
-        if real == note.repo:
+        real = canonical(note.repo) if note.repo else None
+        if real is None or real == note.repo:
             out.append(note)
             continue
-        if real is not None and norm(real) != norm(note.repo or ""):
-            try:
-                client.update_task(note.id[:8], repo=real)
-            except TodoError as exc:
-                log.warning("note %s repo %s -> %s not saved: %s", note.id[:8], note.repo, real, exc)
+        try:
+            client.update_task(note.id[:8], repo=real)
+        except TodoError as exc:
+            log.warning("note %s repo %s -> %s not saved: %s", note.id[:8], note.repo, real, exc)
         out.append(replace(note, repo=real))
     return out
 

@@ -62,7 +62,7 @@ deploys with a pull in `~/.claude` (`- deploy:` line of its CLAUDE.md: a ff-only
 One name per real repo (T2272): `repos.canonical` names a repo by the hosted origin of the checkout it runs in
 (the URL's own case). feedback_inbox filed `kuhyx/cleanup-plate`, a repo that does not exist, for ~/src/cleanup-plate,
 whose origin is `Sepci0/cleanup-plate`; the board listed both and gave each a card. Now the board fetch rewrites an
-open note filed under another owner/name through `update_task` (so `list_tasks(repo=)` finds it), shows closed notes
+open note filed under another spelling (owner, name or case) through `update_task` (so `list_tasks(repo=)` finds it), shows closed notes
 and shipped runs under the origin (one Done card per repo: the real name's own run dir, else the newest), and the
 New task form files a typed alias under the origin. A repo with no checkout, or a checkout with no hosted origin
 (a local bare path, no remote), keeps its name. Answers are kept 10 min.

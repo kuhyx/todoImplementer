@@ -122,10 +122,10 @@ def test_t2272_a_refused_rewrite_still_shows_the_real_name(
     monkeypatch.setenv("TODOIMPL_SRC", str(src))
     notes = [
         Task("aaaa1111", "t", "", GUESS, "todo", "medium", None),
-        Task("bbbb2222", "t", "", "sepci0/Cleanup-Plate", "todo", "medium", None),  # case only: no write
+        Task("bbbb2222", "t", "", "sepci0/Cleanup-Plate", "todo", "medium", None),  # case only: rewritten
         Task("cccc3333", "t", "", None, "todo", "medium", None),
     ]
     with caplog.at_level(logging.WARNING, "todoimpl.service"):
         healed = repoalias.heal(_Refusing(), notes)  # type: ignore[arg-type]
     assert [n.repo for n in healed] == [REAL, REAL, None]
-    assert ["aaaa1111" in r.message for r in caplog.records] == [True]
+    assert [r.message[5:13] for r in caplog.records] == ["aaaa1111", "bbbb2222"]
