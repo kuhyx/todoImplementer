@@ -32,6 +32,7 @@ CARD_VAR = "TODOIMPL_BUILD_CARD"
 LOCK = "build.lock"
 HOLDER = "build.lock.holder"
 WRAPPER = "buildlock.sh"
+QUEUE_LIB = "buildlock_queue.sh"  # the wrapper sources it; written first: a new wrapper never sees an old one
 SHIM_DIR = "shims"
 ENV_DIR = "shims-env"
 # Real build tools only. Never node, npx, uvx, git, python or claude: MCP servers and claude itself use them.
@@ -62,8 +63,9 @@ def _put(path: Path, text: str, mode: int) -> None:
 
 
 def ensure(base: Path) -> Path:
-    """Write the wrapper and one shim per tool under `base`; return the shim dir."""
+    """Write the wrapper, its queue lib and one shim per tool under `base`; return the shim dir."""
     wrapper = base / WRAPPER
+    _put(base / QUEUE_LIB, Path(__file__).with_name(QUEUE_LIB).read_text(encoding="utf-8"), 0o644)
     _put(wrapper, Path(__file__).with_name(WRAPPER).read_text(encoding="utf-8"), 0o755)
     shims = base / SHIM_DIR
     for tool in TOOLS:
@@ -99,7 +101,7 @@ def _say(out: IO[str] | int, text: str) -> None:
 def held(
     card: str, command: str, out: IO[str] | int, on_wait: Callable[[], None] | None = None
 ) -> Iterator[None]:
-    """Hold the build lock in queue order; a wait is said once in `out` and calls `on_wait`; a no-op when held."""
+    """Hold the build lock in queue order; a wait is said once in `out` and calls `on_wait`; held: a no-op."""
     if os.environ.get(HELD_VAR) == "1":
         yield
         return

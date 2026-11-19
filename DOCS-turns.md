@@ -44,6 +44,9 @@ across all board sessions and the board's own checks. Code: `server/todoimpl/run
   the nearest earlier ticket, then on `build.lock`, which stays the one mutex (an old wrapper or a hand-held lock
   still excludes). A ticket whose flock is free is dead (killed waiter, reboot) and is removed by whoever meets
   it. A ticket's line: `<pid> <wait|held> <card> (<cmd>) since <t>`; `buildlock.sh --queue` lists them in order.
+- A board check keeps its place across a server restart (T2168): its ticket ends in ` board`; dead, it is
+  stamped `gone` and kept 5 min (`buildqueue.RESERVE`), passed over by every waiter, and the restarted server's
+  same check (card and command) takes it back. Unclaimed after 5 min, the next look removes it.
 - No whole scripts (T2165): `buildlock.sh bash x.sh` (any shell, python or node with a script, `-c` or stdin,
   also behind env, nice, timeout, capped.sh; or a script path) exits 2 with a hint. Run the script plainly: the
   Bash tool's PATH has the shims, so each heavy tool inside takes the lock itself; a `systemd-run` job needs
@@ -53,9 +56,11 @@ across all board sessions and the board's own checks. Code: `server/todoimpl/run
   sleep, and it sends the wrapper SIGUSR1: the wrapper lets go of the lock and ticket, the tool runs on unkilled,
   and the card (or the run dir the wrapper works in) gets a `system` activity event. The server's own checks
   and a pid that is no buildlock.sh are skipped.
-- No touching by hand (T2167): the standing prompt forbids it, and a `flock` guard shim refuses a flock on
-  build.lock, its holder or the queue (a path or an fd open on one) with exit 2. A Bash deny rule would be
-  inert: kuhy's session policy has `deny: []`.
+- No touching by hand (T2167): the standing prompt forbids it, and a `flock` guard shim (in
+  `buildlock_queue.sh`, sourced by the wrapper) queues it: a blocking flock on build.lock (a path or an fd, as
+  phone_deploy's `board_lock_first` holds it for a deploy) takes a ticket and waits its turn, `flock -n` fails
+  while anyone is queued, the holder or queue files exit 2, and under a held lock it runs as asked. A Bash deny
+  rule would be inert: kuhy's session policy has `deny: []`.
 - Every turn gets one-line shims in `$TODOIMPL_HOME/shims` (flutter, dart, gradle, java for `./gradlew`, pnpm,
   npm, yarn, vite, vitest, cargo, go, make, cmake, ninja, godot, pytest, uv, pre-commit) that run
   `buildlock.sh <tool>`, plus the `flock` guard.

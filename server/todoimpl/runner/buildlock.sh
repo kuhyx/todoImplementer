@@ -1,11 +1,8 @@
 #!/bin/bash
 # Run one build tool under the board's machine-wide build lock (DOCS-turns.md, "One build at a time").
-# Usage: buildlock.sh <tool> [args...] | --queue | --flock <flock args>. The one-line shims in ./shims call
-# it; the server copies it into the lock root next to build.lock. Builds run in arrival order: each waiter
-# holds a flocked ticket in build.queue and waits for the ticket before its own (buildqueue.py has the same
-# protocol), then takes build.lock itself, which stays the one mutex. A dead waiter's ticket lock goes with
-# it, so a kill or reboot never blocks the queue. Only this bash holds the lock fds: the tool runs without
-# them, so a daemon it leaves behind can never keep the lock (and every other build) waiting.
+# Usage: buildlock.sh <tool> [args...] | --queue | --flock <flock args>; the shims in ./shims call it. Builds
+# run in arrival order through flocked tickets in build.queue, then build.lock (protocol: buildqueue.py). Only
+# this bash holds the lock fds: the tool runs without them, so a daemon it leaves never keeps the lock.
 set -euo pipefail
 
 readonly HERE="${BASH_SOURCE[0]%/*}"
@@ -20,10 +17,13 @@ REAL=""
 BIN=""
 FLOCK=""
 TICKET=""
+TFD=""
 WHAT=""
 CHILD=""
 RELEASED=0
 SAID=0
+# shellcheck source-path=SCRIPTDIR source=buildlock_queue.sh
+source "$HERE/buildlock_queue.sh"
 
 # find_real NAME: set REAL to the first NAME on PATH that is not one of our shims.
 find_real() {
@@ -81,103 +81,19 @@ is_script() {
 	return 0
 }
 
-say_waiting() {
-	((SAID)) && return 0
-	SAID=1
-	local held=""
-	[[ -s "$HOLDER" ]] && held="$(<"$HOLDER")"
-	echo "waiting for build lock held by ${held:-another build}; $1 ahead" >&2
-}
-
-# write_ticket PATH STATE: what `--queue` and the hold ceiling read; rewritten in place, never replaced,
-# because the owner's flock is on this inode.
-write_ticket() {
-	local now
-	printf -v now '%(%F %T)T' -1
-	printf '%s %s %s (%s) since %s\n' "$$" "$2" "${TODOIMPL_BUILD_CARD:-?}" "${WHAT:0:120}" "$now" >"$1"
-}
-
-# take_ticket: join the queue under the queue lock with the next number; stale temp files go first.
-take_ticket() {
-	mkdir -p "$QUEUE"
-	exec 7>>"$QLOCK"
-	"$FLOCK" 7
-	rm -f "$QUEUE"/.new.*
-	local f last=0
-	for f in "$QUEUE"/[0-9]*; do [[ -e "$f" ]] && last="${f##*/}"; done
-	printf -v TICKET '%s/%012d' "$QUEUE" "$((10#$last + 1))"
-	exec 8>"$QUEUE/.new.$$"
-	"$FLOCK" 8
-	write_ticket "$QUEUE/.new.$$" wait
-	mv -f "$QUEUE/.new.$$" "$TICKET"
-	exec 7>&-
-}
-
-# wait_turn: wait on the nearest earlier ticket until none is left; a ticket whose lock we get is dead.
-wait_turn() {
-	local mine="${TICKET##*/}" f prev fd ahead
-	while :; do
-		prev="" ahead=0
-		for f in "$QUEUE"/[0-9]*; do
-			[[ -e "$f" && "${f##*/}" < "$mine" ]] && prev="$f" && ahead=$((ahead + 1))
-		done
-		[[ -n "$prev" ]] || break
-		{ exec {fd}<"$prev"; } 2>/dev/null || continue
-		"$FLOCK" -n "$fd" || { say_waiting "$ahead" && "$FLOCK" "$fd"; }
-		rm -f "$prev"
-		exec {fd}<&-
-	done
-}
-
 # release: hand the lock on (holder line, build.lock, then the ticket); once only.
 release() {
 	((RELEASED)) && return 0
 	RELEASED=1
 	: >"$HOLDER"
 	exec 9>&-
-	rm -f "$TICKET"
-	exec 8>&-
+	drop_ticket
 }
 
 # cut: the server's hold ceiling saw this build do nothing for 2 min (holdceiling.py); the tool runs on.
 cut() {
 	release
 	echo "buildlock: released the build lock: ${WHAT:0:120} did nothing for 2 min; it runs on without it" >&2
-}
-
-show_queue() {
-	local f fd n=0 line
-	for f in "$QUEUE"/[0-9]*; do
-		[[ -e "$f" ]] || continue
-		{ exec {fd}<"$f"; } 2>/dev/null || continue
-		if "$FLOCK" -n "$fd"; then
-			rm -f "$f"
-		else
-			read -r line <"$f" || true
-			n=$((n + 1))
-			read -r pid rest <<<"$line" || true
-			echo "$n ${rest:-wait ? () since ?} pid ${pid:-0}"
-		fi
-		exec {fd}<&-
-	done
-}
-
-# guard_flock ARGS...: the `flock` shim; a flock on the lock, its holder or its queue jumps the queue.
-guard_flock() {
-	local word target
-	for word in "$@"; do
-		target="$word"
-		[[ "$word" =~ ^[0-9]+$ ]] && target="/proc/$$/fd/$word"
-		[[ -e "$target" ]] && target="$(realpath -- "$target")" || target="$(realpath -m -- "$target")"
-		case "$target" in "$(realpath -m -- "$LOCK")"* | "$(realpath -m -- "$QUEUE")"*)
-			echo "buildlock: refusing flock on the board's build lock: it serves builds in arrival order, so run" \
-				"each heavy command plainly (the shims queue it) or as buildlock.sh <tool> [args...]; see the" \
-				"queue with buildlock.sh --queue" >&2
-			exit 2
-			;;
-		esac
-	done
-	exec "$FLOCK" "$@"
 }
 
 run_locked() {
@@ -196,7 +112,7 @@ run_locked() {
 	trap '[[ -n "$CHILD" ]] && kill -HUP "$CHILD" 2>/dev/null' HUP
 	shift
 	{ exec 6<&0; } 2>/dev/null || exec 6</dev/null
-	"$BIN" "$@" <&6 6<&- 7>&- 8>&- 9>&- &
+	"$BIN" "$@" <&6 6<&- {TFD}>&- 9>&- &
 	CHILD=$!
 	exec 6<&-
 	local rc again
