@@ -47,3 +47,24 @@ def test_a_flutter_test_title_counts_as_a_tag(tmp_path: Path) -> None:
     (repo / "app/lib/a.dart").write_text("// [T98] not a test\n")
     subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
     assert check_regressions.problems(repo) == []
+
+
+def test_t2052_a_duplicate_id_across_two_files_fails(tmp_path: Path) -> None:
+    repo = make_repo(tmp_path, "| T5 | bug | x |\n", "def test_t5_bug() -> None:\n    pass\n")
+    (repo / "tests/regressions/DOCS-runner.md").write_text("| T5 | other bug | y |\n")
+    subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
+    found = check_regressions.problems(repo)
+    assert len(found) == 1
+    assert found[0].startswith("T5: row repeated in ")
+    assert "DOCS-runner.md" in found[0]
+    assert "DOCS-server.md" in found[0]
+    assert check_regressions.main([str(repo)]) == 1
+
+
+def test_t2052_a_duplicate_id_inside_one_file_fails(tmp_path: Path) -> None:
+    repo = make_repo(
+        tmp_path, "| T5 | bug | x |\n| T5 | again | y |\n", "def test_t5_bug() -> None:\n    pass\n"
+    )
+    assert check_regressions.problems(repo) == [
+        "T5: row repeated in tests/regressions/DOCS-server.md, tests/regressions/DOCS-server.md"
+    ]

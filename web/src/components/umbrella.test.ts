@@ -108,7 +108,7 @@ describe("umbrella rows in the drawer", () => {
     expect(link?.textContent).toBe("2");
   });
 
-  it("[T1887] shows a coached verdict with its own icon", () => {
+  it("[T2054] shows a coached verdict with its own icon", () => {
     const coached = renderUmbrella({ ...DETAIL, rows: [{ ...ROW, verdict: "coached" }] }, "aaaa1111-0");
     expect(coached.querySelector('[data-verdict="coached"]')).not.toBeNull();
   });

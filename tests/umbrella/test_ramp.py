@@ -77,7 +77,7 @@ def test_take_the_next_width_children_in_order() -> None:
     assert ramp.take([], 4) == []
 
 
-def test_t1887_coached_parses_with_its_retry_count_and_ranks_between_clean_and_fixed() -> None:
+def test_t2054_coached_parses_with_its_retry_count_and_ranks_between_clean_and_fixed() -> None:
     got = ramp.parse_verdicts("CHILD kuhyx/a: coached 2 prompt rewritten", KIDS[:1])
     assert got["aaaa1111-0"] == ramp.Verdict("coached", "2 prompt rewritten")
     assert (
@@ -90,7 +90,7 @@ def test_t1887_coached_parses_with_its_retry_count_and_ranks_between_clean_and_f
     )
 
 
-def test_t1887_coached_counts_toward_doubling_unless_it_hit_the_cap() -> None:
+def test_t2054_coached_counts_toward_doubling_unless_it_hit_the_cap() -> None:
     assert ramp.ok(ramp.Verdict("coached", "1"), free=True, checks=True)
     assert ramp.ok(ramp.Verdict("coached", "2 x"), free=True, checks=True)
     assert not ramp.ok(ramp.Verdict("coached", "3"), free=True, checks=True)

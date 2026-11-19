@@ -66,7 +66,7 @@ def backend(fake: FakeTodoMcp, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
     )
 
 
-def test_t2048_a_repo_less_umbrella_is_listed_and_the_merge_ledger_adds_no_second_card(
+def test_t2058_a_repo_less_umbrella_is_listed_and_the_merge_ledger_adds_no_second_card(
     fake: FakeTodoMcp, backend: ServiceBackend
 ) -> None:
     text = umbrella_text("Make the repos text-free", CARDS)

@@ -17,7 +17,7 @@ def _feed(world: Env) -> str:
     return (world.root / CARD / "events.jsonl").read_text(encoding="utf-8")
 
 
-def test_t1887_a_coached_child_doubles_the_width_and_the_task_file_carries_the_textgate_rules(
+def test_t2054_a_coached_child_doubles_the_width_and_the_task_file_carries_the_textgate_rules(
     world: Env, free: Free
 ) -> None:
     sched, _ = boot(world, 2)
@@ -36,7 +36,7 @@ def test_t1887_a_coached_child_doubles_the_width_and_the_task_file_carries_the_t
     assert "Make alpha text-free" in task
 
 
-def test_t1887_a_fixed_free_child_with_fewer_than_three_coaching_lines_is_warned_about(
+def test_t2054_a_fixed_free_child_with_fewer_than_three_coaching_lines_is_warned_about(
     world: Env, free: Free
 ) -> None:
     sched, _ = boot(world, 1)
@@ -54,7 +54,7 @@ def test_t1887_a_fixed_free_child_with_fewer_than_three_coaching_lines_is_warned
     assert "kuhyx/alpha: reported fixed after 2 of 3 coaching attempts" in _feed(world)
 
 
-def test_t1887_a_fixed_child_after_three_coaching_lines_is_not_warned_about(world: Env, free: Free) -> None:
+def test_t2054_a_fixed_child_after_three_coaching_lines_is_not_warned_about(world: Env, free: Free) -> None:
     sched, _ = boot(world, 1)
     world.script(NOTE, *manager("CHILD kuhyx/alpha: fixed after three tries"))
     script_live(world, 1)

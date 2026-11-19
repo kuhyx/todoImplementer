@@ -1,4 +1,4 @@
-"""Gate: every regression row has a test tagged with its id, and every test tag has a row.
+"""Gate: every regression row has a test tagged with its id, every tag has a row, and no id repeats.
 
 Rows live in tests/regressions/*.md as `| T12 | what went wrong | test |`. A pytest test carries the tag as
 `def test_t12_...`; a vitest or Flutter test title (`app/**/*_test.dart`) carries `[T12]`.
@@ -15,13 +15,14 @@ PY_TAG = re.compile(r"^\s*def test_(t\d+)_", re.MULTILINE)
 TS_TAG = re.compile(r"\[(T\d+)\]")
 
 
-def row_ids(root: Path) -> set[str]:
-    """Return the ids of every row under tests/regressions/."""
-    ids: set[str] = set()
+def row_files(root: Path) -> dict[str, list[str]]:
+    """Return, per row id under tests/regressions/, the file of each row that has it."""
+    files: dict[str, list[str]] = {}
     for rel in repo_files(root):
         if rel.parts[:2] == ("tests", "regressions") and rel.suffix == ".md":
-            ids |= set(ROW.findall((root / rel).read_text(encoding="utf-8")))
-    return ids
+            for rid in ROW.findall((root / rel).read_text(encoding="utf-8")):
+                files.setdefault(rid, []).append(rel.as_posix())
+    return files
 
 
 def test_tags(root: Path) -> set[str]:
@@ -39,11 +40,19 @@ def test_tags(root: Path) -> set[str]:
 
 
 def problems(root: Path) -> list[str]:
-    """Return one line per row without a test and per tag without a row."""
-    rows, tags = row_ids(root), test_tags(root)
-    return [f"{rid}: row has no test" for rid in sorted(rows - tags)] + [
-        f"{rid}: test has no row" for rid in sorted(tags - rows)
+    """Return one line per repeated id, per row without a test and per tag without a row."""
+    files, tags = row_files(root), test_tags(root)
+    rows = set(files)
+    repeated = [
+        f"{rid}: row repeated in {', '.join(sorted(where))}"
+        for rid, where in sorted(files.items())
+        if len(where) > 1
     ]
+    return (
+        repeated
+        + [f"{rid}: row has no test" for rid in sorted(rows - tags)]
+        + [f"{rid}: test has no row" for rid in sorted(tags - rows)]
+    )
 
 
 def main(argv: list[str]) -> int:

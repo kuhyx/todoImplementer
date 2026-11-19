@@ -4,7 +4,7 @@ Board sessions kept parking cards on asks that were only permission ("OK me to c
 "send a `LONG:` turn", "editing main is off-limits"). The decision: a session lands its own work and asks kuhy only
 for what he alone can give.
 
-## The grant (`server/todoimpl/prompts/standing.py`, T1862)
+## The grant (`server/todoimpl/prompts/standing.py`, T2053)
 
 Every work-stage prompt (implement, fix, resume, fresh, live_check) carries it:
 

@@ -41,7 +41,7 @@ def board_fetch(
 
     def fetch() -> list[CardTask]:
         notes = client.list_tasks(full=True)
-        # Repo-less notes (kuhy's ideas) are cards in the Yours lane (T2048); an older server that ignores
+        # Repo-less notes (kuhy's ideas) are cards in the Yours lane (T2058); an older server that ignores
         # `no_repo` answers with the repo notes again, so a note counts once.
         seen = {n.id for n in notes}
         notes += [n for n in client.list_tasks(full=True, no_repo=True) if n.id not in seen]

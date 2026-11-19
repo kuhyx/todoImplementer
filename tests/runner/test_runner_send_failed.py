@@ -4,7 +4,7 @@ from runnerfakes import Env, sh
 from schedfakes import CARD, IMPL, LIVE_OK, PLAN, boot, wait_stage
 
 
-def test_t2001_send_on_a_failed_run_with_no_session_starts_it_again_with_the_message(world: Env) -> None:
+def test_t2056_send_on_a_failed_run_with_no_session_starts_it_again_with_the_message(world: Env) -> None:
     sched, _ = boot(world, PLAN, IMPL, LIVE_OK, repo="Sepci0/demo", done_check="true")
     try:
         sched.start(CARD)  # the clone's origin is not Sepci0/demo yet

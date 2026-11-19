@@ -83,13 +83,13 @@ def test_send_without_a_session_is_disabled() -> None:
 
 
 @pytest.mark.parametrize("run_state", [run(stage="failed", error="boom"), run(stage="spec_wait")])
-def test_t2001_send_is_enabled_on_a_needs_you_card_with_no_session(run_state: RunState) -> None:
+def test_t2056_send_is_enabled_on_a_needs_you_card_with_no_session(run_state: RunState) -> None:
     got = acts(S.NEEDS_YOU, run_state)
     assert (got["send"].enabled, got["send"].reason) == (True, None)
     assert "copy-resume" not in got
 
 
-def test_t2001_send_stays_disabled_without_a_session_while_queued_or_shipping() -> None:
+def test_t2056_send_stays_disabled_without_a_session_while_queued_or_shipping() -> None:
     assert acts(S.QUEUED, run())["send"].reason == "no Claude session yet"
     assert acts(S.SHIPPING, run(stage="shipping"))["send"].reason == "no Claude session yet"
 

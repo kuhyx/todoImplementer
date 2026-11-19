@@ -48,7 +48,7 @@ def test_unlogged_finds_repos_without_a_line_since_the_round_began(tmp_path: Pat
     assert issues.unlogged(tmp_path, ["kuhyx/a", "kuhyx/b", "kuhyx/c"], since=10.0) == ["kuhyx/a", "kuhyx/c"]
 
 
-def test_t1887_coaching_counts_the_prompt_lines_of_a_child_since_the_round_began(tmp_path: Path) -> None:
+def test_t2054_coaching_counts_the_prompt_lines_of_a_child_since_the_round_began(tmp_path: Path) -> None:
     issues.append(tmp_path, 5.0, "kuhyx/a", "prompt", "old")
     issues.append(tmp_path, 20.0, "kuhyx/a", "prompt", "misread")
     issues.append(tmp_path, 21.0, "kuhyx/a", "edit", "not coaching")

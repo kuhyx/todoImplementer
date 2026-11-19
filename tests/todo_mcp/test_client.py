@@ -23,7 +23,7 @@ def test_list_open_by_default_and_hides_no_repo_notes(fake: FakeTodoMcp, client:
     assert all(t.body == "" and t.done_check is None for t in tasks)
 
 
-def test_t2048_no_repo_lists_only_the_open_repo_less_notes(fake: FakeTodoMcp, client: TodoClient) -> None:
+def test_t2058_no_repo_lists_only_the_open_repo_less_notes(fake: FakeTodoMcp, client: TodoClient) -> None:
     fake.seed("kuhyx/a", "a todos")
     fake.seed(None, "an idea", "details", priority="high")
     fake.seed(None, "old idea", status="done")

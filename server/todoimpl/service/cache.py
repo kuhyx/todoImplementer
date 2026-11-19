@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from .runtitles import RunTitles
 
 log = logging.getLogger("todoimpl.service")
-INTERVAL = 4.0
+INTERVAL = 2.0
 NOT_LOADED = "notes not loaded yet"
 
 

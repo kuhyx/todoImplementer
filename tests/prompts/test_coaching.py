@@ -8,7 +8,7 @@ from todoimpl.prompts import PromptContext, build, coach
 from todoimpl.prompts import tier as texts
 
 
-def test_t1887_the_umbrella_manager_diagnoses_and_coaches_before_doing_the_edits(ctx: PromptContext) -> None:
+def test_t2054_the_umbrella_manager_diagnoses_and_coaches_before_doing_the_edits(ctx: PromptContext) -> None:
     text = build("manager", ctx)
     assert "DIAGNOSE" in text
     assert "textgate-rework/SKILL.md" in text
@@ -19,7 +19,7 @@ def test_t1887_the_umbrella_manager_diagnoses_and_coaches_before_doing_the_edits
     assert "never do the edits yourself before" in text
 
 
-def test_t1887_the_cheap_tier_manager_coaches_the_same_way() -> None:
+def test_t2054_the_cheap_tier_manager_coaches_the_same_way() -> None:
     text = texts.manager(Path("/wt/x"), Path("/run/r1"), "W-CMD", "kuhyx/x")
     assert "DIAGNOSE" in text
     assert "textgate/SKILL.md" in text
@@ -27,7 +27,7 @@ def test_t1887_the_cheap_tier_manager_coaches_the_same_way() -> None:
     assert 'phase "prompt"' in text
 
 
-def test_t1887_the_textgate_rules_say_a_proper_noun_in_the_ui_is_not_an_excuse() -> None:
+def test_t2054_the_textgate_rules_say_a_proper_noun_in_the_ui_is_not_an_excuse() -> None:
     assert coach.is_textgate("Make x text-free (textgate-rework)")
     assert coach.is_textgate("Scan textgate: 1 items")
     assert not coach.is_textgate("Fix the login bug")

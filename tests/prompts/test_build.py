@@ -41,7 +41,7 @@ def test_plan_names_plan_file_and_numbered_criteria(ctx: PromptContext) -> None:
 
 
 @pytest.mark.parametrize("stage", ["implement", "fix", "resume_after_kill", "fresh_after_idle"])
-def test_t1862_work_stages_grant_landing_instead_of_forbidding_it(stage: str, ctx: PromptContext) -> None:
+def test_t2053_work_stages_grant_landing_instead_of_forbidding_it(stage: str, ctx: PromptContext) -> None:
     text = build(stage, ctx)
     assert "Never commit, push or touch main" not in text
     assert "under 60 s" not in text
@@ -57,13 +57,13 @@ def test_t1862_work_stages_grant_landing_instead_of_forbidding_it(stage: str, ct
     assert "Ask kuhy only for" in text
 
 
-def test_t1862_the_base_branch_is_the_repos(ctx: PromptContext) -> None:
+def test_t2053_the_base_branch_is_the_repos(ctx: PromptContext) -> None:
     text = build("implement", replace(ctx, base="master"))
     assert "git push origin HEAD:master" in text
     assert "origin/master" in text
 
 
-def test_t1862_live_check_lets_the_session_land_before_it_checks(ctx: PromptContext) -> None:
+def test_t2053_live_check_lets_the_session_land_before_it_checks(ctx: PromptContext) -> None:
     text = build("live_check", ctx)
     assert "standing permission" in text
     assert "can only pass after the ship" not in text
