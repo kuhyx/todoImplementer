@@ -15,8 +15,10 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from .checks import CheckResult, clean_env, run_check
+from . import stepwatch
+from .checks import CheckResult, clean_env, run_check, timing_row
 from .files import root_of, write_json
+from .stepwatch import WAIT_FILE
 
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
@@ -30,7 +32,10 @@ LOCK_NAME = "gate.lock"  # next to the run dirs: one gate at a time shares cappe
 
 
 def _row(r: CheckResult) -> dict[str, Any]:
-    return {"name": r.name, "command": r.command, "exit": r.exit_code, "tail": r.tail, "log": r.log}
+    return {
+        "name": r.name, "command": r.command, "exit": r.exit_code, "tail": r.tail, "log": r.log,
+        **timing_row(r),
+    }  # fmt: skip
 
 
 def _ids(wt: Path) -> list[str]:
@@ -80,7 +85,10 @@ def exclusive(lock: Path) -> Iterator[None]:
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the gate named by `<run_dir> <worktree>` (after any gate already running) and write its record."""
     run_dir, wt = (Path(a) for a in (sys.argv[1:3] if argv is None else argv)[:2])
-    with exclusive(root_of(run_dir) / LOCK_NAME):
+    with (
+        exclusive(root_of(run_dir) / LOCK_NAME),
+        stepwatch.watching(stepwatch.host_watch(run_dir / "gate" / WAIT_FILE)),
+    ):
         record = run(run_dir, wt)
     write_json(run_dir / "gate" / "exit.json", record)
     return 0

@@ -16,8 +16,8 @@ import threading
 import time
 from typing import TYPE_CHECKING
 
-from . import launch
-from .checks import CheckResult, clean_env
+from . import launch, stepwatch
+from .checks import CheckResult, clean_env, from_row, report
 from .files import NeedsYouError, read_json
 from .gatehost import STAMP_TOOL
 from .worktree import git
@@ -83,10 +83,7 @@ def _start(card: str, run_dir: Path, wt: Path) -> None:
 
 
 def _results(steps: list[dict[str, object]]) -> list[CheckResult]:
-    return [
-        CheckResult(str(s["name"]), str(s["command"]), s["exit"], str(s["tail"]), str(s["log"]))  # type: ignore[arg-type]
-        for s in steps
-    ]
+    return [from_row(s, str(s["name"]), str(s["command"])) for s in steps]
 
 
 def run(wt: Path, run_dir: Path, card: str) -> list[CheckResult]:
@@ -100,8 +97,9 @@ def run(wt: Path, run_dir: Path, card: str) -> list[CheckResult]:
     record = run_dir / GATE_DIR / EXIT_FILE
     unit = unit_name(card)
     deadline = time.monotonic() + GATE_TIMEOUT
-    launched = False
+    launched = polled = False
     while True:
+        stepwatch.relay(run_dir / GATE_DIR / stepwatch.WAIT_FILE)  # the host's queue on the card
         done = read_json(record)
         if isinstance(done, dict) and done.get("tree") == tree and (done.get("ok") or launched):
             break
@@ -112,8 +110,12 @@ def run(wt: Path, run_dir: Path, card: str) -> list[CheckResult]:
         if time.monotonic() > deadline:
             msg = f"The pre-push gate did not report within {GATE_TIMEOUT:g} s: see {run_dir / GATE_DIR}"
             raise NeedsYouError(msg, "checks_failed")
+        polled = True
         time.sleep(POLL)
     results = _results(done["steps"])
+    if polled:  # not a record reused as it was: the events say how long each step queued and ran
+        for result in results:
+            report(result)
     red = next((r for r in results if not r.passed), None)
     if red is not None:
         code = "timed out" if red.exit_code is None else f"exit {red.exit_code}"

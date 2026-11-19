@@ -12,7 +12,7 @@ from todoimpl.credits import route
 from todoimpl.prompts import PromptContext
 from todoimpl.repotask.prompt import addendum
 
-from . import checks, deploy, phone, resume, retry, tags, tiering, turncheck, worktree
+from . import checks, deploy, phone, resume, retry, stepwatch, tags, tiering, turncheck, worktree
 from .askform import needs_form
 from .files import KilledError, NeedsYouError
 from .grant import auto_grant
@@ -77,6 +77,7 @@ class Driver:
         self.state = state
         self.item = item
 
+    @stepwatch.drive  # a check's queue shows on the card and in the events (T2185)
     def run(self) -> None:
         """Loop stage handlers until a resting stage, a Q/A tag, cancel, the limit or a Needs-you."""
         from .stages import HANDLERS  # noqa: PLC0415 - stages imports this module
@@ -210,9 +211,8 @@ class Driver:
             phone.after_turn(st, ctx.run_dir, res, stage)
         self.save()
         self._check_turn(res)
-        if (
-            st.extra.pop("cap_hit", None) and not res.finished
-        ):  # the credit cap stopped the turn: go on at once, on the plan
+        # the credit cap stopped the turn: go on at once, on the plan
+        if st.extra.pop("cap_hit", None) and not res.finished:
             st.extra["r_continue"] = True
             return self.turn(role, stage, failure_tail=failure_tail, prompt=prompt)
         resume.rest(self, res, stage)  # a wait or resume line of Claude's own rests on the ladder (T2104)

@@ -61,7 +61,8 @@ def current_line(  # noqa: PLR0911 - one return per status
     if status == Status.NEEDS_YOU and run is not None:
         return needs(run).text
     if status == Status.SHIPPING and run is not None and run.extra.get(SHIP_STEP):
-        return f"shipping: {run.extra[SHIP_STEP]}"  # the step the ship is in (T2060)
+        queued = _wait_line(run)  # a check of the ship queued on the build lock (T2185)
+        return f"shipping: {run.extra[SHIP_STEP]}" + (f" {queued}" if queued else "")  # the step (T2060)
     return {
         Status.BACKLOG: "not started",
         Status.YOURS: "yours: no repo on this note" if run is None else "assigned to you",
@@ -78,13 +79,16 @@ def _working(run: RunState) -> str:
     if run.stage == "paused_retry":
         at = time.strftime("%H:%M", time.localtime(run.resume_at or 0))
         return f"retrying at {at}: {run.extra.get('retry_reason', 'a failed turn')}"
-    if isinstance(
-        wait := run.extra.get(WAITS_FOR), dict
-    ):  # an idle turn's job: lock holder or command (T2124)
-        since = wait.get("since")
-        at = f" {time.strftime('%H:%M', time.localtime(float(since)))}" if since is not None else ""
-        return f"{'⏳🔒' if wait.get('lock') else '⏳'} {wait.get('who', '?')}{at}"
-    return run.stage
+    return _wait_line(run) or run.stage
+
+
+def _wait_line(run: RunState) -> str:
+    """Return `⏳🔒 <holder> <HH:MM>` or `⏳ <job>` for an idle turn's job or a queued check; else empty."""
+    if not isinstance(wait := run.extra.get(WAITS_FOR), dict):
+        return ""
+    since = wait.get("since")
+    at = f" {time.strftime('%H:%M', time.localtime(float(since)))}" if since is not None else ""
+    return f"{'⏳🔒' if wait.get('lock') else '⏳'} {wait.get('who', '?')}{at}"
 
 
 def _silent(run: RunState, line: str, now: float) -> str:

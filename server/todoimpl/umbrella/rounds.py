@@ -7,6 +7,7 @@ only when every child was `clean` or `coached` (below the cap), done by a free w
 
 from __future__ import annotations
 
+import contextvars
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -180,8 +181,9 @@ def _check(u: Umbrella, cur: dict[str, Any], live: list[Child]) -> None:
         return kid.cid, not red
 
     todo = [k for k in live if cur["verdicts"][k.cid]["kind"] != "escalate"]
+    runs = [(contextvars.copy_context(), k) for k in todo]  # copied here: each pool thread keeps the watch
     with ThreadPoolExecutor(max_workers=max(1, min(MAX_CHECKS, len(todo)))) as pool:
-        cur["checks"] = dict(pool.map(one, todo))
+        cur["checks"] = dict(pool.map(lambda run: run[0].run(one, run[1]), runs))
     d.save()
 
 

@@ -21,7 +21,7 @@ from todoimpl import atomic
 from todoimpl.board import state as store
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Callable, Iterator
 
 ROOT_VAR = "TODOIMPL_BUILD_ROOT"  # tests point it at a temp dir; unset, the lock lives in the run root
 HELD_VAR = "TODOIMPL_BUILD_LOCK_HELD"  # set under a held lock: nested tools run straight away
@@ -89,8 +89,10 @@ def _say(out: IO[str] | int, text: str) -> None:
 
 
 @contextlib.contextmanager
-def held(card: str, command: str, out: IO[str] | int) -> Iterator[None]:
-    """Hold the build lock, waiting for it (said once in `out`); a no-op when this process holds it."""
+def held(
+    card: str, command: str, out: IO[str] | int, on_wait: Callable[[], None] | None = None
+) -> Iterator[None]:
+    """Hold the build lock, waiting for it (said once in `out`, `on_wait` called); a no-op when held."""
     if os.environ.get(HELD_VAR) == "1":
         yield
         return
@@ -102,6 +104,8 @@ def held(card: str, command: str, out: IO[str] | int) -> Iterator[None]:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             _say(out, WAITING.format(held=_read(holder) or "another build"))
+            if on_wait is not None:
+                on_wait()
             fcntl.flock(lock, fcntl.LOCK_EX)
         since = time.strftime("%Y-%m-%d %H:%M:%S")
         atomic.write_text(holder, f"{card} ({command[:120]}) since {since}\n", durable=False)

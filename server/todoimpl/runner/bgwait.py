@@ -121,6 +121,9 @@ def _holder(lock: Path) -> tuple[str, float | None]:
     return who, time.mktime(time.strptime(found["at"], "%Y-%m-%d %H:%M:%S"))
 
 
+holder = _holder  # the board's own checks name the holder they queue behind the same way (T2185)
+
+
 def scan(claude_pid: int | None, run_dir: Path, lock: Path) -> dict[str, Any] | None:
     """Return what the turn's live background job waits on (None: no job): `{lock, who, since}`."""
     below, jobs = tree(claude_pid)

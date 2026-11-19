@@ -19,8 +19,8 @@ import time
 from dataclasses import asdict
 from typing import TYPE_CHECKING, Any
 
-from . import deployheal, launch
-from .checks import CheckResult, clean_env
+from . import deployheal, launch, stepwatch
+from .checks import CheckResult, clean_env, from_row, report
 from .deployheal import DirtyCheckoutError
 from .deployhost import DEPLOY_DIR, EXIT_FILE
 from .files import NeedsYouError, read_json, write_json
@@ -188,8 +188,11 @@ def _record(run_dir: Path, commit: str, command: str, card: str, wt: Path) -> di
     unit, launched = unit_name(card), False
     deadline = time.monotonic() + WAIT
     while True:
+        stepwatch.relay(run_dir / DEPLOY_DIR / stepwatch.WAIT_FILE)  # the host's queue on the card
         done = read_json(record)
         if isinstance(done, dict) and done.get("commit") == commit and (done.get("ok") or launched):
+            if launched:  # not a green record reused: the events say how long it queued and ran
+                report(from_row(done, "deploy", command))
             return done
         if not launched and not _alive(unit):
             record.unlink(missing_ok=True)

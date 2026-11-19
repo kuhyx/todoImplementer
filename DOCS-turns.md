@@ -46,7 +46,22 @@ across all board sessions and the board's own checks. Code: `server/todoimpl/run
   the only argument) and a dev server (`dev`, `serve`, `start`, `preview`, `watch`, also after `run`) skip it.
 - Only the wrapper's bash holds the lock fd; the tool runs without it, so a daemon it leaves never keeps it.
 - The board's checks (`checks.run_capped`: done_check, `make test`, pre-commit, gate steps, autocheck) take
-  the same lock before their timeout starts.
+  a lane before their timeout starts (T2186, `runner/lanes.py`). `lanes.classify` calls a command `light` only when
+  every part (split on `;`, `&&`, `||`, `|`; `timeout`, `uv run`, `python -m`, `VAR=` peeled) is a known linter
+  (ruff, mypy, pyright, shellcheck, shfmt, black, isort, flake8, pylint, bandit, codespell, yamllint, actionlint,
+  markdownlint, eslint, prettier, git, plus head/tail/grep/wc/sort/cat as output filters), or `pre-commit` when no
+  hook `id`, `name`, `entry` or `language` of the repo's config names a build tool, `build`, `test` or `tests`
+  and no repo script an entry runs mentions one. Everything else (make, flutter, uv sync, scripts, `$(...)`,
+  subshells, an unreadable config) is `heavy`. A heavy check takes the build lock as above; a light one takes the
+  one-slot `$TODOIMPL_HOME/light.lock` (holder in `light.lock.holder`, same wait line), so a check wrongly called
+  light costs at most one extra build next to the one build: the 2-slot fallback. Both run under capped.sh.
+- Queue and run time are separate (T2185): `run_check` writes one event per check, `check <name>: lane=<heavy|light>
+  queue=<s> run=<s> exit=<n|timeout> [behind=<holder>]` (a restart resets the queue part). While a check queues
+  the card's `current` reads `⏳🔒 <holder> <HH:MM>` (the idle-turn line below, `bgwait.holder`; a ship step reads
+  `shipping: <step> ⏳🔒 ...`), through `stepwatch.Watch` that `Driver.run` installs per drive (umbrella round
+  checks copy the context into their pool threads). Of the 212 min the analysis of 2026-11-19 called scheduler
+  queueing, 139 min were kuhy's own spec answers and 73 min were checks queued here (T2187); `Engine._take` waits
+  only on the usage limit, a retry timer and the per-repo lock (`DOCS-repotask.md`).
 - Turn env build tuning (`buildlock.TUNING`): `GRADLE_OPTS` (no daemon, 4 workers, `-Xmx3g`) and
   `CARGO_BUILD_JOBS=4`; no `MAKEFLAGS` (make already runs one job; `-j4` would raise it). The standing prompt says a wait is normal and never to kill a waiting build.
 - An idle turn names its wait (T2124, `runner/bgwait.py`): once a turn's result is in and its stream has been

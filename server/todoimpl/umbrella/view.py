@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 from todoimpl.board import state as store
 from todoimpl.board.parse import StateError
-from todoimpl.board.status import compute
+from todoimpl.board.status import WAITS_FOR, compute
 from todoimpl.board.umbrella import VIEW
 from todoimpl.runner.pipeline import WORK_STAGES
 
@@ -101,6 +101,13 @@ def rows(
     return out, cost
 
 
+def child_wait(run_dir: Path, st: RunState) -> dict[str, Any] | None:
+    """Return the longest-waiting wait of a child (a check queued on the build lock, T2185), or None."""
+    kids = (child_state(run_dir, kid["id"]) for kid in st.extra.get(RECORD, {}).get("kids", []))
+    waits = [w for kid in kids if kid is not None and isinstance(w := kid.extra.get(WAITS_FOR), dict)]
+    return min(waits, key=lambda w: w.get("since") or 0.0) if waits else None
+
+
 def overlay(
     run_dir: Path,
     st: RunState,
@@ -113,7 +120,10 @@ def overlay(
     if RECORD not in st.extra:
         return st
     found, cost = rows(run_dir, st, live=live, limit_until=limit_until, waits=waits)
-    return replace(st, extra={**st.extra, VIEW: {"rows": found}}, cost_usd=round(st.cost_usd + cost, 6))
+    extra = {**st.extra, VIEW: {"rows": found}}
+    if WAITS_FOR not in extra and (wait := child_wait(run_dir, st)) is not None:
+        extra[WAITS_FOR] = wait  # the umbrella's line names what its children queue on
+    return replace(st, extra=extra, cost_usd=round(st.cost_usd + cost, 6))
 
 
 def overlay_for(context: Callable[[], Context], run_dir: Path, st: RunState) -> RunState:

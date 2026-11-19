@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import IO, TYPE_CHECKING, Any
 
-from . import buildlock, checks_guard
+from . import buildlock, checks_guard, lanes, stepwatch
 from .claude import kill_tree
 
 if TYPE_CHECKING:
@@ -34,6 +34,10 @@ class CheckResult:
     exit_code: int | None
     tail: str
     log: str
+    lane: str = lanes.HEAVY
+    queue_s: float = 0.0  # seconds before the lock or slot was this check's (T2185)
+    run_s: float = 0.0
+    holder: str = ""  # who it queued behind, when it queued
 
     @property
     def passed(self) -> bool:  # noqa: D102
@@ -111,7 +115,7 @@ def pool_env(run_dir: Path) -> dict[str, str]:
     return {"CLAUDE_CODE_SESSION_ID": "todoimpl" + re.sub(r"[^A-Za-z0-9]", "", run_dir.name)}
 
 
-def run_capped(  # noqa: PLR0913 - guard is keyword-only
+def run_capped(  # noqa: PLR0913 - guard and timing are keyword-only
     command: str,
     cwd: Path,
     timeout: float,
@@ -119,13 +123,15 @@ def run_capped(  # noqa: PLR0913 - guard is keyword-only
     env: Mapping[str, str] | None = None,
     *,
     guard: Path | None = None,
+    timing: lanes.Timing | None = None,
 ) -> int | None:
     """`capped.sh bash -c command` in its own process group; None when it timed out (the tree is killed).
 
     `guard` is a run dir: the group is recorded there while it runs, so a later server can stop it (T1889).
-    It first waits for the machine-wide build lock (buildlock.py), outside the timeout.
+    A build first waits for the machine-wide build lock (buildlock.py), a linter for the light slot
+    (lanes.py), both outside the timeout; `timing` gets the lane and the queue and run seconds (T2185).
     """
-    with buildlock.held(guard.name if guard else "board", command, out):  # its wait is not timed
+    with lanes.admitted(command, cwd, guard.name if guard else "board", out, timing):
         proc = subprocess.Popen(  # noqa: S603 - argv list; the command is the note's own (trusted) done_check
             [capped(), "bash", "-c", command],
             cwd=cwd,
@@ -162,14 +168,46 @@ def run_check(  # noqa: PLR0913, PLR0917 - one knob (env) more than the lint all
     log = run_dir / "evidence" / f"check-{name}-{time.time():.3f}.log"
     log.parent.mkdir(parents=True, exist_ok=True)
     checks_guard.stop_stale(run_dir)  # a dead server's run of this check would clash with this one (T1889)
+    timing = lanes.Timing()
     with log.open("w", encoding="utf-8") as out:
-        code = run_capped(command, cwd, timeout, out, {**pool_env(run_dir), **(env or {})}, guard=run_dir)
+        env_all = {**pool_env(run_dir), **(env or {})}
+        code = run_capped(command, cwd, timeout, out, env_all, guard=run_dir, timing=timing)
         if code is None:
             out.write(f"\n[timed out after {timeout:g} s]\n")
     lines = log.read_text(encoding="utf-8", errors="replace").splitlines()
+    result = CheckResult(
+        name, command, code, "\n".join(lines[-TAIL_LINES:]).strip(), str(log.relative_to(run_dir)),
+        timing.lane, timing.queue_s, timing.run_s, timing.holder,
+    )  # fmt: skip
+    report(result)
+    return result
+
+
+def report(result: CheckResult) -> None:
+    """Write the event line of a finished check, its lane and its queue and run seconds apart (T2185).
+
+    A gate or deploy step runs in a host process with no card: the server reports it from the host's record.
+    """
+    if (watch := stepwatch.current()) is not None:
+        code = "timeout" if result.exit_code is None else result.exit_code
+        behind = f" behind={result.holder}" if result.holder else ""
+        watch.say(
+            f"check {result.name}: lane={result.lane} queue={result.queue_s:.1f}s run={result.run_s:.1f}s"
+            f" exit={code}{behind}"
+        )
+
+
+def timing_row(result: CheckResult) -> dict[str, object]:
+    """Return a result's timing as a host's record keeps it; `from_row` reads it back."""
+    return {"lane": result.lane, "queue_s": result.queue_s, "run_s": result.run_s, "holder": result.holder}
+
+
+def from_row(row: Mapping[str, Any], name: str, command: str) -> CheckResult:
+    """Return the result a host's record row describes (rows of an older host have no timing)."""
     return CheckResult(
-        name, command, code, "\n".join(lines[-TAIL_LINES:]).strip(), str(log.relative_to(run_dir))
-    )
+        name, command, row["exit"], str(row["tail"]), str(row["log"]), str(row.get("lane", lanes.HEAVY)),
+        float(row.get("queue_s", 0.0)), float(row.get("run_s", 0.0)), str(row.get("holder", "")),
+    )  # fmt: skip
 
 
 def run_all(

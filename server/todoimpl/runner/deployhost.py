@@ -14,7 +14,8 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from .checks import run_check
+from . import stepwatch
+from .checks import run_check, timing_row
 from .files import root_of, write_json
 from .gatehost import LOCK_NAME, exclusive
 
@@ -41,7 +42,9 @@ def run(run_dir: Path, wt: Path, command: str) -> dict[str, Any]:
     except (OSError, subprocess.SubprocessError) as exc:  # e.g. capped.sh is gone
         row.update(exit=NOT_RUN, tail=str(exc)[-TAIL:])
     else:
-        row.update(exit=result.exit_code, tail=result.tail, log=f"{DEPLOY_DIR}/{result.log}")
+        row.update(
+            exit=result.exit_code, tail=result.tail, log=f"{DEPLOY_DIR}/{result.log}", **timing_row(result)
+        )
     return {**row, "ok": row["exit"] == 0, "ended": time.time()}
 
 
@@ -49,7 +52,10 @@ def main(argv: Sequence[str] | None = None) -> int:
     """Run the deploy named by `<run_dir> <worktree> <command>` and write its record."""
     args = list(sys.argv[1:] if argv is None else argv)
     run_dir, wt, command = Path(args[0]), Path(args[1]), args[2]
-    with exclusive(root_of(run_dir) / LOCK_NAME):
+    with (
+        exclusive(root_of(run_dir) / LOCK_NAME),
+        stepwatch.watching(stepwatch.host_watch(run_dir / DEPLOY_DIR / stepwatch.WAIT_FILE)),
+    ):
         record = run(run_dir, wt, command)
     write_json(run_dir / DEPLOY_DIR / EXIT_FILE, record)
     return 0
