@@ -23,6 +23,9 @@ REAL_ASKS = [
     "Is the audio too loud? Listen to the beep",
 ]
 
+CMD = "```ask\ncommand k1: git push origin HEAD:main\n```"
+CHOICE = "```ask\nchoice c1: Layout | wide | *narrow | risk=reversible\n```"
+
 
 @pytest.mark.parametrize("ask", ASKS)
 def test_permission_asks_are_recognised(ask: str) -> None:
@@ -54,7 +57,7 @@ def test_t1863_a_permission_ask_resumes_the_same_session_once(world: Env) -> Non
 
 def test_t1863_a_second_permission_ask_parks_the_card(world: Env) -> None:
     ask = reply("A: OK me to commit and push?")
-    again = reply("Still blocked.\n\nA: may I push now?")
+    again = reply(f"Still blocked.\n\nA: may I push now?\n\n{CMD}")
     sched, _ = boot(world, PLAN, ask, again, done_check="test -f hello.txt")
     try:
         sched.start(CARD)
@@ -67,7 +70,7 @@ def test_t1863_a_second_permission_ask_parks_the_card(world: Env) -> None:
 
 
 def test_t1863_a_real_ask_is_not_granted(world: Env) -> None:
-    ask = reply("A: Which of the two layouts do you want?")
+    ask = reply("A: Which of the two layouts do you want?\n\n" + CHOICE)
     sched, _ = boot(world, PLAN, ask, done_check="test -f hello.txt")
     try:
         sched.start(CARD)

@@ -29,8 +29,8 @@ FINAL = ("shipped", "closed", "cancelled")
 COUNTERS = (
     "failure_tail", "live_fixes", "check_fixes", "nudges", "nudge", "failed_stage", "resume_stage",
     "resettle", "retries", "crash_retries", "r_continues", "r_continue", "tagless_retry", "fresh",
-    "ship_fixes", "reship", "hands_nudged", "ask_grants", "ask_grant_total", "part_nudges", "ship_resumes",
-    "phone_update",
+    "ship_fixes", "reship", "hands_nudged", "ask_grants", "ask_grant_total", "ask_forms", "ask_form_total",
+    "part_nudges", "ship_resumes", "phone_update",
 )  # fmt: skip
 
 
@@ -171,8 +171,8 @@ class Scheduler(PhoneEngine):
         st.error, st.last_tag, st.assignee = None, None, "claude"
         for key in ("live_fixes", "check_fixes", "nudges", "ship_fixes", "reship", "hands_nudged"):
             st.extra.pop(key, None)
-        st.extra.pop("ask_grants", None)
-        st.extra.pop("ask_grant_total", None)
+        for key in ("ask_grants", "ask_grant_total", "ask_forms", "ask_form_total"):
+            st.extra.pop(key, None)
 
     def send(self, card: str, text: str) -> None:  # noqa: D102
         if not text.strip():

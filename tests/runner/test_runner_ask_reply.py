@@ -122,7 +122,7 @@ def test_t2006_the_tunedeck_ask_resumes_the_session_and_the_card_goes_on(world: 
 
 
 def test_t2006_after_the_budget_the_card_rests_on_kuhy_as_before(world: Env) -> None:
-    again = reply(f"Still blocked.\n\nA: {TUNEDECK}")
+    again = reply(f"Still blocked.\n\nA: {TUNEDECK}\n\n```ask\ncommand k1: deploy-todoimpl\n```")
     sched, _ = boot(world, PLAN, reply(f"A: {TUNEDECK}"), again, done_check="test -f hello.txt")
     try:
         sched.start(CARD)

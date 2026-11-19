@@ -16,8 +16,8 @@ Every work-stage prompt (implement, fix, resume, fresh, live_check) carries it:
 - Also granted: installers, confirm scripts and other repo scripts, marker files, approving its own drafts.
 - Heavy commands still go through `capped.sh`; there is no 60 s limit for a session, long jobs run via
   `systemd-run --user --collect` and the session waits.
-- kuhy is asked only for a `Q:` question round, a check only he can see, hear or touch (phone, audio, screen) and
-  physical taps.
+- kuhy is asked only for a `Q:` question round, a decision, a check only he can hear (audio) and physical taps.
+  Phone, device, emulator and E2E checks are the session's own (T2048).
 
 Sessions need the session policy (`~/.config/todoImplementer/session-policy.json`) to push: without one the built-in
 `git push` deny still applies (DOCS-spec.md, "Permission blocks heal themselves").

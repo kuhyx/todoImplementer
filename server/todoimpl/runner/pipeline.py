@@ -13,6 +13,7 @@ from todoimpl.prompts import PromptContext
 from todoimpl.repotask.prompt import addendum
 
 from . import checks, deploy, phone, retry, tags, tiering, turncheck, worktree
+from .askform import needs_form
 from .files import KilledError, NeedsYouError
 from .grant import auto_grant
 from .permit import gate, with_grant
@@ -213,7 +214,7 @@ class Driver:
         ):  # the credit cap stopped the turn: go on at once, on the plan
             st.extra["r_continue"] = True
             return self.turn(role, stage, failure_tail=failure_tail, prompt=prompt)
-        if gate(self, res, stage) or auto_grant(self, res, stage):
+        if gate(self, res, stage) or auto_grant(self, res, stage) or needs_form(self, res, stage):
             return self.turn(role, stage, failure_tail=failure_tail, prompt=prompt)
         return self._finished(res, role, stage)
 

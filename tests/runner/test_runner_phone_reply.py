@@ -7,7 +7,10 @@ PHONE_ASK = reply(
     "- [~] C1: needs phone: the alarm was not seen on the Pixel\n\n"
     "A: phone: with the app on the Pixel, fire a check-in alarm and confirm the shade"
 )
-HANDS_ASK = reply("- [~] C1: needs phone: not seen\n\nA: check the Home shot on the Pixel and tell me")
+HANDS_ASK = reply(
+    "- [~] C1: needs phone: not seen\n\nA: check the Home shot on the Pixel and tell me\n\n"
+    "```ask\nscreenshot s1: Home shot | shots/home.png\n```"
+)
 
 
 def test_t1981_a_reply_to_a_phone_ask_settles_the_checklist_instead_of_asking_again(world: Env) -> None:

@@ -27,3 +27,9 @@ Endpoints (`http/asks.py`, Origin + CSRF like every POST): `POST /api/task/<id>/
 
 Sweep (`python -m todoimpl.asks.sweep report|add|drop-note`): classifies the "MANUAL WORK REQUIRED" sections, appends an
 ask block to a card's section through the todo app (card text only), logs each edit on the card.
+
+Bare `A:` (`runner/askform.py`, T2048): a turn that ends on `A:` with no valid `ask` block is not parked as prose. The
+runner resumes the session once per stage and twice per run (`extra["ask_forms"]`, `ask_form_total`) with a fixed note:
+run any phone, device or E2E check yourself, and write a `choice` per decision or a `command` / `screenshot` for the
+exact step kuhy must take. Skipped for `spec`/`plan`, phone waits, error runs and umbrella children. After the budget
+the card parks with the old free-text ask.
