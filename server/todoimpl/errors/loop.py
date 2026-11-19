@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any
 
 from todoimpl.board import state as store
 from todoimpl.board.parse import StateError
+from todoimpl.board.status import CYCLE_ENDS
 from todoimpl.http.backend import BackendError
 from todoimpl.http.newtask import NewTask
 from todoimpl.todo_mcp.model import TodoError
@@ -202,7 +203,7 @@ class ErrorLoop:
             run = store.load(self.root / card)
         except StateError:
             return False
-        return run is None or run.stage == "shipped"
+        return run is None or run.stage in CYCLE_ENDS
 
     def _start_one(self, cards: Sequence[CardTask]) -> None:
         from todoimpl.runner.scheduler import RunnerError  # noqa: PLC0415 - the scheduler imports the service

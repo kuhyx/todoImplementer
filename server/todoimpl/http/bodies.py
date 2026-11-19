@@ -20,6 +20,7 @@ ACTIONS = (
     "go",
     "rerun",
     "wont",
+    "done-manually",
 )
 
 

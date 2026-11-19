@@ -45,6 +45,7 @@ export const STAGE_ICON: Record<NonNullable<TrackKid["stage"]>, IconName> = {
   checks: "ready",
   closed: "check",
   closing: "log",
+  done_manually: "check",
   failed: "failed",
   gate: "ready",
   implement: "running",

@@ -33,13 +33,13 @@ def test_t2070_a_note_that_asks_for_a_new_app_is_labelled_and_startable(rig: Rig
     assert actions(shown)["start"] is True
 
 
-def test_t2070_a_manual_note_stays_yours_with_only_wont_do(rig: Rig, triage: Make) -> None:
+def test_t2070_a_manual_note_stays_yours_with_only_the_two_hand_endings(rig: Rig, triage: Make) -> None:
     card = rig.note("wysłać jpk", repo=None)
     triage({"label": "manual", "reason": "an errand"}).service.tick()
     rig.backend.cache.refresh()
     shown = rig.card(card)
     assert (shown["triage"], shown["status"]) == ("manual", "yours")
-    assert [a["id"] for a in shown["actions"]] == ["wont"]
+    assert [a["id"] for a in shown["actions"]] == ["wont", "done-manually"]
 
 
 def test_t2070_an_existing_repo_label_sets_the_repo_and_the_card_joins_that_repos(

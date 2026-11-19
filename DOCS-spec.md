@@ -75,7 +75,7 @@ resting stages; the rest are work stages. "auto" = no click; "click" = kuhy. Clo
 | shipping | failed | rebase conflict, red recheck, push refused | auto |
 | any work stage | paused_limit | plan limit seen; `resume_at` = resetsAt | auto |
 | paused_limit | stage before | `resume_at` passed | auto |
-| any non-final (final = shipped, closed, cancelled) | cancelled | cancel (stops the session, keeps the run dir) | click |
+| any non-final (final = shipped, closed, cancelled, done_manually) | cancelled | cancel (stops the session, keeps the run dir) | click |
 | failed, cancelled | plan/spec | start again | click |
 | live_check or checks with `error`, or failed | implement | send (kuhy's note; error cleared) | click |
 
@@ -91,6 +91,7 @@ first match wins:
 | # | Rule | Status | Column |
 |---|---|---|---|
 | 1 | todo status done, or stage shipped or closed | done | done |
+| 1a | stage done_manually (the Done manually click, or the note was marked done in the todo app: `DOCS-manual.md`) | done_manually | done |
 | 1b | todo status abandoned, or stage cancelled (Cancel abandons the note when no other section is open) | cancelled | done |
 | 2 | no run and repo null | yours | backlog |
 | 3 | no run | backlog | backlog |
@@ -111,8 +112,8 @@ Server-computed per card as `{id, label, enabled, reason}`; a disabled action al
 decides. `start` enabled when status is backlog or cancelled, the note has a repo, and no usage limit holds (free
 credits taking over is no hold; a MANUAL WORK REQUIRED title is human work: disabled; board `slots` is just `{used}`);
 `spec-answers` when a question is open; `spec-ok` when every question is answered; `send` while a session exists and the
-stage is not final (`shipped`, `closed`, `cancelled`), including `failed` and stalled runs but never a closing run; `cancel` on any status whose stage is not final; `lesson-approve`
-when a lesson is drafted; `copy-resume` (carries `value`, no POST) when a session id exists; `go`, `copy-fix` (carries `value`, no POST) and `rerun` on a permission block (below).
+stage is not final (`shipped`, `closed`, `cancelled`, `done_manually`), including `failed` and stalled runs but never a closing run; `cancel` on any status whose stage is not final; `lesson-approve`
+when a lesson is drafted; `copy-resume` (carries `value`, no POST) when a session id exists; `go`, `copy-fix` (carries `value`, no POST) and `rerun` on a permission block (below); `wont` on Backlog, Cancelled, Yours and Needs you (DOCS-repotask.md); `done-manually` on every status but the two Done ones, with confirm, disabled while shipping (DOCS-manual.md).
 No `ship`, `close` or `auto_ship` option is offered (T2060); Start, Retry and Hand back send `{}`.
 
 ## Permission blocks heal themselves
@@ -147,7 +148,7 @@ succeeded after it, and only terminal denials of a turn that did not end on `D:`
 ## Endpoints
 
 GET `/version`, `/pair`, `/api/board`, `/api/task/<item-id>`, `/api/usage`, `/api/live?id=<item-id>` (SSE); POST
-`/api/task/<item-id>/{start,spec-answers,spec-ok,send,ship,close,cancel,lesson-approve,go,rerun}`, `/api/settings/credits-fallback`, `/api/pair`. Shapes: `version`, `pair`, `board`,
+`/api/task/<item-id>/{start,spec-answers,spec-ok,send,ship,close,cancel,lesson-approve,go,rerun,wont,done-manually}`, `/api/settings/credits-fallback`, `/api/pair`. Shapes: `version`, `pair`, `board`,
 `task`, `usage`, `live`, `requests` (one def per POST), `response` (all POSTs). Cross-file refs use each schema's
 `$id` (`https://todoimplementer.local/contracts/<file>`); load every file into one registry
 (`scripts/contract_lib.py` in Python, `ajv.addSchema` in web). POSTs need `X-Todoimpl-Token` and a same-origin

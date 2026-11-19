@@ -58,6 +58,11 @@
       "additionalProperties": false,
       "description": "Won't do: cancel a resting run and abandon every note behind the card (T2045)."
     },
+    "done_manually": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Done manually: stop the run, close every note behind the card as done, rest the card in Done (T2064)."
+    },
     "credits_fallback": {
       "type": "object",
       "description": "POST /api/settings/credits-fallback (not task-scoped): turn the free API credits fallback on or off for every run.",

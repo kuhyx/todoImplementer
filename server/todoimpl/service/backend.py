@@ -26,9 +26,8 @@ from todoimpl.umbrella.view import overlay_for
 from todoimpl.usage import limit_state
 from todoimpl.usage.interventions import record
 
-from . import permission, shots, tracking
+from . import dropping, permission, shots, tracking
 from .settings import credits_fallback as _credits_fallback
-from .wont import wont as _wont
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -156,7 +155,8 @@ class ServiceBackend:
     usage = tracking.usage  # GET /api/usage
     umbrella = tracking.umbrella  # GET /api/umbrella/<id8>
     worker_log = tracking.worker_log  # the tail of a child's newest worker log
-    wont = _wont  # Won't do click (T2045)
+    wont = dropping.wont  # Won't do click (T2045)
+    done_manually = dropping.done_manually  # Done manually click (T2064)
     set_credits_fallback = _credits_fallback  # POST /api/settings/credits-fallback
 
     def subscribe(self, id8: str) -> Iterator[dict[str, Any]]:

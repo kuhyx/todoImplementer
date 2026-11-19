@@ -9,11 +9,11 @@
     "usd": {"type": "number", "minimum": 0},
     "assignee": {"enum": ["human", "claude"]},
     "stage": {
-      "enum": ["spec", "spec_wait", "plan", "implement", "live_check", "checks", "gate", "shipping", "shipped", "closing", "closed", "failed", "paused_limit", "paused_retry", "cancelled"],
+      "enum": ["spec", "spec_wait", "plan", "implement", "live_check", "checks", "gate", "shipping", "shipped", "closing", "closed", "failed", "paused_limit", "paused_retry", "cancelled", "done_manually"],
       "description": "Run stage as written by the runner. See DOCS-spec.md for transitions."
     },
     "status": {
-      "enum": ["backlog", "yours", "cancelled", "queued", "working", "paused_limit", "shipping", "waiting_phone_update", "needs_you", "done"],
+      "enum": ["backlog", "yours", "cancelled", "queued", "working", "paused_limit", "shipping", "waiting_phone_update", "needs_you", "done", "done_manually"],
       "description": "THE single status, computed on the server by board.status.compute. Never recomputed in the page."
     },
     "column": {"enum": ["backlog", "running", "needs_you", "done"]},
@@ -49,13 +49,13 @@
         "id": {
           "enum": [
             "start", "spec-answers", "spec-ok", "send", "ship", "close", "cancel", "lesson-approve",
-            "copy-resume", "go", "copy-fix", "rerun", "wont"
+            "copy-resume", "go", "copy-fix", "rerun", "wont", "done-manually"
           ]
         },
         "label": {"type": "string", "minLength": 1},
         "enabled": {"type": "boolean"},
         "reason": {"type": ["string", "null"]},
-        "confirm": {"type": "boolean", "description": "Page asks 'sure?' first (ship, cancel, wont)."},
+        "confirm": {"type": "boolean", "description": "Page asks 'sure?' first (ship, cancel, wont, done-manually)."},
         "value": {"type": "string", "description": "copy-resume and copy-fix only: the text to copy."},
         "option": {
           "type": "object",

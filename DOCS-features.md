@@ -29,6 +29,7 @@
 | Ship | automatic at the gate | one commit with `Todo: <id8>` trailer pushed to origin, section marked `## [x]`, note closed with its last item, worktree removed |
 | Cheap tier | note with a `Tier: cheap` line or the title `text-free (textgate-rework)` | implement role runs on Sonnet (free models via claude-free on public repos, else alone), `ESCALATE:` or a failed turn moves it to Opus once; card icons for cheap / free / escalated (`DOCS-tiers.md`) |
 | Cancel | drawer action | run stops, run dir kept |
+| Done manually | any card that is not Done -> drawer / app action (confirm) (POST `.../done-manually`) | no Claude turn: a live session stops, every note behind the card is closed as done in the todo app, the card rests in Done with status `done_manually`; the reverse (a note marked done in the todo app) does the same within seconds (`DOCS-manual.md`) |
 | New task | toolbar + -> repo (board repos or typed `owner/name`), title, details, any files (picker/camera, paste, drop; 100 MB each, 500 MB total) -> create (POST `/api/upload` per file, then `/api/new-task`) | a `## title` section in the repo's note links the files on dufs (images inline), the repo card starts (or keeps working) and opens; sessions read run-dir copies of the files (`DOCS-repotask.md`) |
 | Free credits fallback | board toggle (POST `/api/settings/credits-fallback`) | while the plan limit is active, turns run on free API credits; card badge "free credits" |
 | Lessons | gate rejection -> drafted lesson -> Approve | lesson written into the named skill via `skill_lesson.py` |

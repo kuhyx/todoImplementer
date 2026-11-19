@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from todoimpl.board.parse import StateError
 from todoimpl.board.state import load, run_dir
+from todoimpl.board.status import CYCLE_ENDS
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -48,7 +49,7 @@ def older(root: Path, card: str) -> Older:
         run = load(run_dir(root, card))
     except StateError:
         return Older(held=True)
-    if run is None or run.stage == "shipped":
+    if run is None or run.stage in CYCLE_ENDS:
         return Older()
     if run.stage in ACTIVE:
         return Older(held=True)

@@ -20,6 +20,7 @@ export const STATUS_ICON: Record<Status, IconName> = {
   backlog: "queued",
   cancelled: "failed",
   done: "check",
+  done_manually: "check",
   needs_you: "failed",
   paused_limit: "queued",
   queued: "queued",

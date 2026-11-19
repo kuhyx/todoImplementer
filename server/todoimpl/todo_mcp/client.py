@@ -30,6 +30,7 @@ class TodoClient:
         self, url: str, token: str, timeout: float = 20.0, clock: Callable[[], float] = time.monotonic
     ) -> None:
         self.url = url
+        self.closed_here: set[str] = set()  # id8 of every note this process closed (the board's own closes)
         self._transport = Transport(url, token, timeout, clock)
 
     def __repr__(self) -> str:  # noqa: D105
@@ -90,6 +91,7 @@ class TodoClient:
     def close_task(self, id8: str, evidence: str) -> None:
         """Mark done; the server refuses blank evidence."""
         self._transport.call_tool("close_task", {"id": id8, "evidence": evidence})
+        self.closed_here.add(id8[:8])
 
     def add_task(
         self, repo: str, title: str, body: str = "", done_check: str | None = None, priority: str = "medium"

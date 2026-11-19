@@ -29,6 +29,9 @@ export function preset(status: TaskCard["status"], hasRepository: boolean): Pres
     case "done": {
       return { actions: [], column: "done", current: "shipped", needs: null, stage: "shipped", status };
     }
+    case "done_manually": {
+      return { actions: [], column: "done", current: "done manually", needs: null, stage: "done_manually", status };
+    }
     case "needs_you": {
       return {
         actions: [

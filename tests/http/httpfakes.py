@@ -24,6 +24,7 @@ POST_ACTIONS = (
     "go",
     "rerun",
     "wont",
+    "done-manually",
 )
 
 
@@ -137,6 +138,9 @@ class FakeBackend:
 
     def wont(self, id8: str) -> None:
         self._record("wont", id8)
+
+    def done_manually(self, id8: str) -> None:
+        self._record("done_manually", id8)
 
     def lesson_approve(self, id8: str, lesson_id: str) -> None:
         self._record("lesson_approve", id8, lesson_id)

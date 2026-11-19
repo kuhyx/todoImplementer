@@ -24,6 +24,7 @@ STAGES = (
     "paused_limit",
     "paused_retry",
     "cancelled",
+    "done_manually",
 )
 
 

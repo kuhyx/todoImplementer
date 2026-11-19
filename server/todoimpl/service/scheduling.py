@@ -32,6 +32,10 @@ class SchedulerLike(Protocol):
     def close_item(self, id8: str) -> None:  # noqa: D102
         ...
 
+    def done_manually(  # noqa: D102
+        self, id8: str, *, repo: str | None = None, title: str = "", repotask: bool = False
+    ) -> None: ...
+
     def auto_start(self, id8: str, passed_at: float) -> bool:  # noqa: D102
         ...
 

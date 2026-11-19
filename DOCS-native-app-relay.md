@@ -57,15 +57,15 @@ belongs to the browser device gate and goes away with it.
 
 | Kind | HTTP route | Body |
 |---|---|---|
-| `task_start` ... `task_rerun` (10) | `POST /api/task/<card>/<action>`, action in `bodies.ACTIONS` | `{card, args}`; args = `requests.schema.json#/$defs/<action>` |
+| `task_start` ... `task_done_manually` (12) | `POST /api/task/<card>/<action>`, action in `bodies.ACTIONS` | `{card, args}`; args = `requests.schema.json#/$defs/<action>` |
 | `ask_answer` ... `ask_reject` (6) | `POST /api/task/<card>/ask/<verb>` | `{card, args}`; args = `requests.schema.json#/$defs/ask_<verb>` |
 | `new_task` | `POST /api/new-task` | `{args}`; args = `$defs/new_task` (body cap stays `newtask.MAX_BODY`) |
 | `credits_fallback` | `POST /api/settings/credits-fallback` | `{args}`; args = `$defs/credits_fallback` |
 | `merge_merge`, `merge_dismiss` | `POST /api/merge/<group>/<merge or dismiss>` | `{group, args: {}}` |
 | `session_resume`, `session_mark`, `session_delete`, `session_handoff` | `POST /api/sessions/<verb>` | `{args}`; args = `sessions.schema.json#/$defs/<verb>_body` |
 
-The ten task actions: `start`, `spec-answers`, `spec-ok`, `send`, `ship`, `close`, `cancel`, `lesson-approve`,
-`go`, `rerun` (kind = `task_` + the action with `-` turned to `_`). `new_task` then starts the card, as the route does.
+The twelve task actions: `start`, `spec-answers`, `spec-ok`, `send`, `ship`, `close`, `cancel`, `lesson-approve`,
+`go`, `rerun`, `wont`, `done-manually` (kind = `task_` + the action with `-` turned to `_`). `new_task` then starts the card, as the route does.
 Since T2060 no card offers `ship` or `close` (a green card ships itself), so those two kinds answer `disabled`.
 
 Read kinds (lane `read`, up to 4 at once). The GET routes that a `snap` node does not cover:

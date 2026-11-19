@@ -48,7 +48,7 @@ class Rig:
         make_repo(self.world, name)
         return f"kuhyx/{name}"
 
-    def note(self, repo: str, title: str, body: str = "", **fields: str | None) -> str:
+    def note(self, repo: str | None, title: str, body: str = "", **fields: str | None) -> str:
         """Seed an open note and refresh the board cache; return the note's 8-char id."""
         note_id = self.fake.seed(repo, title, body, **fields)
         self.cache.refresh()

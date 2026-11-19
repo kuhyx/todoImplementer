@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import shlex
 import time
-from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from .button import Action
 from .needs import needs
 from .norepo import is_yours
 from .parts import kuhys
-from .status import Status
+from .status import MANUAL_STAGE, Status
 from .types import MANUAL_REASON, fmt_when
 
 if TYPE_CHECKING:
@@ -20,36 +20,11 @@ if TYPE_CHECKING:
     from .state import RunState
     from .types import Limit, TaskLike
 
-FINAL_STAGES = ("shipped", "closed", "cancelled")
+FINAL_STAGES = ("shipped", "closed", "cancelled", MANUAL_STAGE)
 NO_NOTES = "closing runs take no notes; Start again or Cancel"
 ABANDONED = "the note is abandoned: auto close no longer polls its done_check"
+DONE = (Status.DONE, Status.DONE_MANUALLY)
 WONT = (Status.BACKLOG, Status.CANCELLED, Status.YOURS, Status.NEEDS_YOU)  # no turn runs: Won't do drops it
-
-
-@dataclass(frozen=True)
-class Action:
-    """One button; `reason` is set exactly when it is disabled."""
-
-    id: str
-    label: str
-    enabled: bool = True
-    reason: str | None = None
-    confirm: bool = False
-    value: str | None = None
-
-    def to_dict(self) -> dict[str, object]:
-        """Return the contract object (confirm/value only when set)."""
-        out: dict[str, object] = {
-            "id": self.id,
-            "label": self.label,
-            "enabled": self.enabled,
-            "reason": self.reason,
-        }
-        if self.confirm:
-            out["confirm"] = True
-        if self.value is not None:
-            out["value"] = self.value
-        return out
 
 
 def _missing(repo_missing: str | None, block: str | None) -> str | None:
@@ -107,7 +82,10 @@ def actions(  # noqa: PLR0913 - the signature of the interface plus keyword-only
     out = _primary(task, run, status, block, repo_missing)
     if status in WONT:  # T2045: abandons every note behind the card
         out.append(Action("wont", "Won't do", confirm=True))
-    if run is not None and status != Status.DONE:
+    if status not in DONE:  # T2064: kuhy did it himself; the one thing a push in flight cannot take
+        why = "shipping cannot be stopped" if status == Status.SHIPPING else None
+        out.append(Action("done-manually", "Done manually", why is None, why, confirm=True))
+    if run is not None and status not in DONE:
         out += _session(run, status, block)
     if run is not None and run.lesson and run.lesson.get("state") == "drafted":
         out.append(Action("lesson-approve", "Approve lesson"))

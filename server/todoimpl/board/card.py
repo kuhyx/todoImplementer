@@ -14,7 +14,7 @@ from .badges import tier_badges
 from .needs import needs
 from .norepo import is_yours
 from .parts import is_repo_task, kuhys, manual_ask, parts_of
-from .status import SHIP_STEP, Status, column, compute
+from .status import CYCLE_ENDS, SHIP_STEP, Status, column, compute
 from .types import Limit, fmt_when
 from .umbrella import card_view
 
@@ -66,6 +66,7 @@ def current_line(  # noqa: PLR0911 - one return per status
         Status.SHIPPING: "pushing and closing the note",
         Status.WAITING_PHONE_UPDATE: "wait for phone to connect, then update the app",
         Status.DONE: "done",
+        Status.DONE_MANUALLY: "done manually",
     }[status]
 
 
@@ -99,7 +100,7 @@ def build_card(task: TaskLike, run: RunState | None, ctx: Context) -> dict[str, 
     """Return the task_card object for one note."""
     tid = task.id
     spent = 0.0
-    if run is not None and run.stage == "shipped" and is_repo_task(task):  # parts are left: the next cycle
+    if run is not None and run.stage in CYCLE_ENDS and is_repo_task(task):  # parts are left: the next cycle
         spent, run = run.cost_usd, None
     live = tid in ctx.live
     limit_until = ctx.limit.until if ctx.limit.active else None

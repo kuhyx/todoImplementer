@@ -7,7 +7,8 @@ from typing import Any
 import pytest
 from board_helpers import EXHAUSTED, LIMITED, NOW, STAGES, TAKEOVER, Note, run
 from contract_lib import validate
-from todoimpl.board.actions import Action, actions
+from todoimpl.board.actions import actions
+from todoimpl.board.button import Action
 from todoimpl.board.state import RunState, SpecQuestion
 from todoimpl.board.status import Status, compute
 from todoimpl.board.types import Limit, fmt_when
@@ -63,12 +64,12 @@ def test_exhausted_credits_block_start_and_say_why() -> None:
 
 
 def test_yours_offers_only_wont_and_done_nothing() -> None:
-    assert list(acts(S.YOURS, None, note=Note(repo=None))) == ["wont"]
+    assert list(acts(S.YOURS, None, note=Note(repo=None))) == ["wont", "done-manually"]
     assert acts(S.DONE, run(stage="shipped", session_id="s", worktree="/w")) == {}
 
 
 def test_queued_and_working_can_be_cancelled() -> None:
-    assert list(acts(S.QUEUED, run())) == ["cancel", "send"]
+    assert list(acts(S.QUEUED, run())) == ["cancel", "done-manually", "send"]
     assert acts(S.QUEUED, run(session_id="s"))["send"].reason == "the run is waiting to start"
     working = acts(S.WORKING, run(session_id="s", worktree="/w"), limit=LIMITED)
     assert working["cancel"].enabled
@@ -142,12 +143,12 @@ def test_failed_run_offers_retry_and_handed_over_run_hands_back() -> None:
 
 def test_claude_question_offers_send_and_cancel_only() -> None:
     got = acts(S.NEEDS_YOU, run(last_tag="Q", session_id="s", worktree="/w"))
-    assert list(got) == ["cancel", "wont", "send", "copy-resume"]
+    assert list(got) == ["cancel", "wont", "done-manually", "send", "copy-resume"]
     assert acts(S.NEEDS_YOU, run(last_tag="A", session_id="s"))["send"].enabled
 
 
 def test_needs_you_without_a_run_offers_only_wont() -> None:
-    assert list(acts(S.NEEDS_YOU, None)) == ["wont"]
+    assert list(acts(S.NEEDS_YOU, None)) == ["wont", "done-manually"]
 
 
 def test_t2045_wont_rests_only_on_cards_no_turn_works_on() -> None:
@@ -216,3 +217,19 @@ def test_t2060_no_status_offers_ship_or_close_or_the_auto_ship_tick() -> None:
         got = acts(status, run(stage="gate", worktree="/w", checks={"passed": True}, session_id="s"))
         assert not {"ship", "close"} & set(got), status
         assert all("option" not in a.to_dict() for a in got.values()), status
+
+
+def test_t2064_done_manually_is_offered_on_every_card_that_is_not_done() -> None:
+    for status in S:
+        if status in (S.DONE, S.DONE_MANUALLY):
+            assert "done-manually" not in acts(status, run(stage="shipped", session_id="s")), status
+            continue
+        offered = acts(status, run(worktree="/w"))["done-manually"]
+        assert (offered.label, offered.confirm) == ("Done manually", True), status
+    assert acts(S.BACKLOG, None)["done-manually"].enabled
+    assert acts(S.DONE_MANUALLY, run(stage="done_manually", session_id="s", worktree="/w")) == {}
+
+
+def test_t2064_done_manually_is_disabled_while_a_push_is_in_flight() -> None:
+    shipping = acts(S.SHIPPING, run(stage="shipping", worktree="/w"))["done-manually"]
+    assert (shipping.enabled, shipping.reason) == (False, "shipping cannot be stopped")

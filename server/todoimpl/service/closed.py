@@ -1,5 +1,7 @@
 """Cards of fully closed notes: the todo app stops listing a note once every section is shipped and closed.
 
+A run that rests at `done_manually` (T2064) keeps its card the same way.
+
 The run dir is the memory: an item whose state.json says `shipped` keeps its card on the board (Done column)
 after its note left `list_tasks`. A closed note never changes, so it is fetched once and its cards are kept.
 """
@@ -11,7 +13,7 @@ from typing import TYPE_CHECKING
 
 from todoimpl.board.parse import StateError
 from todoimpl.board.state import FILE, load
-from todoimpl.board.status import DONE_STAGES
+from todoimpl.board.status import CYCLE_ENDS, DONE_STAGES, MANUAL_STAGE
 from todoimpl.todo_mcp.items import Item
 
 from .cards import CardTask, card_tasks
@@ -64,7 +66,11 @@ class ClosedNotes:
                 run = load(directory)
             except StateError:
                 continue
-            if run is not None and run.stage in DONE_STAGES and not run.extra.get("repotask"):
+            if (
+                run is not None
+                and run.stage in (*DONE_STAGES, MANUAL_STAGE)
+                and not run.extra.get("repotask")
+            ):
                 ids.add(id8)
         return ids
 
@@ -78,7 +84,7 @@ class ClosedNotes:
                 run = load(directory)
             except StateError:
                 continue
-            if run is None or run.stage != "shipped" or not run.extra.get("repotask") or not run.repo:
+            if run is None or run.stage not in CYCLE_ENDS or not run.extra.get("repotask") or not run.repo:
                 continue
             title = str(run.extra.get("repotask_title") or run.repo)
             item = Item(

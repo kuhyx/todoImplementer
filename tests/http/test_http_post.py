@@ -35,6 +35,7 @@ def test_every_post_action_calls_the_backend_and_returns_the_card(live: Live, ac
         "go": ("go",),
         "rerun": ("rerun",),
         "wont": ("wont",),
+        "done-manually": ("done_manually",),
     }[action]
     assert live.backend.calls == [(expect[0], live.backend.task_id, *expect[1:])]
 

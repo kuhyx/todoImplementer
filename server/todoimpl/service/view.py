@@ -148,6 +148,18 @@ class ItemView:
             self._client.update_task(note.id, status="abandoned")
         self._cache.poke()
 
+    def done_manually(self, card: str, evidence: str) -> CardTask:
+        """Close every note behind the card as done (T2064): its parts but a held one, or its section."""
+        found = next((t for t in self._cache.snapshot().tasks if t.id == card), None)
+        if found is None:
+            msg = f"unknown task {card}"
+            raise TodoError(msg)
+        parts = [p for p in found.item.parts if not p.held]  # a held part still runs on its own card
+        items = [Item(p.note_id, p.index, p.title, p.body, found.repo, "todo", p.done_check) for p in parts]
+        for item in items or [found.item]:
+            self._client.close_item(item, evidence)
+        return found
+
     def add_task(self, repo: str, title: str, body: str = "") -> Task:
         """Add a section to the repo's open note (a follow-up) and refresh the cached cards.
 

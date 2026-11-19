@@ -95,6 +95,10 @@ class Backend(Protocol):
         """Won't do: cancel a resting run, abandon every note behind the card."""
         ...
 
+    def done_manually(self, id8: str) -> None:
+        """Done manually: close every note behind the card, stop the run, rest the card in Done."""
+        ...
+
     def set_credits_fallback(self, *, enabled: bool) -> dict[str, Any]:
         """Store the global free-credits fallback setting; return the contract's `credits` object."""
         ...

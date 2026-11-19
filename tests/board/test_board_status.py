@@ -9,7 +9,7 @@ from todoimpl.board.needs import needs
 from todoimpl.board.state import SpecQuestion
 from todoimpl.board.status import Column, Status, column, compute
 
-W, Q, P, N, D, Y, S, C = (
+W, Q, P, N, D, Y, S, C, M = (
     Status.WORKING,
     Status.QUEUED,
     Status.PAUSED_LIMIT,
@@ -18,6 +18,7 @@ W, Q, P, N, D, Y, S, C = (
     Status.YOURS,
     Status.SHIPPING,
     Status.CANCELLED,
+    Status.DONE_MANUALLY,
 )
 # (live, limit) order: (no, no), (no, yes), (yes, no), (yes, yes)
 WORK = (Q, P, W, W)
@@ -37,10 +38,12 @@ CLAUDE: dict[str, tuple[Status, ...]] = {
     "paused_limit": (P,) * 4,
     "paused_retry": (W, P, W, W),
     "cancelled": (C,) * 4,
+    "done_manually": (M,) * 4,
 }
 HUMAN: dict[str, tuple[Status, ...]] = dict.fromkeys(STAGES, (Y,) * 4)
 HUMAN["shipped"] = HUMAN["closed"] = (D,) * 4
 HUMAN["cancelled"] = (C,) * 4
+HUMAN["done_manually"] = (M,) * 4
 COMBOS = list(itertools.product((False, True), repeat=2))
 
 
@@ -133,6 +136,7 @@ def test_columns() -> None:
         Status.NEEDS_YOU: "needs_you",
         Status.WAITING_PHONE_UPDATE: "running",
         Status.DONE: "done",
+        Status.DONE_MANUALLY: "done",
     }
 
 
@@ -174,3 +178,10 @@ def test_t1229_a_paused_retry_run_is_never_needs_you(tag: str) -> None:
     waiting = run(stage="paused_retry", last_tag=tag)
     assert compute(Note(), waiting, False, None) == Status.WORKING
     assert compute(Note(), waiting, False, 5.0) != Status.NEEDS_YOU
+
+
+def test_t2064_done_manually_wins_over_a_closed_note_and_a_live_run() -> None:
+    manual = run(stage="done_manually")
+    assert compute(Note(status="done"), manual, False, None) == Status.DONE_MANUALLY
+    assert compute(Note(), run(stage="done_manually"), True, 99.0) == Status.DONE_MANUALLY
+    assert compute(Note(status="done"), run(stage="shipped"), False, None) == Status.DONE

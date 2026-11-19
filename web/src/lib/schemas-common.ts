@@ -12,11 +12,11 @@ export const usd = z.number().min(0);
 
 export const STAGES = [
   "spec", "spec_wait", "plan", "implement", "live_check", "checks", "gate", "shipping", "shipped", "closing", "closed",
-  "failed", "paused_limit", "paused_retry", "cancelled",
+  "failed", "paused_limit", "paused_retry", "cancelled", "done_manually",
 ] as const;
 export const STATUSES = [
   "backlog", "yours", "cancelled", "queued", "working", "paused_limit", "shipping", "waiting_phone_update", "needs_you",
-  "done",
+  "done", "done_manually",
 ] as const;
 export const COLUMN_IDS = ["backlog", "running", "needs_you", "done"] as const;
 export const NEEDS_KINDS = [
@@ -24,7 +24,7 @@ export const NEEDS_KINDS = [
 ] as const;
 export const ACTION_IDS = [
   "start", "spec-answers", "spec-ok", "send", "ship", "close", "cancel", "lesson-approve", "copy-resume", "go", "copy-fix",
-  "rerun", "wont",
+  "rerun", "wont", "done-manually",
 ] as const;
 
 export const stage = z.enum(STAGES);

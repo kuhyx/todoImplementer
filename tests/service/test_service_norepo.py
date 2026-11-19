@@ -19,7 +19,7 @@ def test_t2058_an_open_note_without_a_repo_is_a_yours_card_in_backlog(rig: Rig) 
         "yours",
         "backlog",
     )
-    assert [a["id"] for a in card["actions"]] == ["wont"]  # never startable
+    assert [a["id"] for a in card["actions"]] == ["wont", "done-manually"]  # never startable
     assert board["repos"] == []
 
 

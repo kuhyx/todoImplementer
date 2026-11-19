@@ -20,6 +20,7 @@ void main() {
       'copy-fix',
       'rerun',
       'wont',
+      'done-manually',
     ];
     expect(actions.map(actionIcon).toSet(), hasLength(actions.length));
     expect(actionIcon('x'), Icons.help_outline);

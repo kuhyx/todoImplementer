@@ -8,11 +8,12 @@ from typing import TYPE_CHECKING, Any
 from todoimpl.board import state as store
 from todoimpl.board.parts import kuhys
 from todoimpl.board.state import RunState, clip_body
+from todoimpl.board.status import CYCLE_ENDS, MANUAL_STAGE
 from todoimpl.board.types import MANUAL_REASON
 from todoimpl.repotask.start import prepare
 from todoimpl.todo_mcp.model import TodoError
 
-from . import adopt, appfix, closing, retry, whenfree
+from . import appfix, closing, retry, stopping, whenfree
 from .engine import Client, default_clock
 from .files import read_json
 from .phone_sched import PhoneEngine
@@ -25,7 +26,7 @@ if TYPE_CHECKING:
 
 log = logging.getLogger("todoimpl.runner")
 RESTARTABLE = ("failed", "cancelled")
-FINAL = ("shipped", "closed", "cancelled")
+FINAL = ("shipped", "closed", "cancelled", MANUAL_STAGE)
 COUNTERS = (
     "failure_tail", "live_fixes", "check_fixes", "nudges", "nudge", "failed_stage", "resume_stage",
     "resettle", "retries", "crash_retries", "r_continues", "r_continue", "tagless_retry", "fresh",
@@ -87,7 +88,13 @@ class Scheduler(PhoneEngine):
     close_item = closing.close  # the Close click on a held closing run (`close` is the Engine's shutdown)
     phone_update_start = appfix.restart  # a pushed fix whose deploy waits for the phone: Ship again
     start_when_free = whenfree.arm  # a handoff onto a held card: it starts when its Ship completes
-    after_recover = whenfree.recover  # a Ship that completed across a restart still starts its handoff
+    cancel = stopping.cancel  # the Cancel click
+    done_manually = stopping.done_manually  # kuhy did the work himself (T2064)
+
+    def after_recover(self) -> None:
+        """Settle a Done manually click a restart cut; a Ship that completed across it starts its handoff."""
+        stopping.recover(self)
+        whenfree.recover(self)
 
     def start(self, card: str, *, auto_ship: bool | None = None, extra: dict[str, Any] | None = None) -> None:
         """Start, Restart, Retry or Hand back; a failed run (Retry, Hand back) keeps its auto-ship choice.
@@ -108,10 +115,10 @@ class Scheduler(PhoneEngine):
             if self.busy(card):
                 msg = f"{card} is already running"
                 raise RunnerError(msg, "conflict")
-            if st is not None and st.stage not in RESTARTABLE and not (item.parts and st.stage == "shipped"):
+            if st is not None and st.stage not in RESTARTABLE and not (item.parts and st.stage in CYCLE_ENDS):
                 msg = f"{card} already has a run ({st.stage})"
                 raise RunnerError(msg, "conflict")
-            if st is None or st.stage in ("cancelled", "shipped"):  # shipped: a repo task's next cycle
+            if st is None or st.stage in ("cancelled", *CYCLE_ENDS):  # a repo task's next cycle
                 st = st or RunState(task_id=card, stage="spec", started_at=self.clock(), repo=item.repo)
                 st.auto_ship = bool(auto_ship)
                 appfix.forget(st)
@@ -202,6 +209,8 @@ class Scheduler(PhoneEngine):
 
     def after_drive(self, card: str) -> None:
         """Requeue a paused run at the front; reopen a resting run when a note arrived mid-turn."""
+        if stopping.settle(self, card):  # kuhy marked the card done while this drive ran (T2064)
+            return
         st = store.load(self.root / card)
         if st is None:  # pragma: no cover - a drive always saves
             return
@@ -223,27 +232,6 @@ class Scheduler(PhoneEngine):
             st.extra.pop("ship_resumes", None)
             self.save(card, st)
             self.enqueue(card)
-
-    def cancel(self, card: str) -> None:  # noqa: D102
-        with self._cv:
-            st = self._load(card)
-            if st.stage in FINAL:
-                msg = f"The run is already {st.stage}"
-                raise RunnerError(msg, "disabled")
-            if card in self._active:
-                self.kill(card)
-            else:
-                if card in self._queue:
-                    self._queue.remove(card)
-                    self.locks.release(card)
-                adopt.abandon(self.root / card)  # a turn no drive follows must not go on editing the worktree
-                st.stage = "cancelled"
-                self.save(card, st)
-                self.bus.publish(card, {"type": "done"})
-        try:  # a cancelled card is abandoned in the todo app too, where a whole note can be (T1815)
-            self.client.abandon(card)
-        except TodoError as exc:
-            log.warning("cancel %s: the note stays open, the todo app refused: %s", card, exc)
 
     def subscribe(self, card: str, after: int = 0) -> Iterator[dict[str, Any]]:  # noqa: D102
         return self.bus.subscribe(card, after)

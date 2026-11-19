@@ -21,6 +21,7 @@ from .backend import ServiceBackend
 from .cache import TaskCache
 from .cards import CardTask
 from .closed import ClosedNotes
+from .notedone import NoteDoneWatcher
 from .repocards import group_cards, released_in
 from .runtitles import RunTitles, card_titles
 from .scheduling import SchedulerLike
@@ -123,6 +124,7 @@ def build_backend(
         cache.start()
         backend.ask_service.start()  # 24 h auto-adopt of reversible choices
         backend.triage_service.watch()  # labels notes without a repo (DOCS-triage.md)
+        NoteDoneWatcher(cache, client, scheduler, root).start()  # a note done in the todo app (T2065)
         monitor.start()  # first check runs on its own thread: a slow network never delays startup
         probe.start()
         gateway.start()  # a dead gateway only makes its reading `down`

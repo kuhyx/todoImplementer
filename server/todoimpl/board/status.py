@@ -21,6 +21,8 @@ if TYPE_CHECKING:
 SHIP_STEP = "ship_step"  # run.extra: the step a shipping run is in (T2060)
 CLOSED = ("done", "abandoned")
 DONE_STAGES = ("shipped", "closed")
+MANUAL_STAGE = "done_manually"  # kuhy did the work himself (T2064); the run ended with no push
+CYCLE_ENDS = ("shipped", MANUAL_STAGE)  # a repo task's run is over here; parts left make it Backlog again
 
 
 class Status(StrEnum):
@@ -36,6 +38,7 @@ class Status(StrEnum):
     WAITING_PHONE_UPDATE = "waiting_phone_update"
     NEEDS_YOU = "needs_you"
     DONE = "done"
+    DONE_MANUALLY = "done_manually"
 
 
 class Column(StrEnum):
@@ -58,12 +61,23 @@ _COLUMNS = {
     Status.WAITING_PHONE_UPDATE: Column.RUNNING,
     Status.NEEDS_YOU: Column.NEEDS_YOU,
     Status.DONE: Column.DONE,
+    Status.DONE_MANUALLY: Column.DONE,
 }
 
 
 def column(status: Status) -> Column:
     """Return the board column of a status."""
     return _COLUMNS[status]
+
+
+def _closed(task: TaskLike, run: RunState | None) -> Status | None:
+    """Return the Done or Cancelled status of rules 1, 1a and 1b, None for a card still open."""
+    stage = run.stage if run is not None else None
+    if stage == MANUAL_STAGE:
+        return Status.DONE_MANUALLY
+    if task.status == "done" or stage in DONE_STAGES:
+        return Status.DONE
+    return Status.CANCELLED if task.status == "abandoned" or stage == "cancelled" else None
 
 
 def compute(  # noqa: PLR0911 - one return per rule of the spec table
@@ -77,10 +91,8 @@ def compute(  # noqa: PLR0911 - one return per rule of the spec table
     `live` = a runner thread/process is active for the task; `limit_until` = end of the plan limit when it
     holds turns back (None while the free credits take over).
     """
-    if task.status == "done" or (run is not None and run.stage in DONE_STAGES):
-        return Status.DONE
-    if task.status == "abandoned" or (run is not None and run.stage == "cancelled"):
-        return Status.CANCELLED
+    if (closed := _closed(task, run)) is not None:
+        return closed
     if kuhys(task.title, getattr(task, "parts", ())) or (run is None and is_yours(task)):
         return Status.YOURS
     if run is None:

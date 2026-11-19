@@ -84,7 +84,7 @@ def test_a_shipped_cycle_with_parts_left_is_backlog_again_and_keeps_its_cost() -
     card = build_card(card_of(part("aaaa1111-0")), run("shipped"), Context(now=1.0))
     validate("common", card, "task_card")
     assert (card["status"], card["stage"], card["cost_usd"]) == ("backlog", None, 2.0)
-    assert [a["id"] for a in card["actions"]] == ["start", "wont"]
+    assert [a["id"] for a in card["actions"]] == ["start", "wont", "done-manually"]
     assert card["actions"][0]["enabled"] is True
 
 
@@ -105,7 +105,7 @@ def test_the_card_of_a_shipped_section_is_still_done() -> None:
 def test_a_repo_with_only_human_work_is_yours_and_cannot_be_started() -> None:
     card = build_card(card_of(part("bbbb2222-0", human=True), title="demo"), None, Context())
     assert (card["status"], card["assignee"]) == ("yours", "human")
-    start, wont = card["actions"]
+    start, wont, _ = card["actions"]
     assert (start["id"], start["enabled"], wont["id"]) == ("start", False, "wont")
     assert "MANUAL WORK REQUIRED" in str(start["reason"])
 

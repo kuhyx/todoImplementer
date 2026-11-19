@@ -1,6 +1,7 @@
 """build_backend: defaults, scheduler import, startup with the todo app down."""
 
 import sys
+import threading
 import types
 from pathlib import Path
 from typing import Any
@@ -82,3 +83,10 @@ def test_t901_scheduler_recovery_can_read_the_notes_at_construction(
     backend = build_backend(root=tmp_path, build="x", client=TodoClient(fake.url, fake.token))
     backend.cache.stop()
     assert seen == {"card": card}
+
+
+def test_t2065_the_board_watches_for_notes_done_in_the_todo_app(fake: FakeTodoMcp, tmp_path: Path) -> None:
+    client = TodoClient(fake.url, fake.token)
+    backend = build_backend(root=tmp_path, build="x", client=client, scheduler=FakeScheduler())
+    backend.cache.stop()
+    assert any(t.name == "note-done" and t.is_alive() for t in threading.enumerate())

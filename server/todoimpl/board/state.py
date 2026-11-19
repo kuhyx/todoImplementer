@@ -31,6 +31,7 @@ STAGES = (
     "paused_limit",
     "paused_retry",
     "cancelled",
+    "done_manually",
 )
 ASSIGNEES = ("human", "claude")
 TAGS = ("Q", "A", "R", "D")

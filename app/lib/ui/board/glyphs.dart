@@ -21,6 +21,7 @@ IconData actionIcon(String id) => switch (id) {
   'copy-fix' => Icons.build_outlined,
   'rerun' => Icons.replay,
   'wont' => Icons.do_not_disturb_on_outlined,
+  'done-manually' => Icons.done_all,
   'merge' => Icons.merge,
   'dismiss' => Icons.close,
   _ => Icons.help_outline,

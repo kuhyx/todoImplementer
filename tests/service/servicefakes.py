@@ -51,6 +51,11 @@ class FakeScheduler:
     def close_item(self, id8: str) -> None:
         self._rec("close_item", id8)
 
+    def done_manually(
+        self, id8: str, *, repo: str | None = None, title: str = "", repotask: bool = False
+    ) -> None:
+        self._rec("done_manually", id8, repo, title, repotask)
+
     def auto_start(self, id8: str, passed_at: float) -> bool:
         self._rec("auto_start", id8, passed_at)
         return True
