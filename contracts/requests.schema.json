@@ -32,9 +32,26 @@
     "spec_ok": {"type": "object", "additionalProperties": false, "description": "Spec OK click: starts Plan."},
     "send": {
       "type": "object",
-      "properties": {"text": {"type": "string", "minLength": 1, "maxLength": 20000}},
+      "description": "Send to Claude. `images` item N is `[Image #N]` in the text; the server copies each into the run dir and names its path in the note (T2320). With images the request may be up to 40 MB.",
+      "properties": {
+        "text": {"type": "string", "minLength": 1, "maxLength": 20000},
+        "images": {"$ref": "#/$defs/image_refs"}
+      },
       "required": ["text"],
       "additionalProperties": false
+    },
+    "image_refs": {
+      "type": "array",
+      "description": "Numbered images ([Image #N] is item N) for send and new_task, at most 8.",
+      "maxItems": 8,
+      "items": {"$ref": "#/$defs/image_ref"}
+    },
+    "image_ref": {
+      "description": "One png, jpeg, webp or gif (the server reads its first bytes): an id POST /api/upload answered (the page, at most 10 MB, ids distinct), or the bytes inline (the phone through the relay, at most 6 MB decoded).",
+      "oneOf": [
+        {"type": "object", "properties": {"upload": {"type": "string", "pattern": "^[0-9a-f]{32}$"}}, "required": ["upload"], "additionalProperties": false},
+        {"type": "object", "properties": {"data_b64": {"type": "string", "minLength": 4, "contentEncoding": "base64"}}, "required": ["data_b64"], "additionalProperties": false}
+      ]
     },
     "ship": {
       "type": "object",
@@ -79,22 +96,12 @@
     },
     "new_task": {
       "type": "object",
-      "description": "POST /api/new-task (not task-scoped): kuhy's own task. The server writes the images and moves the staged files (POST /api/upload, at most 500 MB together) to a fresh dufs folder, appends a `## title` section linking them to the repo's open note (or a new note), then presses Start on the repo card. The request may be up to 40 MB.",
+      "description": "POST /api/new-task (not task-scoped): kuhy's own task. The server writes the images (`[Image #N]` above each link, T2321) and moves the staged files (POST /api/upload, at most 500 MB together) to a fresh dufs folder, appends a `## title` section linking them to the repo's open note (or a new note), then presses Start on the repo card. The request may be up to 40 MB.",
       "properties": {
         "repo": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"},
         "title": {"type": "string", "minLength": 1, "maxLength": 200, "pattern": "^[^\\r\\n]*\\S[^\\r\\n]*$"},
         "body": {"type": "string", "maxLength": 20000},
-        "images": {
-          "type": "array",
-          "maxItems": 8,
-          "items": {
-            "type": "object",
-            "description": "One JPEG (the page re-encodes every picture), at most 6 MB decoded.",
-            "properties": {"data_b64": {"type": "string", "minLength": 4, "contentEncoding": "base64", "contentMediaType": "image/jpeg"}},
-            "required": ["data_b64"],
-            "additionalProperties": false
-          }
-        },
+        "images": {"$ref": "#/$defs/image_refs"},
         "files": {
           "type": "array",
           "description": "Ids POST /api/upload answered, in the order the note links them. Any file type.",

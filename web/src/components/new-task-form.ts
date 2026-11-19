@@ -31,6 +31,8 @@ export interface Form {
 export interface Attached {
   file: File;
   id?: string;
+  /** A numbered image: `[Image #N]` in the details, posted as `images` (T2321); else a plain file. */
+  image: boolean;
   url: null | string;
 }
 
@@ -105,12 +107,15 @@ export function buildForm(handlers: FormHandlers): Form {
 
 /** Images as thumbnails, anything else as a file icon and its name; each with its remove button. */
 export function renderThumbs(form: Form, files: readonly Attached[], onRemove: (index: number) => void): void {
+  let number = 0;
   form.thumbs.replaceChildren(
-    ...files.map(({ file, url }, index) => {
+    ...files.map(({ file, image, url }, index) => {
       const shown = url === null
         ? h("span", { attrs: { title: file.name }, class: "nt-file" }, icon("file"), h("span", { text: file.name }))
         : h("img", { attrs: { alt: file.name, src: url, title: file.name } });
-      return h("li", {}, shown, iconButton("trash", `Remove ${file.name}`, { "data-new-task": "remove" }, () => { onRemove(index); }));
+      if (image) number += 1;
+      const label = image && h("span", { class: "chip-n", text: `#${String(number)}` });
+      return h("li", {}, shown, label, iconButton("trash", `Remove ${file.name}`, { "data-new-task": "remove" }, () => { onRemove(index); }));
     }),
   );
 }

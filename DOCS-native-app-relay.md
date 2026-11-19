@@ -60,6 +60,8 @@ belongs to the browser device gate and goes away with it.
 | `task_start` ... `task_done_manually` (12) | `POST /api/task/<card>/<action>`, action in `bodies.ACTIONS` | `{card, args}`; args = `requests.schema.json#/$defs/<action>` |
 | `ask_answer` ... `ask_reject` (6) | `POST /api/task/<card>/ask/<verb>` | `{card, args}`; args = `requests.schema.json#/$defs/ask_<verb>` |
 | `new_task` | `POST /api/new-task` | `{args}`; args = `$defs/new_task` (body cap stays `newtask.MAX_BODY`) |
+
+`task_send` also gets `newtask.MAX_BODY` (40 MB), since its `images` may carry inline bytes ("Images" below).
 | `credits_fallback` | `POST /api/settings/credits-fallback` | `{args}`; args = `$defs/credits_fallback` |
 | `merge_merge`, `merge_dismiss` | `POST /api/merge/<group>/<merge or dismiss>` | `{group, args: {}}` |
 | `session_resume`, `session_mark`, `session_delete`, `session_handoff` | `POST /api/sessions/<verb>` | `{args}`; args = `sessions.schema.json#/$defs/<verb>_body` |
@@ -85,6 +87,20 @@ Read kinds (lane `read`, up to 4 at once). The GET routes that a `snap` node doe
 
 A watch lasts 120 s; the app renews it every 60 s while the drawer is open and sends `{card: null}` on close.
 
+## Images (`[Image #N]`, T2320-T2322)
+
+Send to Claude and New task take numbered images through one shape: `images` = `requests.schema.json#/$defs/image_refs`,
+at most 8 `image_ref` items, item N being `[Image #N]` in the text. An item is `{upload: <id>}` (the page: POST
+`/api/upload` first, 10 MB) or `{data_b64}` (the app: inline bytes, 6 MB decoded, so relay kinds `task_send`
+`{card, args: {text, images}}` and `new_task` `{args: {..., images}}` work without an upload). The server reads the type
+from the first bytes (png, jpeg, webp, gif) and refuses anything else with the item's number
+(`newtask/noteimages.py`). Send copies each image to `<run>/inbox/<ms>-<N>.<ext>` and appends to the note
+`(runner) kuhy attached images; open each with the Read tool:` plus one `[Image #N] = <absolute path>` line each; the
+run dir is a turn `--add-dir`. Turns are `claude -p <text>`, so the images reach the session as paths for its Read
+tool, not as image blocks. A refused send keeps the staged uploads, so a retry sends the same ids. New task writes
+image N as `<n>.<ext>` in the dufs folder under a `[Image #N]` line above its `![](…)` link; the prompt turns the
+link into the local path.
+
 ## Results and errors
 
 A result is `{ok: true, at, kind, data}`; `data` is the JSON body the HTTP route answers with on 200, without its
@@ -108,7 +124,7 @@ that fails without it.
    A test runs every kind through both transports against one fake backend and compares the replies.
 5. **Once per rid.** The done-log answers a replayed rid from its record; `sent_at` older than 24 h is `expired`.
 6. **Rate cap.** More than 30 write requests in a minute: `rate_limited` until the minute passes.
-7. **Size caps.** `req` over 256 KB (over `newtask.MAX_BODY` for `new_task`) is `bad_request`; results over 4 MB are
+7. **Size caps.** `req` over 256 KB (over `newtask.MAX_BODY` for `new_task` and `task_send`) is `bad_request`; results over 4 MB are
    `too_large`.
 8. **Fail closed.** No password, wrong password or no Firebase session: the worker writes nothing and serves no
    request; the HTTP board keeps working; the board's `alert` names the cause.

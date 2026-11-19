@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Iterator, Sequence
 
 ERROR_CODES = (
     "bad_request",
@@ -75,8 +75,8 @@ class Backend(Protocol):
         """Spec OK click."""
         ...
 
-    def send(self, id8: str, text: str) -> None:
-        """Send text to the task's Claude session."""
+    def send(self, id8: str, text: str, images: Sequence[bytes | str] = ()) -> None:
+        """Send text to the task's Claude session; `images` (inline bytes or upload ids) are `[Image #N]`."""
         ...
 
     def ship(self, id8: str) -> None:

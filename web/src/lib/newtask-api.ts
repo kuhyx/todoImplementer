@@ -21,7 +21,7 @@ export const REPO = /^[\w.\-]+\/[\w.\-]+$/v;
 export const ownTaskRequest = z.strictObject({
   body: z.string().max(MAX_BODY).optional(),
   files: z.array(z.string().regex(FILE_ID)).max(1000).refine((ids) => areDistinct(ids)).optional(),
-  images: z.array(z.strictObject({ data_b64: z.string().min(4) })).max(MAX_IMAGES).optional(),
+  images: z.array(z.union([z.strictObject({ upload: z.string().regex(FILE_ID) }), z.strictObject({ data_b64: z.string().min(4) })])).max(MAX_IMAGES).optional(),
   repo: z.string().regex(REPO),
   title: z.string().max(MAX_TITLE).regex(/^[^\r\n]*$/v).refine((title) => title.trim() !== ""),
 });

@@ -14,8 +14,6 @@ import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from todoimpl import atomic
-
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
@@ -23,7 +21,6 @@ if TYPE_CHECKING:
 
 URL = "https://kuhy-cloud.duckdns.org/todo-images"
 LINK = re.compile(re.escape(URL) + r"/([A-Za-z0-9_-]+)/([A-Za-z0-9_-]+\.[a-z0-9]{1,10})(?![A-Za-z0-9])")
-JPEG_MAGIC = b"\xff\xd8\xff"
 EXTENSION = re.compile(r"[a-z0-9]{1,10}")  # the todo app's own rule (attachment_ref.dart), so it renders them
 UNKNOWN = "bin"
 INLINE = frozenset({"jpg", "jpeg", "png", "gif", "webp", "bmp", "avif", "heic", "heif", "svg"})
@@ -35,20 +32,6 @@ def root(env: Mapping[str, str] | None = None) -> Path:
     if found := env.get("TODOIMPL_IMAGES_ROOT"):
         return Path(found)
     return Path(env.get("HOME") or Path.home()) / "data" / "cloud" / "todo-images"
-
-
-def is_jpeg(data: bytes) -> bool:
-    """Tell whether the bytes start like a JPEG file (SOI marker plus the next marker's 0xff)."""
-    return data.startswith(JPEG_MAGIC)
-
-
-def save(images: Sequence[bytes], base: Path, folder: str) -> tuple[str, ...]:
-    """Write the images as `<base>/<folder>/<n>.jpg` (n from 1) and return their dufs links."""
-    links = []
-    for number, data in enumerate(images, 1):
-        atomic.write_bytes(base / folder / f"{number}.jpg", data)
-        links.append(f"{URL}/{folder}/{number}.jpg")
-    return tuple(links)
 
 
 def extension_of(name: str) -> str:

@@ -3,7 +3,7 @@
 import copy
 import http.client
 import json
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -115,8 +115,8 @@ class FakeBackend:
     def spec_ok(self, id8: str) -> None:
         self._record("spec_ok", id8)
 
-    def send(self, id8: str, text: str) -> None:
-        self._record("send", id8, text)
+    def send(self, id8: str, text: str, images: Sequence[bytes | str] = ()) -> None:
+        self._record("send", id8, text, *((tuple(images),) if images else ()))
 
     def ship(self, id8: str) -> None:
         self._record("ship", id8)

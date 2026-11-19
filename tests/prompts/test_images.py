@@ -29,17 +29,6 @@ def test_localize_leaves_unsafe_names_alone() -> None:
     assert images.localize(text, Path("/imgs")) == (text, ())
 
 
-def test_save_writes_numbered_jpegs_and_answers_their_links(tmp_path: Path) -> None:
-    links = images.save((b"\xff\xd8\xffA", b"\xff\xd8\xffB"), tmp_path, "f-1")
-    assert links == (f"{URL}/f-1/1.jpg", f"{URL}/f-1/2.jpg")
-    assert (tmp_path / "f-1" / "2.jpg").read_bytes() == b"\xff\xd8\xffB"
-
-
-def test_jpeg_magic() -> None:
-    assert images.is_jpeg(b"\xff\xd8\xff\xe0")
-    assert not images.is_jpeg(b"\x89PNG")
-
-
 def test_session_dirs_name_the_root_only_when_it_exists(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

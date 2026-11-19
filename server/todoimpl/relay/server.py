@@ -58,7 +58,7 @@ class RelayServer(RequestServer):
 
     def refuse(self, kind: str, req: dict[str, Any]) -> dict[str, Any] | None:
         """Return the failed result for a request a guard stops, or None to run it."""
-        cap = newtask.MAX_BODY if kind == "new_task" else MAX_REQ
+        cap = newtask.MAX_BODY if kind in newtask.BIG_KINDS else MAX_REQ  # inline images (T2322)
         if len(json.dumps(req, separators=(",", ":"))) > cap:
             return failure(kind, "bad_request", f"request over {cap // 1024} KB")
         if (why := envelope.problem(req)) is not None:

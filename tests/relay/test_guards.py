@@ -1,6 +1,7 @@
 """Guards 1-7 (DOCS-native-app-relay.md): each refusal happens before the backend is touched."""
 
 import asyncio
+import base64
 import itertools
 from typing import Any
 
@@ -8,6 +9,7 @@ import pytest
 from httpfakes import FakeBackend
 from relayfakes import DEV, RIDS, ROOT, answer, board_handlers, req, serve_one
 from rtdb_relay.tests._fake_rtdb import FakeRtdb
+from todoimpl.http import newtask
 from todoimpl.http.routes import Router
 from todoimpl.relay import server as relay_server
 
@@ -148,14 +150,36 @@ def test_guard7_oversized_request_and_answer(fake: FakeRtdb, router: Router, bac
         fake,
         board_handlers(router),
         [
-            req("task_send", {"card": backend.task_id, "args": {"text": "x" * (300 * 1024)}}),
+            req(
+                "task_spec_answers",
+                {"card": backend.task_id, "args": {"answers": {"Q1": "x" * (300 * 1024)}}},
+            ),
             req("task_shot", {"card": backend.task_id, "name": "big.png"}),
         ],
     )
     assert results[0]["code"] == "bad_request"
     assert results[0]["error"] == "request over 256 KB"  # the relay refused it, not the route
     assert results[1]["code"] == "too_large"
-    assert ("send", backend.task_id, "x" * (300 * 1024)) not in backend.calls
+    assert [c for c in backend.calls if c[0] == "spec_answers"] == []
+
+
+def test_t2322_a_send_with_an_inline_image_gets_the_new_task_cap(
+    fake: FakeRtdb, router: Router, backend: FakeBackend, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(newtask, "MAX_BODY", 1024 * 1024)  # the 40 MB cap, scaled down
+    shot = base64.b64encode(b"\x89PNG\r\n\x1a\n" + b"0" * (300 * 1024)).decode()
+    args = {"text": "see [Image #1]", "images": [{"data_b64": shot}]}
+    sent, big = answer(
+        fake,
+        board_handlers(router),
+        [
+            req("task_send", {"card": backend.task_id, "args": args}),
+            req("task_send", {"card": backend.task_id, "args": {"text": "x" * 2**21}}),
+        ],
+    )
+    assert sent["ok"], sent
+    assert backend.calls[0][:3] == ("send", backend.task_id, "see [Image #1]")
+    assert big["error"] == "request over 1024 KB"
 
 
 def test_device_reaches_the_handler(fake: FakeRtdb) -> None:

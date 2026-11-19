@@ -10,6 +10,31 @@
   border-top: 1px solid var(--border);
 }
 
+/* Attach button, image chips (#N, T2320) and the Send action in one row under the box. */
+.send-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.send-images:empty {
+  display: none;
+}
+
+/* The chip's number, the N of `[Image #N]` (Send and New task). */
+.chip-n {
+  position: absolute;
+  bottom: var(--space-1);
+  left: var(--space-1);
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--on-fill);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
 @media (max-width: 719.98px) {
   .drawer {
     border-left: 0;

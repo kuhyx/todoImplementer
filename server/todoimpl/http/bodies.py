@@ -7,6 +7,7 @@ import re
 from typing import Any
 
 from todoimpl import modelpick
+from todoimpl.newtask import noteimages
 
 QUESTION_ID = re.compile(r"Q[0-9]+")
 MAX_TEXT = 20000
@@ -51,12 +52,21 @@ def _answers(body: dict[str, Any]) -> str | None:
 
 
 def _text(body: dict[str, Any]) -> str | None:
-    if (bad := _only(body, "text")) is not None:
-        return bad
+    if "text" not in body or not set(body) <= {"text", "images"}:
+        return "body must be {text, images?}"
     text = body["text"]
     if not isinstance(text, str) or not 1 <= len(text) <= MAX_TEXT:
         return f"text must be 1..{MAX_TEXT} characters"
+    try:
+        images(body)
+    except noteimages.ImageError as exc:
+        return str(exc)
     return None
+
+
+def images(body: dict[str, Any]) -> tuple[noteimages.Ref, ...]:
+    """Return a send body's `[Image #N]` refs in order; raise ImageError on a bad one."""
+    return noteimages.parse(body.get("images", []))
 
 
 def _lesson(body: dict[str, Any]) -> str | None:

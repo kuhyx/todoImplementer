@@ -13,6 +13,7 @@ import { type Attached, buildForm, type Form, renderThumbs } from "@/components/
 import { csrfToken } from "@/lib/boot";
 import { h } from "@/lib/dom";
 import { errorText } from "@/lib/http";
+import { dropTag, imageProblem, insertTag } from "@/lib/image-tags";
 import { MAX_FILE, MAX_TOTAL, postNewTask, REPO, uploadFile } from "@/lib/newtask-api";
 import { routes } from "@/lib/routes";
 
@@ -100,19 +101,28 @@ export class TiNewTask extends HTMLElement {
         continue;
       }
       total += file.size;
-      this.#files.push({ file, url: file.type.startsWith("image/") ? URL.createObjectURL(file) : null });
+      const isImage = imageProblem(file, this.#images()) === null; // else a plain file: a big or ninth image too
+      this.#files.push({ file, image: isImage, url: file.type.startsWith("image/") ? URL.createObjectURL(file) : null });
+      if (isImage) insertTag(this.#form.body, this.#images());
     }
     this.#paint();
   }
 
+  /** How many numbered images (`[Image #N]`) the first `end` attachments hold. */
+  #images(end = this.#files.length): number {
+    return this.#files.slice(0, end).filter(({ image }) => image).length;
+  }
+
   #remove(index: number): void {
+    const number = this.#images(index + 1);
     const [gone] = this.#files.splice(index, 1);
     if (gone?.url != null) URL.revokeObjectURL(gone.url);
+    if (gone?.image === true) this.#form.body.value = dropTag(this.#form.body.value, number);
     this.#paint();
   }
 
-  /** Uploads what is not uploaded yet (a retry after a refusal sends nothing twice); answers every id in order. */
-  async #upload(csrf: string): Promise<string[]> {
+  /** Uploads what is not uploaded yet (a retry after a refusal sends nothing twice); answers images and files apart. */
+  async #upload(csrf: string): Promise<{ files: string[]; images: { upload: string }[] }> {
     for (const attached of this.#files) {
       if (attached.id !== undefined) continue;
       this.#waiting = `${routes.upload} (${attached.file.name})`;
@@ -120,7 +130,8 @@ export class TiNewTask extends HTMLElement {
       attached.id = await uploadFile(attached.file, csrf);
     }
     this.#waiting = routes.ownTask;
-    return this.#files.map(({ id = "" }) => id);
+    const ids = (isImage: boolean): string[] => this.#files.filter((a) => a.image === isImage).map(({ id = "" }) => id);
+    return { files: ids(false), images: ids(true).map((upload) => ({ upload })) };
   }
 
   #reason(): null | string {
@@ -152,8 +163,8 @@ export class TiNewTask extends HTMLElement {
     this.#paint();
     const timer = setTimeout(() => { this.#slow = true; this.#paint(); }, SLOW_MS);
     try {
-      const files = await this.#upload(csrf);
-      const request = { body: form.body.value, ...((files.length > 0) && { files }), repo: form.repo.value, title: form.title.value.trim() };
+      const { files, images } = await this.#upload(csrf);
+      const request = { body: form.body.value, ...((files.length > 0) && { files }), ...((images.length > 0) && { images }), repo: form.repo.value, title: form.title.value.trim() };
       const created = await postNewTask(request, csrf);
       form.title.value = "";
       form.body.value = "";

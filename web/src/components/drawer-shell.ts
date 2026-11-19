@@ -1,6 +1,7 @@
+/** Static drawer skeleton, its tab strip and the keyboard trap. No task data lives here. */
+import type { SendImages } from "@/components/send-images";
 import type { TaskDetail } from "@/lib/schemas";
 
-/** Static drawer skeleton, its tab strip and the keyboard trap. No task data lives here. */
 import { askOf } from "@/components/ask-model";
 import { iconButton, setIcon } from "@/components/icons";
 import { h, must } from "@/lib/dom";
@@ -26,20 +27,9 @@ export interface ShellHandlers {
   onSend: () => void;
 }
 
-export function buildShell(feed: HTMLElement, handlers: ShellHandlers): HTMLElement[] {
-  const send = h("textarea", {
-    attrs: {
-      "aria-label": "Message to Claude",
-      "data-keep": true,
-      name: "send",
-      placeholder: "Send to Claude: a note, an answer or a correction",
-      rows: 2,
-    },
-    on: {
-      keydown: (event) => {
-        if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) handlers.onSend();
-      },
-    },
+export function buildShell(feed: HTMLElement, handlers: ShellHandlers, images: SendImages): HTMLElement[] {
+  images.box.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) handlers.onSend();
   });
   const panels = PANELS.map((tab) => h("div", { attrs: { "data-panel": tab }, class: "panel" }));
   panels[0]?.append(feed);
@@ -61,8 +51,8 @@ export function buildShell(feed: HTMLElement, handlers: ShellHandlers): HTMLElem
   const footer = h(
     "footer",
     { attrs: { "data-slot": "send", hidden: true }, class: "drawer-send" },
-    send,
-    h("div", { attrs: { "data-slot": "send-action" } }),
+    images.box,
+    h("div", { class: "send-row" }, ...images.nodes, h("div", { attrs: { "data-slot": "send-action" } })),
   );
   const aside = h(
     "aside",

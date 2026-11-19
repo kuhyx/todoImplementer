@@ -77,7 +77,7 @@ def test_forbidden_post_does_not_poison_a_keepalive_connection(live: Live) -> No
 
 
 def test_oversized_body_is_refused_unread(live: Live) -> None:
-    r = post(live, "send", {"text": "x" * 300_000})
+    r = post(live, "lesson-approve", {"lesson_id": "x" * 300_000})  # `send` has the 40 MB cap (T2322)
     assert r.status == 400
     assert "too large" in r.json()["error"]["message"]
     assert live.backend.calls == []

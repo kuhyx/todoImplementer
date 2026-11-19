@@ -9,6 +9,7 @@ import { paintDetail } from "@/components/drawer-render";
 import { buildShell, paintFocus, paintTabs, type Tab, trapTab } from "@/components/drawer-shell";
 import { createFeed } from "@/components/feed-view";
 import { loader, showToast } from "@/components/feedback";
+import { SendImages } from "@/components/send-images";
 import { csrfToken, restoreInputs, snapshotInputs } from "@/lib/boot";
 import { h, must } from "@/lib/dom";
 import { errorText, getJson, postAction } from "@/lib/http";
@@ -33,6 +34,7 @@ export class TiDrawer extends HTMLElement {
   #details = false;
   #feed = createFeed();
   #id: null | string = null;
+  #images = new SendImages();
   #opener: HTMLElement | null = null;
   #signature = "";
   #stops: (() => void)[] = [];
@@ -54,7 +56,7 @@ export class TiDrawer extends HTMLElement {
         onSend: () => {
           this.querySelector<HTMLButtonElement>('[data-action="send"]')?.click();
         },
-      }),
+      }, this.#images),
     );
     this.#paintTabs();
   }
@@ -96,10 +98,7 @@ export class TiDrawer extends HTMLElement {
       this.#detail = { ...detail, card: { ...detail.card, cost_usd: event.cost_usd } };
       this.#render();
     }
-    if (event.type === "cost" || this.#id === null) {
-      return;
-    }
-
+    if (event.type === "cost" || this.#id === null) return;
     void this.#refresh(this.#id);
     this.dispatchEvent(new CustomEvent("task-changed", { bubbles: true }));
   }
@@ -159,8 +158,7 @@ export class TiDrawer extends HTMLElement {
       showToast("This page has no CSRF token (index.html was not stamped by the server). Reload it from the server.", "error");
       return;
     }
-    const sendBox = must<HTMLTextAreaElement>(this, "textarea[name=send]");
-    const text = sendBox.value.trim();
+    const text = this.#images.box.value.trim();
     if (text === "" && action.id === "send") {
       showToast("Write a message first.", "error");
       return;
@@ -173,8 +171,10 @@ export class TiDrawer extends HTMLElement {
     });
     try {
       const autoShip = optionValue(action, this);
-      await postAction(detail.card.id, action.id, { autoShip, lessonId: detail.lesson?.id ?? "", model: action.value, text }, csrf);
+      const images = action.id === "send" ? await this.#images.upload(csrf) : [];
+      await postAction(detail.card.id, action.id, { autoShip, images, lessonId: detail.lesson?.id ?? "", model: action.value, text }, csrf);
       if (action.id === "send") for (const box of this.querySelectorAll<HTMLTextAreaElement>("textarea[name$=send]")) box.value = "";
+      if (action.id === "send") this.#images.clear();
       showToast(`${action.label}: done`);
     } catch (error) {
       showToast(errorText(error), "error");
@@ -207,6 +207,7 @@ export class TiDrawer extends HTMLElement {
     this.#ask.reset();
     this.#bar = idleBar();
     this.#feed = createFeed();
+    this.#images = new SendImages();
     this.hidden = false;
     this.#buildShell();
     must(this, '[data-slot="head"]').append(loader(`Loading task ${id} from ${routes.task(id)}…`));
@@ -236,10 +237,7 @@ export class TiDrawer extends HTMLElement {
     this.#opener = null;
     this.hidden = true;
     this.replaceChildren();
-    if (!shouldNotify) {
-      return;
-    }
-
+    if (!shouldNotify) return;
     this.dispatchEvent(new CustomEvent("drawer-close", { bubbles: true }));
     if (opener?.isConnected === true) opener.focus();
   }

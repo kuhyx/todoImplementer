@@ -12,7 +12,7 @@ from todoimpl.http.backend import BackendError
 from todoimpl.service.cards import card_tasks
 from todoimpl.todo_mcp.model import TodoError, upstream_text
 
-from . import images, uploads
+from . import images, noteimages, uploads
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -32,6 +32,14 @@ _PAUSE_S = 0.5
 
 def _fresh_folder() -> str:
     return str(uuid.uuid4())  # the todo renderer only needs [A-Za-z0-9_-]+, never the note id
+
+
+def _pictures(task: NewTask) -> tuple[noteimages.Picture, ...]:
+    """Check the task's `[Image #N]` refs before anything is written (T2321)."""
+    try:
+        return noteimages.resolve(task.images, uploads.root())
+    except noteimages.ImageError as exc:
+        raise BackendError(BAD, str(exc)) from exc
 
 
 def _real(task: NewTask) -> NewTask:
@@ -74,11 +82,14 @@ class NewTaskService:
         try:
             if not checked:
                 self._refuse_twin(task)
+            pictures = _pictures(task)
             staged = uploads.claim(task.files, uploads.root())
             if isinstance(staged, str):
                 raise BackendError(BAD, staged)
             folder = self._folder() if task.images or staged else ""
-            links = [f"![]({link})" for link in images.save(task.images, images.root(), folder)]
+            paths = noteimages.write(pictures, images.root() / folder, "")
+            noteimages.release(pictures)
+            links = [f"[Image #{n}]\n![]({images.URL}/{folder}/{p.name})" for n, p in enumerate(paths, 1)]
             links += images.attach(staged, images.root(), folder)
             body = "\n\n".join([task.body, *links]).strip()
             note = self._client.add_task(task.repo, task.title, body)

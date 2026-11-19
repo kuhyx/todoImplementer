@@ -26,6 +26,8 @@ export const routes = {
 export interface Payload {
   answers?: Record<string, string>;
   autoShip?: boolean | undefined;
+  /** Send's numbered images: `[Image #N]` is item N (contracts/requests.schema.json image_ref). */
+  images?: { upload: string }[];
   lessonId?: string;
   model?: string | undefined;
   text?: string;
@@ -41,7 +43,8 @@ export function bodyFor(action: ActionId, payload: Payload): Record<string, unkn
       return { model: payload.model ?? "default" };
     }
     case "send": {
-      return { text: payload.text ?? "" };
+      const images = payload.images ?? [];
+      return { ...(images.length > 0 && { images }), text: payload.text ?? "" };
     }
     case "spec-answers": {
       return { answers: payload.answers ?? {} };

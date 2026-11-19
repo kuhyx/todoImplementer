@@ -22,7 +22,7 @@
 | Start | card -> Start (POST `/api/task/<id>/start`) | card leaves Backlog; at most 3 run at once, the rest are queued |
 | Spec Q&A | card in Needs you with `❓ Qn` cards -> answer -> Spec OK | answers reach the session, Plan starts |
 | Live feed | open a card drawer (GET `/api/live?id=<id>`, SSE) | first frame is a stage snapshot, then activity/stage/cost events |
-| Send to Claude | drawer -> text box -> Send (POST `.../send`) | text is the next turn of the same session; on a Needs-you card with no session yet it restarts the run with the text as kuhy's note |
+| Send to Claude | drawer -> text box (paste or pick png/jpeg/webp/gif: `#N` chips, `[Image #N]` at the caret) -> Send (POST `/api/upload` per image, then `.../send {text, images}`) | text is the next turn of the same session; on a Needs-you card with no session yet it restarts the run with the text as kuhy's note; each image lands in `<run>/inbox/` and the note maps `[Image #N]` to its path (`DOCS-native-app-relay.md`, "Images") |
 | Resume command | drawer -> "copy resume command" | `cd <worktree> && claude --resume <id>` on the clipboard |
 | Plan + live check | automatic after Start | `plan.md` and `live_check.md` in the run dir; checks tail in `/api/task/<id>` |
 | Gate | a green card (plan, live check, checks) | no rest and no click (T2060): the card goes straight to Ship, shown as Shipping in Running |
@@ -30,7 +30,7 @@
 | Cheap tier | note with a `Tier: cheap` line or the title `text-free (textgate-rework)` | implement role runs on Sonnet (free models via claude-free on public repos, else alone), `ESCALATE:` or a failed turn moves it to Opus once; card icons for cheap / free / escalated (`DOCS-tiers.md`) |
 | Cancel | drawer action | run stops, run dir kept |
 | Done manually | any card that is not Done -> drawer / app action (confirm) (POST `.../done-manually`) | no Claude turn: a live session stops, every note behind the card is closed as done in the todo app, the card rests in Done with status `done_manually`; the reverse (a note marked done in the todo app) does the same within seconds (`DOCS-manual.md`) |
-| New task | toolbar + -> repo (board repos or typed `owner/name`), title, details, any files (picker/camera, paste, drop; 100 MB each, 500 MB total) -> create (POST `/api/upload` per file, then `/api/new-task`) | a `## title` section in the repo's note links the files on dufs (images inline), the repo card starts (or keeps working) and opens; sessions read run-dir copies of the files (`DOCS-repotask.md`) |
+| New task | toolbar + -> repo (board repos or typed `owner/name`), title, details, any files (picker/camera, paste, drop; 100 MB each, 500 MB total) -> create (POST `/api/upload` per file, then `/api/new-task`) | a `## title` section in the repo's note links the files on dufs (png/jpeg/webp/gif up to 10 MB, 8 at most, are numbered: `[Image #N]` chip and tag, the link under `[Image #N]`; the rest as files), the repo card starts (or keeps working) and opens; sessions read run-dir copies of the files (`DOCS-repotask.md`) |
 | Free credits fallback | board toggle (POST `/api/settings/credits-fallback`) | while the plan limit is active, turns run on free API credits; card badge "free credits" |
 | Lessons | gate rejection -> drafted lesson -> Approve | lesson written into the named skill via `skill_lesson.py` |
 | Usage | header (GET `/api/usage`) | per-task cost, plan limit state, reset time |

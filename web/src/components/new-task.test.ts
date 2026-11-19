@@ -94,7 +94,7 @@ describe("ti-new-task", () => {
     const calls = vi.mocked(fetch).mock.calls;
     expect(calls.map(([url]) => url)).toEqual([routes.upload, routes.upload, routes.ownTask]);
     const sent = JSON.parse(calls[2]?.[1]?.body as string) as unknown;
-    expect(sent).toEqual({ body: "see pic", files: ids.slice(0, 2), repo: "kuhyx/demo", title: "Fix it" });
+    expect(sent).toEqual({ body: "see pic [Image #1] ", files: [ids[1]], images: [{ upload: ids[0] }], repo: "kuhyx/demo", title: "Fix it" }); // T2321
     expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:1");
     expect(created).toHaveBeenCalledWith(card?.id);
     expect(panel(element).hidden).toBe(true);

@@ -171,7 +171,7 @@ class Router:
         except ValueError:
             return error_reply("bad_request", "bad Content-Length", close=True)
         path = urlsplit(target).path
-        cap = newtask.MAX_BODY if path == newtask.PATH else MAX_BODY
+        cap = newtask.MAX_BODY if newtask.big(path) else MAX_BODY
         if size < 0 or size > cap:
             return error_reply(
                 "bad_request", f"request body too large (over {cap // 1024} KB) or bad length", close=True
@@ -243,7 +243,7 @@ class Router:
             case "spec-answers":
                 backend.spec_answers(id8, body["answers"])
             case "send":
-                backend.send(id8, body["text"])
+                backend.send(id8, body["text"], bodies.images(body))
             case "lesson-approve":
                 backend.lesson_approve(id8, body["lesson_id"])
             case _:  # an id-only click, or `model` with its one keyword (bodies.check pins the body)
