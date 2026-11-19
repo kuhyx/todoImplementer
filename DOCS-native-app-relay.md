@@ -100,6 +100,10 @@ run dir is a turn `--add-dir`. Turns are `claude -p <text>`, so the images reach
 tool, not as image blocks. A refused send keeps the staged uploads, so a retry sends the same ids. New task writes
 image N as `<n>.<ext>` in the dufs folder under a `[Image #N]` line above its `![](…)` link; the prompt turns the
 link into the local path.
+The app (T2330-T2336) offers gallery, camera and keyboard paste in both note boxes and the New task details as `#N`
+chips; the phone re-encodes picks to 1600 px JPEG, and `image_attach.dart` shrinks anything else to fit. Because the
+relay seals the whole `req` into one RTDB string (10 MB cap, about 16/9 of the bytes after two base64 passes), all
+images of one request share a 4.5 MB budget; a refusal shows as a red glyph.
 
 ## Results and errors
 

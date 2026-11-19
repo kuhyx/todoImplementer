@@ -1,13 +1,16 @@
 /// The new-task sheet: kuhy's own task for a repo (repo, title, details),
 /// sent as `new_task`. The fields are icon-labelled (textgate); the send
-/// button is enabled only when the server would accept the request.
-/// Pictures are not offered yet (they need a JPEG encoder dependency).
+/// button is enabled only when the server would accept the request. The
+/// details box takes images (T2334): `[Image #N]` tags in the body, the
+/// bytes inline in `images`.
 library;
 
 import 'package:design_system/design_system.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:todo_implementer/sync/board_relay.dart';
 import 'package:todo_implementer/ui/board/glyphs.dart';
+import 'package:todo_implementer/ui/board/image_attach.dart';
+import 'package:todo_implementer/ui/board/image_strip.dart';
 
 final _repoPattern = RegExp(r'^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$');
 
@@ -49,6 +52,7 @@ class _NewTaskSheetState extends State<NewTaskSheet> {
   TextEditingController? _repo;
   final _title = TextEditingController();
   final _body = TextEditingController();
+  late final _images = ImageAttach(_body);
   bool _busy = false;
   RelayFailed? _failure;
 
@@ -56,6 +60,7 @@ class _NewTaskSheetState extends State<NewTaskSheet> {
 
   @override
   void dispose() {
+    _images.dispose();
     _title.dispose();
     _body.dispose();
     super.dispose();
@@ -66,11 +71,13 @@ class _NewTaskSheetState extends State<NewTaskSheet> {
       _busy = true;
       _failure = null;
     });
+    final images = _images.refs;
     final out = await widget.relay.send('new_task', {
       'args': {
         'repo': _repoText.trim(),
         'title': _title.text.trim(),
         if (_body.text.trim().isNotEmpty) 'body': _body.text,
+        if (images.isNotEmpty) 'images': images,
       },
     });
     if (!mounted) return;
@@ -134,10 +141,12 @@ class _NewTaskSheetState extends State<NewTaskSheet> {
           TextField(
             key: const Key('nt-body'),
             controller: _body,
+            contentInsertionConfiguration: _images.paste,
             minLines: 4,
             maxLines: 4,
             decoration: _icon(Icons.notes, 'Details'),
           ),
+          ImageStrip(attach: _images, prefix: 'nt'),
           const SizedBox(height: AppSpacing.sm),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,

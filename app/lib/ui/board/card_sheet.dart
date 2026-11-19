@@ -1,7 +1,7 @@
 /// The card sheet: the card's content, its offered actions, and the inputs
-/// some actions need (a message for `send`, answers for `spec-answers`, the
-/// auto-ship option for `start`). Results come back over the relay; a
-/// refusal shows as its code glyph in red.
+/// some actions need (a message and images for `send`, answers for
+/// `spec-answers`, the auto-ship option for `start`). Results come back over
+/// the relay; a refusal shows as its code glyph in red.
 library;
 
 import 'package:design_system/design_system.dart';
@@ -14,6 +14,8 @@ import 'package:todo_implementer/ui/board/action_bar.dart';
 import 'package:todo_implementer/ui/board/detail_page.dart'
     show kDetailPatience;
 import 'package:todo_implementer/ui/board/glyphs.dart';
+import 'package:todo_implementer/ui/board/image_attach.dart';
+import 'package:todo_implementer/ui/board/image_strip.dart';
 import 'package:todo_implementer/ui/board/model_picker.dart';
 import 'package:todo_implementer/ui/board/spec_answers.dart';
 
@@ -49,12 +51,14 @@ class CardSheet extends StatefulWidget {
 
 class _CardSheetState extends State<CardSheet> {
   final _message = TextEditingController();
+  late final _images = ImageAttach(_message);
   bool _autoShip = false;
   List<SpecQuestion>? _questions;
   RelayFailed? _failure;
 
   @override
   void dispose() {
+    _images.dispose();
     _message.dispose();
     super.dispose();
   }
@@ -91,7 +95,13 @@ class _CardSheetState extends State<CardSheet> {
       case 'send':
         final text = _message.text.trim();
         if (text.isEmpty) return await HapticFeedback.heavyImpact();
-        await _settle(await _send(kindOf(a.id), {'text': text}));
+        final images = _images.refs;
+        await _settle(
+          await _send(kindOf(a.id), {
+            'text': text,
+            if (images.isNotEmpty) 'images': images,
+          }),
+        );
       case 'start':
         final args = a.option?.enabled ?? false
             ? <String, dynamic>{'auto_ship': _autoShip}
@@ -166,13 +176,16 @@ class _CardSheetState extends State<CardSheet> {
                 ],
               ),
             const SizedBox(height: AppSpacing.md),
-            if (offers.containsKey('send'))
+            if (offers.containsKey('send')) ...[
               TextField(
                 key: const Key('send-text'),
                 controller: _message,
+                contentInsertionConfiguration: _images.paste,
                 minLines: 1,
                 maxLines: 5,
               ),
+              ImageStrip(attach: _images, prefix: 'sheet'),
+            ],
             if (offers['start']?.option case final opt?) _autoShipChip(opt),
             const SizedBox(height: AppSpacing.sm),
             ActionBar(

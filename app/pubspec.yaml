@@ -37,6 +37,9 @@ dependencies:
       ref: google_account_token-v0.1.0
       path: google_account_token
   http: 1.6.0
+  # Gallery and camera for the note and new-task images; it downscales and
+  # re-encodes on the platform side, so no Dart image encoder is needed.
+  image_picker: 1.2.4
   # Its MaterialLocalizations for crdt_sync_flutter's material_ui dialogs.
   material_ui: 1.11.1
   # The relay client: RTDB REST/SSE, e2e sealing, request hub, rev watcher,
