@@ -24,7 +24,8 @@ A malformed block (no single `*`, bad id, duplicate id, unknown risk) yields not
 - **Delivery**: once no choice is open, the session gets one `(runner)` message with the answers. A Send to Claude
   note sent before then carries the answered ones (T2275), and the note box stays below the questions (T2273).
 - **Rounds** (T2277): state in `asks.json` is per (reply, id). A reply that asks an id again (`logo_pixel` in round two)
-  starts it open with a fresh 24 h clock; `store.load(dir, asks)` drops the record of an id whose reply changed.
+  starts it open with a fresh 24 h clock; `store.load(dir, asks)` drops the record of an id whose reply changed and
+  adopts a record saved before rounds into the current one.
 - **Manual parts on a repo card** (T2114): their asks always show, also beside the run's newest reply. While the
   session has asks of its own (reply, body or Claude's parts), delivery and Take recommended cover only those, so
   kuhy's open manual asks never hold the session back and a click meant for the session never releases his work.

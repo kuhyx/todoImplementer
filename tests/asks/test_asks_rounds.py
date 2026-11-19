@@ -1,7 +1,7 @@
 """T2277: ask state belongs to the reply that asked, not to the bare id."""
 
 from asksfakes import ID, Rig, Task
-from todoimpl.asks import view
+from todoimpl.asks import store, view
 from todoimpl.asks.view import DAY
 from todoimpl.board.state import RunState, load, save
 
@@ -54,3 +54,17 @@ def test_t2277_a_new_round_restarts_the_24_h_auto_adopt_clock(rig: Rig) -> None:
     assert rig.svc.adopt_due() == 0
     rig.clock.now += DAY
     assert rig.svc.adopt_due() == 1
+
+
+def test_t2277_a_record_saved_before_rounds_is_adopted_not_dropped(rig: Rig) -> None:
+    reply(rig, FIRST)
+    old = {"state": "answered", "answer": "b", "at": 1.0}
+    store.save(rig.dir, {"seen": {"c9": 5.0}, "items": {"c9": old}, "log": []})
+    assert states(rig)["c9"] == "answered"  # no `rounds` entry: kept, not erased on deploy
+    rig.svc.verdict(ID, "logo_pixel", approve=True)  # a write stamps the round
+    data = store.load(rig.dir)
+    assert data["items"]["c9"]["answer"] == "b"
+    assert data["seen"]["c9"] == 5.0
+    assert data["rounds"]["c9"] == data["rounds"]["logo_pixel"] != ""
+    reply(rig, SECOND)
+    assert states(rig)["c9"] == "open"  # a different reply still starts fresh

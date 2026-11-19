@@ -21,6 +21,7 @@ def load(directory: Path, asks: Iterable[Ask] = ()) -> dict[str, Any]:
 
     `rounds` maps an id to the reply that asked it. An id in `asks` whose reply differs from the saved one
     is a new ask that reuses the id (T2277): its old record and first-seen time are dropped, so it is open.
+    A record with no saved round (written before rounds) is adopted into the current one and kept.
     """
     try:
         data = json.loads((directory / FILE).read_text(encoding="utf-8"))
@@ -35,7 +36,7 @@ def load(directory: Path, asks: Iterable[Ask] = ()) -> dict[str, Any]:
         "log": list(data.get("log") or []),
     }
     for ask in asks:
-        if out["rounds"].get(ask.id, "") != ask.round:
+        if out["rounds"].setdefault(ask.id, ask.round) != ask.round:
             out["seen"].pop(ask.id, None)
             out["items"].pop(ask.id, None)
             out["rounds"][ask.id] = ask.round

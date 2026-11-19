@@ -1,13 +1,9 @@
 """A note sent while the reply's choices are still open carries the ones kuhy already answered (T2275)."""
 
-from pathlib import Path
-from typing import Any
-
 import pytest
 from servicefakes import Rig
 from todoimpl.asks import store
-from todoimpl.asks.view import work_asks
-from todoimpl.board.state import load, run_dir
+from todoimpl.board.state import run_dir
 
 REPLY = """Q: pick below.
 
@@ -18,14 +14,9 @@ screenshot sheet: The sheet | shots/a.png
 ```"""
 
 
-def _data(directory: Path) -> dict[str, Any]:
-    """Load the card's asks state as the reply's round (T2277), so seeded records belong to the reply."""
-    return store.load(directory, work_asks("", load(directory)))
-
-
 def _answered(rig: Rig, card: str, **answers: str) -> None:
     directory = run_dir(rig.root, card)
-    data = _data(directory)
+    data = store.load(directory)
     for ask_id, answer in answers.items():
         data["items"][ask_id] = {"state": "answered", "answer": answer, "at": 1.0}
     store.save(directory, data)
@@ -44,7 +35,7 @@ def test_t2275_a_note_carries_an_approved_screenshot_that_waits_too(rig: Rig) ->
     rig.run("t1", "implement", session_id="s", extra={"last_reply": REPLY})
     _answered(rig, "t1", colour="Mono")
     directory = run_dir(rig.root, "t1")
-    data = _data(directory)
+    data = store.load(directory)
     data["items"]["sheet"] = {"state": "approved", "at": 1.0}
     store.save(directory, data)
     rig.backend.send("t1", "note")
