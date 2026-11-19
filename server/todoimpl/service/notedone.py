@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING
 from todoimpl.board.actions import FINAL_STAGES
 from todoimpl.board.parse import StateError
 from todoimpl.board.state import FILE, load
+from todoimpl.board.status import CYCLE_ENDS
 from todoimpl.repotask import files
 from todoimpl.runner.files import read_json
 from todoimpl.runner.scheduler import RunnerError
@@ -117,7 +118,7 @@ class NoteDoneWatcher:
         gone = {
             i: Gone(i, _keys(c), c.repo, c.title, bool(c.parts))
             for i, c in self._seen.items()
-            if i not in shown
+            if i not in open_cards  # gone, or turned into its Done twin
         }
         gone |= self._retry
         for found in self._runs(shown, open_cards):
@@ -153,9 +154,13 @@ class NoteDoneWatcher:
         return found
 
     @staticmethod
-    def _leaves(run: RunState) -> bool:
-        """Say whether the board closes this run's notes itself, or the run is over: nothing to notice."""
-        return run.closing or run.stage in (*OWN_CLOSE, *FINAL_STAGES)
+    def _leaves(run: RunState, *, repotask: bool = False) -> bool:
+        """Say whether the board closes this run's notes itself, or the run is over: nothing to notice.
+
+        A repo task whose cycle ended with parts left is not over: its new parts may be done by hand.
+        """
+        over = run.stage in FINAL_STAGES and not (repotask and run.stage in CYCLE_ENDS)
+        return run.closing or run.stage in OWN_CLOSE or over
 
     @staticmethod
     def _part_keys(directory: Path) -> tuple[str, ...]:
@@ -167,7 +172,9 @@ class NoteDoneWatcher:
         """Rest the card at Done manually when every one of its parts is done in the todo app."""
         try:
             run = load(self._root / found.card)
-            done = (run is None or not self._leaves(run)) and all(self._is_done(k, notes) for k in found.keys)
+            done = (run is None or not self._leaves(run, repotask=found.repotask)) and all(
+                self._is_done(k, notes) for k in found.keys
+            )
         except TodoError as exc:
             log.warning("note-done %s: the todo app did not answer: %s", found.card, exc)
             self._retry[found.card] = found

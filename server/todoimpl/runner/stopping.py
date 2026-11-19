@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Any
 
 from todoimpl.board import state as store
 from todoimpl.board.actions import FINAL_STAGES
-from todoimpl.board.status import DONE_STAGES, MANUAL_STAGE
+from todoimpl.board.status import CYCLE_ENDS, DONE_STAGES, MANUAL_STAGE
 from todoimpl.todo_mcp.model import TodoError
 
 from . import adopt
@@ -59,6 +59,17 @@ def _leave(sched: Scheduler, card: str) -> None:
     adopt.abandon(sched.root / card)  # a turn no drive follows must not go on editing the worktree
 
 
+def refusal(stage: str | None, *, repotask: bool) -> str | None:
+    """Return why a card at this stage cannot be rested at `done_manually`, None when it can.
+
+    A repo task whose cycle ended (shipped, or done manually) with parts left is a new cycle: it can.
+    """
+    if stage == "shipping":
+        return "shipping cannot be stopped"
+    over = stage in (*DONE_STAGES, MANUAL_STAGE)
+    return f"The card is already {stage}" if over and not (repotask and stage in CYCLE_ENDS) else None
+
+
 def done_manually(
     sched: Scheduler, card: str, *, repo: str | None = None, title: str = "", repotask: bool = False
 ) -> None:
@@ -70,11 +81,7 @@ def done_manually(
 
     with sched._cv:  # noqa: SLF001
         st = store.load(sched.root / card)
-        if st is not None and st.stage in (*DONE_STAGES, MANUAL_STAGE):
-            msg = f"The card is already {st.stage}"
-            raise RunnerError(msg, "disabled")
-        if st is not None and st.stage == "shipping":
-            msg = "shipping cannot be stopped"
+        if st is not None and (msg := refusal(st.stage, repotask=repotask)) is not None:
             raise RunnerError(msg, "disabled")
         write_json(sched.root / card / FILE, {"repo": repo, "title": title, "repotask": repotask})
         if card in sched._active:  # noqa: SLF001

@@ -22,7 +22,8 @@ Disabled while the run is `shipping` ("shipping cannot be stopped"): a push in f
    it is the memory that keeps the Done card (`ClosedNotes`, also for a repo task).
 
 The worktree stays; nothing is pushed or deployed. A repo task whose parts reappear (a new part) is Backlog again
-like after a shipped cycle (`status.CYCLE_ENDS`); Start begins the next cycle. The click is an intervention
+like after a shipped cycle (`status.CYCLE_ENDS`); Start begins the next cycle, and Done manually works on that
+card again (a card already shipped or done manually with no part left is refused). The click is an intervention
 (`interventions.jsonl`, kind `done_manually`).
 
 ## The other direction: a note done in the todo app
@@ -32,7 +33,8 @@ The todo app lists open notes only, so a done note used to leave the board (a ru
 `done` (or a `## [x]` section) counts, `abandoned` does not.
 
 - Candidates: cards of the previous snapshot that are gone, and run dirs with no card and a live-ish stage (so a
-  restart loses nothing). A failed run an open note still names is a part of the repo card: left alone.
+  restart loses nothing). A failed run an open note still names is a part of the repo card: left alone. A repo
+  task whose last cycle shipped and whose new parts are then done by hand is rested the same way.
 - A single-note card goes to Done manually and its session stops (the same `Scheduler.done_manually`). A card with
   parts loses a part when its note is done; once every part is done it goes to Done manually. A part never stops
   the run.

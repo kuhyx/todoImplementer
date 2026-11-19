@@ -10,8 +10,8 @@ from typing import TYPE_CHECKING
 
 from todoimpl.board.actions import FINAL_STAGES
 from todoimpl.board.state import load, run_dir
-from todoimpl.board.status import DONE_STAGES, MANUAL_STAGE
 from todoimpl.runner.scheduler import RunnerError
+from todoimpl.runner.stopping import refusal
 from todoimpl.todo_mcp.model import TodoError
 
 from .view import ItemView
@@ -48,12 +48,9 @@ def done_manually(backend: ServiceBackend, id8: str) -> None:
             msg = "this board has no todo view to close notes through"
             raise TodoError(msg)
         run = load(run_dir(backend.root, id8))
-        if run is not None and run.stage == "shipping":
-            msg = "shipping cannot be stopped"
-            raise RunnerError(msg, "disabled")
-        if run is not None and run.stage in (*DONE_STAGES, MANUAL_STAGE):
-            msg = f"The card is already {run.stage}"
-            raise RunnerError(msg, "disabled")
+        shown = next((t for t in backend.cache.snapshot().tasks if t.id == id8), None)
+        if run is not None and (why := refusal(run.stage, repotask=bool(shown and shown.parts))) is not None:
+            raise RunnerError(why, "disabled")
         found = view.done_manually(id8, EVIDENCE)
         backend.scheduler.done_manually(id8, repo=found.repo, title=found.title, repotask=bool(found.parts))
 

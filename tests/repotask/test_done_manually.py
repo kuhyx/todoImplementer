@@ -151,13 +151,12 @@ def test_t2064_a_new_part_after_done_manually_starts_a_new_cycle(rig: Rig) -> No
 
 
 def test_t2064_a_card_that_is_already_done_is_refused_before_any_note_is_closed(rig: Rig) -> None:
-    repo = rig.repo()
-    note = rig.note(repo, "a note", "x")
-    card = repo_card_id(repo)
-    save(rig.run_dir(card), RunState(task_id=card, stage="shipped", repo=repo, extra={"repotask": True}))
+    idea = rig.note(None, "wysłać jpk")
+    card = f"{idea}-0"
+    save(rig.run_dir(card), RunState(task_id=card, stage="shipped"))
     with pytest.raises(BackendError, match="already shipped"):
         rig.backend.done_manually(card)
-    assert _note(rig, note)[0] == "todo"
+    assert _note(rig, idea)[0] == "todo"
 
 
 def test_t2064_the_scheduler_refuses_a_push_in_flight_and_a_card_that_is_done(rig: Rig) -> None:
@@ -202,3 +201,13 @@ def test_t2064_a_board_without_an_item_view_refuses_and_writes_nothing(rig: Rig)
     with pytest.raises(BackendError, match="no todo view"):
         other.done_manually(repo_card_id(repo))
     assert _note(rig, note)[0] == "todo"
+
+
+def test_t2064_a_repo_task_with_new_parts_after_a_shipped_cycle_can_be_done_manually(rig: Rig) -> None:
+    repo = rig.repo()
+    note = rig.note(repo, "later note", "y")
+    card = repo_card_id(repo)
+    save(rig.run_dir(card), RunState(task_id=card, stage="shipped", repo=repo, extra={"repotask": True}))
+    assert _offered(rig.card(repo)) == ACTION  # shipped is the last cycle; the card is Backlog again
+    rig.backend.done_manually(card)
+    assert (_note(rig, note)[0], rig.state(card).stage) == ("done", "done_manually")

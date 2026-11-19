@@ -145,3 +145,16 @@ def test_t2065_a_failed_refresh_changes_nothing(rig: Rig) -> None:
     rig.cache.refresh()
     watcher.tick()
     assert _stage(rig, repo_card_id(repo)) is None
+
+
+def test_t2065_the_last_parts_of_a_repo_task_whose_cycle_shipped_are_done_by_hand(rig: Rig) -> None:
+    repo = rig.repo()
+    note = rig.note(repo, "later note", "y")
+    card = repo_card_id(repo)
+    save(rig.run_dir(card), RunState(task_id=card, stage="shipped", repo=repo, extra={"repotask": True}))
+    rig.cache.refresh()
+    watcher = _watcher(rig)
+    watcher.tick()
+    _close_in_todo(rig, note)  # the Done twin of the shipped run replaces the open card
+    watcher.tick()
+    assert _stage(rig, card) == "done_manually"
