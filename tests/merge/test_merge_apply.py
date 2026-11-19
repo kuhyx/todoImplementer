@@ -162,7 +162,7 @@ def card(card_id: str, repo: str | None, status: str = "todo") -> CardTask:
         ([card("aaaaaaaa-0", REPO)], "T"),
         ([card("aaaaaaaa-0", REPO), card("aaaaaaaa-0", REPO)], "T"),
         ([card("aaaaaaaa-0", REPO), card("bbbbbbbb-0", REPO)], "  "),
-        ([card("aaaaaaaa-0", REPO), card("bbbbbbbb-0", None)], "T"),
+        ([card("aaaaaaaa-0", None), card("bbbbbbbb-0", None)], "T"),
         ([card("aaaaaaaa-0", REPO), card("bbbbbbbb-0", REPO, "done")], "T"),
         ([card("aaaaaaaa-0", REPO), card("bbbbbbbb-0", REPO, "abandoned")], "T"),
     ],

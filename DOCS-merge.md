@@ -8,7 +8,8 @@ web `components/merge-strip.ts`.
 ## Members are items
 
 A member is a card (note section) id `<note id8>-<index>`, as everywhere (DOCS-spec.md, "Cards are items"). A note
-without sections is one item. Candidates: open (`todo` / `in progress`), with a repo, title not `MANUAL WORK REQUIRED:`.
+without sections is one item. Candidates: open (`todo` / `in progress`), with a repo, title not `MANUAL WORK REQUIRED:`. A note with no repo can be named
+by hand (CLI) next to members of one repo; it joins that repo (T2093).
 
 ## Suggestions
 

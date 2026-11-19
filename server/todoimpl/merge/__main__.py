@@ -11,7 +11,7 @@ from todoimpl.service.cards import card_tasks
 from todoimpl.todo_mcp.client import TodoClient
 from todoimpl.todo_mcp.model import TodoError
 
-from .apply import MergeError, apply_merge
+from .apply import MergeError, apply_merge, repos_of
 from .store import MergeStore
 from .text import combined_body, umbrella_text
 from .umbrella import create_umbrella
@@ -48,7 +48,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         client = TodoClient.from_env()
         cards = [card for token in args.group.split(",") if token for card in resolve(client, token.strip())]
         if args.dry_run:
-            same_repo = len({card.repo for card in cards}) == 1
+            same_repo = len(repos_of(cards)) == 1
             print(
                 f"# {args.title}\n{combined_body(cards)}" if same_repo else umbrella_text(args.title, cards)
             )

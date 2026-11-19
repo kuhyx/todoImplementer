@@ -103,6 +103,8 @@ def _primary(  # noqa: PLR0911 - one branch per status keeps the table readable
     cancel = Action("cancel", "Cancel", confirm=True)
     if status == Status.YOURS and kuhys(task.title, getattr(task, "parts", ())):
         return [Action("start", "Start", enabled=False, reason=MANUAL_REASON)]
+    if status == Status.YOURS and run is None and is_yours(task):  # T2092: kuhy can start any note
+        return [Action("start", "Start", block is None, block)]
     if status in (Status.BACKLOG, Status.CANCELLED):
         label = "Restart" if status == Status.CANCELLED else "Start"
         reason = _start_block(task, block, repo_missing)

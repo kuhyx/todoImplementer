@@ -63,8 +63,8 @@ def test_exhausted_credits_block_start_and_say_why() -> None:
     assert reason == f"usage limit until {fmt_when(EXHAUSTED.until or 0, NOW)}; credits exhausted"
 
 
-def test_yours_offers_only_wont_and_done_nothing() -> None:
-    assert list(acts(S.YOURS, None, note=Note(repo=None))) == ["wont", "done-manually"]
+def test_yours_offers_start_wont_and_done_nothing() -> None:
+    assert list(acts(S.YOURS, None, note=Note(repo=None))) == ["start", "wont", "done-manually"]  # T2092
     assert acts(S.DONE, run(stage="shipped", session_id="s", worktree="/w")) == {}
 
 

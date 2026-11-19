@@ -24,6 +24,10 @@ NOT_RESEARCH = """
 Your last label was research, but this note has no URL to read. A note that asks to make something is never
 research: answer again with new_repo, existing_repo, all_repos or manual.
 """
+PRESSED = """
+kuhy pressed Start, so this is code work: choose existing_repo, new_repo or all_repos, never manual or
+research unless the note is only URLs.
+"""
 NAME = re.compile(r"[a-z0-9][a-z0-9-]{1,38}[a-z0-9]")
 PROMPT = """override
 You label one todo note that has no repo yet. Labels:

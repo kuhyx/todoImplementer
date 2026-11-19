@@ -20,7 +20,7 @@ from todoimpl.todo_mcp.model import TodoError
 from todoimpl.umbrella.note import is_umbrella
 
 from . import label, newrepo, umbrella
-from .classify import NOT_RESEARCH, ClassifyError, build_prompt, claude_classifier, has_url, parse
+from .classify import NOT_RESEARCH, PRESSED, ClassifyError, build_prompt, claude_classifier, has_url, parse
 from .repos import Listing
 
 if TYPE_CHECKING:
@@ -114,9 +114,9 @@ class TriageService:
             done += 1
         return done
 
-    def _verdict(self, card: CardTask, repos: list[str], files: list[str]) -> label.Verdict:
+    def _verdict(self, card: CardTask, repos: list[str], files: list[str], hint: str = "") -> label.Verdict:
         """Classify one note; `research` needs a URL, else the model is asked once more (T2090)."""
-        prompt = build_prompt(card.title, card.body, repos, files)
+        prompt = build_prompt(card.title, card.body, repos, files) + hint
         verdict = parse(self._classifier(prompt), repos)
         if verdict.label != label.RESEARCH or has_url(card.title, card.body):
             return verdict
@@ -164,19 +164,59 @@ class TriageService:
 
     # ---- Start of a repo-less card ----
     def start(self, id8: str, *, auto_ship: bool | None = None) -> None:
-        """Start a card: a `new_repo` card gets its repo first (off the click), any other starts as it is."""
+        """Start a card off the click: `new_repo` gets its repo first, a note nothing can start is triaged."""
         from todoimpl.runner.scheduler import RunnerError  # noqa: PLC0415 - the scheduler imports the service
 
         card = next((c for c in self.cache.snapshot().tasks if c.id == id8), None)
-        directory = run_dir(self.root, id8)
-        if card is None or card.repo is not None or label.label_of(directory) != label.NEW_REPO:
+        stored = label.label_of(run_dir(self.root, id8))
+        if card is None or card.repo is not None or is_umbrella(card.body) or stored == label.RESEARCH:
             self.scheduler.start(id8, auto_ship=auto_ship)
             return
         if id8 in self._busy:
             msg = f"{id8} is being created"
             raise RunnerError(msg, "conflict")
         self._busy.add(id8)
-        self._spawn(lambda: self._create(card, auto_ship=auto_ship))
+        job = self._create if stored == label.NEW_REPO else self._pressed
+        self._spawn(lambda: job(card, auto_ship=auto_ship))
+
+    def _pressed(self, card: CardTask, *, auto_ship: bool | None) -> None:
+        """Triage a note with no startable label as code work, then route it (T2092: kuhy pressed Start).
+
+        A repo joins that repo's card, a new repo is made, an umbrella is started; a note still not code (or
+        any failure) rests as a failed run with the reason, and Retry asks again.
+        """
+        from todoimpl.runner.scheduler import RunnerError  # noqa: PLC0415 - the scheduler imports the service
+
+        directory = run_dir(self.root, card.id)
+        try:
+            repos = self.repos()
+            files = umbrella.workflow_names(repos, lambda r: repo_path(r, self.src))
+            verdict = self._verdict(card, repos, files, PRESSED)
+            label.save(directory, verdict, label.digest(card.title, card.body), self._clock())
+            self.cache.set_triage(card.id, verdict.label)
+            if verdict.label == label.MANUAL:
+                msg = f"still not code: {verdict.reason}"
+                raise ClassifyError(msg)  # noqa: TRY301 - one failure path for the whole route
+            if verdict.label == label.NEW_REPO:
+                self._create(card, auto_ship=auto_ship)
+                return
+            if verdict.label in (label.EXISTING_REPO, label.ALL_REPOS):
+                self._act(card, verdict, directory)
+                if error := (label.load(directory) or {}).get("error"):
+                    raise ClassifyError(str(error))  # noqa: TRY301
+            if verdict.label == label.EXISTING_REPO:  # the note is a part of the repo's card: start that card
+                try:
+                    self.scheduler.start(repo_card_id(str(verdict.repo)), auto_ship=auto_ship)
+                except RunnerError as exc:  # a card at work takes the part in its next cycle
+                    log.info("card of %s not started: %s", verdict.repo, exc)
+            else:
+                self.scheduler.start(card.id, auto_ship=auto_ship)
+        except Exception as exc:  # noqa: BLE001 - whatever failed, kuhy sees it on the card and may Retry
+            log.warning("start of %s failed: %s", card.id, exc)
+            save(directory, RunState(card.id, "failed", error=f"start: {exc}", started_at=self._clock()))
+        finally:
+            self._busy.discard(card.id)
+            self.cache.poke()
 
     def _create(self, card: CardTask, *, auto_ship: bool | None) -> None:
         """Make the repo, give it to the note, start the repo's card; a failure rests as a failed run."""

@@ -52,6 +52,11 @@ class MergeResult:
     closed: tuple[str, ...]
 
 
+def repos_of(cards: list[CardTask]) -> set[str]:
+    """Return the repos the members name; a note with no repo names none."""
+    return {card.repo for card in cards if card.repo}
+
+
 def _check(cards: list[CardTask], title: str) -> None:
     ids = [card.id for card in cards]
     if not title.strip():
@@ -60,8 +65,10 @@ def _check(cards: list[CardTask], title: str) -> None:
     if len(set(ids)) != len(ids) or len(ids) < MIN_MEMBERS:
         msg = "a merge needs at least two different notes"
         raise MergeError(msg, "bad_request")
-    if missing := next((card.id for card in cards if not card.repo), None):
-        msg = f"{missing} has no repo"
+    missing = next((card.id for card in cards if not card.repo), None)
+    # A repo-less note joins the one repo its partners name (T2093).
+    if missing is not None and len(repos_of(cards)) != 1:
+        msg = f"{missing} has no repo and the others do not name one repo"
         raise MergeError(msg, "bad_request")
 
 
@@ -138,9 +145,9 @@ def apply_merge(  # noqa: PLR0913, PLR0917 - the collaborators, all injectable
     todo = _members_left(client, cards, ref)
     if (why := live_reason(root, [card.id for card in todo])) is not None:
         raise MergeError(why, "disabled")
-    repos = {card.repo for card in cards}
+    repos = repos_of(cards)
     kind = "repo" if len(repos) == 1 else "umbrella"
-    repo = next(iter(repos)) or ""
+    repo = next(iter(repos))
     if ref is None:
         if kind == "repo":
             made = _create_in_repo(client, repo, title.strip(), cards)
