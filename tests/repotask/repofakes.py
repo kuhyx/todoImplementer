@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 
 from runnerfakes import Env, make_repo
 from todoimpl.board import state as store
-from todoimpl.repotask.ids import repo_card_id, repo_human_id
+from todoimpl.repotask.ids import repo_card_id
 from todoimpl.runner.scheduler import Scheduler
 from todoimpl.service import ItemView, ServiceBackend, TaskCache, board_fetch
 from todoimpl.todo_mcp.client import TodoClient
@@ -54,9 +54,9 @@ class Rig:
         self.cache.refresh()
         return note_id[:8]
 
-    def card(self, repo: str, *, human: bool = False) -> dict[str, Any]:
-        """Return the board card of the repo's task, or of its human parts (T1980)."""
-        wanted = repo_human_id(repo) if human else repo_card_id(repo)
+    def card(self, repo: str) -> dict[str, Any]:
+        """Return the board card of the repo's task: Claude's parts and the manual ones (T2114)."""
+        wanted = repo_card_id(repo)
         return next(c for c in self.backend.board()["tasks"] if c["id"] == wanted)
 
     def run_dir(self, card: str) -> Path:

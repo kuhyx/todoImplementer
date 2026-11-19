@@ -7,8 +7,9 @@ from contract_lib import validate
 from repofakes import IMPL, LIVE, PLAN, Rig
 from runnerfakes import sh
 from schedfakes import reply
+from todoimpl.board.types import MANUAL_REASON
 from todoimpl.repotask import files
-from todoimpl.repotask.ids import repo_card_id, repo_human_id
+from todoimpl.repotask.ids import repo_card_id
 from todoimpl.runner.files import write_json
 from todoimpl.runner.scheduler import RunnerError
 
@@ -99,7 +100,7 @@ def test_a_repo_with_only_human_work_cannot_be_started(rig: Rig) -> None:
     repo = rig.repo()
     rig.note(repo, "MANUAL WORK REQUIRED: rotate the key", "do it by hand")
     with pytest.raises(RunnerError, match="MANUAL WORK REQUIRED"):
-        rig.sched.start(repo_human_id(repo))
+        rig.sched.start(repo_card_id(repo))
 
 
 def test_a_held_only_repo_has_nothing_for_the_run(rig: Rig) -> None:
@@ -108,7 +109,32 @@ def test_a_held_only_repo_has_nothing_for_the_run(rig: Rig) -> None:
     other = rig.note(repo, "held note", "## held\nx")
     write_json(rig.run_dir(f"{other}-0") / "state.json", {"x": 1})  # unreadable as a run: counts as in flight
     rig.cache.refresh()
-    card = rig.card(repo, human=True)
+    card = rig.card(repo)
     assert card["title"].startswith("MANUAL WORK REQUIRED")
-    assert [p["state"] for p in card["parts"]] == ["human"]
+    assert sorted(p["state"] for p in card["parts"]) == ["held", "human"]
     assert card["status"] == "yours"
+
+
+def test_t2114_after_claudes_parts_ship_the_manual_part_rests_on_the_card_as_yours(rig: Rig) -> None:
+    repo = rig.repo()
+    work = rig.note(repo, "gamma note", "Make gamma.\ndone_check: true")
+    rig.note(repo, "MANUAL WORK REQUIRED: rotate the key", "do it by hand")
+    card = repo_card_id(repo)
+    assert [c["id"] for c in rig.backend.board()["tasks"]] == [card]  # one card, both parts
+    rig.script(card, PLAN, IMPL, LIVE)
+    tick_before_start(rig, card, f"{work}-0")
+    rig.sched.start(card)
+    rig.wait(card, {"gate"})
+    rig.sched.ship(card)
+    rig.wait(card, {"shipped"})
+    rig.cache.refresh()
+    calls = len(rig.world.calls())
+    assert [c["id"] for c in rig.backend.board()["tasks"]] == [card]  # no Done twin while the card is open
+    left = rig.card(repo)
+    assert (left["status"], [p["state"] for p in left["parts"]]) == ("yours", ["human"])
+    start = next(a for a in left["actions"] if a["id"] == "start")
+    assert (start["enabled"], start["reason"]) == (False, MANUAL_REASON)
+    with pytest.raises(RunnerError, match="MANUAL WORK REQUIRED") as refused:
+        rig.sched.start(card)
+    assert refused.value.code == "disabled"
+    assert len(rig.world.calls()) == calls  # no new turn: nothing on the card is Claude's

@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 from todoimpl.asks import view as asks_view
 from todoimpl.board.state import run_dir
 from todoimpl.board.types import is_manual
-from todoimpl.repotask.ids import norm, repo_card_id, repo_human_id
+from todoimpl.repotask.ids import norm, repo_card_id
 from todoimpl.repotask.legacy import Older
 from todoimpl.repotask.model import Part
 from todoimpl.todo_mcp.items import Item, split_items
@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 PRIORITIES = ("high", "medium", "low")
 MIDDLE = 1
-Released = Callable[[str, str], bool]  # (human card id, part text) -> kuhy answered every ask in it
+Released = Callable[[str, str], bool]  # (repo card id, part text) -> kuhy answered every ask in it
 
 
 def _never(_card: str, _body: str) -> bool:
@@ -37,7 +37,7 @@ def _never(_card: str, _body: str) -> bool:
 
 
 def released_in(root: Path | None) -> Released:
-    """Return the check that reads the human card's saved answers under `root` (none without a root)."""
+    """Return the check that reads the repo card's saved answers under `root` (none without a root)."""
     if root is None:
         return _never
     return lambda card, body: asks_view.released(body, run_dir(root, card))
@@ -64,14 +64,14 @@ def _order(entry: _Entry) -> tuple[int, int, int, int, str, int]:
 
 def _entries(note: Task, older: Callable[[str], Older], released: Released) -> list[_Entry]:
     found = []
-    hid = repo_human_id(note.repo or "")
+    cid = repo_card_id(note.repo or "")
     for item in split_items(note):
         if item.status == "done":
             continue
         key = card_id(item.note_id, item.index)
         manual = is_manual(item.title)
-        human = manual and not released(hid, item.body)  # answered asks hand the part to Claude (T1994)
-        # A manual part never splits off as held: it stays on the human card that keeps its answers (T1995);
+        human = manual and not released(cid, item.body)  # answered asks hand the part to Claude (T1994)
+        # A manual part never splits off as held: it stays on the repo card that keeps its answers (T1995);
         # once released it only learns where an older run left work.
         before = (Older() if human else Older(note=older(key).note)) if manual else older(key)
         part = Part(key, item.note_id, item.index, item.title, item.body, note.priority, item.done_check,
@@ -97,13 +97,13 @@ def _repo_card(repo: str, entries: list[_Entry], cid: str) -> CardTask:
     parts = [entry.part for entry in entries]
     work = [part for part in parts if part.actionable]
     title = repo.rpartition("/")[2] or repo
-    if not work or all(part.manual for part in parts):  # the human card reads as that work
+    if not work or all(part.manual for part in parts):  # only manual work: titled after it
         title = next(part.title for part in parts if part.manual)
     top = min((part.priority for part in work or parts), key=_rank)
     by = "claude" if all(entry.task.created_by == "claude" for entry in entries) else "kuhy"
     body, check = _body(work), _check(work)
     status = "in progress" if any(entry.task.status == "in progress" for entry in entries) else "todo"
-    note, _, index = cid.partition("-")  # `-0` Claude's parts, `-1` the human ones (T1980)
+    note, _, index = cid.partition("-")
     item = Item(note, int(index), title, body, repo, status, check, by, parts=tuple(parts))
     return CardTask(cid, title, body, repo, status, top, check, item, by)
 
@@ -125,13 +125,9 @@ def group_cards(
     for key, entries in repos.items():
         entries.sort(key=_order)
         cards += [CardTask.of(entry.task, entry.item) for entry in entries if entry.part.held]
-        # Claude's parts ship and go to Done; the human parts wait in Backlog on a card of their own (T1980)
-        work = [entry for entry in entries if not entry.part.manual]  # held parts still show on it
-        human = [entry for entry in entries if entry.part.manual]  # released ones too: one card, one Start
-        if any(not entry.part.held for entry in work):
-            cards.append(_repo_card(names[key], work, repo_card_id(names[key])))
-        if human:
-            cards.append(_repo_card(names[key], human, repo_human_id(names[key])))
+        # One card holds Claude's parts and the manual ones (kuhy, 2026-11-19, T2114; T1980 split them)
+        if any(not entry.part.held for entry in entries):
+            cards.append(_repo_card(names[key], entries, repo_card_id(names[key])))
     return cards
 
 

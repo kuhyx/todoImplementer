@@ -26,8 +26,8 @@ def is_repo_task(task: TaskLike) -> bool:
 def kuhys(title: str, parts: tuple[Part, ...] | list[Part] = ()) -> bool:
     """Say whether the work is kuhy's: a manual note, or a repo task with no part for Claude.
 
-    A repo task's title is its first manual part's on the human card; its parts decide, since a part whose
-    asks kuhy answered is Claude's again (T1994).
+    A repo task's parts decide, not its title (a card with only manual parts is titled after the first),
+    since a part whose asks kuhy answered is Claude's again (T1994).
     """
     return not any(part.actionable for part in parts) if parts else is_manual(title)
 

@@ -11,7 +11,7 @@ Offered on every card that is not Done or Done manually, with confirm (the app: 
 Disabled while the run is `shipping` ("shipping cannot be stopped"): a push in flight is never cut. In order:
 
 1. Close every note the card covers, through the todo MCP's `close_task` (the path Ship uses, `close_item`): the
-   repo card's parts but a held one (a held part has its own card; the manual `-1` card's parts count), or the
+   repo card's parts but a held one (a held part has its own card; manual parts count), or the
    card's one section. A section is marked `## [x]`, a note closes with its last section, an umbrella note closes
    whole. Any refusal stops here, before the run is touched.
 2. Stop the run without a turn: a queued run leaves the queue, a live drive is cancelled, a turn no drive follows

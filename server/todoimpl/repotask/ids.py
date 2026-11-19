@@ -17,6 +17,9 @@ def repo_card_id(repo: str) -> str:
     return f"{hashlib.sha1(norm(repo).encode(), usedforsecurity=False).hexdigest()[:HASH_LEN]}-0"
 
 
-def repo_human_id(repo: str) -> str:
-    """Return `<same 8 hex>-1`: the card of the repo's MANUAL WORK REQUIRED parts (T1980)."""
+def former_human_id(repo: str) -> str:
+    """Return `<same 8 hex>-1`: the card the repo's MANUAL WORK REQUIRED parts had from T1980 to T2114.
+
+    No card has this id any more; its run dir still holds the answers kuhy gave there (`foldasks`).
+    """
     return repo_card_id(repo).removesuffix("-0") + "-1"

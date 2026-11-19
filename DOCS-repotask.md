@@ -14,9 +14,16 @@ board made one card per `## ` section and the cards of one repo ran in parallel 
 - The card id is `<sha1(repo)[:8]>-0` (`ids.repo_card_id`): stable whatever notes the repo has or loses, shaped like
   every card id, so the run dir `<root>/<id>/`, the branch `todo/<id>`, the gate unit and the phone lease need no new
   rules. The card title is the repo name.
-- Human parts (`MANUAL WORK REQUIRED:`) never sit on that card (T1980): they get a card of their own, id
-  `<sha1(repo)[:8]>-1` (`ids.repo_human_id`), status Yours in Backlog, titled after its first human part. So Claude's
-  ticked parts ship to Done while the manual work waits in Backlog.
+- Human parts (`MANUAL WORK REQUIRED:`) sit on the same card (kuhy, 2026-11-19, T2114: "should be merged into one").
+  T1980 had moved them to a card of their own, `<sha1(repo)[:8]>-1`; kuhy reversed that when teatr-pw showed two
+  cards. They are never run or ticked (state `human`); once kuhy answered every ask of one it is Claude's work
+  (T1994). Ship closes only the ticked parts, so after Claude's parts ship the card stays with the manual ones
+  and reads as Yours (the cycle's run is not shown, as for any cycle end, and nothing is left for Claude).
+- A repo with only manual parts has the same `-0` card: Yours, Start disabled with the MANUAL reason, titled after
+  its first manual part. The id stays `-0` whatever parts come and go, so a run, its branch and its answers
+  never move. Answers kuhy gave on a former `-1` card are moved once (`repotask/foldasks.py`, called by the board
+  fetch): only the ask ids an open manual part asks now, never over a record the `-0` card has, then a mark file
+  in the old dir (kept, never deleted) stops a second move. An old `-1` run that shipped still shows in Done.
 - Card fields: `priority` = the highest part priority that Claude can work, `status` `in progress` when any note
   is, `body` = the work parts as `### Part <key>: <title>` blocks (level 3 on purpose: a `## ` line would split the
   card), `done_check` = the one check of the work parts or the distinct ones chained `(a) && (b)`.
@@ -33,11 +40,11 @@ is the section card id `<note id8>-<index>`. Order of work: priority (high first
 | todo | not ticked yet |
 | working | the first part still owed while the run works (display only, from the card status) |
 | done | ticked in this cycle |
-| human | a `MANUAL WORK REQUIRED:` part (title start, exact caps): on the repo's `-1` card, never run or ticked |
+| human | a `MANUAL WORK REQUIRED:` part (title start, exact caps): on the repo card, never run or ticked |
 | held | an older per-section run still owns the section (below); it has its own card |
 
-A card with parts but none for Claude (the human `-1` card) is **Yours** and its Start is disabled with the MANUAL
-reason; its line is the parts' `Needs:` lines (T1951). A repo with only held or human parts has no `-0` card. Part titles are user content; the page adds no words (icon per
+A card with parts but none for Claude (only manual or held ones) is **Yours** and its Start is disabled with the MANUAL
+reason; its line is the parts' `Needs:` lines (T1951). A repo with only held parts has no `-0` card. Part titles are user content; the page adds no words (icon per
 state, a number for steps, names in `aria-label` and `title`).
 
 ## One run, cycles, ticks
@@ -161,7 +168,8 @@ Code: `http/newtask.py`, `newtask/service.py`, `newtask/images.py`.
 4. The router then presses that card's Start through the very path of a Start click (`_action`): a new repo card or
    one resting at Backlog starts; a card already at work refuses, and the section is simply a new part, worked by this
    run or the next cycle (as with any part added in the todo app). The answer is `{ok, note, started, task}`; the page opens the card.
-   A `MANUAL WORK REQUIRED:` title lands on the repo's `-1` card, whose Start is disabled (`started: false`).
+   A `MANUAL WORK REQUIRED:` title joins the repo card as a human part and presses no Start (`started: false`), so
+   kuhy's own work never starts a run of the Claude parts beside it (T2114).
 
 Sessions cannot log in to dufs, so every stage prompt rewrites those links to the local paths and adds one line
 asking the session to open each with Read (`prompts/texts.py`, `newtask/images.localize`); this covers files

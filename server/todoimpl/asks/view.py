@@ -19,12 +19,17 @@ RESOLVED = ("answered", "auto", "done", "approved")
 
 
 def source(body: str, run: RunState | None, parts: Iterable[Part] = ()) -> list[Ask]:
-    """Return the asks of the newest reply, else those of the body and of a repo card's parts."""
+    """Return the asks of the newest reply, else those of the body and of a repo card's parts.
+
+    A manual part's asks are kuhy's own decisions on the same card (T2114): they show beside the reply's.
+    """
     reply = str(run.extra.get("last_reply", "")) if run is not None else ""
-    if found := parse_asks(reply):
-        return found
-    found = parse_asks(body)
+    found = parse_asks(reply)
+    current = bool(found)
+    found = found or parse_asks(body)
     for part in parts:
+        if current and not part.manual:
+            continue
         found += [a for a in parse_asks(part.body) if all(a.id != b.id for b in found)]
     return found
 

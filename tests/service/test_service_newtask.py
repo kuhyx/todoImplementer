@@ -11,7 +11,7 @@ from todoimpl.http.newtask import NewTask
 from todoimpl.newtask import service as newtask_service
 from todoimpl.newtask import uploads
 from todoimpl.newtask.service import NewTaskService, _holds
-from todoimpl.repotask.ids import repo_card_id, repo_human_id
+from todoimpl.repotask.ids import repo_card_id
 from todoimpl.service.cards import CardTask
 from todoimpl.todo_mcp.items import Item
 from todoimpl.todo_mcp.model import TodoError
@@ -65,9 +65,9 @@ def test_a_second_part_joins_the_repo_card(rig: Rig, images: Path) -> None:
     assert "newer part" in detail["body"]
 
 
-def test_a_manual_title_answers_the_human_card(rig: Rig, images: Path) -> None:
+def test_a_manual_title_answers_the_one_repo_card(rig: Rig, images: Path) -> None:
     _, card = service(rig).create(NewTask("kuhyx/demo", "MANUAL WORK REQUIRED: plug it in", "", ()))
-    assert card == repo_human_id("kuhyx/demo")
+    assert card == repo_card_id("kuhyx/demo")  # T2114: no card of its own
 
 
 def test_an_open_part_with_the_same_title_is_a_conflict_and_writes_nothing(rig: Rig, images: Path) -> None:

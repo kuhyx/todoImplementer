@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
+from todoimpl.board.types import is_manual
 from todoimpl.newtask.images import is_jpeg
 
 from .bodies import MAX_TEXT, parse
@@ -121,7 +122,10 @@ def check(raw: bytes) -> NewTask | str:
 
 
 def handle(backend: Backend, raw: bytes, start: Callable[[str], Reply]) -> Reply:
-    """Create the task, then press the card's Start (it refuses on a card already at work: still ok)."""
+    """Create the task, then press the card's Start (it refuses on a card already at work: still ok).
+
+    A MANUAL WORK REQUIRED task presses nothing: it joins the repo card beside Claude's parts (T2114).
+    """
     api = getattr(backend, "new_task_service", None)
     if not isinstance(api, NewTaskApi):
         return error_reply("not_found", "no such route")
@@ -129,8 +133,8 @@ def handle(backend: Backend, raw: bytes, start: Callable[[str], Reply]) -> Reply
     if isinstance(task, str):
         return error_reply("bad_request", task)
     note, card = api.create(task)
-    started = start(card)
-    if started.status == HTTPStatus.OK:
+    started = None if is_manual(task.title) else start(card)
+    if started is not None and started.status == HTTPStatus.OK:
         return json_reply(
             {"ok": True, "note": note, "started": True, "task": json.loads(started.body)["task"]}
         )

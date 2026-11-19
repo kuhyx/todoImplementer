@@ -19,6 +19,7 @@ screenshot s1: Looks fine? | shots/a.png
 @dataclass
 class PartBody:
     body: str
+    manual: bool = False
 
 
 @dataclass

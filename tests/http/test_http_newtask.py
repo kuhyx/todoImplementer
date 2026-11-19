@@ -73,6 +73,14 @@ def test_a_card_that_cannot_start_now_still_answers_ok_with_the_card(live: Live,
     assert live.backend.calls == []
 
 
+def test_t2114_a_manual_task_never_presses_start_on_the_repo_card(live: Live, made: FakeNewTasks) -> None:
+    r = post(live, good(title="MANUAL WORK REQUIRED: plug it in"))
+    assert r.status == 200, r.body
+    validate("response", r.json())
+    assert (r.json()["started"], r.json()["task"]["id"]) == (False, live.backend.task_id)
+    assert live.backend.calls == []  # Claude's parts on that card are not started for kuhy's own work
+
+
 def test_a_card_gone_after_the_add_is_not_found(live: Live, made: FakeNewTasks) -> None:
     made.card = "zzzzzzzz-0"
     r = post(live, good())

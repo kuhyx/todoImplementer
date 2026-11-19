@@ -11,7 +11,7 @@ from todoimpl.board.state import run_dir, run_root
 from todoimpl.credits import ledger
 from todoimpl.errors.loop import ErrorLoop
 from todoimpl.http.main import REPO, git_build_id
-from todoimpl.repotask import legacy
+from todoimpl.repotask import foldasks, legacy
 from todoimpl.runner.autocheck import AutoCloser
 from todoimpl.todo_mcp.client import TodoClient
 from todoimpl.triage.label import label_of
@@ -49,6 +49,7 @@ def board_fetch(
         seen = {n.id for n in notes}
         notes += [n for n in client.list_tasks(full=True, no_repo=True) if n.id not in seen]
         notes += registry.notes(client, root, {n.id[:8] for n in notes})  # repo-less umbrellas not listed
+        foldasks.fold_all(root, notes)  # answers from a former `-1` card, once (T2114)
         cards = group_cards(notes, lambda card: legacy.older(root, card), released_in(root))
         # A repo-less note's triage label (a file in its run dir) rides on its card.
         cards = [

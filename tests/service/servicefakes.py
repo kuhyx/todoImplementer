@@ -8,8 +8,7 @@ from typing import Any
 
 from fake_todo_mcp import FakeTodoMcp
 from todoimpl.board.state import RunState, run_dir, save
-from todoimpl.board.types import is_manual
-from todoimpl.repotask.ids import repo_card_id, repo_human_id
+from todoimpl.repotask.ids import repo_card_id
 from todoimpl.service import ServiceBackend
 from todoimpl.umbrella.note import is_umbrella
 
@@ -84,7 +83,7 @@ class Rig:
         self.backend.cache.refresh()
         if not repo or is_umbrella(body):
             return f"{note_id[:8]}-0"
-        return repo_human_id(repo) if is_manual(title) else repo_card_id(repo)  # manual: own card (T1980)
+        return repo_card_id(repo)  # manual parts too: one card per repo (T2114)
 
     def sections(self, body: str, repo: str | None = "kuhyx/demo", title: str = "demo todos") -> list[str]:
         """Seed a note whose every section has an older run in flight (so each keeps its own section card)."""
