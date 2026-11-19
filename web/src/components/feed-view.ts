@@ -1,7 +1,7 @@
 import type { LiveState } from "@/lib/live-feed";
 import type { ActivityEvent } from "@/lib/schemas";
 
-/** Live activity feed. Replayed events (same seq after a reconnect) are ignored; old lines drop past the cap. */
+/** Live activity feed, newest line on top. Replayed events (same seq after a reconnect) are ignored; old lines drop past the cap. */
 import { h } from "@/lib/dom";
 
 export const FEED_CAP = 500;
@@ -20,9 +20,11 @@ export interface Feed {
   setState: (state: LiveState) => void;
 }
 
+/** HH:MM:SS in the viewer's own timezone (the server sends epoch seconds, UTC). */
 function clock(epoch: number): string {
-  const date = new Date(epoch * 1000);
-  return date.toISOString().slice(11, 19);
+  const options: Intl.DateTimeFormatOptions = { hour: "2-digit", hourCycle: "h23", minute: "2-digit", second: "2-digit" };
+  const formatter = new Intl.DateTimeFormat("en-GB", options);
+  return formatter.format(new Date(epoch * 1000));
 }
 
 function body(event: ActivityEvent): HTMLElement {
@@ -44,9 +46,9 @@ export function createFeed(): Feed {
   const append = (event: ActivityEvent): void => {
     if (seen.has(event.seq)) return;
     seen.add(event.seq);
-    const isStick = scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 48;
+    const isStick = scroller.scrollTop < 48;
     empty.hidden = true;
-    list.append(
+    list.prepend(
       h(
         "li",
         { attrs: { "data-kind": event.kind }, class: "feed-item" },
@@ -55,8 +57,8 @@ export function createFeed(): Feed {
         body(event),
       ),
     );
-    while (list.children.length > FEED_CAP) list.firstElementChild?.remove();
-    if (isStick) scroller.scrollTop = scroller.scrollHeight;
+    while (list.children.length > FEED_CAP) list.lastElementChild?.remove();
+    if (isStick) scroller.scrollTop = 0;
   };
   return {
     append,

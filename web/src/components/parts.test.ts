@@ -123,8 +123,8 @@ describe("feed", () => {
     feed.append(event(1));
     feed.append({ ...event(2), kind: "text", tool: null });
     expect(feed.el.querySelectorAll(".feed-item")).toHaveLength(2);
-    expect(feed.el.querySelector(".feed-kind")?.textContent).toBe("tool: Bash");
-    expect(feed.el.querySelectorAll(".feed-kind")[1]?.textContent).toBe("text");
+    expect(feed.el.querySelector(".feed-kind")?.textContent).toBe("text");
+    expect(feed.el.querySelectorAll(".feed-kind")[1]?.textContent).toBe("tool: Bash");
     expect(feed.el.querySelector(".empty")?.hasAttribute("hidden")).toBe(true);
     feed.setState("reconnecting");
     expect(feed.el.querySelector(".feed-state")?.textContent).toBe("connection lost, reconnecting…");
@@ -138,19 +138,15 @@ describe("feed", () => {
     expect(feed.el.querySelectorAll(".feed-item")).toHaveLength(FEED_CAP);
   });
 
-  it("keeps the scroll position when the user scrolled up", () => {
+  it("follows the newest line at the top, but keeps the position once the user scrolled down", () => {
     const feed = createFeed();
     const scroller = feed.el.querySelector<HTMLElement>(".feed-scroll");
     if (scroller === null) throw new Error("scroller");
-    Object.defineProperties(scroller, {
-      clientHeight: { configurable: true, value: 100 },
-      scrollHeight: { configurable: true, value: 1000 },
-    });
-    scroller.scrollTop = 0;
+    scroller.scrollTop = 20;
     feed.append(event(1));
     expect(scroller.scrollTop).toBe(0);
     scroller.scrollTop = 900;
     feed.append(event(2));
-    expect(scroller.scrollTop).toBe(1000);
+    expect(scroller.scrollTop).toBe(900);
   });
 });

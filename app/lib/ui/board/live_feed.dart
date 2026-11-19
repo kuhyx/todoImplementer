@@ -1,5 +1,5 @@
 /// The card's live activity feed (`live/{card}` while watched): one row per
-/// event, a glyph per kind, newest at the bottom, the stage as a chip.
+/// event, a glyph per kind, newest at the top, the stage as a chip.
 library;
 
 import 'package:design_system/design_system.dart';
@@ -61,7 +61,6 @@ class _LiveFeedState extends State<LiveFeed> {
           Expanded(
             child: ListView.builder(
               key: const Key('feed-list'),
-              reverse: true,
               itemCount: activity.length,
               itemBuilder: (_, i) {
                 final e = activity[activity.length - 1 - i];
