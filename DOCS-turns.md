@@ -48,8 +48,10 @@ across all board sessions and the board's own checks. Code: `server/todoimpl/run
   stamped `gone` and kept 5 min (`buildqueue.RESERVE`), passed over by every waiter, and the restarted server's
   same check (card and command) takes it back. Unclaimed after 5 min, the next look removes it.
 - No whole scripts (T2165): `buildlock.sh bash x.sh` (any shell, python or node with a script, `-c` or stdin,
-  also behind env, nice, timeout, capped.sh; or a script path) exits 2 with a hint. Run the script plainly: the
-  Bash tool's PATH has the shims, so each heavy tool inside takes the lock itself; a `systemd-run` job needs
+  also behind env, nice, timeout, capped.sh; or a script path) never takes the lock: it prints a one-line hint
+  and runs the script unlocked with the shims first on PATH, so each heavy tool inside locks itself; the exit
+  code is the script's, so a caller (siege's `hold_build_lock`) never breaks. Under a held lock it runs as
+  before. Better: run the script plainly; the Bash tool's PATH has the shims; a `systemd-run` job needs
   `-E PATH -E TODOIMPL_BUILD_CARD` (a repo's `scripts/bg.sh` passes PATH). `python -m x` is one tool.
 - Hold ceiling (T2166, `runner/holdceiling.py`, a server thread): every 10 s it samples the holding ticket's
   process tree; 2 min with no CPU beyond 1 %, no read or write bytes, no new or gone process and none in disk

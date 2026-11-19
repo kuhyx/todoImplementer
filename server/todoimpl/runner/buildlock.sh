@@ -22,6 +22,7 @@ WHAT=""
 CHILD=""
 RELEASED=0
 SAID=0
+UNLOCKED=0
 # shellcheck source-path=SCRIPTDIR source=buildlock_queue.sh
 source "$HERE/buildlock_queue.sh"
 
@@ -146,16 +147,20 @@ main() {
 	esac
 	WHAT="$*"
 	if [[ "${TODOIMPL_BUILD_LOCK_HELD:-}" != 1 ]] && needs_lock "${@:2}" && is_script "$@"; then
-		echo "buildlock: refusing to hold the build lock for a whole script (${WHAT:0:120}): lock each heavy" \
-			"command on its own (buildlock.sh flutter build apk), or run the script plainly with PATH passed on" \
-			"(systemd-run -E PATH -E TODOIMPL_BUILD_CARD) so each heavy tool inside takes the lock itself" >&2
-		exit 2
+		# Never fail a caller (a repo gate wraps itself this way): run it unlocked, shims first (T2165).
+		echo "buildlock: not holding the build lock for a whole script (${WHAT:0:120}): it runs unlocked and" \
+			"each heavy tool inside takes the lock itself; lock each heavy command on its own (buildlock.sh" \
+			"flutter build apk), or run the script plainly with PATH passed on (systemd-run -E PATH -E" \
+			"TODOIMPL_BUILD_CARD)" >&2
+		[[ "$PATH" == "$SHIMS":* ]] || export PATH="$SHIMS:$PATH"
+		[[ "$1" == */* ]] && exec "$@"
+		UNLOCKED=1
 	fi
 	find_real "$1" || {
 		echo "buildlock: $1 not found on PATH" >&2
 		exit 127
 	}
-	if [[ "${TODOIMPL_BUILD_LOCK_HELD:-}" == 1 ]] || ! needs_lock "${@:2}"; then
+	if [[ "${TODOIMPL_BUILD_LOCK_HELD:-}" == 1 || "$UNLOCKED" == 1 ]] || ! needs_lock "${@:2}"; then
 		shift
 		exec "$REAL" "$@"
 	fi
