@@ -72,7 +72,8 @@ void main() {
     await pumpDetail(tester, detail: _detail([action('send', enabled: false)]));
     await seek(tester, _send, 300);
     expect(tester.widget<IconButton>(_send).onPressed, isNull);
-    expect(tester.widget<IconButton>(_send).tooltip, 'send: why send');
+    final icon = find.descendant(of: _send, matching: find.byType(Icon));
+    expect(tester.widget<Icon>(icon).semanticLabel, 'send: why send');
   });
 
   testWidgets('[T2276] no send offered, no box', (tester) async {

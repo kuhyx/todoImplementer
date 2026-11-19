@@ -86,17 +86,23 @@ def released(body: str, directory: Path) -> bool:
 
 
 def held(body: str, run: RunState | None, directory: Path, parts: Iterable[Part] = ()) -> list[str]:
-    """Return `<title>: <answer>` of the session's answered choices that still wait for an open one (T2275).
+    """Return the session's answered choices and approved shots that still wait for an open choice (T2275).
 
-    The session hears the answers once no choice is open (`AskService._resolve`); a note sent before that
-    carries them, so a note never drops an answer. A manual part's answers are kuhy's own and never carried.
+    The session hears them once no choice is open (`AskService._resolve`); a note sent before that carries
+    them, so a note never drops an answer. A manual part's answers are kuhy's own and never carried.
     """
-    choices = [a for a in work_asks(body, run, parts) if a.type == "choice"]
+    work = work_asks(body, run, parts)
     records = store.load(directory)["items"]
-    if not any(is_open(records.get(a.id)) for a in choices):
+    if not any(a.type == "choice" and is_open(records.get(a.id)) for a in work):
         return []
-    found = ((a, records.get(a.id)) for a in choices)
-    return [f"{a.title}: {rec['answer']}" for a, rec in found if rec and not is_open(rec) and "answer" in rec]
+    out: list[str] = []
+    for ask in work:
+        record = records.get(ask.id) or {}
+        if ask.type == "choice" and not is_open(record) and "answer" in record:
+            out.append(f"{ask.title}: {record['answer']}")
+        elif ask.type == "screenshot" and record.get("state") == "approved":
+            out.append(f"approved: {ask.title}")
+    return out
 
 
 def decided(body: str, directory: Path) -> list[str]:

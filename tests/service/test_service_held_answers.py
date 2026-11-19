@@ -31,6 +31,19 @@ def test_t2275_a_note_carries_the_answers_that_wait_for_the_other_choices(rig: R
     ]
 
 
+def test_t2275_a_note_carries_an_approved_screenshot_that_waits_too(rig: Rig) -> None:
+    rig.run("t1", "implement", session_id="s", extra={"last_reply": REPLY})
+    _answered(rig, "t1", colour="Mono")
+    directory = run_dir(rig.root, "t1")
+    data = store.load(directory)
+    data["items"]["sheet"] = {"state": "approved", "at": 1.0}
+    store.save(directory, data)
+    rig.backend.send("t1", "note")
+    assert rig.scheduler.calls == [
+        ("send", "t1", "note\n\n(runner) kuhy answered in the note: Colour: Mono; approved: The sheet")
+    ]
+
+
 @pytest.mark.parametrize("answers", [{}, {"colour": "Mono", "next": "Refine"}])
 def test_t2275_no_answer_or_one_already_delivered_leaves_the_note_as_typed(
     rig: Rig, answers: dict[str, str]

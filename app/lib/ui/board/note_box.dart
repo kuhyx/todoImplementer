@@ -65,7 +65,6 @@ class _NoteBoxState extends State<NoteBox> {
           ),
           IconButton(
             key: const Key('detail-send'),
-            tooltip: action.spoken,
             icon: _busy
                 ? const SizedBox.square(
                     dimension: AppSpacing.md,
