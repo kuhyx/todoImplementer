@@ -43,3 +43,4 @@ Ids are global and never reused; the row's test is titled `[T<N>] ...` (vitest).
 | T2335 | A refused image or a failed picker or camera left no trace; the row shows the reason's glyph in red, the reason as screen-reader text | app/test/ui/send_images_test.dart |
 | T2336 | Eight chips and the keyboard must not push the send button under the keyboard in the New task sheet or the card sheet (Pixel 6a, 300 dp keyboard) | app/test/ui/send_images_test.dart |
 | T2337 | A slow pick or a big paste being shrunk showed no sign of work, so the row looked dead for seconds: a loader naming the wait stands in the reason glyph's place while any image is added | app/test/ui/send_images_test.dart |
+| T2338 | CI's app coverage gate missed T2330 lines: the real `pickImages` (gallery, camera, cancel) ran in no test, so the app job stood at 3375/3383 and no release APK was built | app/test/ui/pick_images_test.dart |
