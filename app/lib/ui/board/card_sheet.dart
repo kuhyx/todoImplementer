@@ -11,6 +11,8 @@ import 'package:todo_implementer/model/board.dart';
 import 'package:todo_implementer/model/json.dart';
 import 'package:todo_implementer/sync/board_relay.dart';
 import 'package:todo_implementer/ui/board/action_bar.dart';
+import 'package:todo_implementer/ui/board/detail_page.dart'
+    show kDetailPatience;
 import 'package:todo_implementer/ui/board/glyphs.dart';
 import 'package:todo_implementer/ui/board/model_picker.dart';
 import 'package:todo_implementer/ui/board/spec_answers.dart';
@@ -76,9 +78,11 @@ class _CardSheetState extends State<CardSheet> {
         await Clipboard.setData(ClipboardData(text: a.value ?? ''));
         await HapticFeedback.selectionClick();
       case 'spec-answers':
+        // Same patience as the detail page (T2314): a dead worker ends in
+        // the failure glyph and a re-enabled action, which is the retry.
         final out = await widget.relay.send('task_detail', {
           'card': widget.card.id,
-        });
+        }, timeout: kDetailPatience);
         if (out is RelayOk) {
           setState(() => _questions = openQuestions(out.data));
         } else {
