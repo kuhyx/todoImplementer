@@ -7,7 +7,8 @@ script left it replays a plain successful turn ending in a `D:` tag. Every call 
 $FAKE_CLAUDE_DIR/calls.jsonl (argv, cwd, prompt, resume, model, CLAUDE_AUTO_CONTINUE, bg_wait).
 
 A script line is either a raw stream-json object (printed with the session id filled in) or a directive
-{"_fake": kind}: text, tool, tool_result, denied, result (optional `denials`), limit, write, sleep, spawn_sleeper, raw, stderr, exit; a first `bare` line
+{"_fake": kind}: text, tool, tool_result, denied, result (optional `denials`), limit, write, sleep, spawn_sleeper, shell (a
+bash child for `sec` seconds, as a background Bash job), raw, stderr, exit; a first `bare` line
 suppresses the init event and the session id.
 """
 
@@ -98,6 +99,8 @@ def run(step: dict, sid: str, cwd: Path) -> int | None:
     elif kind == "spawn_sleeper":
         child = subprocess.Popen(["sleep", "30"])
         Path(step["pidfile"]).write_text(str(child.pid), encoding="utf-8")
+    elif kind == "shell":  # `; :` keeps bash alive: a lone command is exec-replaced
+        subprocess.run(["bash", "-c", f"sleep {step['sec']}; :"], check=False)
     elif kind == "raw":
         sys.stdout.write(step["text"] + "\n")
         sys.stdout.flush()

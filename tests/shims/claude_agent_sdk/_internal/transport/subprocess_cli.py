@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 CLAUDE = Path(__file__).resolve().parents[3] / "claude"
+DEFAULT_MAX_BUFFER = 1024 * 1024  # the real transport's default: a longer stdout line fails the query
 
 
 class SubprocessCLITransport:
@@ -35,7 +36,11 @@ class SubprocessCLITransport:
             argv, cwd=opt.cwd, env=env, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True
         ) as proc:
             assert proc.stdout is not None  # PIPE was asked for
+            limit = opt.max_buffer_size or DEFAULT_MAX_BUFFER
             for line in proc.stdout:
+                if len(line) > limit:
+                    msg = f"JSON message exceeded maximum buffer size of {limit} bytes"
+                    raise RuntimeError(msg)
                 yield json.loads(line)
         if proc.returncode:
             msg = f"Command failed with exit code {proc.returncode}"

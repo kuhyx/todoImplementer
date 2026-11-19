@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from . import orphans
+from . import buildlock, orphans
 from .files import ROUTE_SUFFIX, STREAM_SUFFIX, NeedsYouError, sibling
 from .turnhost import INVOKE_SUFFIX
 
@@ -104,8 +104,14 @@ def turn_timeout() -> float:
 
 
 def _invocation(inv: Invocation) -> str:
-    """Return the host's instructions; the limit travels in the file, so it holds across a server restart."""
-    body = {"argv": list(inv.argv), "cwd": str(inv.cwd), "env": inv.env, "timeout": turn_timeout()}
+    """Return the host's instructions; the limit travels in the file, so it holds across a server restart.
+
+    `lock` names the build lock: the host does not count the time the turn only waits on it (T2270).
+    """
+    body = {
+        "argv": list(inv.argv), "cwd": str(inv.cwd), "env": inv.env, "timeout": turn_timeout(),
+        "lock": str(buildlock.root() / buildlock.LOCK),
+    }  # fmt: skip
     return json.dumps(body)
 
 

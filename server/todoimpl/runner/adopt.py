@@ -26,7 +26,7 @@ if TYPE_CHECKING:
 POLL = 0.05  # a change shows within 100 ms
 START_GRACE = 30.0  # a launched host that has not recorded itself by then never started
 FED_SUFFIX = ".fed"
-IDLE_AFTER_RESULT = 600.0  # a turn silent this long after its result, with no shell running, is ended (T1991)
+IDLE_AFTER_RESULT = 600.0  # a turn silent this long after its result, no shell for 60 s, is ended (T1991)
 WAIT_AFTER = 1.0  # a turn silent this long after its result shows what its background job waits on (T2124)
 SCAN_EVERY = 1.0  # seconds between two looks at that job (a few small /proc reads)
 
@@ -153,7 +153,7 @@ def follow(  # noqa: PLR0913, PLR0917 - the turn's files, parser, feed and its t
     """Feed the turn's stream to `parser` until it is over; return claude's exit code, None if it was lost.
 
     Complete lines only (a partial one waits for the rest); lines below the `.fed` offset are parsed silently.
-    `stop` ends a turn idle after its result (`idle.should_stop`); its exit record then closes it.
+    `stop` ends a turn idle after its result and last shell (`idle.Clock`); its exit record then closes it.
     `waiting` hears what an idle turn's background job waits on, and None once the stream speaks (T2124).
     `watch` hears every new line and judges the turn's wait once it has had no real action for 1 min (T2198).
     """
@@ -163,6 +163,7 @@ def follow(  # noqa: PLR0913, PLR0917 - the turn's files, parser, feed and its t
     pos = 0
     buf = b""
     quiet_since = time.monotonic()
+    clock = idle.Clock(quiet_since)
     waits = _Waits(run_dir, waiting)
     while True:
         if detach.is_set():
@@ -176,6 +177,7 @@ def follow(  # noqa: PLR0913, PLR0917 - the turn's files, parser, feed and its t
             watch.heard(fresh)
         if chunk:
             quiet_since = time.monotonic()
+            clock.heard(quiet_since)
             waits.heard()
             continue
         if ended:
@@ -187,11 +189,8 @@ def follow(  # noqa: PLR0913, PLR0917 - the turn's files, parser, feed and its t
         waits.quiet(finished=parser.result.finished, silent_for=time.monotonic() - quiet_since, pid=pid)
         if watch is not None:
             watch.quiet(pid)
-        if stop is not None and idle.should_stop(
-            finished=parser.result.finished,
-            silent_for=time.monotonic() - quiet_since,
-            limit=IDLE_AFTER_RESULT,
-            claude_pid=pid,
+        if stop is not None and clock.due(
+            finished=parser.result.finished, now=time.monotonic(), limit=IDLE_AFTER_RESULT, claude_pid=pid
         ):
             activity("system", "turn idle after its result: ended, the next turn resumes it", None)
             stop()

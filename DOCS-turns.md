@@ -20,6 +20,10 @@ credits route runs a role on a lesser model than it wanted (every credit turn ru
 A turn has a wall-clock limit: `$TODOIMPL_TURN_TIMEOUT` seconds (default 4 h, above a manager round with coaching).
 The limit travels in `<stem>.invoke.json`, so the turn host enforces it across a server restart: SIGTERM, then
 SIGKILL, `timeout: true` in the exit record, the reason in the stderr log; the run then retries like a crash.
+A turn idle after its result is ended (T1991, `runner/idle.py`) once its stream was silent for 10 min and no shell
+was seen below claude (looked for every 1 s) for the last 60 s. The 60 s let claude take a finished job's notice
+(it takes 0.1 s, at most 5.5 s over 237 notices); without them a job that ran past 10 min had claude stopped the
+instant its shell left, and the notice was lost (T2194). The next turn starts within 1 s of the stop.
 A server-side API error (5xx, overloaded) is retried at most `retry.MAX_API_RETRIES` (12) times on the ladder of
 `DOCS-resilience.md` (about 4 h); after that the run rests in `failed` with "Gave up after N automatic retries:
 <reason>". Waits that kuhy's rules keep unbounded stay so: a lost connection (an outage), the todo app and the live
@@ -71,9 +75,12 @@ across all board sessions and the board's own checks. Code: `server/todoimpl/run
   holder's card, or its command when the card is `?`, and since when it holds); else `⏳ <job command> <HH:MM>`.
   It sits in `state.extra.waits_for`, is saved and announced as a stage event, and is cleared when the stream
   speaks again and when the turn ends.
-- The turn's 4 h clock (`$TODOIMPL_TURN_TIMEOUT`) keeps running while a job waits on the lock. Kept on purpose
-  for now: the host would need the same /proc attribution as the follower to pause it, and the waiter is often
-  outside its tree. A turn queued behind many builds can therefore time out and retry like a crash.
+- The turn's 4 h clock (`$TODOIMPL_TURN_TIMEOUT`) stands still while its only live work waits on the lock
+  (T2270, `runner/turnclock.py`): every 1 s the host checks that the stream did not grow since its last look and
+  that `bgwait.scan` finds a waiter on the lock that is the card's (same attribution as the card's line, also a
+  `systemd-run` job in the run dir). Then the deadline moves on by that second. The lock path travels in
+  `<stem>.invoke.json` (`lock`); a host started by an older server has none and counts every second. A second
+  job that works beside a waiting one also stops the clock; other cards' holds are bounded, so the turn is not.
 - Not locked on purpose: a job started with `systemd-run` that keeps the user manager's PATH (no shims). It may
   outlive the turn, and a server or watcher there would hold the lock for good; the slice caps its memory. A
   job that passes PATH on (a repo's `scripts/bg.sh` does) takes the lock, with `?` as its card.

@@ -23,6 +23,9 @@ if TYPE_CHECKING:
 EVENTS = frozenset({"system", "assistant", "user", "result", "rate_limit_event"})  # not control messages
 TRANSPORT = "claude_agent_sdk._internal.transport.subprocess_cli"
 FAILED = 1
+# One stream line may be a big tool result (a screenshot, a long log); the SDK's 1 MiB default failed credit
+# turns mid-way (T2271). `claude -p` has no such cap; this one only stops a runaway line.
+MAX_LINE = 256 * 1024 * 1024
 
 
 @dataclass
@@ -82,6 +85,7 @@ async def turn(spec: dict[str, Any], seen: Seen) -> None:
         effort=spec.get("effort"),
         mcp_servers=spec.get("mcp_servers", {}),
         strict_mcp_config=spec.get("strict_mcp_config", False),
+        max_buffer_size=MAX_LINE,
         # The SDK sends no Claude Code prompt unless asked; `claude -p` always does.
         system_prompt={"type": "preset", "preset": "claude_code"},
     )

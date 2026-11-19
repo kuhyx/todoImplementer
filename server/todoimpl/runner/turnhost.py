@@ -5,7 +5,8 @@ The host reads `<stem>.invoke.json` (argv, cwd, env; mode 0600, deleted at once:
 claude with stdout going straight into `<stem>.stream.jsonl` (a file, not a pipe: nobody has to be reading),
 fills the pids into `turn.pid`, and when claude exits writes `<stem>.exit.json` atomically. A restarted server
 therefore finds the turn alive, or finished with its result on disk. SIGTERM (a stop of the unit) is passed to
-claude's process group and still ends with an exit record.
+claude's process group and still ends with an exit record. The turn's limit stands still while its only live
+work waits on the build lock (`turnclock`, T2270).
 
 Everything is imported up front and no shell script is involved: an edit of the checkout while a turn runs
 cannot change what a live host does.
@@ -23,11 +24,11 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from . import orphans
+from . import orphans, turnclock
 from .files import EXIT_SUFFIX, STREAM_SUFFIX, sibling, write_json
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
     from types import FrameType
 
 INVOKE_SUFFIX = ".invoke.json"
@@ -73,18 +74,24 @@ def _finish(  # noqa: PLR0913 - the exit record's fields
     return 0
 
 
-def _wait(proc: subprocess.Popen[bytes], stop: Stop, limit: float | None, err: Path) -> tuple[int, bool]:
-    """Wait for claude; past `limit` seconds stop it (reason to the stderr log). Return (code, timed out)."""
-    deadline = None if limit is None else time.monotonic() + limit
+def _wait(
+    proc: subprocess.Popen[bytes], stop: Stop, limit: float | None, err: Path, waiting: Callable[[], bool]
+) -> tuple[int, bool]:
+    """Wait for claude; past `limit` seconds stop it (reason to the stderr log). Return (code, timed out).
+
+    `waiting` says whether the turn only waited on the build lock since its last call: that time is free.
+    """
+    deadline = turnclock.Deadline(limit, time.monotonic(), waiting)
     timed_out = False
     while True:
         try:
             return proc.wait(timeout=TICK), timed_out
         except subprocess.TimeoutExpired:
-            if deadline is not None and not timed_out and time.monotonic() >= deadline:
+            if not timed_out and deadline.passed(time.monotonic()):
                 timed_out = True
                 with err.open("ab") as log:
-                    log.write(f"turn exceeded its {limit:g} s limit: stopped by the host\n".encode())
+                    free = f"{deadline.paused:.0f} s on the build lock not counted"
+                    log.write(f"turn exceeded its {limit:g} s limit, {free}: stopped by the host\n".encode())
                 stop(signal.SIGTERM, None)
             stop.escalate()
 
@@ -97,6 +104,7 @@ def run(run_dir: Path, stem: str, stop: Stop) -> int:
         path.unlink()
         argv, cwd, env = list(inv["argv"]), inv["cwd"], dict(inv["env"])
         limit = float(inv["timeout"]) if inv.get("timeout") is not None else None  # absent: an older server
+        lock = Path(inv["lock"]) if inv.get("lock") else None  # absent: an older server, no pause
     except OSError, ValueError, KeyError, TypeError:
         return _finish(run_dir, stem, BAD_INVOCATION, None, "the invocation file is missing or unreadable")
     rec = orphans.read(run_dir)
@@ -125,7 +133,9 @@ def run(run_dir: Path, stem: str, stop: Stop) -> int:
     orphans.write(
         run_dir, pid=proc.pid, start=orphans.start_of(proc.pid), host_pid=me, host_start=orphans.start_of(me)
     )
-    code, timed_out = _wait(proc, stop, limit, sibling(run_dir, stem, ERR_SUFFIX))
+    stream = sibling(run_dir, stem, STREAM_SUFFIX)
+    waiting = turnclock.LockWait(proc.pid, run_dir, lock, stream)
+    code, timed_out = _wait(proc, stop, limit, sibling(run_dir, stem, ERR_SUFFIX), waiting)
     return _finish(run_dir, stem, code, proc.pid, timed_out=timed_out)
 
 

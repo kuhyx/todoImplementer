@@ -24,6 +24,7 @@ class ClaudeAgentOptions:
     effort: str | None = None
     mcp_servers: dict[str, Any] = field(default_factory=dict)
     strict_mcp_config: bool = False
+    max_buffer_size: int | None = None
 
 
 async def query(*, prompt: str, options: ClaudeAgentOptions, transport: Any) -> AsyncIterator[dict[str, Any]]:

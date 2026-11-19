@@ -63,6 +63,21 @@ def test_t1986_mcp_servers_and_strictness_reach_the_sdk_options(
     assert opt["strict_mcp_config"] is True
 
 
+def test_t2271_a_stream_line_over_one_mib_does_not_fail_the_credit_turn(
+    world: Env, capsys: pytest.CaptureFixture[str]
+) -> None:
+    big = "x" * (2 * 1024 * 1024)  # a large tool result (a screenshot, a long log) is one stream line
+    world.script(
+        "abcd1234",
+        {"_fake": "tool_result", "id": "toolu_1", "text": big},
+        {"_fake": "result", "text": "ok\n\nD: done"},
+    )
+    assert sdkturn.main([spec(world)]) == 0
+    assert lines(capsys)[-1]["result"] == "ok\n\nD: done"
+    (opt,) = options(world)
+    assert opt["max_buffer_size"] == sdkturn.MAX_LINE
+
+
 def test_control_traffic_is_not_printed(capsys: pytest.CaptureFixture[str]) -> None:
     seen = sdkturn.Seen()
     sdkturn.record({"type": "control_response", "response": {}}, seen)

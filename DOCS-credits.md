@@ -95,7 +95,8 @@ as a plan turn. The spec comes from the same `claude.options` as the plan argv (
 allow/deny tools, resume, hooks-off settings, env), plus the model of the `credits_model` setting for every role (default `claude-opus-5-5`, since 2026-11-15; before
 that `sonnet`; the feed and `state.extra.credit_downgrade` say when a role ran on a lesser family than it wanted), `effort`, setting sources
 user/project/local and the Claude Code system prompt. A transport subclass prints the CLI's raw stream-json events,
-so `*.stream.jsonl` has the shape every parser expects. The plan env never has `ANTHROPIC_API_KEY` (it would beat
+so `*.stream.jsonl` has the shape every parser expects. `max_buffer_size` is 256 MiB (`sdkturn.MAX_LINE`, T2271):
+the SDK's 1 MiB default failed credit turns on one big tool result. The plan env never has `ANTHROPIC_API_KEY` (it would beat
 the plan login); the credit env carries it from the 0600 invoke file the host deletes at once. The SDK is pinned
 in `deploy/requirements-sdk.txt`; `scripts/deploy.sh` creates `~/.local/share/todoImplementer/sdk-venv`
 (`$TODOIMPL_SDK_VENV`) once and applies the pin. A missing venv shows as `unavailable` with that text.
