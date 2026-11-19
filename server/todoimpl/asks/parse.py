@@ -26,6 +26,7 @@ class Ask:
     command: str | None = None
     shot: str | None = None
     risk: str = "risky"
+    round: str = ""  # which reply asked it ("" = the note or a part); state is kept per (round, id), T2277
 
 
 def _fields(rest: str) -> tuple[list[str], str | None]:

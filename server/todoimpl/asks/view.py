@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
 from . import allow, store
@@ -29,7 +31,9 @@ def work_asks(body: str, run: RunState | None, parts: Iterable[Part] = ()) -> li
     """Return the asks of the newest reply, else those of the body and of the card's non-manual parts."""
     reply = str(run.extra.get("last_reply", "")) if run is not None else ""
     if found := parse_asks(reply):
-        return found
+        # The reply is the round: an id a later reply asks again is a new ask (T2277).
+        rnd = hashlib.sha256(reply.encode()).hexdigest()[:12]
+        return [replace(a, round=rnd) for a in found]
     return _add(parse_asks(body), parts, manual=False)
 
 
@@ -74,7 +78,7 @@ def items(
     asks = source(body, run, parts)
     if not asks:
         return []
-    data = store.load(directory)
+    data = store.load(directory, asks)
     return [_item(a, data["items"].get(a.id), directory.parent, data["seen"].get(a.id)) for a in asks]
 
 
@@ -92,7 +96,7 @@ def held(body: str, run: RunState | None, directory: Path, parts: Iterable[Part]
     them, so a note never drops an answer. A manual part's answers are kuhy's own and never carried.
     """
     work = work_asks(body, run, parts)
-    records = store.load(directory)["items"]
+    records = store.load(directory, work)["items"]
     if not any(a.type == "choice" and is_open(records.get(a.id)) for a in work):
         return []
     out: list[str] = []

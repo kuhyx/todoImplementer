@@ -73,7 +73,7 @@ class AskService:
 
     def _resolve(self, id8: str, directory: Path, asks: list[Ask], text: str) -> None:
         """Tell the session once no choice is left open; the saved state is already durable."""
-        data = store.load(directory)
+        data = store.load(directory, asks)
         if any(a.type == "choice" and is_open(data["items"].get(a.id)) for a in asks):
             return
         if load(directory) is None:
@@ -83,9 +83,9 @@ class AskService:
         except Exception:
             log.exception("ask answer for %s not delivered", id8)
 
-    def _set(self, directory: Path, ask_id: str, record: dict[str, Any]) -> None:
-        data = store.load(directory)
-        data["items"][ask_id] = {**record, "at": self._clock()}
+    def _set(self, directory: Path, ask: Ask, record: dict[str, Any]) -> None:
+        data = store.load(directory, [ask])
+        data["items"][ask.id] = {**record, "at": self._clock()}
         store.save(directory, data)
         self.cache.poke()  # the last answer may hand a MANUAL part to Claude: rebuild the cards now (T1994)
 
@@ -94,19 +94,19 @@ class AskService:
         ask, asks, directory = self._find(id8, ask_id)
         if ask.type != "choice" or option not in ask.options:
             raise refuse("bad_request", "not an option of this ask")
-        self._set(directory, ask_id, {"state": "answered", "answer": option})
+        self._set(directory, ask, {"state": "answered", "answer": option})
         if ask in asks:  # a manual part's answer beside the session's asks is kuhy's, not news for it
             self._resolve(id8, directory, asks, f"{ask.title}: {option}")
 
     def take_recommended(self, id8: str) -> None:
         """Every open choice the session waits on takes its recommended option (`_scope`)."""
         _all, directory, asks = self._card(id8)
-        data = store.load(directory)
+        data = store.load(directory, asks)
         taken = [a for a in asks if a.type == "choice" and is_open(data["items"].get(a.id))]
         if not taken:
             raise refuse("disabled", "no open choice")
         for ask in taken:
-            self._set(directory, ask.id, {"state": "answered", "answer": ask.recommended})
+            self._set(directory, ask, {"state": "answered", "answer": ask.recommended})
         self._resolve(id8, directory, asks, "; ".join(f"{a.title}: {a.recommended}" for a in taken))
 
     def run_command(self, id8: str, ask_id: str, *, add: bool) -> dict[str, Any]:
@@ -120,23 +120,23 @@ class AskService:
             raise refuse("disabled", "run this one in a terminal")
         run = load(directory)
         result = self._runner(command, Path(run.worktree) if run and run.worktree else None)
-        self._set(directory, ask_id, {"state": "done", "result": result})
+        self._set(directory, ask, {"state": "done", "result": result})
         return result
 
     def undo(self, id8: str, ask_id: str) -> None:
         """Reopen an auto-adopted choice; it never auto-adopts again."""
         ask, _asks, directory = self._find(id8, ask_id)
-        record = store.load(directory)["items"].get(ask_id) or {}
+        record = store.load(directory, [ask])["items"].get(ask_id) or {}
         if ask.type != "choice" or record.get("state") != "auto":
             raise refuse("disabled", "nothing to undo")
-        self._set(directory, ask_id, {"state": "open", "undone": True})
+        self._set(directory, ask, {"state": "open", "undone": True})
 
     def verdict(self, id8: str, ask_id: str, *, approve: bool) -> None:
         """Approve a screenshot, or reject it and send the card back to its session."""
         ask, asks, directory = self._find(id8, ask_id)
         if ask.type != "screenshot":
             raise refuse("bad_request", "not a screenshot ask")
-        self._set(directory, ask_id, {"state": "approved" if approve else "rejected"})
+        self._set(directory, ask, {"state": "approved" if approve else "rejected"})
         if not approve and load(directory) is not None:
             self.scheduler.send(id8, f"(runner) kuhy rejected the screenshot: {ask.title}")
         elif approve and ask in asks:
@@ -156,7 +156,7 @@ class AskService:
 
     def _adopt_card(self, id8: str, directory: Path, lists: tuple[list[Ask], list[Ask]], now: float) -> int:
         asks, scope = lists
-        data = store.load(directory)
+        data = store.load(directory, asks)
         taken = []
         for ask in asks:
             data["seen"].setdefault(ask.id, now)
