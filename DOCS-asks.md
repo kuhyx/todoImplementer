@@ -21,7 +21,8 @@ A malformed block (no single `*`, bad id, duplicate id, unknown risk) yields not
   root, credentials, money, `rm`, `chattr`...) overrides it to `risky`. Untagged is risky. Only `reversible` choices
   auto-adopt their recommended option after 24 h (`AskService.adopt_due`, 5 min tick); the card shows Undo, and an
   undone choice never auto-adopts again. State lives in `<run dir>/asks.json` (first-seen times, answers, log).
-- **Delivery**: once no choice is open, the session gets one `(runner)` message with the answers.
+- **Delivery**: once no choice is open, the session gets one `(runner)` message with the answers. A Send to Claude
+  note sent before then carries the answered ones (T2275), and the note box stays below the questions (T2273).
 - **Manual parts on a repo card** (T2114): their asks always show, also beside the run's newest reply. While the
   session has asks of its own (reply, body or Claude's parts), delivery and Take recommended cover only those, so
   kuhy's open manual asks never hold the session back and a click meant for the session never releases his work.

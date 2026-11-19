@@ -4,7 +4,8 @@ Asserts, per viewport, on the dev mock's real-shaped ask cards (web/src/test/fix
 question body, a multi-line task title, a long recommendation):
  - the drawer covers the whole browser and the content column is centered on it; Details opened gives the side panel back;
  - the bar holds icon-only Details, All-questions (not for a plain Claude question) and Close buttons; no tab strip,
-   no counter, no helper text; the task title is whole and its slot is three lines at most;
+   no counter, no helper text; Send to Claude stays visible below Back/OK (T2273); the task title is whole and
+   its slot is three lines at most;
  - KEY: the top y of the task title, question title, answer box, Back and OK is identical (+-1px) for EVERY question of
    the 5-question card, the 9-question card and the plain Claude question, whatever the text length;
  - title slot, question slot, answer slot and Back/OK do not overlap and sit inside the viewport;
@@ -65,7 +66,10 @@ METRICS = """(() => {
     out.colMid = (c.l + c.r) / 2;
     out.measure = Math.round(c.r - c.l);
     out.tops = {title: tt.t, question: rect(q('.ask-title')).t, answer: bx.t, back: bk.t, ok: k.t};
+    const send = q('.drawer-send');
     out.stack = {slotB: rect(slot).b, qT: q1.t, qB: q1.b, aT: bx.t, aB: bx.b, navT: Math.min(bk.t, k.t)};
+    out.navB = Math.max(bk.b, k.b);
+    out.sendT = vis(send) ? rect(send).t : innerHeight;
     out.okRight = k.l > bk.r && bk.l < out.colMid && k.r > out.colMid;
     out.inside = [bx, bk, k].every((r) => r.l >= 0 && r.r <= innerWidth && r.t >= 0 && r.b <= innerHeight);
     const bodyP = q('.ask-body p');
@@ -94,7 +98,7 @@ def common(m: dict[str, Any], where: str, bar_buttons: int = 3) -> list[str]:
     problems = []
     if m["tabsVisible"]:
         problems.append(f"{where}: the tab strip is visible")
-    if m["sendBox"] or m["sendBtn"] or m["counter"] or m["helper"]:
+    if not m["sendBox"] or not m["sendBtn"] or m["counter"] or m["helper"]:  # T2273: the note box stays
         problems.append(
             f"{where}: send box {m['sendBox']} / send button {m['sendBtn']} / counter {m['counter']} / helper {m['helper']}"
         )
@@ -127,6 +131,10 @@ def one_question(m: dict[str, Any], where: str) -> list[str]:
     s = m.get("stack", {})
     if s and not (s["slotB"] <= s["qT"] + 1 and s["qB"] <= s["aT"] + 1 and s["aB"] <= s["navT"] + 1):
         problems.append(f"{where}: slots overlap {s}")
+    if m.get("navB", 0) > m.get("sendT", 0) + 1:
+        problems.append(
+            f"{where}: Back/OK (bottom {m.get('navB')}) run under the note box (top {m.get('sendT')})"
+        )
     if len(set(m.get("fonts", [1, 2]))) != 1:
         problems.append(f"{where}: title/body/answer typography differs: {m.get('fonts')}")
     return problems

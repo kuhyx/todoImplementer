@@ -85,6 +85,20 @@ def released(body: str, directory: Path) -> bool:
     return bool(asks) and not any(is_open(data["items"].get(a.id)) for a in asks)
 
 
+def held(body: str, run: RunState | None, directory: Path, parts: Iterable[Part] = ()) -> list[str]:
+    """Return `<title>: <answer>` of the session's answered choices that still wait for an open one (T2275).
+
+    The session hears the answers once no choice is open (`AskService._resolve`); a note sent before that
+    carries them, so a note never drops an answer. A manual part's answers are kuhy's own and never carried.
+    """
+    choices = [a for a in work_asks(body, run, parts) if a.type == "choice"]
+    records = store.load(directory)["items"]
+    if not any(is_open(records.get(a.id)) for a in choices):
+        return []
+    found = ((a, records.get(a.id)) for a in choices)
+    return [f"{a.title}: {rec['answer']}" for a, rec in found if rec and not is_open(rec) and "answer" in rec]
+
+
 def decided(body: str, directory: Path) -> list[str]:
     """Return `<title>: <answer>` for every answered choice of the text, in block order."""
     data = store.load(directory)

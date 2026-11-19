@@ -80,8 +80,10 @@ export function buildShell(feed: HTMLElement, handlers: ShellHandlers): HTMLElem
 
 export function paintTabs(root: HTMLElement, detail: null | TaskDetail, active: Tab, onTab: (tab: Tab) => void): void {
   const ask = detail === null ? null : askOf(detail);
+  // Open questions only: answered ones from an earlier turn are history, not a count to clear (T2274).
+  const open = ask?.kind === "spec" ? ask.questions.filter((question) => (question.answer ?? "") === "").length : 0;
   const counts: Partial<Record<Tab, number>> = {
-    ...(ask?.kind === "spec" && { questions: ask.questions.length }),
+    ...(open > 0 && { questions: open }),
     checks: detail?.checks?.results.length ?? 0,
     diff: detail?.diff?.files.length ?? 0,
     live: detail?.live_check?.shots.length ?? 0,

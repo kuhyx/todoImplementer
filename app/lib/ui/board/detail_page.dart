@@ -2,6 +2,7 @@
 /// split into icon tabs (overview with needs, asks, lesson and umbrella;
 /// live feed; plan; diff; checks; live check; issues for an umbrella).
 /// An ask answer reloads the detail so the server's new state shows.
+/// Send to Claude sits under the asks whenever the card offers it (T2276).
 library;
 
 import 'dart:async';
@@ -15,6 +16,7 @@ import 'package:todo_implementer/ui/board/detail_tabs.dart';
 import 'package:todo_implementer/ui/board/glyphs.dart';
 import 'package:todo_implementer/ui/board/live_feed.dart';
 import 'package:todo_implementer/ui/board/needs_links.dart';
+import 'package:todo_implementer/ui/board/note_box.dart';
 import 'package:todo_implementer/ui/board/umbrella_view.dart';
 
 /// The drawer page of [card].
@@ -77,6 +79,20 @@ class _DetailPageState extends State<DetailPage> {
     await _load();
   }
 
+  Future<bool> _note(String text) async {
+    final out = await widget.relay.send('task_send', {
+      'card': widget.card,
+      'args': {'text': text},
+    });
+    if (out is RelayFailed) {
+      widget.onError(out);
+      if (mounted) setState(() => _failure = out);
+      return false;
+    }
+    await _load();
+    return true;
+  }
+
   Widget _overview(TaskDetail d) {
     final needs = d.card.needs;
     final lesson = d.lesson;
@@ -115,6 +131,9 @@ class _DetailPageState extends State<DetailPage> {
           ),
         if (d.asks.isNotEmpty)
           AsksView(asks: d.asks, onSend: _ask, loadShot: _shots),
+        if (d.card.actions.where((a) => a.id == 'send').firstOrNull
+            case final send?)
+          NoteBox(action: send, onSend: _note),
         if (lesson != null)
           ListTile(
             key: const Key('lesson'),

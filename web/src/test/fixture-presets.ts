@@ -38,6 +38,7 @@ export function preset(status: TaskCard["status"], hasRepository: boolean): Pres
           { enabled: true, id: "spec-answers", label: "Send answers", reason: null },
           { enabled: false, id: "spec-ok", label: "Spec OK", reason: "2 questions are still unanswered" },
           CANCEL,
+          SEND,
         ],
         column: "needs_you",
         current: "waiting for your answers",

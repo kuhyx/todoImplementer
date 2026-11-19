@@ -1,8 +1,8 @@
-/* Only-ask mode of the question flow (a card that waits for an answer): the answer view covers the whole browser. */
+/* Only-ask mode of the question flow (a card that waits for an answer): the answer view covers the whole browser.
+   Send to Claude stays below it, so a note never waits for the answers (T2273). */
 
 .drawer--only-ask [data-slot="actions"],
 .drawer--only-ask [data-slot="pending"],
-.drawer--only-ask [data-slot="send"],
 .drawer--only-ask [data-slot="lesson"],
 .drawer--only-ask .dtabs,
 .drawer--only-ask .drawer-chips,

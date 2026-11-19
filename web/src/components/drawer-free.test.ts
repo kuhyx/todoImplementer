@@ -21,9 +21,9 @@ describe("plain Claude question", () => {
     await open(c, { [`GET /api/task/${c.id}`]: freeDetail(), [`POST /api/task/${c.id}/send`]: { ok: true, task: c } });
     expect(q(".drawer").classList.contains("drawer--only-ask")).toBe(true);
     expect(q("[data-details]").hidden).toBe(false);
-    expect(q("[data-slot=send]").hidden).toBe(true);
     expect(document.querySelector("textarea[name=ask-send]")).toBeNull();
-    expect(document.querySelector("[data-action=send]")).toBeNull();
+    // T2273: Send to Claude stays below the question, so a note needs no answer first.
+    expect(q("[data-slot=send]").hidden).toBe(false);
     expect(document.querySelector("[data-ask-mode]")).toBeNull();
     const box = q<HTMLTextAreaElement>("textarea[name=Q1]");
     expect(document.activeElement).toBe(box);

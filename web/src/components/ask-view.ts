@@ -200,10 +200,11 @@ export class AskPanel {
     if (ask === null) return null;
     const root = h("section", { attrs: { "aria-label": "Questions" }, class: "ask" });
     this.#root = root;
-    // The server's spec-answers (or send) action only gates the send: its own button is never drawn (answers send themselves).
+    // The server's spec-answers (or send) action only gates the send: spec-answers is never drawn (answers send
+    // themselves); send stays with the note box below, which is always offered next to the questions (T2273).
     const gate = this.#free ? "send" : "spec-answers";
     const action = detail.card.actions.find((candidate) => candidate.id === gate);
-    act(gate);
+    if (!this.#free) act(gate);
     this.#interactive = true;
     this.#offered = action !== undefined;
     this.#note = action === undefined || action.enabled ? null : (action.reason ?? "");
