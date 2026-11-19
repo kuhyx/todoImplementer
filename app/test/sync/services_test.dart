@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:rtdb_relay/rtdb_relay.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:todo_implementer/config/firebase_config.dart';
 import 'package:todo_implementer/sync/rtdb_board_relay.dart';
@@ -38,5 +39,23 @@ void main() {
     expect(s.sessions, isNotNull);
     expect((s.relay as RtdbBoardRelay).moves(), isA<Stream<int>>());
     expect(FirebaseConfig.compiled, isA<FirebaseConfig>());
+  });
+
+  test('[T2310] the production relay really listens to live/{card}', () async {
+    SharedPreferences.setMockInitialValues({'todoimpl.device_id': 'd1'});
+    const config = FirebaseConfig(
+      apiKey: 'k',
+      databaseUrl: 'https://db.example',
+      syncUid: 'u',
+      serverClientId: 'w',
+    );
+    final relay = (await AppServices.open(config)).relay as RtdbBoardRelay;
+    // Not signed in: the real listen reports its failed connect instead of
+    // ending at once with no event, as the unwired default did.
+    final first = await relay
+        .listen('todoimpl/v1-e2e/live/c1')
+        .first
+        .timeout(const Duration(seconds: 5));
+    expect(first, isA<RtdbDisconnected>());
   });
 }

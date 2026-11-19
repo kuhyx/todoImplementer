@@ -61,6 +61,10 @@ class AppServices {
       dev: dev,
       watch: hub.watch,
       moves: () => rev.changesOf('board'),
+      // Without these the relay falls back to never-emitting seams: the
+      // live feed spun forever and merges never refreshed (T2310).
+      revOf: rev.changesOf,
+      listen: stream.listen,
     );
     return AppServices(
       config: config,
