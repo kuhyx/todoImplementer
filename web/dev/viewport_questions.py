@@ -34,7 +34,7 @@ METRICS = """(() => {
   const font = (e) => { const s = getComputedStyle(e); return s.fontSize + '/' + s.lineHeight + '/' + s.fontFamily; };
   // One text line as the browser lays it out (4K runs zoomed, so computed line heights are not on-screen pixels).
   const oneLine = (e) => { const p = document.createElement('span'); p.textContent = 'x'; p.style.display = 'block'; e.append(p); const h = p.getBoundingClientRect().height; p.remove(); return h; };
-  const box = q('textarea[name]');
+  const box = q('.drawer textarea[name]');
   const center = q('.ask-center');
   const drawer = q('.drawer');
   const title = q('.drawer-title');
@@ -44,13 +44,13 @@ METRICS = """(() => {
   const out = {
     focused: !!box && document.activeElement === box,
     boxChars: box ? box.value.length : 0,
-    cards: document.querySelectorAll('.ask .ask-card').length,
-    boxes: document.querySelectorAll('.ask textarea').length,
+    cards: document.querySelectorAll('.drawer .ask .ask-card').length,
+    boxes: document.querySelectorAll('.drawer .ask textarea').length,
     qtitle: (q('.ask-title') || {}).innerText || '',
     sendBox: vis(q('.drawer-send')),
     sendBtn: vis(q('[data-action=send]')),
     tabsVisible: vis(q('.dtabs')),
-    counter: !!q('.ask-page') || /\\d+ \\/ \\d+/.test((q('.ask') || {innerText: ''}).innerText),
+    counter: !!q('.ask-page') || /\\d+ \\/ \\d+/.test((q('.drawer .ask') || {innerText: ''}).innerText),
     helper: /Your answer|Recommended|One by one/.test(document.body.innerText),
     barNames: bar.map((b) => (b.getAttribute('aria-label') || '') + '|' + (b.title || '') + '|' + b.innerText.trim()),
     titleWhole: title ? title.scrollHeight <= title.clientHeight + 1 && getComputedStyle(title).textOverflow === 'clip' : false,
@@ -192,7 +192,7 @@ def step_questions(cdp: Cdp, url: str, out: Path, tag: str) -> dict[str, Any]:
         every += tops
     problems += same_slots(every)
     problems += probe(
-        cdp, ["textarea[name=Q1]", "[data-ask=back]", "[data-ask=accept]", ".drawer-bar button"]
+        cdp, [".drawer textarea[name=Q1]", "[data-ask=back]", "[data-ask=accept]", ".drawer-bar button"]
     )["problems"]
     problems += all_view_and_details(cdp, out, tag)
     return {"problems": problems, "tops": every[:1]}
