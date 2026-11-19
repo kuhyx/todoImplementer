@@ -15,7 +15,7 @@ from todoimpl.http.backend import BackendError
 
 from . import allow, cmdrun, store
 from .parse import Ask
-from .view import DAY, is_open, source
+from .view import DAY, is_open, source, work_asks
 
 if TYPE_CHECKING:
     from todoimpl.service.cache import TaskCache
@@ -52,22 +52,24 @@ class AskService:
             runner,
         )
 
-    def _card(self, id8: str) -> tuple[list[Ask], Path]:
+    def _card(self, id8: str) -> tuple[list[Ask], Path, list[Ask]]:
+        """Return the card's asks, its run dir and the asks the session waits on (`_scope`)."""
         task = next((t for t in self.cache.snapshot().tasks if t.id == id8), None)
         if task is None:
             raise refuse("not_found", "unknown task")
         directory = run_dir(self.root, id8)
-        asks = source(task.body, load(directory), task.parts)
+        run = load(directory)
+        asks = source(task.body, run, task.parts)
         if not asks:
             raise refuse("disabled", "this card has no asks")
-        return asks, directory
+        return asks, directory, _scope(asks, work_asks(task.body, run, task.parts))
 
     def _find(self, id8: str, ask_id: str) -> tuple[Ask, list[Ask], Path]:
-        asks, directory = self._card(id8)
+        asks, directory, scope = self._card(id8)
         ask = next((a for a in asks if a.id == ask_id), None)
         if ask is None:
             raise refuse("not_found", "no such ask")
-        return ask, asks, directory
+        return ask, scope, directory
 
     def _resolve(self, id8: str, directory: Path, asks: list[Ask], text: str) -> None:
         """Tell the session once no choice is left open; the saved state is already durable."""
@@ -93,11 +95,12 @@ class AskService:
         if ask.type != "choice" or option not in ask.options:
             raise refuse("bad_request", "not an option of this ask")
         self._set(directory, ask_id, {"state": "answered", "answer": option})
-        self._resolve(id8, directory, asks, f"{ask.title}: {option}")
+        if ask in asks:  # a manual part's answer beside the session's asks is kuhy's, not news for it
+            self._resolve(id8, directory, asks, f"{ask.title}: {option}")
 
     def take_recommended(self, id8: str) -> None:
-        """Every open choice takes its recommended option."""
-        asks, directory = self._card(id8)
+        """Every open choice the session waits on takes its recommended option (`_scope`)."""
+        _all, directory, asks = self._card(id8)
         data = store.load(directory)
         taken = [a for a in asks if a.type == "choice" and is_open(data["items"].get(a.id))]
         if not taken:
@@ -136,7 +139,7 @@ class AskService:
         self._set(directory, ask_id, {"state": "approved" if approve else "rejected"})
         if not approve and load(directory) is not None:
             self.scheduler.send(id8, f"(runner) kuhy rejected the screenshot: {ask.title}")
-        elif approve:
+        elif approve and ask in asks:
             self._resolve(id8, directory, asks, f"approved: {ask.title}")
 
     def adopt_due(self) -> int:
@@ -144,12 +147,15 @@ class AskService:
         now, count = self._clock(), 0
         for task in self.cache.snapshot().tasks:
             directory = run_dir(self.root, task.id)
-            asks = source(task.body, load(directory), task.parts)
+            run = load(directory)
+            asks = source(task.body, run, task.parts)
             if asks:
-                count += self._adopt_card(task.id, directory, asks, now)
+                scope = _scope(asks, work_asks(task.body, run, task.parts))
+                count += self._adopt_card(task.id, directory, (asks, scope), now)
         return count
 
-    def _adopt_card(self, id8: str, directory: Path, asks: list[Ask], now: float) -> int:
+    def _adopt_card(self, id8: str, directory: Path, lists: tuple[list[Ask], list[Ask]], now: float) -> int:
+        asks, scope = lists
         data = store.load(directory)
         taken = []
         for ask in asks:
@@ -167,9 +173,9 @@ class AskService:
                 data["log"].append(f"auto-adopted {ask.id}: {ask.recommended}")
                 taken.append(ask)
         store.save(directory, data)
-        if taken:
+        if news := [a for a in taken if a in scope]:
             self._resolve(
-                id8, directory, asks, "; ".join(f"{a.title}: {a.recommended} (auto)" for a in taken)
+                id8, directory, scope, "; ".join(f"{a.title}: {a.recommended} (auto)" for a in news)
             )
         return len(taken)
 
@@ -185,3 +191,12 @@ class AskService:
                 time.sleep(TICK)
 
         threading.Thread(target=loop, name="ask-adopt", daemon=True).start()
+
+
+def _scope(asks: list[Ask], work: list[Ask]) -> list[Ask]:
+    """Return the asks delivery and Take recommended cover: the work's, else (only manual ones) all.
+
+    On a repo card a manual part's asks sit beside the session's (T2114): they must neither hold back the
+    session's answers nor be answered by a click meant for the session, which would release kuhy's work.
+    """
+    return work or asks
