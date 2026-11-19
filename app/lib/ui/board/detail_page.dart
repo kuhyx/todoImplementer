@@ -14,6 +14,7 @@ import 'package:todo_implementer/ui/board/asks_view.dart';
 import 'package:todo_implementer/ui/board/detail_tabs.dart';
 import 'package:todo_implementer/ui/board/glyphs.dart';
 import 'package:todo_implementer/ui/board/live_feed.dart';
+import 'package:todo_implementer/ui/board/needs_links.dart';
 import 'package:todo_implementer/ui/board/umbrella_view.dart';
 
 /// The drawer page of [card].
@@ -99,6 +100,7 @@ class _DetailPageState extends State<DetailPage> {
                     style: const TextStyle(fontFamily: 'monospace'),
                   ),
           ),
+        if (needs != null) NeedsLinks(links: needs.links),
         if (d.error case final e? when e != needs?.text)
           ListTile(
             key: const Key('detail-error'),

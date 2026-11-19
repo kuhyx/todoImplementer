@@ -71,6 +71,7 @@ class Needs {
     required this.category,
     required this.effort,
     this.command,
+    this.links = const [],
   });
 
   /// Parses it.
@@ -80,6 +81,7 @@ class Needs {
     category: str(j, 'category'),
     effort: intOr(j, 'effort') ?? 1,
     command: strOr(j, 'command'),
+    links: strs(j, 'links'),
   );
 
   /// `spec_questions`, `run_failed`, ...
@@ -96,4 +98,7 @@ class Needs {
 
   /// permission: the one-line grant command.
   final String? command;
+
+  /// Absolute http(s) pages the ask names; empty when it names none.
+  final List<String> links;
 }

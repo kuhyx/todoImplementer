@@ -3,6 +3,7 @@ import type { ActionId } from "@/lib/schemas-common";
 
 /** Drawer sections that depend only on the task detail. Buttons are supplied by the caller from actions[]. */
 import { autoBadge, routeChip, statusChip, tierBadges, triageBadge } from "@/components/card";
+import { renderNeedsLinks } from "@/components/needs-links";
 import { renderParts, waitsBadge } from "@/components/repo-parts";
 import { renderUmbrella } from "@/components/umbrella";
 import { type Child, h } from "@/lib/dom";
@@ -39,6 +40,7 @@ export function renderNeeds(detail: TaskDetail, isQuiet = false): HTMLElement | 
     { attrs: { "data-kind": needs.kind }, class: "needs" },
     h("strong", { text: humanize(needs.kind) }),
     h("p", { text: needs.text }),
+    renderNeedsLinks(needs.links),
     needs.command !== undefined && h("code", { attrs: { "data-fix-command": "" }, class: "fix-command", text: needs.command }),
     // A failed run's need text is usually its error verbatim (T1950): say it once.
     detail.error !== null && detail.error !== needs.text && h("p", { class: "needs-error", text: detail.error }),

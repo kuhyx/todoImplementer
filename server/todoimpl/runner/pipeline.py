@@ -16,6 +16,7 @@ from . import checks, deploy, phone, resume, retry, tags, tiering, turncheck, wo
 from .askform import needs_form
 from .files import KilledError, NeedsYouError
 from .grant import auto_grant
+from .linknudge import needs_link
 from .permit import gate, with_grant
 from .prompting import Ask, prompt_for
 from .repolock import RepoLocks
@@ -215,7 +216,7 @@ class Driver:
             st.extra["r_continue"] = True
             return self.turn(role, stage, failure_tail=failure_tail, prompt=prompt)
         resume.rest(self, res, stage)  # a wait or resume line of Claude's own rests on the ladder (T2104)
-        if gate(self, res, stage) or auto_grant(self, res, stage) or needs_form(self, res, stage):
+        if any(note(self, res, stage) for note in (gate, auto_grant, needs_form, needs_link)):
             return self.turn(role, stage, failure_tail=failure_tail, prompt=prompt)
         return self._finished(res, role, stage)
 

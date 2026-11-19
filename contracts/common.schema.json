@@ -37,6 +37,7 @@
         "kind": {"$ref": "#/$defs/needs_kind"}, "text": {"type": "string", "minLength": 1},
         "category": {"enum": ["questions", "criteria", "action", "auto", "phone", "permission"], "description": "auto: the server heals it itself. phone: waiting for the phone."},
         "command": {"type": "string", "minLength": 1, "description": "permission only: the one-line command that grants it (works from any directory)."},
+        "links": {"type": "array", "minItems": 1, "maxItems": 5, "uniqueItems": true, "items": {"type": "string", "pattern": "^https?://\\S+$"}, "description": "Absolute http(s) pages the ask names (a bare route is resolved against an own-host URL of the reply); present only when there are any. The page renders each as a link glyph."},
         "effort": {"type": "integer", "minimum": 1, "description": "Server-computed answers or clicks needed (open questions count one each); Least effort sorts by it, ascending, across repos."}
       },
       "required": ["kind", "text", "category", "effort"],

@@ -108,3 +108,13 @@ def test_t2048_the_session_answers_with_a_block_and_the_card_gets_buttons(world:
         assert [a.id for a in parse_asks(str(st.extra["last_reply"]))] == ["c1"]
     finally:
         sched.close()
+
+
+def test_t2134_a_rejected_ask_block_is_named_in_the_note() -> None:
+    bad = "```ask\nchoice c1: pick | one | two\n```\n\nA: Pick one above."
+    driver, _ = _driver(bad)
+    assert askform.needs_form(driver, _res(), "implement")
+    note = driver.state.extra["granted_note"]
+    assert "Your ask block was rejected" in note
+    assert "exactly one * option" in note
+    assert "choice c1: pick" in note

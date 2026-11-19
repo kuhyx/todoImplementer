@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING
 
 from .ask import NO_REPLY, concrete_ask
+from .links import scan
 
 if TYPE_CHECKING:
     from .state import RunState
@@ -22,6 +23,7 @@ class Needs:
     category: str = "action"
     effort: int = 3
     command: str | None = None
+    links: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, object]:
         """Return the contract object (`command` only for a permission block that has a one-liner)."""
@@ -33,6 +35,8 @@ class Needs:
         }
         if self.command:
             out["command"] = self.command
+        if self.links:
+            out["links"] = list(self.links)
         return out
 
 
@@ -80,8 +84,13 @@ def _red_checks(run: RunState) -> str:
     )
 
 
-def needs(run: RunState) -> Needs:  # noqa: PLR0911 - one return per kind
-    """Return the Needs for a run whose status is NEEDS_YOU."""
+def needs(run: RunState) -> Needs:
+    """Return the Needs for a run whose status is NEEDS_YOU, with the pages its ask names as links (T2135)."""
+    found = _kind(run)
+    return replace(found, links=scan(found.text, str(run.extra.get("last_reply", ""))).urls)
+
+
+def _kind(run: RunState) -> Needs:  # noqa: PLR0911 - one return per kind
     err = run.error
     if (phone := _phone_needs(run)) is not None:
         return phone

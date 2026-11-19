@@ -39,6 +39,7 @@ export const needs = z
     command: z.string().min(1).optional(),
     effort: z.number().int().min(1),
     kind: z.enum(NEEDS_KINDS),
+    links: z.array(z.string().regex(/^https?:\/\/\S+$/)).min(1).max(5).optional(),
     text: z.string().min(1),
   })
   .nullable();

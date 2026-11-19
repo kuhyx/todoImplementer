@@ -27,6 +27,10 @@ GRANT = (
     "When you do need kuhy, put it in a fenced `ask` block, one line each: "
     "`choice <id>: <title> | opt | *recommended | risk=reversible`, `command <id>: <exact command>`, "
     "`screenshot <id>: <what to check> | shots/<name>.png`; the board shows buttons, never prose. "
+    "Anything kuhy must look at (a logo, a layout, a page, a result) goes into the task itself: save "
+    "pictures under `{run_dir}/shots/` and show them with a `screenshot` line; never tell him to open a "
+    "bare path. "
+    "If a page truly must be opened, give its full absolute URL (scheme, host, port, path). "
     "Do everything else yourself and log the automatic choice."
 )
 DEPLOY = (

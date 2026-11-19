@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from todoimpl.asks.parse import parse_asks
+from todoimpl.asks.parse import diagnose, parse_asks
 from todoimpl.errors.marks import unattended
 
 from .grant import NOT_FOR
@@ -31,8 +31,11 @@ FORM = (
     "(2 to 8 options, exactly one `*`; one `choice` line per decision); "
     "a step he must take is `command <id>: <exact command>` "
     "or `screenshot <id>: <what to check> | shots/<name>.png`. "
+    "Anything he must look at goes into the task itself (a `screenshot` line, a `choice`), never "
+    "`open <path>`; a page that must be opened gets its full absolute URL. "
     "Name the exact step, never `check it`, `confirm it` or `decide`."
 )
+REJECTED = "(runner) Your ask block was rejected, so kuhy saw none of it. The line that broke it:\n"
 MAX_FORMS = 1  # per stage; the count clears when a turn ends on anything but `A:`
 MAX_FORMS_RUN = 2  # per run, cleared by Start, Retry and a note from kuhy
 RUN_KEY = "ask_form_total"
@@ -55,7 +58,8 @@ def needs_form(driver: Driver, res: TurnResult, stage: str) -> bool:
         return False
     given[stage] = given.get(stage, 0) + 1
     st.extra[RUN_KEY] = total + 1
-    st.extra["granted_note"] = FORM
+    problem = diagnose(reply)
+    st.extra["granted_note"] = FORM if problem is None else f"{REJECTED}{problem}\n\n{FORM}"
     driver.save()  # before the turn starts: a restart during it must not send the same ask back twice
     driver.activity("the A: has no ask block, the session resumes to write one")
     return True

@@ -143,3 +143,12 @@ def test_t1969_implement_tells_a_repo_without_a_deploy_line_to_add_one(ctx: Prom
     assert "idempotent" in text
     assert "Never uninstall an app or `pm clear`" in text
     assert "git -C ~/src/<repo> pull --ff-only" in text
+
+
+@pytest.mark.parametrize("stage", ["implement", "fix", "live_check", "fresh_after_idle", "resume_after_kill"])
+def test_t2135_what_kuhy_must_look_at_goes_into_the_task_not_a_path(stage: str, ctx: PromptContext) -> None:
+    text = build(stage, ctx)
+    assert "goes into the task itself" in text
+    assert "/run/ab12cd34/shots/" in text
+    assert "never tell him to open a bare path" in text
+    assert "full absolute URL" in text

@@ -36,3 +36,14 @@ runner resumes the session once per stage and twice per run (`extra["ask_forms"]
 run any phone, device or E2E check yourself, and write a `choice` per decision or a `command` / `screenshot` for the
 exact step kuhy must take. Skipped for `spec`/`plan`, phone waits, error runs and umbrella children. After the budget
 the card parks with the old free-text ask.
+
+Ids: `[a-z][a-z0-9_-]{0,15}`; a hyphen reads as an underscore (`logo-pick` is `logo_pick`, T2134). A block that still
+fails makes the form note above quote the line that broke it and why (`parse.diagnose`).
+
+Pages (T2135, `board/links.py`): what kuhy must look at belongs in the task itself (a `screenshot` ask, a `choice`), never
+"open /path". When a Needs-you ask names a page anyway, `needs.links` carries it as an absolute http(s) URL (the ask's own
+URLs; a route after a cue verb such as `open /logo-lab` resolves against the first loopback or `*.duckdns.org` URL of the
+ask or last reply). The web drawer draws a link glyph per URL, the app a glyph that copies it (no browser dependency).
+A route with no known host is not concrete: an `A:` that says it and has no valid ask block goes back to its session
+(`runner/linknudge.py`, `link_nudges`, twice per run, cleared by Start, Retry and a note) to put the content in the task.
+Nothing records a per-repo base URL; add one before resolving a route without a host in the reply.
