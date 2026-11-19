@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 from todoimpl.apikey import cache
+from todoimpl.board import clone as clones
 from todoimpl.relay.status import NOTIFY, STATUS
 
 
@@ -118,3 +119,11 @@ def _no_real_relay(monkeypatch: pytest.MonkeyPatch) -> None:
 def _no_real_uploads(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch) -> None:
     """Stage new-task attachments in a temp dir: kuhy's real `$TODOIMPL_HOME/uploads` is never touched."""
     monkeypatch.setenv("TODOIMPL_UPLOADS_ROOT", str(tmp_path_factory.mktemp("uploads")))
+
+
+@pytest.fixture(autouse=True)
+def _no_real_checkouts(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch) -> None:
+    """No repo is found in kuhy's real ~/.claude or testsAndMisc, no override file is read, no `gh` clone."""
+    monkeypatch.setenv("TODOIMPL_REPO_ROOTS", "")
+    monkeypatch.setenv("TODOIMPL_REPO_PATHS", str(tmp_path_factory.mktemp("repo-paths") / "repo-paths.json"))
+    monkeypatch.setattr(clones, "GH", "gh-disabled-in-tests")

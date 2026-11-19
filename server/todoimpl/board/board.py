@@ -11,7 +11,6 @@ from todoimpl.asks.view import items as ask_items
 from todoimpl.runner.parsing import parse_questions
 
 from .card import Context, build_card
-from .repos import is_clone_of, repo_path
 from .umbrella import detail
 
 if TYPE_CHECKING:
@@ -28,19 +27,15 @@ COLUMNS = (
 )
 
 
-def repo_checker(src_root: Path | None = None) -> Callable[[str | None], str | None]:
-    """Return a function mapping a note's repo to its display path when that is not a git repo on disk.
+def repo_checker() -> Callable[[str | None], str | None]:
+    """Return a function mapping a note's repo to its display path when an absolute repo is not a git repo.
 
-    A relative repo is looked up under `src_root` (`$TODOIMPL_SRC`, default `~/src`); absolute and `~` as is.
+    A relative repo (`owner/name`) is never missing: Start finds its checkout by origin or clones it (T2079).
     """
 
     def missing(repo: str | None) -> str | None:
-        if not repo:
-            return None
-        path = Path(repo).expanduser()
-        found = path.is_absolute()
-        path = path if found else repo_path(repo, src_root)
-        if (path / ".git").exists() if found else is_clone_of(path, repo):
+        path = Path(repo).expanduser() if repo else None
+        if path is None or not path.is_absolute() or (path / ".git").exists():
             return None
         home = str(Path.home())
         text = str(path)

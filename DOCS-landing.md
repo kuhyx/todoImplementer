@@ -36,6 +36,25 @@ cleared by Start, Retry and a note from kuhy). The count is saved before the gra
 grant the same ask twice. A further ask parks the card as before. Not used in the spec and plan stages, nor while a
 phone wait is set. No LLM. The standing grant tells sessions the same: never end on `A:` for what you can run.
 
+## Where a repo lives (kuhy, 2026-11-19; `board/repos.py`, `board/clone.py`, T2079)
+
+The board used to assume `~/src/<name>`; claude-config lives in `~/.claude`, so its Start said "repo not found".
+`repo_path` is the one resolver (board check, runner `repo_dir`, ship, deploy, closing, triage), in this order:
+
+1. The override file `~/.config/todoImplementer/repo-paths.json` (`$TODOIMPL_REPO_PATHS`): `{"owner/name": "/abs/path"}`.
+2. `~/src/<name>` (`$TODOIMPL_SRC`), unless its origin is some other repo.
+3. A map from origin remote (`github.com/<owner>/<name>`, https or ssh, case-blind) to checkout, built by one-level
+   scans of `~/src/*`, `~/src/testsAndMisc/*`, `~/praca_magisterska` and its children, and `~/.claude`
+   (`$TODOIMPL_REPO_ROOTS`, an `os.pathsep` list, replaces all but `~/src`). Kept 10 min; rebuilt on any miss and when
+   a hit's checkout is gone. Never a recursive walk of `~`.
+4. Nothing found: `~/src/<name>`, the path Start clones into.
+
+A relative repo is never "missing" on the board. The first attach of a run (`repo_dir(clone=True)`) with no checkout
+runs `gh repo clone owner/name ~/src/<name>` (15 min cap), as the new-repo flow does; a failed clone ends the run in
+Needs you (`run_failed`, Retry works) with gh's error. Absolute-path repos still show "repo <path> not found".
+Sessions work in their own worktree off the resolved checkout; Ship, closing and deploy run there too, so claude-config
+deploys with a pull in `~/.claude` (`- deploy:` line of its CLAUDE.md: a ff-only pull there).
+
 ## Rebase on every drive (`runner/worktree.py`, T1864)
 
 `attach` runs at the start of each drive: fetch, then `git rebase --autostash origin/<base>` in a reused worktree,

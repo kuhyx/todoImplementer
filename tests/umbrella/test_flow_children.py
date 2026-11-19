@@ -76,7 +76,7 @@ def test_a_missing_clone_fails_that_child_and_retry_picks_it_up(world: Env, free
         st = at_rest(world, sched, "failed")
         assert "1 of 2 children need you: kuhyx/alpha" in str(st.error)
         assert st.extra["umbrella"]["rounds"][0]["children"][0]["detail"].startswith(
-            "Repo kuhyx/alpha is not cloned"
+            "Repo kuhyx/alpha has no local clone"
         )
         make_repo(world, "alpha")
         world.script("umbr0001-1", {"_fake": "result", "text": "C1: done\n\nD: done"})

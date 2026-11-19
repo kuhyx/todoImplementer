@@ -89,14 +89,27 @@ def test_unknown_runs_and_wrong_stages_are_refused(world: Env) -> None:
         sched.close()
 
 
-def test_missing_repo_hands_the_item_to_kuhy(world: Env) -> None:
+def test_missing_repo_that_cannot_be_cloned_fails_with_the_clone_error(world: Env) -> None:
     sched, _ = boot(world, repo="kuhyx/missing", done_check="true")
+    try:
+        sched.start(CARD)
+        st = wait_stage(world, sched, "failed")
+        assert st.error is not None
+        assert "no local clone" in st.error
+        assert "gh-disabled-in-tests" in st.error  # T2079: Start tries `gh repo clone` first
+        assert world.calls() == []
+    finally:
+        sched.close()
+
+
+def test_a_note_with_no_repo_is_handed_to_kuhy(world: Env) -> None:
+    sched, _ = boot(world, repo=None, done_check="true")
     try:
         sched.start(CARD)
         st = wait_stage(world, sched, "failed")
         assert st.assignee == "human"
         assert st.error is not None
-        assert "not cloned" in st.error
+        assert "no repo" in st.error
         assert world.calls() == []
     finally:
         sched.close()

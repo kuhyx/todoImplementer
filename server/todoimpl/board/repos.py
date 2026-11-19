@@ -1,14 +1,23 @@
-"""Where a note's repo is cloned: the one rule the board's repo check and the runner's repo_dir share."""
+"""Where a note's repo is checked out: the one rule the board's repo check and the runner's repo_dir share.
+
+Order (T2079, DOCS-landing.md "Where a repo lives"): the override file, `<src>/<name>`, then a cached map from
+origin remote to checkout built over a few likely roots, else `<src>/<name>` (which Start then clones).
+"""
 
 from __future__ import annotations
 
+import json
 import os
 import re
+import time
 from pathlib import Path
 
 OWNER = "kuhyx"  # this owner (or a bare name) runs from `<src>/<name>` whatever its origin
-_FOUND: dict[tuple[Path, str], Path] = {}  # (src root, repo) -> clone found by origin URL
+REFRESH_S = 600.0  # the origin map is rebuilt at most this often, and on any miss
+_clock = time.monotonic
+_MAPS: dict[tuple[Path, tuple[Path, ...], tuple[Path, ...]], tuple[float, dict[str, Path]]] = {}
 _ORIGIN = re.compile(r'\[remote "origin"\][^\[]*?^\s*url\s*=\s*(\S+)', re.MULTILINE)
+_SLUG = re.compile(r"[/:]([^/:\s]+)/([^/\s]+?)(?:\.git)?/?$")
 
 
 def _origin_url(clone: Path) -> str | None:
@@ -21,43 +30,96 @@ def _origin_url(clone: Path) -> str | None:
     return None if found is None else found.group(1).removesuffix(".git")
 
 
-def _origin_matches(clone: Path, repo: str) -> bool:
-    """Say whether the clone origin URL ends in `<owner>/<name>` (https or ssh, optional .git)."""
+def _slug(clone: Path) -> str | None:
+    """Return the clone's origin as lower-case `owner/name` (https or ssh), else None."""
     url = _origin_url(clone)
-    return url is not None and url.endswith((f"/{repo}", f":{repo}"))
+    found = None if url is None else _SLUG.search(url)
+    return None if found is None else f"{found.group(1)}/{found.group(2)}".lower()
 
 
-def _scan(base: Path, repo: str) -> Path | None:
-    """One level of `<base>/*/` for a checkout of `repo`; a vanished clone drops out of the cache."""
-    cached = _FOUND.get((base, repo))
-    if cached is not None and (cached / ".git").exists():
-        return cached
-    _FOUND.pop((base, repo), None)
+def _origin_matches(clone: Path, repo: str) -> bool:
+    """Say whether the clone's origin is `repo` (`owner/name`, case-blind)."""
+    return _slug(clone) == repo.lower()
+
+
+def _roots(base: Path) -> tuple[tuple[Path, ...], tuple[Path, ...]]:
+    """Return (checkouts that may themselves be a repo, directories whose children may be repos).
+
+    $TODOIMPL_REPO_ROOTS (os.pathsep list) replaces the defaults; the src root is always searched.
+    """
+    given = os.environ.get("TODOIMPL_REPO_ROOTS")
+    if given is not None:
+        roots = tuple(Path(part) for part in given.split(os.pathsep) if part)
+        return roots, (base, *roots)
+    home = Path.home()
+    return (home / ".claude", home / "praca_magisterska"), (
+        base,
+        base / "testsAndMisc",
+        home / "praca_magisterska",
+    )
+
+
+def _build(base: Path) -> dict[str, Path]:
+    """Scan the roots, one level deep, for git checkouts; the first checkout of an origin wins."""
+    singles, containers = _roots(base)
+    found: dict[str, Path] = {}
+    for container in containers:
+        try:
+            children = sorted(p for p in container.iterdir() if p.is_dir())
+        except OSError:
+            continue
+        for child in children:
+            if (slug := _slug(child)) is not None:
+                found.setdefault(slug, child)
+    for single in singles:
+        if (slug := _slug(single)) is not None:
+            found.setdefault(slug, single)
+    return found
+
+
+def _lookup(base: Path, repo: str) -> Path | None:
+    """Return the checkout of `owner/name` from the cached map; a miss or a stale map rebuilds it first."""
+    key = (base, *_roots(base))
+    now = _clock()
+    cached = _MAPS.get(key)
+    if cached is not None and now - cached[0] < REFRESH_S:
+        hit = cached[1].get(repo.lower())
+        if hit is not None and (hit / ".git").exists():
+            return hit
+    found = _build(base)
+    _MAPS[key] = (now, found)
+    return found.get(repo.lower())
+
+
+def _pinned(repo: str) -> Path | None:
+    """Return the directory the override file maps `repo` to (`{"owner/name": "/abs"}`), if it is one."""
+    given = os.environ.get("TODOIMPL_REPO_PATHS")
+    path = Path(given) if given else Path.home() / ".config" / "todoImplementer" / "repo-paths.json"
     try:
-        children = sorted(p for p in base.iterdir() if p.is_dir())
-    except OSError:
+        table = json.loads(path.read_text(encoding="utf-8"))
+    except OSError, ValueError:
         return None
-    for child in children:
-        if _origin_matches(child, repo):
-            _FOUND[(base, repo)] = child
-            return child
-    return None
+    where = table.get(repo) if isinstance(table, dict) else None
+    pinned = Path(where).expanduser() if isinstance(where, str) else None
+    return pinned if pinned is not None and pinned.is_dir() else None
 
 
 def repo_path(repo: str, src_root: Path | None = None) -> Path:
-    """Return the clone of `owner/name`: `<src root>/<name>`, else the checkout whose origin is that repo.
+    """Return the checkout of `owner/name` (a bare name is `kuhyx/<name>`).
 
-    A `<name>` directory whose origin is some other repo is passed over too (T1839). The root defaults to
-    $TODOIMPL_SRC, ~/src. A missing clone still yields `<root>/<name>`.
+    Order: the override file, `<src root>/<name>` (unless its origin is some other repo, T1839), then the
+    checkout whose origin is that repo in ~/src/*, ~/.claude, ~/praca_magisterska, ~/src/testsAndMisc/*
+    (T2079). The root defaults to $TODOIMPL_SRC, ~/src. No checkout at all still yields `<root>/<name>`,
+    where Start clones.
     """
     base = src_root or Path(os.environ.get("TODOIMPL_SRC") or Path.home() / "src")
     direct = base / repo.rpartition("/")[2]
-    if "/" not in repo:
+    full = repo if "/" in repo else f"{OWNER}/{repo}"
+    if (pinned := _pinned(full)) is not None:
+        return pinned
+    if direct.exists() and ("/" not in repo or _origin_url(direct) is None or _origin_matches(direct, repo)):
         return direct
-    origin = _origin_url(direct) if direct.exists() else None
-    if direct.exists() and (origin is None or _origin_matches(direct, repo)):
-        return direct
-    return _scan(base, repo) or direct
+    return _lookup(base, full) or direct
 
 
 def is_clone_of(path: Path, repo: str) -> bool:

@@ -34,7 +34,8 @@ DEPLOY = (
     "CLAUDE.md (Commands section). If CLAUDE.md has no `- deploy: `<command>`` line, add one that installs, "
     "releases and deploys this change everywhere it runs; it is idempotent and exits non-zero unless its own "
     "health check passes. Never uninstall an app or `pm clear`. A service that runs from "
-    "~/src/<repo> updates it with `git -C ~/src/<repo> pull --ff-only` (fails on a dirty tree). "
+    "~/src/<repo> updates it with `git -C ~/src/<repo> pull --ff-only` (fails on a dirty tree); a repo "
+    "checked out elsewhere (claude-config lives in ~/.claude) pulls in that checkout. "
     'A red deploy comes back to you as a fix turn with its output: a deploy check such as "X changed after '
     '<tag>: bump and release" is yours to fix (bump the version, commit, tag, push the tag, push, redeploy, '
     "read the result), never a reason to end on `A:`."

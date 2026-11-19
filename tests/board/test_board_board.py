@@ -2,7 +2,6 @@
 """build_board / build_task / repo_checker: payloads validate against the contracts."""
 
 import json
-import os
 import time
 from pathlib import Path
 
@@ -201,17 +200,13 @@ def test_resume_command_needs_session_and_worktree() -> None:
     assert board.resume_command(run(worktree="/w")) is None
 
 
-def test_repo_checker(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_repo_checker(tmp_path: Path) -> None:
     (tmp_path / "ok" / ".git").mkdir(parents=True)
-    check = board.repo_checker(tmp_path)
+    check = board.repo_checker()
     assert check(None) is None
     assert check("ok") is None
-    assert check("nope") == str(tmp_path / "nope")
+    assert check("nope") is None  # a relative repo is found by origin or cloned by Start (T2079)
     assert check(str(tmp_path / "ok")) is None
+    assert check(str(tmp_path / "nope")) == str(tmp_path / "nope")
     home = Path.home()
-    assert board.repo_checker(home / "src")("zzz-not-a-repo-xyz") == "~/src/zzz-not-a-repo-xyz"
-    monkeypatch.setenv("TODOIMPL_SRC", str(tmp_path))
-    assert board.repo_checker()("ok") is None
-    monkeypatch.delenv("TODOIMPL_SRC")
-    assert board.repo_checker()("zzz-not-a-repo-xyz") == "~/src/zzz-not-a-repo-xyz"
-    assert os.sep in str(home)
+    assert check(str(home / "zzz-not-a-repo-xyz")) == "~/zzz-not-a-repo-xyz"

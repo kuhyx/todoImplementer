@@ -10,7 +10,7 @@ def test_t2056_send_on_a_failed_run_with_no_session_starts_it_again_with_the_mes
         sched.start(CARD)  # the clone's origin is not Sepci0/demo yet
         st = wait_stage(world, sched, "failed")
         assert st.error is not None
-        assert "not cloned" in st.error
+        assert "no local clone" in st.error
         assert not st.sessions
         moved = world.tmp / "remotes" / "Sepci0" / "demo"  # an origin URL that ends in Sepci0/demo
         moved.parent.mkdir()

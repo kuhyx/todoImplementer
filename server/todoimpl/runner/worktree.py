@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from todoimpl.board import clone as clones
 from todoimpl.board.repos import OWNER, is_clone_of, repo_path
 from todoimpl.prompts.standing import REBASE_NOTE
 
@@ -70,13 +71,26 @@ def output_tail(proc: subprocess.CompletedProcess[str], limit: int = 600) -> str
     return both[-limit:]
 
 
-def repo_dir(repo: str | None) -> Path:
-    """Return the local clone of a note's repo, or NeedsYouError saying what is missing."""
+def repo_dir(repo: str | None, *, clone: bool = False) -> Path:
+    """Return the local clone of a note's repo, or NeedsYouError saying what is missing.
+
+    With `clone` (a run's first attach) a repo with no checkout anywhere is cloned to `<src>/<name>` with
+    `gh repo clone`; a failed clone ends the run naming gh's error (T2079).
+    """
     if not repo:
         msg = "The note has no repo: set kuhyx/<name> on it, or do it yourself"
         raise NeedsYouError(msg, "handed_to_you")
     owner, _, name = repo.rpartition("/")
-    path = repo_path(f"{owner or OWNER}/{name}")  # the owner finds a clone in a differently named directory
+    full = f"{owner or OWNER}/{name}"
+    path = repo_path(full)  # the owner finds a clone in a differently named directory
+    if not is_clone_of(path, repo) and clone:
+        dest = clones.src_root() / name
+        try:
+            clones.gh_clone(full, dest)
+        except OSError as exc:
+            msg = f"Repo {repo} has no local clone and cloning it into {dest} failed: {exc}"
+            raise NeedsYouError(msg, "run_failed") from exc
+        path = repo_path(full)
     if not is_clone_of(path, repo):
         msg = f"Repo {repo} is not cloned at {path}: clone it there, then start again"
         raise NeedsYouError(msg, "handed_to_you")
@@ -184,7 +198,13 @@ def attach(st: RunState, repo_name: str | None, root: Path) -> None:
     in the Ship drive: ship rebases itself and must never commit a half-rebased tree.
     """
     quiet = st.stage == "shipping" or orphans.read(root / st.task_id) is not None
-    wt = add(repo_dir(repo_name), root, st.task_id, st.base_sha if st.worktree else None, sync=not quiet)
+    wt = add(
+        repo_dir(repo_name, clone=True),
+        root,
+        st.task_id,
+        st.base_sha if st.worktree else None,
+        sync=not quiet,
+    )
     st.worktree, st.branch, st.base_sha = str(wt.path), wt.branch, wt.base_sha
     st.extra["base_branch"] = wt.remote_branch
     if wt.conflict:

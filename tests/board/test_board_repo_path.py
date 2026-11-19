@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 from todoimpl.board.board import repo_checker
-from todoimpl.board.repos import repo_path
+from todoimpl.board.repos import is_clone_of, repo_path
 from todoimpl.runner.worktree import repo_dir
 
 
@@ -25,7 +25,7 @@ def test_t202_board_and_runner_agree_on_the_clone(tmp_path: Path, monkeypatch: p
     monkeypatch.setenv("TODOIMPL_SRC", str(tmp_path))
     assert repo_dir("kuhyx/foo") == tmp_path / "foo"
     assert repo_checker()("kuhyx/foo") is None
-    assert repo_checker()("kuhyx/missing") == str(tmp_path / "missing")
+    assert repo_checker()("kuhyx/missing") is None  # Start clones it (T2079)
 
 
 def make_clone(root: Path, directory: str, url: str | None) -> Path:
@@ -98,7 +98,7 @@ def test_t2000_a_foreign_owner_needs_a_clone_with_its_origin(
 ) -> None:
     monkeypatch.setenv("TODOIMPL_SRC", str(tmp_path))
     make_clone(tmp_path, "cleanup-plate", "https://github.com/kuhyx/cleanup-plate")  # another owner
-    assert repo_checker()("Sepci0/cleanup-plate") == str(tmp_path / "cleanup-plate")
+    assert not is_clone_of(tmp_path / "cleanup-plate", "Sepci0/cleanup-plate")  # the runner clones its own
     assert repo_checker()("kuhyx/cleanup-plate") is None
     real = make_clone(tmp_path, "plate", "https://github.com/Sepci0/cleanup-plate")
     assert repo_checker()("Sepci0/cleanup-plate") is None
