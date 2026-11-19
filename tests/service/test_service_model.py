@@ -42,3 +42,12 @@ def test_t2218_a_pick_the_cut_drive_has_not_settled_shows_at_once(rig: Rig) -> N
     assert card["status"] != "cancelled"
     assert card["model"] == FABLE
     assert next(a for a in card["actions"] if a["id"] == "model")["value"] == FABLE
+
+
+def test_t2221_a_model_command_with_more_words_pins_and_sends_the_rest(rig: Rig) -> None:
+    spawned: list[Any] = []
+    rig.backend.spawn = spawned.append
+    rig.run("t1", "gate")
+    rig.backend.send("t1", "run it on claude fable 5.2\nTry three bolder logos")
+    assert rig.scheduler.calls == [("set_model", "t1", FABLE, "Try three bolder logos")]
+    assert spawned == []

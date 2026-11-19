@@ -40,7 +40,9 @@ Code: `server/todoimpl/modelpick.py` (names, plain regex, no LLM), `runner/model
 
 - Names: Fable 5.2 `claude-fable-5-2`, Opus 5.5 `claude-opus-5-5`, Sonnet 5.5 `claude-sonnet-5-5`, Haiku 5.5
   `claude-haiku-5-5`, with or without `claude` and the version ("fable", "rerun on opus", "use sonnet 5.5", "on
-  haiku"); `default` drops the pin. A note with any other words or version is an ordinary note.
+  haiku"); `default` drops the pin. A note with any other words or version is an ordinary note, except one that
+  starts with a run / rerun / switch command and a separator ("run it on fable 5.2. Try bolder logos", T2221): it
+  pins the model and the rest reaches the rerun session as kuhy's note.
 - The pin (`state.extra.model_pin`) wins over the role, tier, research and escalation models and over
   `credits_model` on the credit route, until kuhy names another model or `default`; effort stays the role's.
 - The card's current stage runs again on the pick. A live turn is cut and its session resumed with

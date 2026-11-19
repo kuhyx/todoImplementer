@@ -55,8 +55,11 @@ def _nudge(st: RunState, model: str, text: str) -> None:
     st.extra["nudge"] = text.format(model="the default model" if model == modelpick.DEFAULT else model)
 
 
-def pick(sched: Scheduler, card: str, model: str) -> None:
-    """Pin `card` to `model` (an id of `modelpick.IDS`) and run its current stage again on it."""
+def pick(sched: Scheduler, card: str, model: str, note: str = "") -> None:
+    """Pin `card` to `model` (an id of `modelpick.IDS`) and run its current stage again on it.
+
+    `note` is the rest of a note that started with the command (T2221): it waits in the inbox for that turn.
+    """
     from .scheduler import RunnerError  # noqa: PLC0415 - scheduler imports this module
 
     if model not in modelpick.IDS:
@@ -67,6 +70,10 @@ def pick(sched: Scheduler, card: str, model: str) -> None:
         if st.stage in NO_PICK or st.closing:
             msg = f"The run is {'closing' if st.closing else st.stage}: no turn to switch"
             raise RunnerError(msg, "disabled")
+        if note:  # before the pin and the queue: the rerun turn drains it like any note of kuhy's
+            sched.push_note(card, note)
+            shown = {"type": "activity", "at": sched.clock(), "kind": "user", "text": note, "tool": None}
+            sched.bus.publish(card, shown)
         if card in sched._active:  # noqa: SLF001
             write_json(sched.root / card / FILE, {"model": model, "stage": st.stage})
             sched.kill(card)  # the drive's cancel ends it; `after_drive` then calls `settle`

@@ -1,7 +1,8 @@
 """Send to Claude and the model picker; `ServiceBackend` binds them from here as its methods.
 
-A note that is a model command (`modelpick.parse`: "run it on claude fable 5.2", "rerun on opus", "default")
-pins the card and reruns its stage (`Scheduler.set_model`); it never reaches the session or drafts a lesson.
+A note that is a model command (`modelpick.command`: "run it on claude fable 5.2", "rerun on opus", "default")
+pins the card and reruns its stage (`Scheduler.set_model`); it never drafts a lesson. A note that starts with
+one ("rerun on opus, keep the palette") sends the rest to the rerun session as an ordinary note (T2221).
 Every other note goes on as before: at the gate it is a rejection, so a lesson is drafted in the background.
 """
 
@@ -17,9 +18,10 @@ if TYPE_CHECKING:
 
 
 def send(backend: ServiceBackend, id8: str, text: str) -> None:
-    """Send to Claude: a model command pins the model, any other note goes to the session."""
-    if (picked := modelpick.parse(text)) is not None:
-        model(backend, id8, model=picked)
+    """Send to Claude: a model command pins the model (its rest goes on as a note), any other note goes on."""
+    if (picked := modelpick.command(text)) is not None:
+        chosen, rest = picked
+        backend._click(id8, "model", lambda: backend.scheduler.set_model(id8, chosen, rest))  # noqa: SLF001
         return
     run = load(run_dir(backend.root, id8))
     if run is not None and run.stage == "gate":

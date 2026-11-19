@@ -36,7 +36,7 @@ class SchedulerLike(Protocol):
         self, id8: str, *, repo: str | None = None, title: str = "", repotask: bool = False
     ) -> None: ...
 
-    def set_model(self, id8: str, model: str) -> None:  # noqa: D102
+    def set_model(self, id8: str, model: str, note: str = "") -> None:  # noqa: D102
         ...
 
     def auto_start(self, id8: str, passed_at: float) -> bool:  # noqa: D102

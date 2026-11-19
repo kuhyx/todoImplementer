@@ -61,11 +61,32 @@ def _known(family: str, version: str | None) -> str | None:
 def parse(text: str) -> str | None:
     """Return the model id the note names, `default`, or None when the note is not a model command."""
     match = COMMAND.fullmatch(_norm(text))
-    if match is None:
-        return None
-    if match.group("default"):
-        return DEFAULT
-    return _known(match.group("family"), match.group("version"))
+    return None if match is None else _named(match)
+
+
+# A note may also start with a command and go on ("run it on fable 5.2. Try bolder logos", T2221): a
+# run, rerun or switch verb leads it, then a separator: a newline, `.` `,` `;` `:` before a space,
+# ` and ` or ` - `.
+_LEAD = r"(?:please\s+)?(?:re\s*run|run|switch)(?:\s+(?:it|this|that|the\s+task|the\s+card|again))*\s+"
+LEAD: Final = re.compile(rf"{_LEAD}(?:on|with|to|using|in)\s+(?:{_NAME}|{_DEFAULT}){_TAIL}")
+SEPARATOR: Final = re.compile(r"\n|[.,;:](?=\s)|\s+and\s+|\s+-\s+")
+_REST_START = re.compile(r"^(?:[\s.,;:-]|and\b)+", re.IGNORECASE)
+
+
+def _named(match: re.Match[str]) -> str | None:
+    return DEFAULT if match.group("default") else _known(match.group("family"), match.group("version"))
+
+
+def command(text: str) -> tuple[str, str] | None:
+    """Return (model id or `default`, the rest as a note) when the note is or starts with a model command."""
+    if (whole := parse(text)) is not None:
+        return whole, ""
+    for sep in SEPARATOR.finditer(text):
+        rest = _REST_START.sub("", text[sep.start() :]).strip()
+        lead = LEAD.fullmatch(_norm(text[: sep.start()]))
+        if lead is not None and rest and (model := _named(lead)) is not None:
+            return model, rest
+    return None
 
 
 def label(model_id: str) -> str:

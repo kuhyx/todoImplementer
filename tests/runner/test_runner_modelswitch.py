@@ -48,6 +48,32 @@ def test_t2216_a_resting_card_runs_its_stage_again_on_the_picked_model_in_the_sa
         sched.close()
 
 
+def test_t2221_the_rest_of_a_model_note_reaches_the_rerun_prompt(world: Env) -> None:
+    sched, _ = boot(world, PLAN, IMPL, LIVE_OK, IMPL, LIVE_OK, done_check="true")
+    try:
+        sched.start(CARD)
+        wait_stage(world, sched, "gate", turns=3)
+        sched.set_model(CARD, FABLE, "Try three bolder logos")
+        wait_stage(world, sched, "gate", turns=3)
+        rerun = world.calls()[3]
+        assert (rerun["model"], "Try three bolder logos" in str(rerun["prompt"])) == (FABLE, True)
+    finally:
+        sched.close()
+
+
+def test_t2221_the_rest_of_a_note_sent_mid_turn_reaches_the_resumed_prompt(world: Env) -> None:
+    sched, _ = boot(world, PLAN, CUT, IMPL, LIVE_OK, done_check="true")
+    try:
+        sched.start(CARD)
+        wait(lambda: len(world.calls()) == 2 and CARD in sched.running())
+        sched.set_model(CARD, SONNET, "only the header")
+        wait_stage(world, sched, "gate", turns=3)
+        resumed = world.calls()[2]
+        assert (resumed["model"], "only the header" in str(resumed["prompt"])) == (SONNET, True)
+    finally:
+        sched.close()
+
+
 def test_t2216_a_live_turn_is_cut_and_resumed_on_the_picked_model(world: Env) -> None:
     sched, _ = boot(world, PLAN, CUT, IMPL, LIVE_OK, done_check="true")
     try:
