@@ -18,13 +18,23 @@ failed fetch keeps the last data marked stale. 404 until the umbrella has a run.
 | Resting | `resting {kind, until}`: why the run waits by itself, with a countdown: `limit` (plan usage), `network`, `gateway`, `killed`, `crash`, `todo`, `turn` (`state.extra.retry_kind`, `DOCS-resilience.md`). |
 | Round | The round in progress with its step (`manager`: worktrees, manager and free workers; `checks`; `verdict`) and the history: per round the width, the width that followed (doubled or not), start and end, and each child as `clean` / `coached` / `fixed` / `escalate` plus whether it counted (`ok`). |
 | Children | Per child: status icon, repo, stage, elapsed time, issue count, the newest issue (phase, model, symptom) on hover and in an expandable row, resting reason, free-worker attempts and how many were killed, links to the worker log (`GET /api/umbrella/<id>/log/<child id>`, the last 64 KB of the newest `worker-<round>.log`) and to the live feed (the umbrella's drawer: child events arrive there prefixed with the repo). |
-| Issues | `free-issues.jsonl` grouped by phase and model: count, fixed, the newest 20 raw lines per group; the raw file stays at `GET /api/task/<id>/issues`. |
+| Issues | `free-issues.jsonl` grouped by phase and model: count, fixed, the newest 20 raw lines per group; its log link opens the issues page (below); the raw file stays at `GET /api/task/<id>/issues`. |
 | ETA | `ceil(children left / width) x median time a finished child took` (start to gate or done, from the child's `started_at` and last save). `width` is the next round's width or the number of running children, whichever is larger. `null` until one child has finished. A rough bound, not a promise: later rounds double when the free tier is clean, and the tail (live check, checks, gate) is inside the child time. |
 
 Server-computed only: the child status is the one `status.compute` gives; the page sorts and computes nothing.
 Elapsed time of a child stops at its last save once it rests (gate, shipped, failed, cancelled). A child
 that has no state yet has `elapsed: null`. Round `started` and `ended` are written by the runner from this
 change on (older rounds show no duration).
+
+## The issues page
+
+`/issues#task=<id>` (`web/src/pages/issues.astro`, code in `web/src/issues/`) shows one task's
+`free-issues.jsonl` as a table, newest first: age (absolute time on hover), repo, phase, model, fixed or open,
+symptom and the manager's action in full. Every header sorts; chips filter fixed / open, phase and model, a picker
+filters the repo, a box searches every column; task, filters and sort live in the hash. It reads the raw
+`GET /api/task/<id>/issues` (no endpoint of its own) every 5 s and parses each line in the page: a line that is
+not an issue record shows as a muted raw row, never dropped. The download icon still serves the raw file. The
+tracking view's log link and the umbrella block's issue count open this page (T2094).
 
 ## Free tokens: what the gateway tells and what it does not
 

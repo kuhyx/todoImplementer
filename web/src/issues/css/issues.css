@@ -1,0 +1,207 @@
+/* The issue log page. Frame, toolbar and table base come from the sessions page CSS; this adds the issue parts. Tokens only. */
+issues-app {
+  --ui-scale: 1;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  zoom: var(--ui-scale);
+  height: calc(100dvh / var(--ui-scale));
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@media (min-width: 2400px) {
+  issues-app {
+    --ui-scale: 1.25;
+  }
+}
+
+@media (min-width: 3200px) {
+  issues-app {
+    --ui-scale: 1.75;
+  }
+}
+
+@media (min-width: 3600px) {
+  issues-app {
+    --ui-scale: 2;
+  }
+}
+
+issues-app .head {
+  gap: var(--space-2);
+}
+
+issues-app svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  flex: none;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.task-id {
+  font-size: var(--text-subtitle);
+}
+
+.chip-slot,
+.chip-slot .chips {
+  display: contents;
+}
+
+.chips[role="group"] > svg {
+  color: var(--text-muted);
+}
+
+.value-chip code {
+  font-size: var(--text-label);
+}
+
+.chip[data-tone="success"] svg,
+.mark[data-tone="success"] {
+  color: var(--success);
+}
+
+.mark[data-tone="warning"] {
+  color: var(--warning);
+}
+
+.chip[data-tone="info"] svg {
+  color: var(--info);
+}
+
+.raw-link {
+  display: inline-grid;
+  place-items: center;
+  color: var(--text);
+}
+
+/* Rows ------------------------------------------------------------------ */
+
+issues-app td {
+  vertical-align: top;
+}
+
+td.col-symptom,
+td.col-action {
+  min-width: 18rem;
+}
+
+.prose {
+  max-width: var(--measure);
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: var(--text-body);
+  line-height: 1.45;
+}
+
+.raw-line {
+  display: block;
+  max-width: var(--measure);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--text-muted);
+}
+
+.repo {
+  white-space: nowrap;
+}
+
+tr[data-state="fixed"] .col-symptom .prose {
+  color: var(--text-muted);
+}
+
+.none {
+  color: var(--text-muted);
+}
+
+.cell-icon {
+  display: none;
+}
+
+.state-done,
+.state-failed {
+  display: inline-grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  margin: var(--space-4) auto;
+}
+
+.state-done {
+  color: var(--success);
+}
+
+.state-failed {
+  color: var(--danger);
+}
+
+.state-done svg,
+.state-failed svg {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+/* A phone gets one card per issue: time, state, repo, phase and model on top, symptom and action in full below. */
+@media (max-width: 700px) {
+  issues-app table,
+  issues-app thead,
+  issues-app tbody,
+  issues-app tr,
+  issues-app td {
+    display: block;
+  }
+
+  /* The header stays as a strip of sort buttons above the cards. */
+  issues-app thead tr {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    padding: var(--space-1);
+  }
+
+  issues-app thead th {
+    display: block;
+    padding: 0;
+    border: 0;
+  }
+
+  issues-app tbody tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-3);
+    padding: var(--space-2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  issues-app td {
+    padding: 0;
+    border: 0;
+  }
+
+  issues-app td.col-symptom,
+  issues-app td.col-action {
+    display: flex;
+    flex-basis: 100%;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+
+  issues-app .cell-icon {
+    display: inline-grid;
+    color: var(--text-muted);
+  }
+
+  .col-child .cell-icon,
+  .col-phase .cell-icon,
+  .col-model .cell-icon {
+    display: none;
+  }
+
+  issues-app td.col-action:has(.prose:empty) {
+    display: none;
+  }
+}

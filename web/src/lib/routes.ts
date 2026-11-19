@@ -5,6 +5,8 @@ export const routes = {
   board: "/api/board",
   creditsFallback: "/api/settings/credits-fallback",
   issues: (id: string): string => `/api/task/${encodeURIComponent(id)}/issues`,
+  /** The readable issue log page (web/src/issues); `issues` above is its raw ndjson. */
+  issuesPage: (id: string): string => `/issues#task=${encodeURIComponent(id)}`,
   live: (id: string): string => `/api/live?id=${encodeURIComponent(id)}`,
   mergeAction: (group: string, action: string): string => `/api/merge/${group}/${action}`,
   merges: "/api/merges",

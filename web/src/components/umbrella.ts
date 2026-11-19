@@ -83,7 +83,7 @@ export function renderUmbrella(detail: UmbrellaDetail, id: string): HTMLElement 
         h("span", { attrs: { "data-doubled": String(round.next > round.width), title: `Round ${String(round.n)}` }, class: "u-round", text: String(round.width) }),
       ),
       trackLink(`#umbrella=${id}`),
-      total > 0 && h("a", { attrs: { "aria-label": "Free-model issue log", href: routes.issues(id), rel: "noopener", target: "_blank", title: "Free-model issue log" }, class: "u-issues" }, icon("issue"), String(total)),
+      total > 0 && h("a", { attrs: { "aria-label": "Free-model issue log", href: routes.issuesPage(id), rel: "noopener", target: "_blank", title: "Free-model issue log" }, class: "u-issues" }, icon("issue"), String(total)),
     ),
     h("ul", { class: "u-rows" }, ...detail.rows.map((row) => renderRow(row))),
   );

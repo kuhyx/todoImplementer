@@ -100,11 +100,11 @@ describe("umbrella rows in the drawer", () => {
     expect(rows[3]?.querySelector('[aria-label="Free worker"]')).toBeNull();
   });
 
-  it("marks the rounds that doubled the width and links the raw issue log", () => {
+  it("[T2094] marks the rounds that doubled the width and links the readable issues page", () => {
     const rounds = [...block.querySelectorAll(".u-round")];
     expect(rounds.map((r) => [r.textContent, r.getAttribute("data-doubled")])).toEqual([["1", "true"], ["2", "false"]]);
     const link = block.querySelector("a.u-issues");
-    expect(link?.getAttribute("href")).toBe("/api/task/aaaa1111-0/issues");
+    expect(link?.getAttribute("href")).toBe("/issues#task=aaaa1111-0");
     expect(link?.textContent).toBe("2");
   });
 

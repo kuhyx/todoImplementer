@@ -158,10 +158,10 @@ describe("child rows", () => {
 });
 
 describe("issue groups", () => {
-  it("counts each group by phase and model and names the raw log", () => {
+  it("[T2094] counts each group by phase and model and links the readable issues page, not the raw download", () => {
     const section = renderIssues(makeTrack().issues, ID, open());
     expect(section.querySelector(".t-issues-head .t-num")?.textContent).toBe("5");
-    expect(section.querySelector<HTMLAnchorElement>('a[aria-label="Raw issue log"]')?.getAttribute("href")).toBe("/api/task/2d0704cd-0/issues");
+    expect(section.querySelector<HTMLAnchorElement>('a[aria-label="Issue log"]')?.getAttribute("href")).toBe("/issues#task=2d0704cd-0");
     const groups = all(section, ".t-group");
     expect(groups.map((g) => g.querySelector(".t-phase")?.textContent)).toEqual(["permission", "start"]);
     expect(groups[0]?.querySelector(".t-model")?.textContent).toBe("free-best");

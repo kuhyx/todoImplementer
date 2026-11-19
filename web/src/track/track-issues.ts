@@ -7,7 +7,7 @@ import { h } from "@/lib/dom";
 import { routes } from "@/lib/routes";
 import { stat } from "@/track/track-kit";
 
-const RAW_LABEL = "Raw issue log";
+const LOG_LABEL = "Issue log";
 
 function group(item: Track["issues"]["groups"][number], expand: Expand): HTMLElement {
   const key = `issue:${item.phase}:${item.model ?? ""}`;
@@ -39,7 +39,7 @@ export function renderIssues(issues: Track["issues"], id: string, expand: Expand
       "div",
       { class: "t-issues-head" },
       stat("issue", "Free-model issues", issues.total),
-      h("a", { attrs: { "aria-label": RAW_LABEL, href: routes.issues(id), rel: "noopener", target: "_blank", title: RAW_LABEL }, class: "btn icon-btn t-link" }, icon("log")),
+      h("a", { attrs: { "aria-label": LOG_LABEL, href: routes.issuesPage(id), rel: "noopener", target: "_blank", title: LOG_LABEL }, class: "btn icon-btn t-link" }, icon("log")),
     ),
     h("ul", { class: "t-groups" }, ...issues.groups.map((item) => group(item, expand))),
   );

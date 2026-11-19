@@ -11,10 +11,12 @@ def usage_page(live: Live) -> Live:
     (live.dist / "usage").mkdir()
     (live.dist / "usage" / "index.html").write_text(PAGE, encoding="utf-8")
     (live.dist / "plain.html").write_text(PAGE, encoding="utf-8")
+    (live.dist / "issues").mkdir()
+    (live.dist / "issues" / "index.html").write_text(PAGE, encoding="utf-8")
     return live
 
 
-@pytest.mark.parametrize("path", ["/usage", "/usage/", "/usage/index.html", "/plain.html"])
+@pytest.mark.parametrize("path", ["/usage", "/usage/", "/usage/index.html", "/plain.html", "/issues"])
 def test_t203_subpages_are_served_and_stamped(usage_page: Live, path: str) -> None:
     r = call(usage_page.port, "GET", path)
     assert r.status == 200

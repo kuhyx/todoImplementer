@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from cdp_driver import Cdp, goto, launch, page_ws, probe
+from viewport_issues import step_issues
 from viewport_questions import step_questions
 from viewport_sessions import step_detail, step_sessions
 from viewport_track import step_track
@@ -116,6 +117,7 @@ STEPS = {
     "track": step_track,
     "sessions": step_sessions,
     "sessions-detail": step_detail,
+    "issues": step_issues,
 }
 
 
