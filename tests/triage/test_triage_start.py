@@ -1,5 +1,6 @@
 """Start of a new_repo card: the repo is made first, the note gets it, the repo's own card starts."""
 
+import threading
 from collections.abc import Callable
 
 import pytest
@@ -8,7 +9,7 @@ from servicefakes import Rig
 from todoimpl.board.state import load, run_dir
 from todoimpl.http.backend import BackendError
 from todoimpl.repotask.ids import repo_card_id
-from todoimpl.triage import label
+from todoimpl.triage import label, service
 from todoimpl.triage.newrepo import NewRepoError
 
 Make = Callable[..., Triage]
@@ -75,3 +76,9 @@ def test_t2071_any_other_card_starts_through_the_scheduler(rig: Rig, triage: Mak
     unknown = "deadbeef-0"
     triage().service.start(unknown)
     assert [c[1] for c in rig.scheduler.calls] == [repo_card, unknown]
+
+
+def test_t2071_the_default_job_runs_on_its_own_thread() -> None:
+    done = threading.Event()
+    service._spawn(done.set)
+    assert done.wait(5)

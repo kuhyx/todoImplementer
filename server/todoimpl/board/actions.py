@@ -7,8 +7,6 @@ import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from todoimpl.umbrella.note import is_umbrella
-
 from .needs import needs
 from .norepo import is_yours
 from .parts import kuhys

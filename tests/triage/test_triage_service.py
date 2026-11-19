@@ -2,6 +2,7 @@
 
 import threading
 from collections.abc import Callable
+from pathlib import Path
 
 import pytest
 from conftest import Triage
@@ -146,3 +147,8 @@ def test_t2070_a_note_of_urls_is_labelled_research_and_startable(rig: Rig, triag
     assert (shown["triage"], shown["status"], actions(shown)["start"]) == ("research", "backlog", True)
     rig.backend.start(card)  # the plain scheduler path: the research driver is picked by the label
     assert ("start", card, None) in rig.scheduler.calls
+
+
+def test_t2070_adding_facts_to_a_missing_record_is_a_no_op(tmp_path: Path) -> None:
+    label.update(tmp_path, error="x")
+    assert label.load(tmp_path) is None

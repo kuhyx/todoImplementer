@@ -120,6 +120,18 @@ def test_t2071_a_repo_or_main_or_clone_that_already_exists_is_not_made_again(tmp
     assert [c[:2] for c in sh.calls] == [["gh", "repo"], ["git", "ls-remote"]]  # checked, nothing made
 
 
+def test_t2071_a_run_cut_after_the_push_only_clones_and_a_finished_one_does_nothing(tmp_path: Path) -> None:
+    sh = Shell()
+    state = tmp_path / "run"
+    state.mkdir()
+    (state / "newrepo.json").write_text(json.dumps({"name": "pacman-gui", "step": "pushed"}))
+    assert make(sh, tmp_path) == "kuhyx/pacman-gui"
+    assert [c[:2] for c in sh.calls] == [["git", "clone"]]
+    sh.calls.clear()
+    assert make(sh, tmp_path) == "kuhyx/pacman-gui"  # step cloned: nothing left
+    assert sh.calls == []
+
+
 def test_t2071_no_repo_list_means_no_proof_the_name_is_free(tmp_path: Path) -> None:
     sh = Shell()
     sh.fail = "list"
