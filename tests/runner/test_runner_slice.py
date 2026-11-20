@@ -8,7 +8,7 @@ from todoimpl.runner import deploy, gate, launch
 
 REPO = Path(__file__).resolve().parents[2]
 SLICE_FILE = REPO / "deploy" / launch.SLICE
-FLAG = f"--slice={launch.SLICE}"
+FLAG = "--slice=todoimpl-"  # a card's own slice, one level below todoimpl.slice (T2405)
 
 
 def _slice_settings() -> dict[str, str]:
@@ -28,13 +28,13 @@ def test_t1982_turn_gate_and_deploy_units_join_the_capped_slice(tmp_path: Path) 
     check = gate.systemd_argv("u2", tmp_path, tmp_path / "wt")
     ship = deploy.systemd_argv("u3", tmp_path, tmp_path / "wt", "scripts/deploy.sh")
     for argv in (turn, check, ship):
-        assert FLAG in argv[: argv.index("--")]
+        assert any(arg.startswith(FLAG) for arg in argv[: argv.index("--")])
 
 
 def test_t1982_the_slice_caps_memory_swap_and_cpu() -> None:
     cfg = _slice_settings()
     # Swap is capped too: with RAM full and swap open, the slice thrashed the whole desktop to a freeze.
-    assert _gib(cfg["MemoryHigh"]) < _gib(cfg["MemoryMax"]) <= 20
+    assert _gib(cfg["MemoryMax"]) <= 20  # no MemoryHigh: its throttling froze every card at once (T2400)
     assert 0 < _gib(cfg["MemorySwapMax"]) <= 8
     assert cfg["CPUQuota"].endswith("%")
     assert int(cfg["CPUQuota"][:-1]) <= 1600

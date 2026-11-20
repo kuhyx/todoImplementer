@@ -16,7 +16,7 @@ from launchfakes import gone as _gone
 from launchfakes import rig as _rig
 from runnerfakes import Env
 from schedfakes import wait
-from todoimpl.runner import files, launch, orphans
+from todoimpl.runner import cardslice, files, launch, orphans
 
 
 def test_t1817_production_launch_is_a_systemd_unit_with_the_env_only_in_a_private_file(
@@ -30,8 +30,8 @@ def test_t1817_production_launch_is_a_systemd_unit_with_the_env_only_in_a_privat
     assert seen == [
         [
             "systemd-run", "--user", "--collect", "--quiet", f"--unit={unit}",
-            f"--slice={launch.SLICE}",
-            "-p", "KillMode=control-group", "-p", "TimeoutStopSec=10",
+            f"--slice={cardslice.card_slice(run_dir.name)}",  # the card's own slice (T2405)
+            "-p", "KillMode=control-group", "-p", "TimeoutStopSec=10", "-p", "OOMPolicy=continue",
             "-E", f"PYTHONPATH={launch.SERVER_DIR}",
             "--", sys.executable, "-m", "todoimpl.runner.turnhost", str(run_dir), STEM,
         ]

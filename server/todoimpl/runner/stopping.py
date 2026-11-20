@@ -17,7 +17,7 @@ from todoimpl.board.actions import FINAL_STAGES
 from todoimpl.board.status import CYCLE_ENDS, DONE_STAGES, MANUAL_STAGE
 from todoimpl.todo_mcp.model import TodoError
 
-from . import adopt, modelswitch
+from . import adopt, cardslice, modelswitch
 from .files import read_json, write_json
 
 if TYPE_CHECKING:
@@ -46,6 +46,7 @@ def cancel(sched: Scheduler, card: str) -> None:
             st.stage = "cancelled"
             sched.save(card, st)
             sched.bus.publish(card, {"type": "done"})
+    cardslice.stop(card)  # its session's own jobs too: a render it started must not run on (T2401)
     try:  # a cancelled card is abandoned in the todo app too, where a whole note can be (T1815)
         sched.client.abandon(card)
     except TodoError as exc:

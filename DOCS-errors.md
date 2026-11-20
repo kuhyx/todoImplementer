@@ -135,6 +135,23 @@ test_board_appfix.py`, `web/src/components/app-error.test.ts`; regressions T2009
 (`tests/regressions/DOCS-errors.md`). Every test runs with a temp HOME, `$TODOIMPL_HOME`,
 `$TODOIMPL_ERROR_STATE_ROOT` and `$TODOIMPL_SETTINGS`: kartka's real state file is never read.
 
+## Stalls (`stall/`, T2402, T2403)
+
+Rule (kuhy, 2026-11-20): no running card goes more than 60 s between two real activities. A real activity is one
+of the card's own `activity` events in `events.jsonl` (a tool call, text, a result). The board's `system` lines, a
+stream heartbeat and a touched file do not count, so nothing looks alive by pinging.
+
+- `stall/watch.py` ticks every 10 s. A card with a live turn (`turn.pid` alive) whose last real activity is over 60 s
+  old is one stall episode. A fresh turn counts from its start. An episode counts once however many ticks it lasts.
+- Each episode is a line in `<run root>/stalls.jsonl`, its end another line with how long it was quiet.
+  `<run root>/stalls.json` holds the open episodes, so a restart never counts one twice.
+- Each episode also counts in the board's own contract report, `<error state>/app-errors/todoimplementer.json`
+  (kind `perf.stall`). The errors loop turns the record into a ticket like any other app's.
+- The signature is the cause (`stall/cause.py`): `stall-memory` (memory pressure on the user slice, checked first,
+  because under pressure every other wait is a symptom), `stall-buildlock`, `stall-job-<tool>`, `stall-model`.
+- A stall ticket is ungated and first: the loop starts it before any other error card and skips the usage gate for
+  it (reason `stall`).
+
 ## Defaults chosen (not in the brief)
 
 - One start per tick, three starts per ticket, five phone waits per cycle, 60 s tick.

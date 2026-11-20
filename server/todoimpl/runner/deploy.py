@@ -17,7 +17,7 @@ import time
 from dataclasses import asdict
 from typing import TYPE_CHECKING, Any
 
-from . import deployheal, launch, stepwatch
+from . import cardslice, deployheal, launch, stepwatch
 from .checks import CheckResult, clean_env, from_row, report
 from .deployheal import DirtyCheckoutError
 from .deployhost import DEPLOY_DIR, EXIT_FILE
@@ -103,7 +103,8 @@ def systemd_argv(unit: str, run_dir: Path, wt: Path, command: str) -> list[str]:
     env = clean_env()
     keep = [f"{key}={env[key]}" for key in UNIT_ENV if key in env]
     return [
-        "systemd-run", "--user", "--collect", "--quiet", f"--unit={unit}", f"--slice={launch.SLICE}",
+        "systemd-run", "--user", "--collect", "--quiet", f"--unit={unit}",
+        f"--slice={cardslice.card_slice(run_dir.name)}",
         "-p", "KillMode=control-group", "-p", f"RuntimeMaxSec={UNIT_MAX:.0f}",
         "-E", f"PYTHONPATH={launch.SERVER_DIR}", *(arg for kv in keep for arg in ("-E", kv)),
         "--", *host_argv(run_dir, wt, command),

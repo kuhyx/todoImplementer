@@ -56,9 +56,22 @@ its `resume_at`; a note from kuhy ends the wait. The reason is `state.extra.retr
   Retry.
 - The 1, 2, 5, 10, 30 ladder is shared by every run; there is no per-run setting.
 
-## Resource cap
+## Resource cap (one slice per card)
 
-Every turn, gate and deploy unit joins `todoimpl.slice` (`deploy/todoimpl.slice`, installed by `scripts/deploy.sh`):
-`MemoryHigh` 14G (reclaim pressure), `MemoryMax` 18G, `MemorySwapMax` 8G, `CPUQuota` 1600 %, `CPUWeight` 20,
-`TasksMax` 8192. Many parallel builds once filled RAM and 43 GB of swap and froze the PC (T1982). Past the cap the
-kernel OOM-kills inside the slice, never the desktop; the killed turn is a failed turn and the retry ladder resumes it.
+`todoimpl.slice` (`deploy/todoimpl.slice`, installed by `scripts/deploy.sh`) caps the whole board: `MemoryMax` 18G,
+`MemorySwapMax` 8G, `CPUQuota` 1600 %, `CPUWeight` 20, `TasksMax` 8192. It has no `MemoryHigh`. Each card also gets
+its own slice, `todoimpl-<card>.slice`, one level below it (`runner/cardslice.py`); the card's turn, gate and deploy
+units run there. A prefix drop-in (`deploy/todoimpl-.slice.d/50-card-cap.conf`, installed by `scripts/deploy.sh`
+before the reload) hard-caps every card slice at `MemoryMax` 10G and `MemorySwapMax` 2G. Past its cap, the kernel
+OOM-kills the biggest process of that one card; the session sees a failed command, or the turn fails and the retry
+ladder resumes it. The other cards and the desktop never notice (T1982, T2405, T2400).
+
+Why no `MemoryHigh`: on 2026-11-20 one card's Stable Diffusion render (16 GB RAM + 8 GB swap) pushed the shared
+slice over it, the kernel throttled every process in the slice (`mem_cgroup_handle_over_high`, claude included), and
+five running cards sat 47 min with no activity. A hard cap per card kills the offender instead of freezing everyone.
+
+A session starts its own jobs with `systemd-run --slice=todoimpl.slice`. `buildlock.ensure` writes a `systemd-run`
+shim (`runner/sliceshim.sh`) into the shims dir, and the turn env carries `TODOIMPL_SLICE=todoimpl-<card>.slice`: the
+shim swaps the slice for the card's, and passes every other `systemd-run` call through untouched (T2401). Cancel
+stops the card's whole slice, so the session's jobs die with the turn. The stall watch (`DOCS-errors.md`, "Stalls")
+files a ticket whenever a running card still goes quiet for over 60 s.

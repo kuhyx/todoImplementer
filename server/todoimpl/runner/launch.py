@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from . import buildlock, orphans
+from . import buildlock, cardslice, orphans
 from .files import ROUTE_SUFFIX, STREAM_SUFFIX, NeedsYouError, sibling
 from .turnhost import INVOKE_SUFFIX
 
@@ -32,8 +32,10 @@ SERVER_DIR = Path(__file__).resolve().parents[2]  # what the host needs on PYTHO
 TIMEOUT_VAR = "TODOIMPL_TURN_TIMEOUT"  # seconds a turn may run before its host kills it
 DEFAULT_TIMEOUT = 4 * 3600.0  # above a manager round: a 1 h worker plus coaching reruns
 UNIT_STOP_SEC = 10
-# deploy/todoimpl.slice: every board unit (turn, gate, deploy) shares one memory/swap/CPU cap (T1982)
-SLICE = "todoimpl.slice"
+# deploy/todoimpl.slice: every board unit (turn, gate, deploy) shares one memory/swap/CPU cap (T1982); each
+# runs one level down in its own capped slice (cardslice.py, T2405). OOMPolicy=continue: a build below claude
+# killed for memory fails its command, the turn goes on.
+SLICE = cardslice.PARENT
 START_WAIT = 2.0  # how long stop() waits for a just-launched host to record claude's pid
 POLL = 0.05
 _run = subprocess.run  # the one place systemd-run and systemctl are called: tests swap it
@@ -57,8 +59,9 @@ def host_argv(run_dir: Path, stem: str) -> list[str]:
 def systemd_argv(unit: str, run_dir: Path, stem: str) -> list[str]:
     """`systemd-run` argv for the host; the env is deliberately not here, only the host's PYTHONPATH."""
     return [
-        "systemd-run", "--user", "--collect", "--quiet", f"--unit={unit}", f"--slice={SLICE}",
-        "-p", "KillMode=control-group", "-p", f"TimeoutStopSec={UNIT_STOP_SEC}",
+        "systemd-run", "--user", "--collect", "--quiet", f"--unit={unit}",
+        f"--slice={cardslice.card_slice(run_dir.name)}", "-p", "KillMode=control-group",
+        "-p", f"TimeoutStopSec={UNIT_STOP_SEC}", "-p", "OOMPolicy=continue",
         "-E", f"PYTHONPATH={SERVER_DIR}",
         "--", *host_argv(run_dir, stem),
     ]  # fmt: skip

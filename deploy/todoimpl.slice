@@ -3,12 +3,13 @@
 # swap the whole PC into a freeze (T1982, 2026-11-11). Sized for 30 GiB RAM / 24 threads: the desktop keeps
 # >= 12 GiB RAM and 8 threads. MemorySwapMax is the setting that stops thrash: past RAM + 8 GiB swap the
 # kernel OOM-kills inside this slice (a turn dies and the board's retry ladder resumes it) instead of
-# freezing the machine. Installed by scripts/deploy.sh; transient units pick it up via --slice.
+# freezing the machine. No MemoryHigh (T2400): on 2026-11-20 its throttling froze every card in the slice for
+# 47 min behind one card's 16 GB render. Each card has its own hard cap one level down
+# (todoimpl-.slice.d/, runner/cardslice.py). Installed by scripts/deploy.sh; units pick it up via --slice.
 [Unit]
 Description=todoImplementer board sessions (memory, swap and CPU capped)
 
 [Slice]
-MemoryHigh=14G
 MemoryMax=18G
 MemorySwapMax=8G
 CPUQuota=1600%

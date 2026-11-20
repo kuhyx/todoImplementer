@@ -87,6 +87,7 @@ restart_server() {
 	step "installing ${UNIT} and ${SLICE}"
 	install_unit "$UNIT"
 	install_unit "$SLICE"
+	install_unit "todoimpl-.slice.d/50-card-cap.conf" # each card's own cap (T2400)
 	systemctl --user daemon-reload
 	# The transient preview unit holds the port the real unit needs.
 	if systemctl --user is-active --quiet "$PREVIEW_UNIT"; then

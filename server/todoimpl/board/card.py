@@ -15,7 +15,7 @@ from .badges import tier_badges
 from .needs import needs
 from .norepo import is_yours
 from .parts import is_repo_task, kuhys, manual_ask, parts_of
-from .status import CYCLE_ENDS, SHIP_STEP, SILENT, WAITS_FOR, Status, column, compute
+from .status import CYCLE_ENDS, SHIP_STEP, SILENT, WAITS_FOR, Column, Status, column, compute
 from .types import Limit, fmt_when
 from .umbrella import card_view
 
@@ -40,6 +40,7 @@ class Context:
     auto_close: bool = False  # settings.json `auto_close`
     checks: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)  # autocheck.json, by item id
     waits: Mapping[str, str] = field(default_factory=dict)  # queued run -> the run of its repo it waits on
+    activity: Callable[[str], float | None] = lambda _id: None  # a card's last real activity (T2404)
 
 
 def current_line(  # noqa: PLR0911 - one return per status
@@ -125,6 +126,15 @@ def _assignee(task: TaskLike, run: RunState | None) -> str:
     return "human" if is_yours(task) else "claude"
 
 
+def _updated(run: RunState | None, status: Status, tid: str, ctx: Context) -> float | None:
+    """Return when the card last did something: a running card's newest real activity, else its save."""
+    if run is None:
+        return None
+    if column(status) != Column.RUNNING:
+        return run.updated
+    return max(run.updated, ctx.activity(tid) or 0.0)
+
+
 def build_card(task: TaskLike, run: RunState | None, ctx: Context) -> dict[str, Any]:
     """Return the task_card object for one note."""
     tid = task.id
@@ -166,7 +176,7 @@ def build_card(task: TaskLike, run: RunState | None, ctx: Context) -> dict[str, 
         "route": run.extra.get("route") if run is not None else None,
         "tier": tier_badges(task, run),
         "resumes_at": resumes_at,
-        "updated": run.updated if run is not None else None,
+        "updated": _updated(run, status, tid, ctx),
         "actions": [a.to_dict() for a in buttons],
         "auto_start": run.auto_start if run is not None else None,
         "auto": str(entry["reason"]) if entry is not None else None,

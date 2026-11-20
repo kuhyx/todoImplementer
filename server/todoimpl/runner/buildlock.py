@@ -21,7 +21,7 @@ from typing import IO, TYPE_CHECKING
 from todoimpl import atomic
 from todoimpl.board import state as store
 
-from . import buildqueue
+from . import buildqueue, cardslice
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -72,6 +72,9 @@ def ensure(base: Path) -> Path:
         _put(shims / tool, f'#!/bin/bash\nexec {shlex.quote(str(wrapper))} {tool} "$@"\n', 0o755)
     for tool in GUARDS:
         _put(shims / tool, f'#!/bin/bash\nexec {shlex.quote(str(wrapper))} --{tool} "$@"\n', 0o755)
+    # A session's board-slice job joins its card's slice (cardslice.py, T2401).
+    shim = Path(__file__).with_name(cardslice.SHIM_SOURCE).read_text(encoding="utf-8")
+    _put(shims / cardslice.SHIM, shim, 0o755)
     return shims
 
 
@@ -81,7 +84,8 @@ def turn_env(card: str) -> dict[str, str]:
     shims = shlex.quote(str(ensure(base)))
     env_file = base / ENV_DIR / f"{card}.sh"
     _put(env_file, f'[[ "$PATH" == {shims}:* ]] || export PATH={shims}:"$PATH"\n', 0o644)
-    return {"CLAUDE_ENV_FILE": str(env_file), CARD_VAR: card, **TUNING}
+    own = {cardslice.SLICE_VAR: cardslice.card_slice(card)}
+    return {"CLAUDE_ENV_FILE": str(env_file), CARD_VAR: card, **own, **TUNING}
 
 
 def _read(path: Path) -> str:

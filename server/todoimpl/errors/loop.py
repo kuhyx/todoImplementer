@@ -18,6 +18,7 @@ from todoimpl.board.parse import StateError
 from todoimpl.board.status import CYCLE_ENDS
 from todoimpl.http.backend import BackendError
 from todoimpl.http.newtask import NewTask
+from todoimpl.stall.report import is_stall
 from todoimpl.todo_mcp.model import TodoError
 
 from . import ledger, settle, ticket
@@ -210,11 +211,14 @@ class ErrorLoop:
 
         now = self.clock()
         data = ledger.load(self.root)
-        for card, parts in self._wanted(cards).items():
+        # A stall ticket (DOCS-errors.md, "Stalls") goes first and skips the usage gate: kuhy's top priority.
+        wanted = sorted(self._wanted(cards).items(), key=lambda kv: not any(is_stall(k) for k, _f in kv[1]))
+        for card, parts in wanted:
             keys = [key for key, _found in parts]
             if not self._resting(card):
                 continue
-            reason = self.gate.check(self.root, str(data[keys[0]]["repo"]), now)
+            stall = any(is_stall(key) for key in keys)
+            reason = "stall" if stall else self.gate.check(self.root, str(data[keys[0]]["repo"]), now)
             if reason is None:
                 continue
             if reason == "free":

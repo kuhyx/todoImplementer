@@ -6,6 +6,7 @@ import logging
 import threading
 import time
 from dataclasses import replace
+from functools import partial
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -21,6 +22,7 @@ from todoimpl.lessons import LessonError, approve, draft_lesson, latest_lesson, 
 from todoimpl.repotask.files import overlay as ticks_overlay
 from todoimpl.runner import autocheck, modelswitch
 from todoimpl.runner.scheduler import RunnerError
+from todoimpl.stall.scan import card_activity
 from todoimpl.todo_mcp.model import TodoError, upstream_text
 from todoimpl.umbrella.view import overlay_for
 from todoimpl.usage import limit_state
@@ -105,6 +107,7 @@ class ServiceBackend:
             auto_close=autocheck.enabled(self.root),
             checks=autocheck.load_cache(self.root),
             waits=dict(getattr(self.scheduler, "lock_waits", dict)()),
+            activity=partial(card_activity, self.root),
         )
 
     def _with_extras(self, run: RunState | None) -> RunState | None:

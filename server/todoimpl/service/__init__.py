@@ -110,6 +110,7 @@ def build_backend(
     from todoimpl.newtask.service import NewTaskService  # noqa: PLC0415 - it imports service.cards
     from todoimpl.runner.holdceiling import Ceiling  # noqa: PLC0415 - runner imports the service view
     from todoimpl.runner.limitprobe import LimitProbe  # noqa: PLC0415 - runner imports the service view
+    from todoimpl.stall.watch import StallWatch  # noqa: PLC0415 - runner imports the service view
     from todoimpl.triage.service import TriageService  # noqa: PLC0415 - it imports service.cards
 
     monitor = KeyMonitor(client, after_write=cache.poke)
@@ -141,4 +142,6 @@ def build_backend(
             root, cards=lambda: cache.snapshot().tasks, tasks=client, creator=new_tasks,
             starter=scheduler, refresh=cache.refresh,
         ).start()  # fmt: skip
+        # A running card quiet over 60 s is logged and filed (DOCS-errors.md, "Stalls").
+        StallWatch(root).start()
     return backend
