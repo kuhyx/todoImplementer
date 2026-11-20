@@ -37,7 +37,7 @@
     },
     "repos": {
       "type": "array",
-      "description": "Distinct repos of the cards, sorted; notes with no repo are not listed here (they are the Yours lane).",
+      "description": "The cards' repos plus kuhy's live GitHub repos (a new repo has no card yet), sorted; notes with no repo are not listed here (they are the Yours lane).",
       "items": {"type": "string", "minLength": 1}
     },
     "tasks": {

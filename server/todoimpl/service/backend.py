@@ -78,8 +78,7 @@ class ServiceBackend:
         """Wire the pieces; nothing is read until a request arrives."""
         self.cache = cache
         self.scheduler = scheduler
-        self.root = root
-        self.build = build
+        self.root, self.build = root, build
         self._clock = clock
         self.drafter = drafter  # lesson drafter; None = the real `claude -p` one
         self.spawn = spawn  # runs a background job; tests run it inline
@@ -92,6 +91,7 @@ class ServiceBackend:
         self.ask_service: AskService | None = None  # POST /api/task/<id>/ask/<verb>
         self.new_task_service: NewTaskService | None = None  # POST /api/new-task
         self.triage_service: TriageService | None = None  # labels repo-less notes (DOCS-triage.md)
+        self.known_repos: Callable[[], list[str]] = list  # GitHub repos beside the cards' (T2410)
 
     def _context(self) -> Context:
         now = self._clock()
@@ -132,7 +132,7 @@ class ServiceBackend:
         tasks = snap.tasks
         runs = load_runs(self.root, [t.id for t in tasks])
         extended = {key: self._with_extras(run) for key, run in runs.items()}
-        board = build_board(tasks, extended, self._context(), self.build)  # type: ignore[arg-type]
+        board = build_board(tasks, extended, self._context(), self.build, self.known_repos())  # type: ignore[arg-type]
         if snap.error:  # stale cards plus a banner, never an empty board that looks healthy
             board["error"] = {"code": UPSTREAM, "message": upstream_text(snap.error)}
         if (alert := marks.active_alert(self.root, self._clock())) is not None:

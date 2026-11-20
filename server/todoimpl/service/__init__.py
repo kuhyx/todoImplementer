@@ -22,6 +22,7 @@ from .backend import ServiceBackend
 from .cache import TaskCache
 from .cards import CardTask
 from .closed import ClosedNotes
+from .known_repos import KnownRepos
 from .notedone import NoteDoneWatcher
 from .repocards import group_cards, released_in
 from .runtitles import RunTitles, card_titles
@@ -122,6 +123,9 @@ def build_backend(
         gateway=gateway,
     )  # fmt: skip
     backend.merge_service = MergeService(client, cache, root)
+    if refresh:  # a test backend never reaches for gh
+        backend.known_repos = KnownRepos().get
+        backend.known_repos()  # first fetch starts now, off this thread
     auto_merge = AutoMerge(backend.merge_service)
     new_tasks = NewTaskService(client, cache)
     backend.new_task_service = new_tasks

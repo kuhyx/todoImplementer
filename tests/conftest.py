@@ -127,3 +127,4 @@ def _no_real_checkouts(tmp_path_factory: pytest.TempPathFactory, monkeypatch: py
     monkeypatch.setenv("TODOIMPL_REPO_ROOTS", "")
     monkeypatch.setenv("TODOIMPL_REPO_PATHS", str(tmp_path_factory.mktemp("repo-paths") / "repo-paths.json"))
     monkeypatch.setattr(clones, "GH", "gh-disabled-in-tests")
+    monkeypatch.setattr("todoimpl.service.known_repos.gh_repos", list)

@@ -53,9 +53,13 @@ def _ask_order(card: dict[str, Any]) -> tuple[int, int, float]:
 
 
 def build_board(
-    tasks: Sequence[TaskLike], runs: dict[str, RunState], ctx: Context, build: str
+    tasks: Sequence[TaskLike], runs: dict[str, RunState], ctx: Context, build: str, known: Sequence[str] = ()
 ) -> dict[str, Any]:
-    """Return the /api/board object: every note as a card, grouped by the four fixed columns."""
+    """Return the /api/board object: every note as a card, grouped by the four fixed columns.
+
+    `repos` is the cards' repos plus `known` (GitHub repos with no note yet, T2410), so the filter and the
+    new-task picker list a brand-new repo too.
+    """
     built = [(build_card(task, runs.get(task.id), ctx), task.created_by == "claude") for task in tasks]
     order = [key for key, _ in COLUMNS]
     # Inside a column kuhy's own notes come first, then the Needs-you order.
@@ -71,7 +75,7 @@ def build_board(
             {"id": key, "label": label, "count": sum(1 for card in cards if card["column"] == key)}
             for key, label in COLUMNS
         ],
-        "repos": sorted({task.repo for task in tasks if task.repo}),
+        "repos": sorted({*(task.repo for task in tasks if task.repo), *known}),
         "tasks": cards,
     }
 
