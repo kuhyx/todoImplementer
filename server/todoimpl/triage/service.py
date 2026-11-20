@@ -12,6 +12,7 @@ import threading
 import time
 from typing import TYPE_CHECKING
 
+from todoimpl.board.clone import wants_public
 from todoimpl.board.repos import repo_path
 from todoimpl.board.state import RunState, load, run_dir, save
 from todoimpl.board.types import is_manual
@@ -225,6 +226,7 @@ class TriageService:
             stored = label.load(directory) or {}
             repo = self._provision(
                 directory, self.src, note=note, title=card.title, name=str(stored.get("name")),
+                public=wants_public(card.item.body),
             )  # fmt: skip
             self.client.update_task(note, repo=repo)
             self.cache.refresh()  # the scheduler resolves card ids through the cache

@@ -163,3 +163,16 @@ def test_t2071_the_real_runner_reports_exit_timeout_and_a_missing_binary(
         newrepo.run_cmd(["git", "slow"])
     with pytest.raises(NewRepoError, match="nonesuch"):
         newrepo.run_cmd(["nonesuch"])
+
+
+@pytest.mark.parametrize(("public", "flag"), [(True, "--public"), (False, "--private")])
+def test_t2395_the_repo_takes_the_visibility_the_note_asks_for(
+    tmp_path: Path, public: bool, flag: str
+) -> None:
+    sh = Shell()
+    newrepo.provision(
+        tmp_path / "run", tmp_path / "src", note=NOTE, title=TITLE, name="pacman-gui", public=public, run=sh,
+        gh=sh.gh,
+    )  # fmt: skip
+    create = next(c for c in sh.calls if c[:3] == ["gh", "repo", "create"])
+    assert create[3:5] == ["kuhyx/pacman-gui", flag]

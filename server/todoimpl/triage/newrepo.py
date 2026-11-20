@@ -104,10 +104,11 @@ def provision(  # noqa: PLR0913 - one note's facts, keyword-only
     note: str,
     title: str,
     name: str,
+    public: bool = False,
     run: Run = run_cmd,
     gh: Callable[[list[str]], str] = run_gh,
 ) -> str:
-    """Create `kuhyx/<name>` (private), push the scaffold, clone it to `<src>/<name>`; return `kuhyx/<name>`.
+    """Create `kuhyx/<name>` (private unless asked), push the scaffold, clone to `<src>/<name>`; return it.
 
     Resumes after the last step that finished. The clone is for kuhy and the runner's worktrees; no session
     edits it.
@@ -126,7 +127,8 @@ def provision(  # noqa: PLR0913 - one note's facts, keyword-only
     done = STEPS.index(state["step"]) if state.get("step") in STEPS else 0
     if done < STEPS.index("created"):
         if not _exists(run, ["gh", "repo", "view", repo, "--json", "name", "--jq", ".name"]):
-            run(["gh", "repo", "create", repo, "--private", "--description", title[:100]], None)
+            seen = "--public" if public else "--private"
+            run(["gh", "repo", "create", repo, seen, "--description", title[:100]], None)
         _mark(directory, state, "created")
     if done < STEPS.index("pushed"):
         if not _exists(run, ["git", "ls-remote", "--heads", url, "main"]):

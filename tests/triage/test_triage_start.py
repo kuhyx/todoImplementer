@@ -82,3 +82,15 @@ def test_t2071_the_default_job_runs_on_its_own_thread() -> None:
     done = threading.Event()
     service._spawn(done.set)
     assert done.wait(5)
+
+
+@pytest.mark.parametrize(("line", "public"), [("visibility: public", True), ("", False)])
+def test_t2395_start_passes_the_note_visibility_line_to_the_new_repo(
+    rig: Rig, triage: Make, line: str, public: bool
+) -> None:
+    card = rig.note("gui for pacman and yay", f"a front end\n{line}", repo=None)
+    run = triage(NEW)
+    run.service.tick()
+    rig.backend.cache.refresh()
+    rig.backend.start(card)
+    assert [c["public"] for c in run.created] == [public]

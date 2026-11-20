@@ -52,7 +52,7 @@ class Triage:
         self.prompts: list[str] = []
         self.replies = replies
         self.now = 1000.0
-        self.created: list[dict[str, str]] = []
+        self.created: list[dict[str, object]] = []
         self.provision_error: Exception | None = None
         self.jobs: list[Callable[[], None]] | None = None  # a list holds the jobs instead of running them
         self.service = TriageService(
@@ -75,7 +75,7 @@ class Triage:
         else:
             self.jobs.append(job)
 
-    def _provision(self, directory: Path, src: Path, **facts: str) -> str:
+    def _provision(self, directory: Path, src: Path, **facts: object) -> str:
         if self.provision_error is not None:
             raise self.provision_error
         self.created.append({**facts, "dir": str(directory), "src": str(src)})
