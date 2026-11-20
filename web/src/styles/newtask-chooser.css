@@ -1,0 +1,73 @@
+/* <ti-new-task> step one: the repo chooser; folded, one button of the picks that opens it again. */
+.nt-chooser {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.nt-chips,
+.nt-repo-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.nt-chips > input {
+  flex: 1 1 12rem;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: var(--space-2);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+/* 175 repos: the chips scroll inside their own box instead of pushing the description off the dialog. */
+.nt-repo-chips {
+  flex-basis: 100%;
+  max-height: 30vh;
+  overflow-y: auto;
+}
+
+.nt-chip {
+  min-height: 2.75rem;
+  padding: var(--space-1) var(--space-3);
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.nt-chip[aria-pressed="true"] {
+  color: var(--on-fill);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.nt-chip[hidden],
+.nt-chips[hidden],
+.nt-picked[hidden] {
+  display: none;
+}
+
+.nt-picked {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 2.75rem;
+  padding: var(--space-1);
+  text-align: start;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.nt-picked .nt-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+}
+

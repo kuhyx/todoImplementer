@@ -147,15 +147,20 @@ than one card because 7 older section runs are working or shipping (they fold as
 
 ## kuhy's own task from the board: `POST /api/new-task`
 
-The toolbar's + opens a dialog: repo (an `<input list>` over the board's repos, free `owner/name` allowed), title,
-details and any files (picker with no type filter, multi-select; a camera picker on touch devices; Ctrl+V; drag and
-drop). Images show as thumbnails, other files as a file icon and their name; each has a remove button. Caps: 100 MB
+The toolbar's + opens a dialog. Step one is where the task goes (`new-task-chooser.ts`): chips for none, all and each
+board repo, several at once; a typed `owner/name` filters the chips and Enter adds one not on the board. Once picked
+it folds to one row of the picks; a click opens it again. Step two is one description box (18 rows) whose first line
+is the title (`splitNote`; a first line over 200 characters keeps the whole text as the body). Then one row: attach,
+camera, the attachments, close and OK. OK sends one task per picked repo; none and all send one repo-less note that
+triage routes (`DOCS-triage.md`). A sent repo leaves the picks, so a retry after a refusal sends nothing twice; each
+repo uploads its own copy of the files, because the server moves them into that task. Files: any (picker with no
+type filter, multi-select; a camera picker on touch devices; Ctrl+V; drag and drop). Images show as thumbnails, other files as a file icon and their name; each has a remove button. Caps: 100 MB
 per file, 500 MB per task, refused by name before upload (and again by the server). On Create the page sends each
 file unchanged to `POST /api/upload` (raw body, name percent-encoded in `X-Todoimpl-Name`; Origin and token checked
 before a byte is read; streamed to `$TODOIMPL_HOME/uploads/<id>/`, swept after 24 h; `http/upload.py`,
-`newtask/uploads.py`), then posts `{repo, title, body, files: [id]}` (`contracts/requests.schema.json` `new_task`).
+`newtask/uploads.py`), then posts `{repo?, title, body, files: [id]}` (`contracts/requests.schema.json` `new_task`).
 The relay's JSON `images: [{data_b64}]` (JPEG, 8 x 6 MB, 40 MB per request) still works. At 640 px or less the dialog
-fills the visible viewport (`visualViewport`), the details field grows with its text and Create stays pinned.
+fills the visible viewport (`visualViewport`), the description grows with its text and the button row stays pinned.
 Code: `http/newtask.py`, `newtask/service.py`, `newtask/images.py`.
 
 1. A title an open section of that repo already has is refused (`conflict`): two parts nobody could tell apart.

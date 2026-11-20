@@ -22,7 +22,7 @@ export const ownTaskRequest = z.strictObject({
   body: z.string().max(MAX_BODY).optional(),
   files: z.array(z.string().regex(FILE_ID)).max(1000).refine((ids) => areDistinct(ids)).optional(),
   images: z.array(z.union([z.strictObject({ upload: z.string().regex(FILE_ID) }), z.strictObject({ data_b64: z.string().min(4) })])).max(MAX_IMAGES).optional(),
-  repo: z.string().regex(REPO),
+  repo: z.string().regex(REPO).optional(),
   title: z.string().max(MAX_TITLE).regex(/^[^\r\n]*$/v).refine((title) => title.trim() !== ""),
 });
 
@@ -35,6 +35,14 @@ export const uploadResponse = z.union([
   z.strictObject({ ok: z.literal(true), upload: z.strictObject({ id: z.string().regex(FILE_ID), name: z.string().min(1).max(200), size: z.int().min(0) }) }),
   z.strictObject({ error: apiError, ok: z.literal(false) }),
 ]);
+
+/** The one description box as (title, body): its first non-blank line, cut to MAX_TITLE, and the lines after it; a cut line keeps the whole text as the body (the app's `splitNote`). */
+export function splitNote(text: string): { body: string; title: string } {
+  const all = text.trim();
+  const [first = "", ...rest] = all.split(/\r?\n/v);
+  const head = first.trim();
+  return head.length > MAX_TITLE ? { body: all, title: head.slice(0, MAX_TITLE).trim() } : { body: rest.join("\n").trim(), title: head };
+}
 
 export type OwnTaskRequest = z.infer<typeof ownTaskRequest>;
 export interface Created {

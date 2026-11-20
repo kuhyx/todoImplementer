@@ -1,7 +1,7 @@
-/** The new-task dialog's DOM: icon-labelled fields (names in aria-label and title, no visible words), attachments, actions. */
+/** The new-task dialog's DOM: the repo chooser, one description box (its first line is the title), then one row with attach, camera, the attachments, close and OK. Icons only; names in aria-label and title. */
 import { icon, iconButton, type IconName } from "@/components/icons";
 import { h } from "@/lib/dom";
-import { MAX_BODY, MAX_TITLE } from "@/lib/newtask-api";
+import { MAX_BODY } from "@/lib/newtask-api";
 
 export interface FormHandlers {
   onClose: () => void;
@@ -17,14 +17,11 @@ export interface Form {
   camera: HTMLButtonElement;
   cancel: HTMLButtonElement;
   dialog: HTMLElement;
-  list: HTMLDataListElement;
   panel: HTMLElement;
   pick: HTMLButtonElement;
-  repo: HTMLInputElement;
   slot: HTMLElement;
   submit: HTMLButtonElement;
   thumbs: HTMLElement;
-  title: HTMLInputElement;
 }
 
 /** One file in the dialog: `url` is its object URL when it is an image (a thumbnail), `id` once uploaded. */
@@ -35,8 +32,6 @@ export interface Attached {
   image: boolean;
   url: null | string;
 }
-
-const LIST_ID = "nt-repos";
 
 function row(glyph: IconName, control: HTMLElement): HTMLElement {
   return h("div", { class: "nt-row" }, h("span", { attrs: { "aria-hidden": "true" }, class: "nt-glyph" }, icon(glyph)), control);
@@ -73,14 +68,12 @@ function picker(name: string, glyph: IconName, label: string, attributes: Record
   return [button, input];
 }
 
-export function buildForm(handlers: FormHandlers): Form {
-  const on = { input: handlers.onInput };
-  const repo = h("input", {
-    attrs: { "aria-label": "Repo (owner/name)", autocomplete: "off", list: LIST_ID, name: "repo", spellcheck: "false", title: "Repo (owner/name)" },
-    on,
+/** `chooser` is the first step (the repo chooser's element); the description box follows it. */
+export function buildForm(handlers: FormHandlers, chooser: HTMLElement): Form {
+  const body = h("textarea", {
+    attrs: { "aria-label": "Description (first line is the title)", maxlength: MAX_BODY, name: "body", rows: 18, title: "Description (first line is the title)" },
+    on: { input: () => { handlers.onGrow(); handlers.onInput(); } },
   });
-  const title = h("input", { attrs: { "aria-label": "Title", maxlength: MAX_TITLE, name: "title", title: "Title" }, on });
-  const body = h("textarea", { attrs: { "aria-label": "Details", maxlength: MAX_BODY, name: "body", rows: 6, title: "Details" }, on: { input: () => { handlers.onGrow(); handlers.onInput(); } } });
   const [pick, files] = picker("files", "attach", "Attach files (or paste, or drop them here)", {}, handlers.onFiles);
   const [camera, shot] = picker("camera", "camera", "Take a photo", { accept: "image/*", capture: "environment" }, handlers.onFiles);
   camera.classList.add("nt-camera");
@@ -88,21 +81,17 @@ export function buildForm(handlers: FormHandlers): Form {
   const submit = iconButton("check", "Create and start", { "data-new-task": "submit" }, handlers.onSubmit, "primary");
   const cancel = iconButton("close", "Close", { "data-new-task": "cancel" }, handlers.onClose);
   const slot = h("div", { class: "nt-slot" });
-  const list = h("datalist", { attrs: { id: LIST_ID } });
   const dialog = h(
     "aside",
     { attrs: { "aria-label": "New task", "aria-modal": "true", role: "dialog", tabindex: -1 }, class: "nt-dialog", on: { keydown: handlers.onKey } },
-    row("folder", repo),
-    list,
-    row("tag", title),
+    row("folder", chooser),
     row("log", body),
-    h("div", { class: "nt-row" }, pick, files, camera, shot, thumbs),
     slot,
-    h("div", { class: "nt-actions" }, cancel, submit),
+    h("div", { class: "nt-bar" }, pick, files, camera, shot, thumbs, h("div", { class: "nt-actions" }, cancel, submit)),
   );
   listenForFiles(dialog, handlers.onFiles);
   const panel = h("div", { attrs: { hidden: true }, class: "nt-panel" }, h("div", { class: "nt-scrim", on: { click: handlers.onClose } }), dialog);
-  return { body, camera, cancel, dialog, list, panel, pick, repo, slot, submit, thumbs, title };
+  return { body, camera, cancel, dialog, panel, pick, slot, submit, thumbs };
 }
 
 /** Images as thumbnails, anything else as a file icon and its name; each with its remove button. */

@@ -52,6 +52,6 @@ describe("[T2321] New task numbers its images", () => {
     await settle(0);
     const calls = vi.mocked(fetch).mock.calls;
     const sent = JSON.parse(calls[2]?.[1]?.body as string) as unknown;
-    expect(sent).toEqual({ body: "see pic [Image #1] ", files: [ids[0]], images: [{ upload: ids[1] }], repo: "kuhyx/demo", title: "Fix it" });
+    expect(sent).toEqual({ body: "see pic [Image #1]", files: [ids[0]], images: [{ upload: ids[1] }], repo: "kuhyx/demo", title: "Fix it" });
   });
 });

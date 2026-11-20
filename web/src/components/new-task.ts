@@ -1,24 +1,27 @@
 import { trapTab } from "@/components/drawer-shell";
 /**
- * <ti-new-task>: kuhy's own task for a repo. The + button opens a dialog (repo from the board's repos or typed
- * owner/name, title, details, files of any type by picker, camera, paste or drop). Create uploads each file
- * unchanged (POST /api/upload, 100 MB each, 500 MB together), then posts the task with their ids; the server adds
- * the section, presses the repo card's Start and answers the card, which the app then opens. While that runs both
+ * <ti-new-task>: kuhy's own task. The + button opens a dialog: first where it goes (RepoChooser: none, all or
+ * several repos), then one description box whose first line is the title, files of any type by picker, camera,
+ * paste or drop. Create sends one task per picked repo (none and all: one repo-less note that triage routes). Each
+ * send uploads the files unchanged (POST /api/upload, 100 MB each, 500 MB together; the server moves them into
+ * that task, so every repo gets its own upload), then posts the task with their ids; the server adds the section,
+ * presses the repo card's Start and answers the card, which the app then opens. A repo already sent is dropped
+ * from the picks, so a retry after a refusal sends nothing twice. While that runs both
  * buttons are disabled with the reason; after 1 s a loader names what it waits on. At 640 px or less the dialog
  * fills the visible viewport (it follows `visualViewport`, so the keyboard never covers the details field).
  */
 import { loader, showToast, SLOW_MS } from "@/components/feedback";
 import { iconButton } from "@/components/icons";
+import { RepoChooser } from "@/components/new-task-chooser";
 import { type Attached, buildForm, type Form, renderThumbs } from "@/components/new-task-form";
 import { csrfToken } from "@/lib/boot";
-import { h } from "@/lib/dom";
 import { errorText } from "@/lib/http";
 import { dropTag, imageProblem, insertTag } from "@/lib/image-tags";
-import { MAX_FILE, MAX_TOTAL, postNewTask, REPO, uploadFile } from "@/lib/newtask-api";
+import { MAX_FILE, MAX_TOTAL, postNewTask, splitNote, uploadFile } from "@/lib/newtask-api";
 import { routes } from "@/lib/routes";
 
 const BUSY = "Creating the task…";
-const INCOMPLETE = "Needs a repo (owner/name) and a title";
+const INCOMPLETE = "Needs a repo choice and a description";
 const MB = 1024 * 1024;
 
 function block(button: HTMLButtonElement, reason: null | string, label: string): void {
@@ -28,10 +31,10 @@ function block(button: HTMLButtonElement, reason: null | string, label: string):
 
 export class TiNewTask extends HTMLElement {
   #busy = false;
+  readonly #chooser: RepoChooser;
   readonly #form: Form;
   #files: Attached[] = [];
   readonly #opener: HTMLButtonElement;
-  #repos = "";
   #slow = false;
   #waiting: string = routes.ownTask;
   readonly #onViewport = (): void => { this.#fit(); };
@@ -40,6 +43,10 @@ export class TiNewTask extends HTMLElement {
   constructor() {
     super();
     this.#opener = iconButton("plus", "New task", { "data-new-task": "open" }, () => { this.#open(); });
+    this.#chooser = new RepoChooser((isFolded) => {
+      this.#paint();
+      if (isFolded) this.#form.body.focus();
+    });
     this.#form = buildForm({
       onClose: () => { this.#close(); },
       onFiles: (files) => { this.#add(files); },
@@ -47,18 +54,18 @@ export class TiNewTask extends HTMLElement {
       onInput: () => { this.#paint(); },
       onKey: (event) => { this.#onKey(event); },
       onSubmit: () => void this.#submit(),
-    });
+    }, this.#chooser.element);
   }
 
   #open(): void {
     if (this.#busy) return;
     const form = this.#form;
-    if (form.repo.value === "") form.repo.value = this.defaultRepo;
+    if (this.#chooser.scope === null) this.#chooser.reset(this.defaultRepo);
     form.panel.hidden = false;
     globalThis.visualViewport?.addEventListener("resize", this.#onViewport);
     this.#fit();
     this.#paint();
-    (form.repo.value === "" ? form.repo : form.title).focus();
+    (this.#chooser.scope === null ? this.#chooser.typed : form.body).focus();
   }
 
   #close(): void {
@@ -136,8 +143,7 @@ export class TiNewTask extends HTMLElement {
 
   #reason(): null | string {
     if (this.#busy) return BUSY;
-    const { repo, title } = this.#form;
-    return REPO.test(repo.value) && title.value.trim() !== "" ? null : INCOMPLETE;
+    return this.#chooser.targets().length > 0 && splitNote(this.#form.body.value).title !== "" ? null : INCOMPLETE;
   }
 
   #paint(): void {
@@ -163,16 +169,23 @@ export class TiNewTask extends HTMLElement {
     this.#paint();
     const timer = setTimeout(() => { this.#slow = true; this.#paint(); }, SLOW_MS);
     try {
-      const { files, images } = await this.#upload(csrf);
-      const request = { body: form.body.value, ...((files.length > 0) && { files }), ...((images.length > 0) && { images }), repo: form.repo.value, title: form.title.value.trim() };
-      const created = await postNewTask(request, csrf);
-      form.title.value = "";
+      const { body, title } = splitNote(form.body.value);
+      let made: string | undefined;
+      for (const repo of this.#chooser.targets()) {
+        const { files, images } = await this.#upload(csrf);
+        const request = { ...(body !== "" && { body }), ...((files.length > 0) && { files }), ...((images.length > 0) && { images }), ...(repo !== null && { repo }), title };
+        const created = await postNewTask(request, csrf);
+        for (const attached of this.#files) delete attached.id; // the server moved them into this task
+        this.#chooser.sent(repo);
+        made = created.task?.id ?? made;
+      }
       form.body.value = "";
       form.body.style.height = "";
       for (const { url } of this.#files) if (url !== null) URL.revokeObjectURL(url);
       this.#files = [];
+      this.#chooser.reset("");
       this.#hide();
-      if (created.task !== undefined) this.dispatchEvent(new CustomEvent("task-created", { bubbles: true, detail: { id: created.task.id } }));
+      if (made !== undefined) this.dispatchEvent(new CustomEvent("task-created", { bubbles: true, detail: { id: made } }));
     } catch (error) {
       showToast(errorText(error), "error");
       form.dialog.classList.add("nt-shake");
@@ -185,10 +198,7 @@ export class TiNewTask extends HTMLElement {
   }
 
   set repos(list: readonly string[]) {
-    const signature = list.join("\n");
-    if (signature === this.#repos) return;
-    this.#repos = signature;
-    this.#form.list.replaceChildren(...list.map((repo) => h("option", { attrs: { value: repo } })));
+    this.#chooser.repos = list;
   }
 
   connectedCallback(): void {

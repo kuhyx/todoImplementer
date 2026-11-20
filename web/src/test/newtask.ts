@@ -30,12 +30,22 @@ export function mount(routes_: Record<string, unknown> = {}): TiNewTask {
   return element;
 }
 
-export function fill(element: TiNewTask, repo = "kuhyx/demo", title = "Fix it"): void {
-  for (const [sel, value] of [["input[name=repo]", repo], ["input[name=title]", title], ["textarea[name=body]", "see pic"]] as const) {
-    const field = q<HTMLInputElement>(element, sel);
-    field.value = value;
-    field.dispatchEvent(new Event("input", { bubbles: true }));
+/** Taps the chooser: "none", "all" or a repo name per entry, opening the folded row first when needed. */
+export function choose(element: TiNewTask, ...picks: string[]): void {
+  for (const pick of picks) {
+    const folded = element.querySelector<HTMLButtonElement>("[data-new-task=scope]:not([hidden])");
+    folded?.click();
+    const sel = pick === "none" || pick === "all" ? `[data-scope=${pick}]` : `[data-repo="${pick}"]`;
+    q<HTMLButtonElement>(element, sel).click();
   }
+}
+
+/** Picks `repos` (none when empty) and types `text` into the one description box. */
+export function fill(element: TiNewTask, text = "Fix it\nsee pic", repos: readonly string[] = ["kuhyx/demo"]): void {
+  choose(element, ...repos);
+  const field = q<HTMLTextAreaElement>(element, "textarea[name=body]");
+  field.value = text;
+  field.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
 export const submit = (element: TiNewTask): HTMLButtonElement => q<HTMLButtonElement>(element, "[data-new-task=submit]");

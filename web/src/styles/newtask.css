@@ -55,8 +55,10 @@ ti-new-task {
   border-radius: var(--radius-sm);
 }
 
+/* Three times the old six rows: the description is the dialog's main field. */
 .nt-row > textarea {
-  max-height: 60vh;
+  min-height: calc(18lh + 2 * var(--space-2));
+  max-height: 70vh;
   resize: vertical;
   scroll-margin-bottom: calc(var(--space-5) * 3);
 }
@@ -70,6 +72,7 @@ ti-new-task {
 }
 
 .nt-glyph svg,
+.nt-picked > svg,
 .nt-thumbs svg {
   width: 1.25rem;
   height: 1.25rem;
@@ -143,10 +146,18 @@ ti-new-task {
   right: var(--space-1);
 }
 
+/* Attach, camera, the attachments, then close and OK at the row's end. */
+.nt-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .nt-actions {
   display: flex;
-  justify-content: flex-end;
   gap: var(--space-2);
+  margin-inline-start: auto;
 }
 
 /* Phones: the create dialog fills the visible viewport (JS writes --nt-vh/--nt-top from visualViewport, so the
@@ -170,12 +181,12 @@ ti-new-task {
 
   .nt-row > textarea {
     max-height: none;
-    min-height: 40vh;
+    min-height: 50vh;
     resize: none;
     overflow: hidden;
   }
 
-  .nt-actions {
+  .nt-bar {
     position: sticky;
     bottom: 0;
     margin-top: auto;

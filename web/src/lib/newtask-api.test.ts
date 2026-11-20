@@ -24,6 +24,7 @@ describe("new task contract mirror", () => {
   it("agrees on good and bad requests", () => {
     expect(agree("requests", "new_task", ownTaskRequest, REQUEST)).toEqual([true, true]);
     expect(agree("requests", "new_task", ownTaskRequest, { repo: "kuhyx/demo", title: "x" })).toEqual([true, true]);
+    expect(agree("requests", "new_task", ownTaskRequest, { title: "x" })).toEqual([true, true]);
     for (const bad of [{ ...REQUEST, repo: "demo" }, { ...REQUEST, title: "a\nb" }, { ...REQUEST, title: " " }, { ...REQUEST, images: [{}] }, { ...REQUEST, extra: 1 }]) {
       expect(agree("requests", "new_task", ownTaskRequest, bad)).toEqual([false, false]);
     }
