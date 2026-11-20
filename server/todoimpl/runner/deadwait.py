@@ -79,7 +79,8 @@ def _units(claude: int, run_dir: Path, below: set[int]) -> list[Job]:
     for unit in sorted((CGROUP / path).parent.glob("*.s*")):
         pids = [int(p) for p in bgwait.read(unit / "cgroup.procs").split()]
         if not unit.name.startswith(TURN_UNIT) and pids and any(bgwait.mine(p, below, run_dir) for p in pids):
-            jobs.append(_job(pids, unit.name))
+            # capped.sh moves heavy tools into their own scope: count every process below too (T2390)
+            jobs.append(_job(list(dict.fromkeys(k for p in pids for k in deadrules.subtree(p))), unit.name))
     return jobs
 
 

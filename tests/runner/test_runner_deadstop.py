@@ -123,3 +123,25 @@ def test_t2196_a_program_whose_main_thread_sleeps_in_a_futex_but_another_waits_o
     judge.look(CLAUDE)
     clock.now += deadwait.STILL * 2
     assert judge.look(CLAUDE)[0].verdict == deadwait.UNKNOWN
+
+
+def test_t2390_a_unit_whose_child_works_in_a_capped_scope_is_no_deadlock(
+    proc: Proc, run_dir: Path, tmp_path: Path
+) -> None:
+    slice_dir = tmp_path / "cgroup" / "user.slice" / "todoimpl.slice"
+    (slice_dir / "gate.service").mkdir(parents=True)
+    (slice_dir / "gate.service" / "cgroup.procs").write_text("800\n801\n")  # make and its shell; pytest left
+    (slice_dir / "todoimpl-turn-bcf6a474-0-x.service").mkdir()
+    (slice_dir / "todoimpl-turn-bcf6a474-0-x.service" / "cgroup.procs").write_text(f"{CLAUDE}\n")
+    proc.add(CLAUDE, "claude", cgroup="/user.slice/todoimpl.slice/todoimpl-turn-bcf6a474-0-x.service")
+    proc.add(800, "bash", kids=(801,), cmd="bash\0gate.sh\0")
+    (proc.root / "800" / "environ").write_text("TODOIMPL_BUILD_CARD=bcf6a474-0\0")
+    proc.add(801, "make", ppid=800, kids=(802,))
+    proc.add(802, "pytest", ppid=801, wchan="0", cgroup="/user.slice/capped.slice/capped-1.scope")
+    clock = Clock()
+    judge = judge_of(run_dir, clock)
+    judge.look(CLAUDE)
+    clock.now += deadwait.STILL
+    proc.cpu(802, 50)
+    (found,) = judge.look(CLAUDE)
+    assert (found.verdict, found.rule) == (deadwait.HEALTHY, "working")
