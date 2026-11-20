@@ -6,6 +6,8 @@ import hashlib
 from dataclasses import replace
 from typing import TYPE_CHECKING, Any
 
+from todoimpl.board.status import DONE_STAGES, MANUAL_STAGE
+
 from . import allow, store
 from .parse import Ask, parse_asks
 
@@ -18,6 +20,7 @@ if TYPE_CHECKING:
 
 DAY = 24 * 3600.0
 RESOLVED = ("answered", "auto", "done", "approved")
+CLOSED = (*DONE_STAGES, MANUAL_STAGE)  # stages whose note is closed (Ship, Done manually, the todo app)
 
 
 def _add(found: list[Ask], parts: Iterable[Part], *, manual: bool) -> list[Ask]:
@@ -28,13 +31,18 @@ def _add(found: list[Ask], parts: Iterable[Part], *, manual: bool) -> list[Ask]:
 
 
 def work_asks(body: str, run: RunState | None, parts: Iterable[Part] = ()) -> list[Ask]:
-    """Return the asks of the newest reply, else those of the body and of the card's non-manual parts."""
-    reply = str(run.extra.get("last_reply", "")) if run is not None else ""
+    """Return the asks of the newest reply, else those of the body and of the card's non-manual parts.
+
+    A run whose note closed asks nothing: an answer could only send stale news (T2360). A repo card's open
+    parts still ask, since they are the next cycle's work.
+    """
+    parts, closed = list(parts), run is not None and run.stage in CLOSED
+    reply = str(run.extra.get("last_reply", "")) if run is not None and not closed else ""
     if found := parse_asks(reply):
         # The reply is the round: an id a later reply asks again is a new ask (T2277).
         rnd = hashlib.sha256(reply.encode()).hexdigest()[:12]
         return [replace(a, round=rnd) for a in found]
-    return _add(parse_asks(body), parts, manual=False)
+    return [] if closed and not parts else _add(parse_asks(body), parts, manual=False)
 
 
 def source(body: str, run: RunState | None, parts: Iterable[Part] = ()) -> list[Ask]:

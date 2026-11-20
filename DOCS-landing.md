@@ -103,6 +103,9 @@ on origin gets no new commit and no push: it closes with "Pushed by the session:
 `state.ship` has no `pushed_at`. Its checks run again first (T1964), because the session never ran them for this
 HEAD: red checks end in Needs you and nothing is deployed. Partly pushed work squashes only what origin lacks (the
 merge base is the last pushed commit). Every path that pushed then deploys (below) before it closes the note.
+A round that changed no code (clean tree, HEAD on origin, nothing past `base_sha`) closes the same way with
+"Closed with no code change." after its checks, Ship click or auto-ship (T2361); only local commits whose net diff is
+empty and that origin lacks still end in "Nothing to ship".
 
 ## Done means deployed (kuhy, 2026-11-11; `runner/deploy.py`, `runner/deployhost.py`, T1960-T1962, T1964-T1970)
 

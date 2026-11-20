@@ -24,5 +24,16 @@ def new_cycle(st: RunState, run_dir: Path) -> None:
     for name in FILES:
         (run_dir / name).unlink(missing_ok=True)
     # The tier is decided from the cycle's parts; a card id outlives its cycles (T1999).
-    for key in ("spec_ok", "partial", "followup_id", "tier", "free_models", "escalated", "escalate_reason"):
+    # The last cycle's reply asked that cycle's questions: answering one now would steer this one (T2360).
+    keys = (
+        "spec_ok",
+        "partial",
+        "followup_id",
+        "tier",
+        "free_models",
+        "escalated",
+        "escalate_reason",
+        "last_reply",
+    )
+    for key in keys:
         st.extra.pop(key, None)

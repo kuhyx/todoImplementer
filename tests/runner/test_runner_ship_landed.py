@@ -104,3 +104,23 @@ def test_t1865_ship_click_after_the_session_pushed_closes_with_that_evidence(wor
         assert sh(remote, "git", "log", "-1", "--format=%s", "main") == "landed by the session\n"
     finally:
         sched.close()
+
+
+def test_t2361_an_untouched_worktree_on_origin_closes_with_no_code_change(world: Env) -> None:
+    repo, wt, client, remote = _setup(world)  # the round changed no code: HEAD == base_sha, clean
+    before = sh(remote, "git", "rev-parse", "main").strip()
+    info = ship.ship(_plan(repo, wt, world), client, lambda: 4.0)
+    assert info == {"commit": "", "closed_at": 4.0}
+    assert client.closed[0][1].startswith("Closed with no code change.")
+    assert sh(remote, "git", "rev-parse", "main").strip() == before
+    assert not wt.path.exists()
+
+
+def test_t2361_an_untouched_worktree_origin_moved_past_still_closes(world: Env) -> None:
+    repo, wt, client, remote = _setup(world)
+    sh(repo, "git", "commit", "-q", "--allow-empty", "-m", "someone else")
+    sh(repo, "git", "push", "-q", "origin", "main")
+    before = sh(remote, "git", "rev-parse", "main").strip()
+    ship.ship(_plan(repo, wt, world), client, lambda: 1.0)
+    assert client.closed[0][1].startswith("Closed with no code change.")
+    assert sh(remote, "git", "rev-parse", "main").strip() == before

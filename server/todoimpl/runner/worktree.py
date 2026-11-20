@@ -142,6 +142,16 @@ def _on(wt: Path, ancestor: str, descendant: str) -> bool:
     return git(wt, "merge-base", "--is-ancestor", ancestor, descendant, check=False).returncode == 0
 
 
+def on_origin(wt: Path, ref: str) -> bool:
+    """Return True when HEAD is already on `ref`."""
+    return git(wt, "merge-base", "--is-ancestor", "HEAD", ref, check=False).returncode == 0
+
+
+def settled(wt: Path, ref: str) -> bool:
+    """Return True when nothing is uncommitted and HEAD is on `ref`: what the run did is on origin (T2361)."""
+    return not git(wt, "status", "--porcelain").stdout.strip() and on_origin(wt, ref)
+
+
 def unresolved(wt: Path, ref: str) -> bool:
     """Return True while a rebase onto `ref` has not gone through: conflicts open, or `ref` not in HEAD."""
     return has_conflicts(wt) or not _on(wt, ref, "HEAD")

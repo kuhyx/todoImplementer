@@ -11,7 +11,7 @@ from todoimpl.todo_mcp.model import TodoError
 from . import deploy, deployline, gate
 from .checks import CheckResult, run_all
 from .files import NeedsYouError
-from .worktree import base_ref, git, has_conflicts, output_tail, remove
+from .worktree import base_ref, git, has_conflicts, on_origin, output_tail, remove, settled
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -88,15 +88,10 @@ def evidence(sha: str, branch: str, results: list[CheckResult], live: str = "", 
     return "\n".join(parts if results else [*parts, "No checks were found."])
 
 
-def _on_origin(wt: Path, ref: str) -> bool:
-    """Return True when HEAD is already on `ref`."""
-    return git(wt, "merge-base", "--is-ancestor", "HEAD", ref, check=False).returncode == 0
-
-
 def _landed(plan: ShipPlan, ref: str) -> list[str]:
     """Short shas of the commits the session already pushed, when nothing is left for Ship to push (T1865)."""
     wt = plan.worktree
-    if not plan.base_sha or git(wt, "status", "--porcelain").stdout.strip() or not _on_origin(wt, ref):
+    if not plan.base_sha or not settled(wt, ref):
         return []
     return git(wt, "rev-list", "--reverse", "--abbrev-commit", f"{plan.base_sha}..HEAD").stdout.split()
 
@@ -176,7 +171,8 @@ def ship(
 ) -> dict[str, Any]:
     """Run the whole ship; any refusal raises NeedsYouError and leaves the worktree in place.
 
-    `allow_empty` (auto-ship only) closes a run with no diff without a commit or push; `commit` is then "".
+    `allow_empty` (auto-ship) closes a run with no diff without a commit or push; `commit` is then "". A clean
+    worktree whose HEAD is on origin closes that way on a click too: nothing is left to ship (T2361).
     """
     wt = plan.worktree
     git(wt, "fetch", "--quiet", "origin")
@@ -187,7 +183,7 @@ def ship(
     if has_conflicts(wt):  # `add --all` would commit the markers as if resolved
         msg = f"Unresolved conflicts in {wt}: resolve them and finish the rebase, then Retry"
         raise NeedsYouError(msg, "run_failed")
-    if (own := deploy.pushed(plan.run_dir, wt)) and _on_origin(wt, ref):  # a Retry after this ship's own push
+    if (own := deploy.pushed(plan.run_dir, wt)) and on_origin(wt, ref):  # a Retry after this ship's own push
         kept = {
             "commit": own["commit"],
             "pushed_at": own["pushed_at"],
@@ -201,7 +197,7 @@ def ship(
         head = git(wt, "rev-parse", "HEAD").stdout.strip()
         return _finish(plan, client, now, {"commit": head}, results, branch, said, command)
     plan.step("squashing the work")
-    changed = _squash(plan, ref, allow_empty=allow_empty)
+    changed = _squash(plan, ref, allow_empty=allow_empty or settled(wt, ref))  # all on origin: close (T2361)
     if changed:
         plan.step("rebasing")
         _rebase(plan, ref)

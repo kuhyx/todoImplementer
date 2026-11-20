@@ -66,8 +66,11 @@ def test_evidence_without_checks() -> None:
 
 
 def test_ship_with_nothing_to_ship(world: Env) -> None:
-    repo, wt, client = _setup(world)
-    (wt.path / "hello.txt").unlink()
+    repo, wt, client = _setup(world)  # local commits that cancel out: HEAD is not on origin (T2361)
+    sh(wt.path, "git", "add", "hello.txt")
+    sh(wt.path, "git", "commit", "-q", "-m", "add")
+    sh(wt.path, "git", "rm", "-q", "hello.txt")
+    sh(wt.path, "git", "commit", "-q", "-m", "revert")
     with pytest.raises(NeedsYouError, match="Nothing to ship"):
         ship.ship(_plan(world, repo, wt), client, lambda: 1.0)
 

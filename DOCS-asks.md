@@ -29,6 +29,9 @@ A malformed block (no single `*`, bad id, duplicate id, unknown risk) yields not
 - **Manual parts on a repo card** (T2114): their asks always show, also beside the run's newest reply. While the
   session has asks of its own (reply, body or Claude's parts), delivery and Take recommended cover only those, so
   kuhy's open manual asks never hold the session back and a click meant for the session never releases his work.
+- **Closed cards** (T2360): a run at `shipped`, `closed` or `done_manually` asks nothing from its reply, so its old asks
+  show no buttons, take no click and never auto-adopt; a repo card keeps the asks of its open parts. A repo card's next
+  cycle drops the last reply (`repotask/cycle.py`), so the old cycle's asks never steer the new one.
 
 Endpoints (`http/asks.py`, Origin + CSRF like every POST): `POST /api/task/<id>/ask/<answer|take-recommended|run|undo|approve|reject>`.
 
