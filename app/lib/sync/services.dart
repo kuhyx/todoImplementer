@@ -5,6 +5,7 @@ import 'package:rtdb_relay/rtdb_relay.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:todo_implementer/config/firebase_config.dart';
 import 'package:todo_implementer/sync/board_relay.dart';
+import 'package:todo_implementer/sync/feed_cache.dart';
 import 'package:todo_implementer/sync/google_sign_in_backend.dart';
 import 'package:todo_implementer/sync/layout.dart';
 import 'package:todo_implementer/sync/rtdb_board_relay.dart';
@@ -65,6 +66,7 @@ class AppServices {
       // live feed spun forever and merges never refreshed (T2310).
       revOf: rev.changesOf,
       listen: stream.listen,
+      feeds: PrefsFeedCache(await SharedPreferences.getInstance()),
     );
     return AppServices(
       config: config,

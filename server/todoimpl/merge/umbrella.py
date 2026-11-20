@@ -23,12 +23,12 @@ def note_command() -> tuple[list[str], Path]:
     return ["dart", "run", "bin/todo_note.dart"], home
 
 
-def create_umbrella(text: str) -> str:
-    """Add `text` as a note without a repo (`--by claude`) and return the id the CLI printed."""
+def create_umbrella(text: str, by: str = "claude") -> str:
+    """Add `text` as a note without a repo (`--by` claude or kuhy) and return the id the CLI printed."""
     prefix, cwd = note_command()
     try:
         proc = subprocess.run(  # noqa: S603
-            [*prefix, "--text", text, "--by", "claude"],
+            [*prefix, "--text", text, "--by", by],
             capture_output=True,
             text=True,
             cwd=cwd,

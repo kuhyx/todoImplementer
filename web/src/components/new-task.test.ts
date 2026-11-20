@@ -124,4 +124,17 @@ describe("ti-new-task", () => {
     expect(vi.mocked(fetch)).not.toHaveBeenCalled();
     expect(document.querySelector("#toasts")?.textContent).toContain("CSRF");
   });
+
+  it("closes without naming a card when the answer has none (a repo-less note)", async () => {
+    const { task: _task, ...loose } = OK;
+    const element = mount({ [`POST ${routes.ownTask}`]: () => Promise.resolve(Response.json(loose)) });
+    const created = vi.fn();
+    element.addEventListener("task-created", created);
+    q<HTMLButtonElement>(element, "[data-new-task=open]").click();
+    fill(element);
+    submit(element).click();
+    await settle(0);
+    expect(created).not.toHaveBeenCalled();
+    expect(panel(element).hidden).toBe(true);
+  });
 });

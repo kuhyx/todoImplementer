@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:todo_implementer/model/board.dart';
 import 'package:todo_implementer/model/board_view.dart';
+import 'package:todo_implementer/model/json.dart';
 import 'package:todo_implementer/sync/board_relay.dart';
 import 'package:todo_implementer/ui/board/board_grid.dart';
 import 'package:todo_implementer/ui/board/board_header.dart';
@@ -22,10 +23,13 @@ import 'package:todo_implementer/ui/board/new_task_sheet.dart';
 /// Board page fed by [relay].
 class BoardPage extends StatefulWidget {
   /// Creates the page.
-  const new({required this.relay, super.key});
+  const new({required this.relay, this.usage, super.key});
 
   /// The link to the PC.
   final BoardRelay relay;
+
+  /// `snap/usage` as it changes (the plan ring), if the relay has it.
+  final Stream<Json>? usage;
 
   @override
   State<BoardPage> createState() => _BoardPageState();
@@ -36,6 +40,20 @@ class _BoardPageState extends State<BoardPage> {
   ViewState _state = const ViewState();
   final List<RelayFailed> _errors = [];
   RelayFailed? _last;
+  Json? _usage;
+  StreamSubscription<Json>? _usageSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _usageSub = widget.usage?.listen((u) => setState(() => _usage = u));
+  }
+
+  @override
+  void dispose() {
+    unawaited(_usageSub?.cancel());
+    super.dispose();
+  }
 
   void _record(RelayFailed f) => setState(() {
     _errors.add(f);
@@ -73,15 +91,16 @@ class _BoardPageState extends State<BoardPage> {
     ),
   );
 
-  void _newTask(Board board) => showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    showDragHandle: true,
-    builder: (_) => NewTaskSheet(
+  // The whole screen (T2349): a pushed full-screen route, not a half sheet.
+  void _newTask(Board board) => Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      fullscreenDialog: true,
+      builder: (_) => NewTaskSheet(
       repos: board.repos,
       relay: widget.relay,
       onError: _record,
-      repo: _state.repo.isEmpty || _state.repo == yours ? null : _state.repo,
+        repo: _state.repo.isEmpty || _state.repo == yours ? null : _state.repo,
+      ),
     ),
   );
 
@@ -107,6 +126,7 @@ class _BoardPageState extends State<BoardPage> {
           children: [
             StatusStrip(
               board: board,
+              usage: _usage,
               errors: _errors.length,
               onCredits: (on) => _global('credits_fallback', {
                 'args': {'enabled': on},

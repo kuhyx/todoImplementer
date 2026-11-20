@@ -25,14 +25,14 @@
     },
     {
       "type": "object",
-      "description": "POST /api/new-task: the note that got the section, whether Start ran (false: the card is already at work or cannot start; its actions say why), and the repo's card.",
+      "description": "POST /api/new-task: the note that got the section, whether Start ran (false: the card is already at work or cannot start; its actions say why), and the repo's card (absent for a repo-less note, which triage files: T2347).",
       "properties": {
         "ok": {"const": true},
         "note": {"type": "string", "pattern": "^[A-Za-z0-9]{8}$"},
         "started": {"type": "boolean"},
         "task": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/task_card"}
       },
-      "required": ["ok", "note", "started", "task"],
+      "required": ["ok", "note", "started"],
       "additionalProperties": false
     },
     {

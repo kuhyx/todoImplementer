@@ -172,7 +172,7 @@ export class TiNewTask extends HTMLElement {
       for (const { url } of this.#files) if (url !== null) URL.revokeObjectURL(url);
       this.#files = [];
       this.#hide();
-      this.dispatchEvent(new CustomEvent("task-created", { bubbles: true, detail: { id: created.task.id } }));
+      if (created.task !== undefined) this.dispatchEvent(new CustomEvent("task-created", { bubbles: true, detail: { id: created.task.id } }));
     } catch (error) {
       showToast(errorText(error), "error");
       form.dialog.classList.add("nt-shake");

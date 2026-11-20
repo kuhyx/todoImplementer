@@ -96,7 +96,7 @@
     },
     "new_task": {
       "type": "object",
-      "description": "POST /api/new-task (not task-scoped): kuhy's own task. The server writes the images (`[Image #N]` above each link, T2321) and moves the staged files (POST /api/upload, at most 500 MB together) to a fresh dufs folder, appends a `## title` section linking them to the repo's open note (or a new note), then presses Start on the repo card. The request may be up to 40 MB.",
+      "description": "POST /api/new-task (not task-scoped): kuhy's own task. The server writes the images (`[Image #N]` above each link, T2321) and moves the staged files (POST /api/upload, at most 500 MB together) to a fresh dufs folder, appends a `## title` section linking them to the repo's open note (or a new note), then presses Start on the repo card. With no `repo` (the phone's none) the todo CLI adds a repo-less note by kuhy that triage routes, and nothing is started (T2347). The request may be up to 40 MB.",
       "properties": {
         "repo": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"},
         "title": {"type": "string", "minLength": 1, "maxLength": 200, "pattern": "^[^\\r\\n]*\\S[^\\r\\n]*$"},
@@ -110,7 +110,7 @@
           "items": {"type": "string", "pattern": "^[0-9a-f]{32}$"}
         }
       },
-      "required": ["repo", "title"],
+      "required": ["title"],
       "additionalProperties": false
     },
     "ask_answer": {

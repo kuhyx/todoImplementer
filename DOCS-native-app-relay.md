@@ -30,14 +30,15 @@ sessions 5 s, usage and merges 10 s. The FCM pinger plugs into `Publisher(on_boa
 | `presence/workers/{dev}` | worker | heartbeat every 30 s, with `version` and `build` (replaces `GET /version`) |
 | `presence/clients/{dev}` | app | platform, app version, build number, `seen`, FCM token or null |
 | `watch/{dev}` | worker | which card's live feed is mirrored for that client, and until when |
-| `live/{card}/{seq}` | worker | the `/api/live` events of a watched card, key `s` + 9-digit seq continuing above the highest stored key (restarts too), last 200 kept |
+| `live/{card}/{seq}` | worker | the `/api/live` events of a watched card, key `s` + 9-digit seq continuing above the highest stored key (restarts too), last 200 kept; a new mirror skips activity already there (T2345) and writes one PATCH per second (T2346) |
 | `requests/{rid}/req` | app | a request (`relay-request.schema.json`) |
 | `requests/{rid}/claim` (clear) | worker | lease, attempt and phase, as the tutor |
 | `requests/{rid}/result` | worker | the answer (`relay-result.schema.json`) |
 
 Publishing: the worker writes a `snap` node when its JSON changes, at most every 250 ms per node, then bumps
 `rev`. The app streams `rev`, `presence/workers` and, while a drawer is open, `live/{card}`; it GETs a `snap` node
-when its counter moves. A `snapshot_refresh` request republishes every node (pull to refresh, first start).
+when its counter moves. The app keeps each card's last feed (in memory, the newest 50 events in its preferences on
+close) and shows it at once on the next open (T2353). A `snapshot_refresh` request republishes every node (pull to refresh, first start).
 
 ## Sealing
 

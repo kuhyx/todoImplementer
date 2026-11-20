@@ -102,8 +102,8 @@ def test_without_a_service_the_route_does_not_exist(live: Live) -> None:
     ("body", "why"),
     [
         ("[]", "JSON object"),
-        ({"title": "x"}, "repo, title"),
-        (good(extra=1), "repo, title"),
+        ({"body": "x"}, "repo?, title"),
+        (good(extra=1), "repo?, title"),
         (good(repo="demo"), "owner/name"),
         (good(repo=5), "owner/name"),
         (good(title=""), "title"),

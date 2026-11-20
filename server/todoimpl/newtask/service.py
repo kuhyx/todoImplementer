@@ -9,6 +9,8 @@ from typing import TYPE_CHECKING
 
 from todoimpl.board.repos import canonical
 from todoimpl.http.backend import BackendError
+from todoimpl.merge.apply import MergeError
+from todoimpl.merge.umbrella import create_umbrella
 from todoimpl.service.cards import card_tasks
 from todoimpl.todo_mcp.model import TodoError, upstream_text
 
@@ -67,8 +69,10 @@ class NewTaskService:
         self._cache = cache
         self._folder = folder
 
-    def create(self, task: NewTask) -> tuple[str, str]:
-        """Add the section and return (note id8, the card that holds it now)."""
+    def create(self, task: NewTask) -> tuple[str, str | None]:
+        """Add the section and return (note id8, the card that holds it now; None for a repo-less note)."""
+        if not task.repo:
+            return self._loose(task), None
         note8 = self.add(task)
         card = self.card_of(note8, task)
         if card is None:
@@ -76,23 +80,34 @@ class NewTaskService:
             raise BackendError(NOT_FOUND, msg)
         return note8, card
 
+    def _loose(self, task: NewTask) -> str:
+        """Add a repo-less note through the todo CLI (MCP add_task needs a repo); triage files it (T2347)."""
+        body = self._linked(task)
+        try:
+            return create_umbrella("\n\n".join([f"# {task.title}", body]).strip(), by="kuhy")[:8]
+        except MergeError as exc:
+            raise BackendError(UPSTREAM, exc.message) from exc
+
+    def _linked(self, task: NewTask) -> str:
+        """Write the task's images and staged files to a fresh folder; return the body with their links."""
+        pictures = _pictures(task)
+        staged = uploads.claim(task.files, uploads.root())
+        if isinstance(staged, str):
+            raise BackendError(BAD, staged)
+        folder = self._folder() if task.images or staged else ""
+        paths = noteimages.write(pictures, images.root() / folder, "")
+        noteimages.release(pictures)
+        links = [f"[Image #{n}]\n![]({images.URL}/{folder}/{p.name})" for n, p in enumerate(paths, 1)]
+        links += images.attach(staged, images.root(), folder)
+        return "\n\n".join([task.body, *links]).strip()
+
     def add(self, task: NewTask, *, checked: bool = False) -> str:
         """Add the section (refusing a twin unless `checked` by adopt) and return its note id8."""
         task = _real(task)
         try:
             if not checked:
                 self._refuse_twin(task)
-            pictures = _pictures(task)
-            staged = uploads.claim(task.files, uploads.root())
-            if isinstance(staged, str):
-                raise BackendError(BAD, staged)
-            folder = self._folder() if task.images or staged else ""
-            paths = noteimages.write(pictures, images.root() / folder, "")
-            noteimages.release(pictures)
-            links = [f"[Image #{n}]\n![]({images.URL}/{folder}/{p.name})" for n, p in enumerate(paths, 1)]
-            links += images.attach(staged, images.root(), folder)
-            body = "\n\n".join([task.body, *links]).strip()
-            note = self._client.add_task(task.repo, task.title, body)
+            note = self._client.add_task(task.repo, task.title, self._linked(task))
         except TodoError as exc:
             raise BackendError(UPSTREAM, upstream_text(str(exc))) from exc
         return note.id[:8]

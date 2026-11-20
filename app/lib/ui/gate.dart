@@ -96,7 +96,7 @@ class _AppGateState extends State<AppGate> {
               final sessions = s.sessions;
               final usage = s.usage;
               return Shell(
-                board: BoardPage(relay: s.relay),
+                board: BoardPage(relay: s.relay, usage: usage?.usage()),
                 sessions: sessions == null
                     ? null
                     : SessionsPage(feed: sessions, relay: s.relay),

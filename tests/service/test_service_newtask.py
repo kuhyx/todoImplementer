@@ -155,3 +155,27 @@ def test_an_unknown_staged_file_is_a_bad_request_and_writes_nothing(rig: Rig, im
         service(rig).create(NewTask("kuhyx/fresh", "Read it", "", (), files=("0" * 32,)))
     assert caught.value.code == "bad_request"
     assert not images.exists()
+
+
+def test_t2347_no_repo_goes_through_the_todo_cli_as_kuhy(
+    rig: Rig, images: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """MCP add_task needs a repo, so a repo-less task is the todo CLI's note; triage picks its repo."""
+    log, shim = tmp_path / "args", tmp_path / "note"
+    shim.write_text(f'#!/bin/sh\nprintf "%s\\n" "$@" > {log}\necho 0123abcd-0000-4000-8000-000000000000\n')
+    shim.chmod(0o755)
+    monkeypatch.setenv("TODOIMPL_TODO_NOTE", str(shim))
+    note, card = service(rig).create(NewTask("", "Habit app", "streaks", (JPEG,)))
+    assert (note, card) == ("0123abcd", None)
+    args = log.read_text()
+    assert args.startswith("--text\n# Habit app\n\nstreaks\n\n[Image #1]\n![](")
+    assert args.endswith("--by\nkuhy\n")
+
+
+def test_t2347_a_failing_todo_cli_is_upstream_unavailable(
+    rig: Rig, images: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("TODOIMPL_TODO_NOTE", str(tmp_path / "missing"))
+    with pytest.raises(BackendError) as err:
+        service(rig).create(NewTask("", "Habit app", "", ()))
+    assert err.value.code == "upstream_unavailable"

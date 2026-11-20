@@ -19,7 +19,7 @@ class Tasks(Protocol):
 class Creator(Protocol):
     """`NewTaskService`: add a part to the repo's note."""
 
-    def create(self, task: NewTask) -> tuple[str, str]: ...  # noqa: D102
+    def create(self, task: NewTask) -> tuple[str, str | None]: ...  # noqa: D102
 
 
 class Starter(Protocol):

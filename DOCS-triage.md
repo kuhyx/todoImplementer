@@ -3,6 +3,9 @@
 A note with no `repo` used to be a Yours card with only Won't do (T2058). That is wrong for a note that asks for a new
 app, a change across all repos, or a reading list. Code: `server/todoimpl/triage/`, `board/norepo.py`, `prompts/research.py`.
 
+A repo-less note also comes from the phone's add task with no repo picked: `new_task` without `repo` adds it through
+the todo CLI (`--by kuhy`) and starts nothing; this triage then labels it (T2347).
+
 ## The label
 
 `TriageService` (`triage/service.py`, a 5 s loop, never on the board fetch) classifies each open, single-note, repo-less

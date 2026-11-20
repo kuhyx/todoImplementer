@@ -149,16 +149,16 @@ void main() {
     final relay = await _board(tester, card('a1', repo: 'kuhyx/demo'));
     await tester.tap(_key('new-task'));
     await settle(tester);
-    await tester.enterText(_key('nt-repo'), 'kuhyx/demo');
-    await tester.enterText(_key('nt-title'), 'Logo');
-    await tester.enterText(_key('nt-body'), 'like this');
+    await tester.tap(_key('nt-repo-kuhyx/demo'));
+    await tester.tap(_key('nt-repos-done'));
+    await tester.enterText(_key('nt-body'), 'Logo\nlike this');
     await _tap(tester, _key('nt-gallery'));
     await _tap(tester, _key('nt-send'));
     expect(relay.sent.single.$2, {
       'args': {
         'repo': 'kuhyx/demo',
         'title': 'Logo',
-        'body': 'like this [Image #1] ',
+        'body': 'like this [Image #1]',
         'images': [_ref(_png)],
       },
     });

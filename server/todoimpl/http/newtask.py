@@ -38,7 +38,7 @@ MAX_FILES = 1000  # ids only; the real cap is uploads.MAX_TASK bytes
 
 @dataclass(frozen=True)
 class NewTask:
-    """A checked request: title and body stripped, images the `[Image #N]` refs, files staged upload ids."""
+    """A checked request: repo "" for none, title and body stripped, images `[Image #N]` refs, files ids."""
 
     repo: str
     title: str
@@ -51,8 +51,8 @@ class NewTask:
 class NewTaskApi(Protocol):
     """What the route needs from the service; its refusals are BackendError."""
 
-    def create(self, task: NewTask) -> tuple[str, str]:
-        """Add the task; return (note id8, the card id that now holds it)."""
+    def create(self, task: NewTask) -> tuple[str, str | None]:
+        """Add the task; return (note id8, the card id that now holds it; None for a repo-less note)."""
         ...
 
 
@@ -89,10 +89,10 @@ def check(raw: bytes) -> NewTask | str:
     body: dict[str, Any] | str = parse(raw)
     if isinstance(body, str):
         return body
-    if not {"repo", "title"} <= set(body) <= KEYS:
-        return "body must be {repo, title, body?, images?, files?}"
-    repo, text = body["repo"], body.get("body", "")
-    if not isinstance(repo, str) or not REPO.fullmatch(repo):
+    if not {"title"} <= set(body) <= KEYS:
+        return "body must be {repo?, title, body?, images?, files?}"
+    repo, text = body.get("repo", ""), body.get("body", "")
+    if not isinstance(repo, str) or (repo and not REPO.fullmatch(repo)):
         return "repo must look like owner/name"
     if (title := _title(body["title"])) is None:
         return f"title must be 1..{MAX_TITLE} characters on one line"
@@ -105,7 +105,8 @@ def check(raw: bytes) -> NewTask | str:
 def handle(backend: Backend, raw: bytes, start: Callable[[str], Reply]) -> Reply:
     """Create the task, then press the card's Start (it refuses on a card already at work: still ok).
 
-    A MANUAL WORK REQUIRED task presses nothing: it joins the repo card beside Claude's parts (T2114).
+    A MANUAL WORK REQUIRED task presses nothing: it joins the repo card beside Claude's parts (T2114). A task
+    with no repo is a repo-less note that triage routes; the answer then has no `task` (T2347).
     """
     api = getattr(backend, "new_task_service", None)
     if not isinstance(api, NewTaskApi):
@@ -114,6 +115,8 @@ def handle(backend: Backend, raw: bytes, start: Callable[[str], Reply]) -> Reply
     if isinstance(task, str):
         return error_reply("bad_request", task)
     note, card = api.create(task)
+    if card is None:  # a repo-less note: triage files it (DOCS-triage.md); nothing to start (T2347)
+        return json_reply({"ok": True, "note": note, "started": False})
     started = None if is_manual(task.title) else start(card)
     if started is not None and started.status == HTTPStatus.OK:
         return json_reply(

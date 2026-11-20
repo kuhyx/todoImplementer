@@ -27,7 +27,7 @@ export const ownTaskRequest = z.strictObject({
 });
 
 export const ownTaskResponse = z.union([
-  z.strictObject({ note: z.string().regex(/^[A-Za-z0-9]{8}$/v), ok: z.literal(true), started: z.boolean(), task: taskCard }),
+  z.strictObject({ note: z.string().regex(/^[A-Za-z0-9]{8}$/v), ok: z.literal(true), started: z.boolean(), task: taskCard.optional() }),
   z.strictObject({ error: apiError, ok: z.literal(false) }),
 ]);
 
@@ -40,7 +40,7 @@ export type OwnTaskRequest = z.infer<typeof ownTaskRequest>;
 export interface Created {
   note: string;
   started: boolean;
-  task: TaskCard;
+  task?: TaskCard;
 }
 
 /** Resolves with the repo card (started or already at work); rejects with the server's own message. */
@@ -55,7 +55,7 @@ export async function postNewTask(request: OwnTaskRequest, csrf: string): Promis
   if (!parsed.success) throw new ApiError(shapeMessage(url, parsed.error), { code: "shape", status: response.status });
   if (!parsed.data.ok) throw new ApiError(parsed.data.error.message, { code: parsed.data.error.code, status: response.status });
   const { note, started, task } = parsed.data;
-  return { note, started, task };
+  return { note, started, ...(task !== undefined && { task }) };
 }
 
 /** Streams one file (any type, unchanged bytes) to the staging dir; resolves with the id new_task `files` takes. */

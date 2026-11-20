@@ -40,12 +40,9 @@ Future<FakeRelay> _pump(WidgetTester tester) async {
 List<String> _kinds(FakeRelay r) => [for (final (k, _) in r.sent) k];
 
 void main() {
-  test('newTaskValid follows the schema', () {
-    expect(newTaskValid('kuhyx/demo', 'Fix it'), isTrue);
-    expect(newTaskValid('demo', 'Fix it'), isFalse);
-    expect(newTaskValid('kuhyx/demo', '  '), isFalse);
-    expect(newTaskValid('kuhyx/demo', 'a\nb'), isFalse);
-    expect(newTaskValid('kuhyx/demo', 'x' * 201), isFalse);
+  test('newTaskValid wants a first line', () {
+    expect(newTaskValid('Fix it'), isTrue);
+    expect(newTaskValid('  '), isFalse);
   });
 
   testWidgets('repo groups show for every sort but least effort', (
@@ -98,8 +95,7 @@ void main() {
     await _settle(tester);
     final send = find.byKey(const Key('nt-send'));
     expect(tester.widget<IconButton>(send).onPressed, isNull);
-    await tester.enterText(find.byKey(const Key('nt-title')), 'Do it');
-    await tester.enterText(find.byKey(const Key('nt-body')), 'more');
+    await tester.enterText(find.byKey(const Key('nt-body')), 'Do it\nmore');
     await _settle(tester);
     relay.outcomes['new_task'] = const RelayFailed(code: 'offline', error: 'x');
     await tester.tap(send);
@@ -109,10 +105,12 @@ void main() {
       'args': {'repo': 'kuhyx/other', 'title': 'Do it', 'body': 'more'},
     });
     relay.outcomes.remove('new_task');
-    await tester.enterText(find.byKey(const Key('nt-repo')), 'kuhyx/de');
+    await tester.tap(find.byKey(const Key('nt-repos-folded')));
     await _settle(tester);
-    await tester.tap(find.text('kuhyx/demo').last);
-    await tester.enterText(find.byKey(const Key('nt-body')), ' ');
+    await tester.tap(find.byKey(const Key('nt-repo-kuhyx/demo')));
+    await tester.tap(find.byKey(const Key('nt-repo-kuhyx/other')));
+    await tester.tap(find.byKey(const Key('nt-repos-done')));
+    await tester.enterText(find.byKey(const Key('nt-body')), 'Do it');
     await _settle(tester);
     await tester.tap(send);
     await _settle(tester);

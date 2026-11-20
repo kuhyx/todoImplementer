@@ -1,8 +1,9 @@
-/// The new-task sheet: kuhy's own task for a repo (repo, title, details),
-/// sent as `new_task`. The fields are icon-labelled (textgate); the send
-/// button is enabled only when the server would accept the request. The
-/// details box takes images (T2334): `[Image #N]` tags in the body, the
-/// bytes inline in `images`.
+/// The add-task page (full screen, T2349): where it goes ([RepoChooser]:
+/// none, all or some repos, folded once picked, T2351), one text box whose
+/// first line is the title (no title field, T2350), and one row with the
+/// image buttons, the attached images and the send button (T2352). Sent as
+/// `new_task`: one per repo, or one with no repo for none. The box takes
+/// images (T2334): `[Image #N]` tags in the text, the bytes in `images`.
 library;
 
 import 'package:design_system/design_system.dart';
@@ -11,19 +12,28 @@ import 'package:todo_implementer/sync/board_relay.dart';
 import 'package:todo_implementer/ui/board/glyphs.dart';
 import 'package:todo_implementer/ui/board/image_attach.dart';
 import 'package:todo_implementer/ui/board/image_strip.dart';
+import 'package:todo_implementer/ui/board/repo_chooser.dart';
 
-final _repoPattern = RegExp(r'^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$');
+/// The schema's title cap.
+const kMaxTitle = 200;
 
-/// True when [repo] and [title] pass `requests.schema.json#/$defs/new_task`.
-bool newTaskValid(String repo, String title) =>
-    _repoPattern.hasMatch(repo.trim()) &&
-    title.trim().isNotEmpty &&
-    title.trim().length <= 200 &&
-    !title.contains('\n');
+/// (title, body): the first non-blank line, cut to [kMaxTitle], and the
+/// lines after it; a cut line keeps the whole text as the body.
+(String, String) splitNote(String text) {
+  final lines = text.trim().split('\n');
+  final first = lines.first.trim();
+  if (first.length > kMaxTitle) {
+    return (first.substring(0, kMaxTitle).trim(), text.trim());
+  }
+  return (first, lines.skip(1).join('\n').trim());
+}
 
-/// The sheet body.
+/// True when [text] gives a title `new_task` accepts.
+bool newTaskValid(String text) => splitNote(text).$1.isNotEmpty;
+
+/// The page body.
 class NewTaskSheet extends StatefulWidget {
-  /// Creates the sheet.
+  /// Creates the page.
   const new({
     required this.repos,
     required this.relay,
@@ -32,16 +42,16 @@ class NewTaskSheet extends StatefulWidget {
     super.key,
   });
 
-  /// Repo suggestions (the board's repos).
+  /// The board's repos (the chooser's chips and "all").
   final List<String> repos;
 
-  /// Where the request goes.
+  /// Where the requests go.
   final BoardRelay relay;
 
   /// Records a refusal.
   final void Function(RelayFailed failure) onError;
 
-  /// Preselected repo (the repo filter), if any.
+  /// Preselected repo (the board's repo filter): counts as picked.
   final String? repo;
 
   @override
@@ -49,128 +59,147 @@ class NewTaskSheet extends StatefulWidget {
 }
 
 class _NewTaskSheetState extends State<NewTaskSheet> {
-  TextEditingController? _repo;
-  final _title = TextEditingController();
   final _body = TextEditingController();
   late final _images = ImageAttach(_body);
+  late RepoScope? _scope = widget.repo == null ? null : RepoScope.some;
+  late final Set<String> _picked = {?widget.repo};
+  late bool _open = widget.repo == null;
   bool _busy = false;
   RelayFailed? _failure;
-
-  String get _repoText => _repo?.text ?? widget.repo ?? '';
 
   @override
   void dispose() {
     _images.dispose();
-    _title.dispose();
     _body.dispose();
     super.dispose();
   }
+
+  // The repos still to send to; [null] means one repo-less note.
+  List<String?> _targets() => switch (_scope) {
+    RepoScope.none => const [null],
+    RepoScope.all => [...widget.repos],
+    RepoScope.some => [..._picked],
+    null => const [],
+  };
 
   Future<void> _submit() async {
     setState(() {
       _busy = true;
       _failure = null;
     });
+    final (title, body) = splitNote(_body.text);
     final images = _images.refs;
-    final out = await widget.relay.send('new_task', {
-      'args': {
-        'repo': _repoText.trim(),
-        'title': _title.text.trim(),
-        if (_body.text.trim().isNotEmpty) 'body': _body.text,
-        if (images.isNotEmpty) 'images': images,
-      },
-    });
-    if (!mounted) return;
-    if (out is RelayFailed) {
-      widget.onError(out);
-      setState(() {
-        _busy = false;
-        _failure = out;
+    for (final repo in _targets()) {
+      final out = await widget.relay.send('new_task', {
+        'args': {
+          'repo': ?repo,
+          'title': title,
+          if (body.isNotEmpty) 'body': body,
+          if (images.isNotEmpty) 'images': images,
+        },
       });
-      return;
+      if (!mounted) return;
+      if (out is RelayFailed) {
+        widget.onError(out);
+        setState(() {
+          _busy = false;
+          _failure = out;
+        });
+        return;
+      }
+      // Sent: a retry after a later refusal must not send it twice.
+      if (repo != null) {
+        setState(() {
+          if (_scope == RepoScope.all) _picked.addAll(widget.repos);
+          _scope = RepoScope.some;
+          _picked.remove(repo);
+        });
+      }
     }
     await Navigator.of(context).maybePop();
   }
 
-  InputDecoration _icon(IconData icon, String spoken) => InputDecoration(
-    prefixIcon: Icon(icon, semanticLabel: spoken),
-    isDense: true,
+  Widget _send(bool ok) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      if (_failure case final failure?)
+        Icon(
+          codeIcon(failure.code),
+          key: const Key('nt-failure'),
+          color: AppPalette.danger,
+          semanticLabel: failure.error,
+        ),
+      IconButton.filled(
+        key: const Key('nt-send'),
+        onPressed: ok ? _submit : null,
+        icon: _busy
+            ? const SizedBox.square(
+                dimension: AppSpacing.md,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.add_task, semanticLabel: 'Add'),
+      ),
+    ],
   );
 
   @override
   Widget build(BuildContext context) {
-    final ok = newTaskValid(_repoText, _title.text) && !_busy;
-    final failure = _failure;
-    void changed(String _) => setState(() {});
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.md,
-        AppSpacing.md,
-        AppSpacing.md,
-        AppSpacing.md + MediaQuery.viewInsetsOf(context).bottom,
+    final ok = newTaskValid(_body.text) && _targets().isNotEmpty && !_busy;
+    return Scaffold(
+      appBar: AppBar(
+        leading: const CloseButton(),
+        toolbarHeight: AppSpacing.xl + AppSpacing.md,
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Autocomplete<String>(
-            initialValue: TextEditingValue(text: widget.repo ?? ''),
-            optionsBuilder: (v) => widget.repos.where(
-              (r) => r.toLowerCase().contains(v.text.toLowerCase()),
+      body: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          0,
+          AppSpacing.md,
+          AppSpacing.sm,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            RepoChooser(
+              repos: widget.repos,
+              open: _open,
+              scope: _scope,
+              picked: _picked,
+              onScope: (s) => setState(() {
+                _scope = s;
+                _open = false;
+              }),
+              onToggle: (r) => setState(() {
+                if (_scope != RepoScope.some) _picked.clear();
+                _scope = RepoScope.some;
+                if (!_picked.remove(r)) _picked.add(r);
+              }),
+              onFold: () => setState(() => _open = false),
+              onOpen: () => setState(() => _open = true),
             ),
-            onSelected: changed,
-            fieldViewBuilder: (_, controller, focus, _) {
-              _repo = controller;
-              return TextField(
-                key: const Key('nt-repo'),
-                controller: controller,
-                focusNode: focus,
-                onChanged: changed,
-                decoration: _icon(Icons.folder_outlined, 'Repo'),
-              );
-            },
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          TextField(
-            key: const Key('nt-title'),
-            controller: _title,
-            onChanged: changed,
-            decoration: _icon(Icons.title, 'Title'),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          TextField(
-            key: const Key('nt-body'),
-            controller: _body,
-            contentInsertionConfiguration: _images.paste,
-            minLines: 4,
-            maxLines: 4,
-            decoration: _icon(Icons.notes, 'Details'),
-          ),
-          ImageStrip(attach: _images, prefix: 'nt'),
-          const SizedBox(height: AppSpacing.sm),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              if (failure != null)
-                Icon(
-                  codeIcon(failure.code),
-                  key: const Key('nt-failure'),
-                  color: AppPalette.danger,
-                  semanticLabel: failure.error,
+            const SizedBox(height: AppSpacing.sm),
+            Expanded(
+              child: TextField(
+                key: const Key('nt-body'),
+                controller: _body,
+                contentInsertionConfiguration: _images.paste,
+                onChanged: (_) => setState(() {}),
+                onTap: () {
+                  if (_open && _targets().isNotEmpty) {
+                    setState(() => _open = false);
+                  }
+                },
+                expands: true,
+                maxLines: null,
+                textAlignVertical: TextAlignVertical.top,
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.notes, semanticLabel: 'Task'),
                 ),
-              IconButton.filled(
-                key: const Key('nt-send'),
-                onPressed: ok ? _submit : null,
-                icon: _busy
-                    ? const SizedBox.square(
-                        dimension: AppSpacing.md,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.add_task, semanticLabel: 'Add'),
               ),
-            ],
-          ),
-        ],
+            ),
+            ImageStrip(attach: _images, prefix: 'nt', trailing: _send(ok)),
+          ],
+        ),
       ),
     );
   }

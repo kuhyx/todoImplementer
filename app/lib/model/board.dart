@@ -143,6 +143,8 @@ class Board {
     required this.limitActive,
     required this.creditsEnabled,
     this.creditsState = 'off',
+    this.credits = const {},
+    this.limitUntil,
     this.error,
     this.alert,
     this.apiKeyLevel = 'ok',
@@ -167,6 +169,8 @@ class Board {
       limitActive: flag(limit, 'active'),
       creditsEnabled: flag(credits, 'enabled'),
       creditsState: str(credits, 'state', 'off'),
+      credits: credits,
+      limitUntil: intOr(limit, 'until'),
       error: strOr(objOr(j, 'error') ?? const {}, 'message'),
       alert: strOr(objOr(j, 'alert') ?? const {}, 'text'),
       apiKeyLevel: key == null ? 'ok' : str(key, 'level', 'ok'),
@@ -200,6 +204,12 @@ class Board {
 
   /// `off`, `ready`, `exhausted`, `unavailable`.
   final String creditsState;
+
+  /// The `limit.credits` object as sent (cap, spend, over_cap).
+  final Json credits;
+
+  /// Epoch seconds the plan limit lifts, while one is active.
+  final int? limitUntil;
 
   /// Board-level error (stale cards); spoken.
   final String? error;

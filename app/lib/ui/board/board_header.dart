@@ -1,5 +1,6 @@
 /// The strip over the board: health glyphs (stale board, overage alert, API
-/// key, plan limit), running slots, the free-credits switch, copy-errors and
+/// key, plan limit), running slots, the plan and credits rings beside the
+/// free-credits switch, copy-errors and
 /// refresh; then the search field and the repo and sort pickers. Every
 /// server sentence is screen-reader text only (textgate).
 library;
@@ -8,7 +9,9 @@ import 'package:design_system/design_system.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:todo_implementer/model/board.dart';
 import 'package:todo_implementer/model/board_view.dart';
+import 'package:todo_implementer/model/json.dart';
 import 'package:todo_implementer/ui/board/glyphs.dart';
+import 'package:todo_implementer/ui/board/usage_gauges.dart';
 
 /// Status glyphs and global switches.
 class StatusStrip extends StatelessWidget {
@@ -19,11 +22,15 @@ class StatusStrip extends StatelessWidget {
     required this.onCredits,
     required this.onRefresh,
     required this.onCopyErrors,
+    this.usage,
     super.key,
   });
 
   /// The board.
   final Board board;
+
+  /// The newest `snap/usage` (plan windows), if read.
+  final Json? usage;
 
   /// Failures recorded this session.
   final int errors;
@@ -68,7 +75,7 @@ class StatusStrip extends StatelessWidget {
               child: const Icon(Icons.bug_report_outlined),
             ),
           ),
-        const Icon(Icons.savings_outlined),
+        UsageGauges(board: b, usage: usage),
         Switch(
           key: const Key('credits'),
           value: b.creditsEnabled,

@@ -9,6 +9,7 @@ import 'package:rtdb_relay/rtdb_relay.dart';
 import 'package:todo_implementer/model/board.dart';
 import 'package:todo_implementer/model/json.dart';
 import 'package:todo_implementer/sync/board_relay.dart';
+import 'package:todo_implementer/sync/feed_cache.dart';
 import 'package:todo_implementer/sync/layout.dart';
 
 /// Follows `requests/<rid>` (production: `RequestHub.watch`).
@@ -49,8 +50,10 @@ class RtdbBoardRelay implements BoardRelay {
     RevMoves? revOf,
     NodeListen? listen,
     DateTime Function()? clock,
+    FeedCache? feeds,
     this.renewEvery = kLiveRenew,
-  }) : revOf = revOf ?? _still,
+  }) : feeds = feeds ?? MemoryFeedCache(),
+       revOf = revOf ?? _still,
        listen = listen ?? _quiet,
        _clock = clock ?? DateTime.now;
 
@@ -59,6 +62,7 @@ class RtdbBoardRelay implements BoardRelay {
     required RtdbClient client,
     required RtdbStream stream,
     required String dev,
+    FeedCache? feeds,
   }) {
     final hub = RequestHub(stream, fullPath('requests'));
     final rev = RevWatcher(stream, fullPath('rev'), yieldTo: hub.inFlight);
@@ -69,6 +73,7 @@ class RtdbBoardRelay implements BoardRelay {
       moves: () => rev.changesOf('board'),
       revOf: rev.changesOf,
       listen: stream.listen,
+      feeds: feeds,
     );
   }
 
@@ -89,6 +94,9 @@ class RtdbBoardRelay implements BoardRelay {
 
   /// Streams one node (the live feed).
   final NodeListen listen;
+
+  /// The last feed per card: a reopen shows it at once (T2353).
+  final FeedCache feeds;
 
   /// Renewal period of an open feed's `live_watch`.
   final Duration renewEvery;
@@ -135,17 +143,21 @@ class RtdbBoardRelay implements BoardRelay {
     void watchIt() => unawaited(send('live_watch', {'card': card}));
     out = StreamController<List<Json>>(
       onListen: () {
+        if (feeds.read(card) case final seen?) out.add(seen);
         watchIt();
         renew = Timer.periodic(renewEvery, (_) => watchIt());
         sub = listen(fullPath('live/$card')).listen((event) {
           if (event is! RtdbPut && event is! RtdbPatch) return;
           tree = applyEvent(tree, event);
-          out.add(feedOf(tree));
+          final feed = feedOf(tree);
+          feeds.write(card, feed);
+          out.add(feed);
         });
       },
       onCancel: () async {
         renew?.cancel();
         await sub?.cancel();
+        unawaited(feeds.save(card));
         // RTDB drops the null: the worker reads a missing card as release.
         unawaited(send('live_watch', {'card': null}));
       },

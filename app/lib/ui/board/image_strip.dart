@@ -88,7 +88,8 @@ class ImageStrip extends StatefulWidget {
   /// The text field to put between the buttons and [trailing].
   final Widget? field;
 
-  /// What follows the field (the send arrow).
+  /// What ends the row (the send arrow): after the field, or after the
+  /// chips when there is no field (the add-task page, T2352).
   final Widget? trailing;
 
   /// The box's images.
@@ -204,6 +205,7 @@ class _ImageStripState extends State<ImageStrip> {
           children: [
             ..._buttons(),
             Expanded(child: _chips(images)),
+            ?widget.trailing,
           ],
         );
       }
