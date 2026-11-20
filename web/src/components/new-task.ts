@@ -2,7 +2,7 @@ import { trapTab } from "@/components/drawer-shell";
 /**
  * <ti-new-task>: kuhy's own task. The + button opens a dialog: first where it goes (RepoChooser: none, all or
  * several repos), then one description box whose first line is the title, files of any type by picker, camera,
- * paste or drop. Create sends one task per picked repo (none, all and no choice: one repo-less note that triage routes, T2409). It
+ * paste or drop. Create sends one task per picked repo (none, all and no choice: one repo-less note that triage routes, T2414). It
  * uploads each file once, unchanged (POST /api/upload, 100 MB each, 500 MB together; the server keeps the upload
  * for the next repo, T2399), then posts each task with their ids; the server adds the section,
  * presses the repo card's Start and answers the card, which the app then opens. A repo already sent is dropped

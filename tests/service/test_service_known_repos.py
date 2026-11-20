@@ -1,4 +1,4 @@
-"""T2410: a GitHub repo with no notes yet is on the board repo list and in the new-task picker."""
+"""T2413: a GitHub repo with no notes yet is on the board repo list and in the new-task picker."""
 
 import time
 from collections.abc import Callable
@@ -24,7 +24,7 @@ def inline(job: Callable[[], None]) -> None:
     job()
 
 
-def test_t2410_board_lists_github_repos_that_have_no_notes(rig: Rig) -> None:
+def test_t2413_board_lists_github_repos_that_have_no_notes(rig: Rig) -> None:
     rig.note(repo="kuhyx/demo")
     rig.backend.known_repos = lambda: ["kuhyx/demo", "kuhyx/logo-review"]
     board = rig.backend.board()

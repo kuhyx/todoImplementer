@@ -54,7 +54,7 @@ describe("ti-new-task", () => {
     expect(q(element, "[data-new-task=scope]").textContent).toBe("kuhyx/other");
   });
 
-  it("[T2409] Create with no repo picked posts a repo-less note and closes the dialog", async () => {
+  it("[T2414] Create with no repo picked posts a repo-less note and closes the dialog", async () => {
     const loose = { note: OK.note, ok: OK.ok, started: false };
     const element = mount({ [`POST ${routes.ownTask}`]: () => Promise.resolve(Response.json(loose)) });
     q<HTMLButtonElement>(element, "[data-new-task=open]").click();
@@ -67,7 +67,7 @@ describe("ti-new-task", () => {
     expect(q(element, "[role=dialog]").classList.contains("nt-shake")).toBe(false);
   });
 
-  it("[T2409] a Create that cannot succeed marks the one field to fix and focuses it; typing clears the mark", () => {
+  it("[T2414] a Create that cannot succeed marks the one field to fix and focuses it; typing clears the mark", () => {
     const element = mount();
     q<HTMLButtonElement>(element, "[data-new-task=open]").click();
     const body = q<HTMLTextAreaElement>(element, "textarea[name=body]");
@@ -94,7 +94,7 @@ describe("ti-new-task", () => {
     expect(submit(element).getAttribute("aria-disabled")).toBe("false");
   });
 
-  it("[T2409] a refusal that names the repo or the title marks that field, not the whole dialog", async () => {
+  it("[T2414] a refusal that names the repo or the title marks that field, not the whole dialog", async () => {
     function refuse(message: string): Record<string, unknown> {
       return { [`POST ${routes.ownTask}`]: () => Promise.resolve(Response.json({ error: { code: "bad_request", message }, ok: false }, { status: 400 })) };
     }

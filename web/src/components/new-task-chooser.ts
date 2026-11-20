@@ -109,7 +109,7 @@ export class RepoChooser {
     this.#folded.replaceChildren(...(scope === "all" || scope === "none" ? [icon(GLYPHS[scope])] : [...this.#picked].map((repo) => h("span", { class: "nt-chip", text: repo }))));
   }
 
-  /** The repos still to send to; `[null]` is one repo-less note (none, all, or no choice: triage routes it, T2409; typed text that is not picked is stopped by the caller). */
+  /** The repos still to send to; `[null]` is one repo-less note (none, all, or no choice: triage routes it, T2414; typed text that is not picked is stopped by the caller). */
   targets(): (null | string)[] {
     return this.#scope === "some" ? [...this.#picked] : [null];
   }

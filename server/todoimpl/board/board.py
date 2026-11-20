@@ -57,7 +57,7 @@ def build_board(
 ) -> dict[str, Any]:
     """Return the /api/board object: every note as a card, grouped by the four fixed columns.
 
-    `repos` is the cards' repos plus `known` (GitHub repos with no note yet, T2410), so the filter and the
+    `repos` is the cards' repos plus `known` (GitHub repos with no note yet, T2413), so the filter and the
     new-task picker list a brand-new repo too.
     """
     built = [(build_card(task, runs.get(task.id), ctx), task.created_by == "claude") for task in tasks]

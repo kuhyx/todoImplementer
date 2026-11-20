@@ -1,6 +1,6 @@
 """kuhy's GitHub repos for the board's repo list and the new-task picker, refreshed off the request path.
 
-The board used to list only the repos of cards that exist (T2410), so a repo with no note yet (a new one)
+The board used to list only the repos of cards that exist (T2413), so a repo with no note yet (a new one)
 was in neither the filter nor the picker. This keeps `gh repo list` (triage.repos.gh_repos) one refresh
 behind: `get()` never waits for gh, a stale list starts one background refresh, a failed one keeps the old
 list and retries after `RETRY_S`.

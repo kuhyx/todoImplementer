@@ -91,7 +91,7 @@ class ServiceBackend:
         self.ask_service: AskService | None = None  # POST /api/task/<id>/ask/<verb>
         self.new_task_service: NewTaskService | None = None  # POST /api/new-task
         self.triage_service: TriageService | None = None  # labels repo-less notes (DOCS-triage.md)
-        self.known_repos: Callable[[], list[str]] = list  # GitHub repos beside the cards' (T2410)
+        self.known_repos: Callable[[], list[str]] = list  # GitHub repos beside the cards' (T2413)
 
     def _context(self) -> Context:
         now = self._clock()
