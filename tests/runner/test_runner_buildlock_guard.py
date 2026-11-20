@@ -115,3 +115,17 @@ def test_t2167_flock_on_any_other_file_still_works(env: dict[str, str], tmp_path
         f'exec 9>>"{tmp_path}/mine.lock"; flock -n 9 && flock -w 1 "{tmp_path}/b" echo got', env, tmp_path
     )
     assert (done.returncode, done.stdout) == (0, "got\n")
+
+
+def test_t2391_a_shim_of_another_build_root_later_on_path_is_never_the_real_tool(
+    env: dict[str, str], tmp_path: Path
+) -> None:
+    other = tmp_path / "board"  # the live board's root: its flock shim would queue on its real, busy lock
+    (other / "shims").mkdir(parents=True)
+    (other / "buildlock.sh").write_text("#!/bin/bash\nexit 97\n")
+    (other / "shims" / "flock").write_text("#!/bin/bash\nexit 97\n")
+    (other / "shims" / "flock").chmod(0o755)
+    shims, rest = env["PATH"].split(":", 1)
+    env = {**env, "PATH": f"{shims}:{other / 'shims'}:{rest}"}
+    done = _bash(f'exec 9>>"{tmp_path}/mine.lock"; flock -n 9 && echo got', env, tmp_path)
+    assert (done.returncode, done.stdout) == (0, "got\n")

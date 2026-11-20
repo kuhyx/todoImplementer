@@ -34,6 +34,7 @@ find_real() {
 	for dir in "${dirs[@]}"; do
 		[[ -n "$dir" && -x "$dir/$1" && ! -d "$dir/$1" ]] || continue
 		[[ "$dir/$1" -ef "$SHIMS/$1" ]] && continue
+		[[ -e "$dir/../buildlock.sh" ]] && continue # another root's shim (a board session's PATH): T2391
 		REAL="$dir/$1"
 		return 0
 	done
