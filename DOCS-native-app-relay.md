@@ -16,6 +16,13 @@ this app's own Firebase session `~/.config/todoImplementer/firebase_auth.json` (
 names the cause, and it retries after 5 s, 15 s, then every 60 s. Snap nodes are polled: board every 1 s,
 sessions 5 s, usage and merges 10 s. The FCM pinger plugs into `Publisher(on_board=...)` and `notify_test`.
 
+Live checks of a slot build (`phone_deploy.sh --slot`, `SYNC_NAMESPACE=sandbox/slotN`) run a scratch server with
+`TODOIMPL_RELAY_NAMESPACE=sandbox/slotN` (anything else outside `sandbox/<lowercase>` is refused): every path, the
+key header included, lives under that namespace, and the AAD stays the plain layout root, as the app's. Without
+it the worker unlocked with the production header (rtdb_relay's `unlock` reads through `rtdb.at("")`) and dropped
+every slot request as undecryptable (T2354). The e2e world's server env points `TODOIMPL_TODO_NOTE` at a recording
+shim, so a repo-less task never reaches the real todo app (T2355).
+
 ## Layout (root `todoimpl/v1-e2e`)
 
 | Node | Writer | Content |

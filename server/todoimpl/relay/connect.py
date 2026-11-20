@@ -9,6 +9,8 @@ session is this app's own, ~/.config/todoImplementer/firebase_auth.json (seed it
 from __future__ import annotations
 
 import asyncio
+import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Final
@@ -26,9 +28,12 @@ from rtdb_relay.rtdb import Rtdb, RtdbError
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
+    import httpx
     from rtdb_relay.seal import Sealer
 
 APP: Final = "todoImplementer"
+NAMESPACE_VAR: Final = "TODOIMPL_RELAY_NAMESPACE"  # a slot build's SYNC_NAMESPACE: live checks only (T2354)
+_NAMESPACE: Final = re.compile(r"sandbox/[a-z0-9_-]+")
 
 
 @dataclass(frozen=True)
@@ -37,10 +42,53 @@ class Endpoint:
 
     database_url: str
     token: Callable[[], Awaitable[str]]
+    namespace: str = ""
+    http: httpx.AsyncClient | None = None  # tests pass the fake's transport
 
     def client(self, root: str = "", sealer: Sealer | None = None) -> Rtdb:
-        """Build an RTDB client under `root`."""
-        return Rtdb(self.database_url, self.token, root=root, sealer=sealer)
+        """Build an RTDB client under `root`, inside the namespace when one is set."""
+        if self.namespace:
+            return NsRtdb(
+                self.database_url, self.token, self.http, root=root, sealer=sealer, space=self.namespace
+            )
+        return Rtdb(self.database_url, self.token, self.http, root=root, sealer=sealer)
+
+
+class NsRtdb(Rtdb):
+    """An Rtdb kept inside one sandbox namespace, `at()` included (T2354).
+
+    rtdb_relay's `unlock` reads the key header through `rtdb.at("")`, a client on the bare root: a plain
+    Rtdb rooted at `sandbox/slotN` then read the production header and sealed with the production key.
+    """
+
+    def __init__(  # noqa: PLR0913 - Rtdb's own arguments plus the namespace
+        self,
+        database_url: str,
+        token: Callable[[], Awaitable[str]],
+        client: httpx.AsyncClient | None = None,
+        *,
+        root: str,
+        sealer: Sealer | None = None,
+        space: str,
+    ) -> None:
+        """Root every path at `space/root`; the sealer's AAD stays the plain layout root, as the app's."""
+        inside = root == space or root.startswith(f"{space}/")  # rtdb_relay hands back `rtdb.root`
+        full = root if inside else "/".join(p for p in (space, root) if p)
+        super().__init__(database_url, token, client, root=full, sealer=sealer)
+        self.namespace = space
+
+    def at(self, root: str) -> Rtdb:
+        """Return a raw client on `root` inside the namespace, sharing this one's connection."""
+        return NsRtdb(self._base, self._token, self.client, root=root, space=self.namespace)
+
+
+def namespace() -> str:
+    """Return `$TODOIMPL_RELAY_NAMESPACE` ("" = production); RelaySetupError unless it is `sandbox/<slot>`."""
+    value = os.environ.get(NAMESPACE_VAR, "")
+    if value and not _NAMESPACE.fullmatch(value):
+        msg = f"{NAMESPACE_VAR} must be empty or sandbox/<lowercase name>, got {value!r}"
+        raise RelaySetupError(msg)
+    return value
 
 
 class RelaySetupError(RuntimeError):
@@ -71,7 +119,7 @@ def connect() -> Endpoint:
     if not provider.has_session():
         msg = f"no Firebase sign-in in ~/.config/{APP}/firebase_auth.json"
         raise RelaySetupError(msg)
-    return Endpoint(config.database_url, token_source(provider))
+    return Endpoint(config.database_url, token_source(provider), namespace())
 
 
 def passphrase(path: Path | None = None) -> str:

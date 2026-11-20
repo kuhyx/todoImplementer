@@ -105,6 +105,7 @@ def server_env(state: State) -> dict[str, str]:
         "TODOIMPL_MCP_URL": state.mcp_url,
         "TODOIMPL_MCP_TOKEN_FILE": str(work / "mcp-token"),
         "TODOIMPL_CAPPED": str(work / "bin" / "capped.sh"),
+        "TODOIMPL_TODO_NOTE": str(work / "bin" / "todo_note"),  # never the real todo CLI (T2355)
         "REAL_GIT": real_git(),
         "GIT_PUSH_ALLOW_ROOT": str(work),
         **GIT_IDENTITY,
@@ -119,10 +120,15 @@ def server_env(state: State) -> dict[str, str]:
 
 
 def write_shims(state: State) -> None:
-    """bin/: push-refusing git, pass-through capped.sh and (unless real) the fake claude."""
+    """bin/: push-refusing git, pass-through capped.sh, a recording todo CLI, the fake claude."""
     shims = {
         "git": f'#!/bin/sh\nexec "{SHIMS / "git_push_refuse"}" "$@"\n',
         "capped.sh": '#!/bin/sh\nexec "$@"\n',
+        # The todo CLI a repo-less note goes through: records its args, prints a note id.
+        "todo_note": (
+            f'#!/bin/sh\nprintf "%s\\n" "$@" > "{state.path / "todo_note.log"}"\n'
+            "cat /proc/sys/kernel/random/uuid\n"
+        ),
     }
     if not state.real_claude:
         # One script folder per run dir (`fake/runs/<item id>`): the shim keys on the first 8 chars of the
