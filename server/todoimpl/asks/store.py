@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING, Any
 
 from todoimpl import atomic
 
+from . import carry
+
 if TYPE_CHECKING:
     from collections.abc import Iterable
     from pathlib import Path
@@ -20,7 +22,8 @@ def load(directory: Path, asks: Iterable[Ask] = ()) -> dict[str, Any]:
     """Return {"seen", "items", "rounds", "log"}; a missing or corrupt file is empty.
 
     `rounds` maps an id to the reply that asked it. An id in `asks` whose reply differs from the saved one
-    is a new ask that reuses the id (T2277): its old record and first-seen time are dropped, so it is open.
+    is a new ask that reuses the id (T2277): its old record and first-seen time are dropped, so it is open,
+    unless it is a choice kuhy already answered this cycle (`carry.keeps`, T2376): that answer stays.
     A record with no saved round (written before rounds) is adopted into the current one and kept.
     """
     try:
@@ -37,9 +40,11 @@ def load(directory: Path, asks: Iterable[Ask] = ()) -> dict[str, Any]:
     }
     for ask in asks:
         if out["rounds"].setdefault(ask.id, ask.round) != ask.round:
+            out["rounds"][ask.id] = ask.round
+            if carry.keeps(ask, out["items"].get(ask.id), directory):
+                continue
             out["seen"].pop(ask.id, None)
             out["items"].pop(ask.id, None)
-            out["rounds"][ask.id] = ask.round
     return out
 
 

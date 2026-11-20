@@ -21,11 +21,14 @@ A malformed block (no single `*`, bad id, duplicate id, unknown risk) yields not
   root, credentials, money, `rm`, `chattr`...) overrides it to `risky`. Untagged is risky. Only `reversible` choices
   auto-adopt their recommended option after 24 h (`AskService.adopt_due`, 5 min tick); the card shows Undo, and an
   undone choice never auto-adopts again. State lives in `<run dir>/asks.json` (first-seen times, answers, log).
-- **Delivery**: once no choice is open, the session gets one `(runner)` message with the answers. A Send to Claude
-  note sent before then carries the answered ones (T2275), and the note box stays below the questions (T2273).
+- **Delivery**: once no choice is open, the session gets one `(runner)` message with every answer of its asks, not
+  just the last click (T2376). A Send to Claude note sent before then carries the answered ones (T2275), and the
+  note box stays below the questions (T2273).
 - **Rounds** (T2277): state in `asks.json` is per (reply, id). A reply that asks an id again (`logo_pixel` in round two)
   starts it open with a fresh 24 h clock; `store.load(dir, asks)` drops the record of an id whose reply changed and
-  adopts a record saved before rounds into the current one.
+  adopts a record saved before rounds into the current one. A choice kuhy answered this cycle keeps his answer when
+  asked again (`asks/carry.py`, T2376), unless his option is gone or it was a `change` on an approval; records carry
+  their `cycle`. An `A:` that asks only answered choices resumes with his answers (`runner/answered.py`, twice a run).
 - **Manual parts on a repo card** (T2114): their asks always show, also beside the run's newest reply. While the
   session has asks of its own (reply, body or Claude's parts), delivery and Take recommended cover only those, so
   kuhy's open manual asks never hold the session back and a click meant for the session never releases his work.
@@ -46,12 +49,14 @@ the card parks with the old free-text ask.
 
 Approval criteria (`runner/approval.py`, T2362): when the item or a spec answer says kuhy judges, approves or reviews a
 deliverable (a mail, message, post or design), the plan writes that criterion as `Cn. (kuhy) ...`. The live check
-never ticks it. It shows the deliverable in its reply and ends `A:` with `choice c<n>: <question> | *approve | change`.
+never ticks it. It (or the implement or fix stage) shows the deliverable and ends `A:` with
+`choice c<n>: <question> | *approve | change`.
 The card waits in Needs you. A `change` or a Send note goes back to the same session, which edits the deliverable and
 asks again. `approve` resumes it to do the outward step, such as sending the mail, if the session has the means. Board
-sessions have no mail or Gmail tool: they run with `--strict-mcp-config`. Until asks.json holds kuhy's own `approve`
-for `c<n>` (an auto-adopted answer, or one older than this cycle's `plan.md`, does not count), `live.settle` sends the session back once and then raises Needs
-you. The run never reaches Checks, never ships partly with a follow-up, and never defers the criterion.
+sessions have no mail or Gmail tool: they run with `--strict-mcp-config`. Until asks.json holds kuhy's own approve for `c<n>`
+(an option starting with `approve`, or a screenshot `c<n>` he approved; for a sole `(kuhy)` criterion, an approve on any
+choice; never an auto-adopted answer or one older than this cycle's `plan.md`), `live.settle` sends the session back
+once and then raises Needs you. If he answered `c<n>` with no approve, Needs you says so at once (T2376). The run never reaches Checks, never ships partly with a follow-up, and never defers the criterion.
 
 Ids: `[a-z][a-z0-9_-]{0,15}`; a hyphen reads as an underscore (`logo-pick` is `logo_pick`, T2134). A block that still
 fails makes the form note above quote the line that broke it and why (`parse.diagnose`).

@@ -55,4 +55,7 @@ def test_t2114_auto_adopt_tells_the_session_only_of_its_own_asks(rig: Rig) -> No
     assert rig.svc.adopt_due() == 0
     rig.clock.now += 2 * DAY
     assert rig.svc.adopt_due() == 2  # z2 and m1, both reversible
-    assert [text for _id, text in rig.sched.sent] == ["(runner) kuhy answered in the note: Name: a (auto)"]
+    # z1's click is told too: the session hears every answer of its round, not the last one (T2376)
+    assert [text for _id, text in rig.sched.sent] == [
+        "(runner) kuhy answered in the note: Port: 9090; Name: a (auto)"
+    ]

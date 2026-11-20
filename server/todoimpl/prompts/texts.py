@@ -37,11 +37,13 @@ KUHY_PLAN = (  # runner/approval.py gates Ship on these (T2362)
     "If the item or a spec answer has kuhy judge, approve or review a deliverable (mail, message, post, "
     "design), add `Cn. (kuhy) kuhy approves <it> in the board ask, then <the outward step, e.g. it is sent>`."
 )
-KUHY_LIVE = (
+KUHY_LIVE = (  # the implement and fix stages show deliverables too, so they carry it (T2376)
     "A `(kuhy)` criterion is kuhy's, never yours to tick. Until the runner reports his `approve`, put the "
     "deliverable in your reply (full text, gaps, whether you can send or post it yourself), end `A:` with "
-    "`choice c<n>: <question> | *approve | change` in an `ask` block. On a change edit only the deliverable "
-    "and ask again; on `approve` do the outward step if you have the means, then tick it."
+    "`choice c<n>: <question> | *approve | change` in an `ask` block: id `c<n>` (C6 is `c6`) and option "
+    "`approve`, the only ask the runner matches. Never ask again what kuhy already answered. On a change "
+    "edit only the deliverable and ask again; on `approve` do the outward step if you have the means, then "
+    "tick it."
 )
 
 
@@ -115,6 +117,7 @@ def implement(ctx: PromptContext) -> str:
         _rules(ctx),
         "Write the failing check first, see it red, implement, see it green.",
         SELF_CHECK,
+        KUHY_LIVE,
         standing.DEPLOY,
         phone.IMPLEMENT,
         "End with `D:`.",
@@ -168,6 +171,7 @@ def fix(ctx: PromptContext) -> str:
         _rules(ctx),
         "Find the root cause, add a failing check for it first, fix, rerun the failing command until green.",
         SELF_CHECK,
+        KUHY_LIVE,
         "End with `D:`.",
     )
 

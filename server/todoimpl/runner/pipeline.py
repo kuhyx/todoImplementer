@@ -12,7 +12,7 @@ from todoimpl.credits import route
 from todoimpl.prompts import PromptContext
 from todoimpl.repotask.prompt import addendum
 
-from . import checks, deploy, phone, resume, retry, stepwatch, tags, tiering, turncheck, worktree
+from . import answered, checks, deploy, phone, resume, retry, stepwatch, tags, tiering, turncheck, worktree
 from .askform import needs_form
 from .files import KilledError, NeedsYouError
 from .grant import auto_grant
@@ -216,7 +216,7 @@ class Driver:
             st.extra["r_continue"] = True
             return self.turn(role, stage, failure_tail=failure_tail, prompt=prompt)
         resume.rest(self, res, stage)  # a wait or resume line of Claude's own rests on the ladder (T2104)
-        if any(note(self, res, stage) for note in (gate, auto_grant, needs_form, needs_link)):
+        if any(note(self, res, stage) for note in (gate, auto_grant, needs_form, answered.back, needs_link)):
             return self.turn(role, stage, failure_tail=failure_tail, prompt=prompt)
         return self._finished(res, role, stage)
 

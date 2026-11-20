@@ -29,8 +29,11 @@ def test_t2277_a_reused_id_in_a_new_reply_is_a_fresh_ask(rig: Rig) -> None:
     rig.svc.answer(ID, "c9", "b")
     assert states(rig) == {"logo_pixel": "rejected", "c9": "answered"}
     reply(rig, SECOND)
-    assert states(rig) == {"logo_pixel": "open", "c9": "open"}
+    # A shot is a new picture to judge; a choice kuhy answered this cycle keeps his answer (T2376).
+    assert states(rig) == {"logo_pixel": "open", "c9": "answered"}
+    reply(rig, SECOND.replace("| b", "| c"))  # his option is gone: a new question
     got = {i["id"]: i for i in view.items("", load(rig.dir), rig.dir)}
+    assert got["c9"]["state"] == "open"
     assert "answer" not in got["c9"]
     assert view.held("", load(rig.dir), rig.dir) == []
 

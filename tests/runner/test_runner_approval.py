@@ -71,10 +71,11 @@ def test_t2362_open_or_deferred_kuhy_criterion_never_ships_partly(tmp_path: Path
 
 def test_t2362_only_kuhys_approve_click_opens_the_gate(tmp_path: Path) -> None:
     d = stub(tmp_path)
-    for record in ({"state": "auto", "answer": "approve"}, {"state": "answered", "answer": "change"}):
-        answered(tmp_path, c2=record)
-        d.state.extra.pop("approval_nudges", None)
-        assert settle(d, ALL_TICKED) == "live_check"
+    answered(tmp_path, c2={"state": "auto", "answer": "approve"})
+    assert settle(d, ALL_TICKED) == "live_check"
+    answered(tmp_path, c2={"state": "answered", "answer": "change"})  # his own answer: said plainly (T2376)
+    with pytest.raises(NeedsYouError, match="you answered c2: change"):
+        settle(d, ALL_TICKED)
     answered(tmp_path, c2={"state": "answered", "answer": "approve"})
     assert settle(d, ALL_TICKED) == "checks"
     assert "approval_nudges" not in d.state.extra
@@ -87,3 +88,33 @@ def test_t2362_plan_and_live_check_prompts_carry_the_kuhy_criterion(tmp_path: Pa
     assert "`(kuhy)` criterion is kuhy's, never yours to tick" in live
     assert "| *approve | change`" in live
     assert "never a `(kuhy)` criterion" in live  # the standing grant's "approve your own drafts" stops there
+
+
+def test_t2376_kuhys_approval_counts_in_every_form_the_board_records(tmp_path: Path) -> None:
+    d = stub(tmp_path)
+    for record in (
+        {"c2": {"state": "answered", "answer": "approve once the gaps are filled"}},
+        {"c2": {"state": "approved"}},  # Approve on a screenshot c2
+        {"verdict": {"state": "answered", "answer": "approve once the gaps are filled"}},  # 1c1ca49b-0's ask
+    ):
+        answered(tmp_path, **record)
+        assert settle(d, ALL_TICKED) == "checks"
+
+
+def test_t2376_an_answered_but_unapproved_criterion_is_needs_you_not_a_new_ask(tmp_path: Path) -> None:
+    d = stub(tmp_path)
+    answered(
+        tmp_path, c2={"state": "rejected"}, verdict={"state": "answered", "answer": "revise (type notes)"}
+    )
+    with pytest.raises(NeedsYouError, match="C2 is not approved: you answered c2: rejected"):
+        settle(d, ALL_TICKED)
+    assert "nudge" not in d.state.extra
+    assert "approval_nudges" not in d.state.extra
+
+
+def test_t2376_an_approve_of_another_id_counts_only_for_a_sole_kuhy_criterion(tmp_path: Path) -> None:
+    d = stub(tmp_path)
+    d.plan_md = lambda: PLAN + "C3. (kuhy) kuhy approves the logo in the board ask\n"
+    answered(tmp_path, verdict={"state": "answered", "answer": "approve"})
+    assert settle(d, ALL_TICKED + "\n- [x] C3: logo") == "live_check"
+    assert "C2, C3" in str(d.state.extra["nudge"])

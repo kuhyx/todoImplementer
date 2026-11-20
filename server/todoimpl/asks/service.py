@@ -13,9 +13,9 @@ from typing import TYPE_CHECKING, Any
 from todoimpl.board.state import load, run_dir
 from todoimpl.http.backend import BackendError
 
-from . import allow, cmdrun, store
+from . import allow, carry, cmdrun, store
 from .parse import Ask
-from .view import DAY, is_open, source, work_asks
+from .view import DAY, is_open, source, told, work_asks
 
 if TYPE_CHECKING:
     from todoimpl.service.cache import TaskCache
@@ -72,21 +72,27 @@ class AskService:
             raise refuse("not_found", "no such ask")
         return ask, scope, directory, asks
 
-    def _resolve(self, id8: str, directory: Path, asks: list[Ask], text: str) -> None:
-        """Tell the session once no choice is left open; the saved state is already durable."""
+    def _resolve(self, id8: str, directory: Path, asks: list[Ask]) -> None:
+        """Tell the session every answer of its asks once no choice is open; the state is already durable.
+
+        Every answer, not just the click that closed the last choice: the session heard only that one and
+        asked the rest again, twice (T2376).
+        """
         data = store.load(directory, asks)
         if any(a.type == "choice" and is_open(data["items"].get(a.id)) for a in asks):
             return
         if load(directory) is None:
             return
         try:
-            self.scheduler.send(id8, f"(runner) kuhy answered in the note: {text}")
+            self.scheduler.send(
+                id8, f"(runner) kuhy answered in the note: {'; '.join(told(asks, data['items']))}"
+            )
         except Exception:
             log.exception("ask answer for %s not delivered", id8)
 
     def _set(self, directory: Path, ask: Ask, record: dict[str, Any], card: list[Ask]) -> None:
         data = store.load(directory, card)  # stamps the round of every ask, kept answers included
-        data["items"][ask.id] = {**record, "at": self._clock()}
+        data["items"][ask.id] = {**record, "at": self._clock(), "cycle": carry.cycle(directory)}
         store.save(directory, data)
         self.cache.poke()  # the last answer may hand a MANUAL part to Claude: rebuild the cards now (T1994)
 
@@ -97,7 +103,7 @@ class AskService:
             raise refuse("bad_request", "not an option of this ask")
         self._set(directory, ask, {"state": "answered", "answer": option}, card)
         if ask in asks:  # a manual part's answer beside the session's asks is kuhy's, not news for it
-            self._resolve(id8, directory, asks, f"{ask.title}: {option}")
+            self._resolve(id8, directory, asks)
 
     def take_recommended(self, id8: str) -> None:
         """Every open choice the session waits on takes its recommended option (`_scope`)."""
@@ -108,7 +114,7 @@ class AskService:
             raise refuse("disabled", "no open choice")
         for ask in taken:
             self._set(directory, ask, {"state": "answered", "answer": ask.recommended}, card)
-        self._resolve(id8, directory, asks, "; ".join(f"{a.title}: {a.recommended}" for a in taken))
+        self._resolve(id8, directory, asks)
 
     def run_command(self, id8: str, ask_id: str, *, add: bool) -> dict[str, Any]:
         """RUN (allow-listed) or add-then-run; never for the never-add set or a root command."""
@@ -141,7 +147,7 @@ class AskService:
         if not approve and load(directory) is not None:
             self.scheduler.send(id8, f"(runner) kuhy rejected the screenshot: {ask.title}")
         elif approve and ask in asks:
-            self._resolve(id8, directory, asks, f"approved: {ask.title}")
+            self._resolve(id8, directory, asks)
 
     def adopt_due(self) -> int:
         """Take the recommended option of every reversible choice open for 24 h; return how many."""
@@ -174,10 +180,8 @@ class AskService:
                 data["log"].append(f"auto-adopted {ask.id}: {ask.recommended}")
                 taken.append(ask)
         store.save(directory, data)
-        if news := [a for a in taken if a in scope]:
-            self._resolve(
-                id8, directory, scope, "; ".join(f"{a.title}: {a.recommended} (auto)" for a in news)
-            )
+        if any(a in scope for a in taken):
+            self._resolve(id8, directory, scope)
         return len(taken)
 
     def start(self) -> None:

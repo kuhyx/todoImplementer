@@ -107,11 +107,21 @@ def held(body: str, run: RunState | None, directory: Path, parts: Iterable[Part]
     records = store.load(directory, work)["items"]
     if not any(a.type == "choice" and is_open(records.get(a.id)) for a in work):
         return []
+    return told(work, records)
+
+
+def told(asks: Iterable[Ask], records: dict[str, Any]) -> list[str]:
+    """Return every answer of `asks` the session must hear, in block order (T2376: all of them, every time).
+
+    `<title>: <answer>` per answered choice (`(auto)` when adopted after 24 h), `approved: <title>` per
+    approved screenshot.
+    """
     out: list[str] = []
-    for ask in work:
+    for ask in asks:
         record = records.get(ask.id) or {}
         if ask.type == "choice" and not is_open(record) and "answer" in record:
-            out.append(f"{ask.title}: {record['answer']}")
+            auto = " (auto)" if record.get("state") == "auto" else ""
+            out.append(f"{ask.title}: {record['answer']}{auto}")
         elif ask.type == "screenshot" and record.get("state") == "approved":
             out.append(f"approved: {ask.title}")
     return out
