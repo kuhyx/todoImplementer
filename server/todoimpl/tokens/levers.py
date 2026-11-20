@@ -18,7 +18,6 @@ on the metric key.
 
 from __future__ import annotations
 
-import json
 import re
 from typing import TYPE_CHECKING, Any
 
@@ -65,16 +64,8 @@ def ledger_date(entry: Row) -> str | None:
 
 
 def _snapshots(report: Path) -> list[tuple[str, Row]]:
-    """``(date, snapshot)`` oldest first."""
-    out = []
-    for path in sorted((report / "history").glob("*.json")):
-        try:
-            snap = json.loads(path.read_text(encoding="utf-8"))
-        except ValueError:
-            continue
-        if isinstance(snap, dict):
-            out.append((path.stem[:10], snap))
-    return out
+    """``(date, snapshot)`` oldest first, by each snapshot's ``generated`` time."""
+    return [(path.stem[:10], snap) for path, snap in history.snapshots(report)]
 
 
 def _applied(report: Path, latest: Row) -> list[Row]:

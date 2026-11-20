@@ -47,7 +47,9 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     db = args.db or schema.db_path()
     folder = args.report_dir / history.HISTORY_NAME
-    path = folder / f"{args.snapshot}.json" if args.snapshot else max(folder.glob("*.json"), default=None)
+    found = history.snapshots(args.report_dir)
+    newest = found[-1][0] if found else None
+    path = folder / f"{args.snapshot}.json" if args.snapshot else newest
     if path is None or not path.is_file() or not db.is_file():
         sys.stderr.write(f"missing snapshot or store ({path}, {db})\n")
         return 1

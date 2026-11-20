@@ -72,3 +72,30 @@ def test_append_and_read_ledger_filters_bad_lines(tmp_path: Path) -> None:
 def test_append_ledger_default_directory() -> None:
     history.append_ledger({"metric": "m", "baseline": 1})
     assert len(history.read_ledger()) == 1
+
+
+def _write(tmp_path: Path, stem: str, snap: dict[str, object]) -> None:
+    folder = tmp_path / history.HISTORY_NAME
+    folder.mkdir(exist_ok=True)
+    (folder / f"{stem}.json").write_text(json.dumps(snap), encoding="utf-8")
+
+
+def test_t2378_second_snapshot_of_a_day_is_the_newest(tmp_path: Path) -> None:
+    _write(tmp_path, "2026-11-20", {"generated": "2026-11-20T14:18:12+00:00", "window": {"until": 1.0}})
+    _write(
+        tmp_path, "2026-11-20-153247", {"generated": "2026-11-20T15:32:01+00:00", "window": {"until": 2.0}}
+    )
+    newest = history.last_snapshot(tmp_path)
+    assert newest is not None
+    assert newest["generated"] == "2026-11-20T15:32:01+00:00"
+    assert history.default_since(tmp_path) == 2.0
+
+
+def test_t2378_snapshots_without_generated_rank_lowest_by_stem(tmp_path: Path) -> None:
+    _write(tmp_path, "2026-11-20", {"n": "first"})
+    _write(tmp_path, "2026-11-20-153247", {"n": "second"})
+    assert history.last_snapshot(tmp_path) == {"n": "second"}
+    _write(tmp_path, "2026-12-31", {"n": "undated", "generated": 5})
+    _write(tmp_path, "2026-01-01", {"n": "dated", "generated": "2026-01-01T00:00:00+00:00"})
+    ordered = [snap["n"] for _, snap in history.snapshots(tmp_path)]
+    assert ordered == ["first", "second", "undated", "dated"]

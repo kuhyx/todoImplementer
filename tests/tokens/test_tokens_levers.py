@@ -108,3 +108,17 @@ def test_structured_levers_in_a_snapshot_win_over_markdown(tmp_path: Path) -> No
     found = next(r for r in rows if r["lever"] == "Structured one")
     assert found["status"] == "proposed"
     assert found["source"] == "snapshot 2026-10-17"
+
+
+def test_t2378_later_same_day_snapshot_holds_the_proposed_levers(tmp_path: Path) -> None:
+    folder = tmp_path / "report" / "history"
+    folder.mkdir(parents=True)
+    for stem, generated, title in (
+        ("2026-11-20", "2026-11-20T14:18:12+00:00", "Morning"),
+        ("2026-11-20-153247", "2026-11-20T15:32:01+00:00", "Afternoon"),
+    ):
+        lever = {"title": title, "metric": f"m_{title}"}
+        snap = {"generated": generated, "metrics": {}, "levers": [lever]}
+        (folder / f"{stem}.json").write_text(json.dumps(snap))
+    status = {r["lever"]: r["status"] for r in levers.build(tmp_path / "report", {})}
+    assert status == {"Morning": "not applied", "Afternoon": "proposed"}

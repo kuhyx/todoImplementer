@@ -22,10 +22,12 @@ def _store(tmp_path: Path, stamps: list[float]) -> Path:
     return db
 
 
-def _snapshot(report: Path, name: str, metrics: Mapping[str, float]) -> None:
+def _snapshot(report: Path, name: str, metrics: Mapping[str, float], generated: str | None = None) -> None:
     folder = report / "history"
     folder.mkdir(parents=True, exist_ok=True)
-    snap = {"window": {"since": 0, "until": 10 * DAY}, "metrics": metrics}
+    snap: dict[str, object] = {"window": {"since": 0, "until": 10 * DAY}, "metrics": metrics}
+    if generated is not None:
+        snap["generated"] = generated
     (folder / f"{name}.json").write_text(json.dumps(snap), encoding="utf-8")
 
 
@@ -69,3 +71,11 @@ def test_missing_snapshot_or_store_exits_one(tmp_path: Path, capsys: pytest.Capt
     assert _run(tmp_path, db, "--snapshot", "1999-01-01") == 1
     assert _run(tmp_path, tmp_path / "gone.sqlite") == 1
     assert capsys.readouterr().err.count("missing snapshot or store") == 3
+
+
+def test_t2378_default_snapshot_is_the_newest_generated(tmp_path: Path) -> None:
+    db = _store(tmp_path, [100.0, 100.0 + DAY])
+    good = {"usd_total": 2.0, "usd_per_day": 2.0, "calls": 2}
+    _snapshot(tmp_path / "report", "2026-11-20", {**good, "calls": 99}, "2026-11-20T14:18:12+00:00")
+    _snapshot(tmp_path / "report", "2026-11-20-153247", good, "2026-11-20T15:32:01+00:00")
+    assert _run(tmp_path, db) == 0

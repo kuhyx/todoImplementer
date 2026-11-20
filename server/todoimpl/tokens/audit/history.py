@@ -49,19 +49,40 @@ def save_snapshot(snap: dict[str, Any], directory: Path | None = None) -> Path:
     return path
 
 
-def last_snapshot(directory: Path | None = None) -> dict[str, Any] | None:
-    """Return the newest readable snapshot, or ``None`` if there is none."""
+def _age(item: tuple[Path, dict[str, Any]]) -> tuple[bool, str, str]:
+    """Sort key: the snapshot's own ``generated`` time, then its file stem.
+
+    File names cannot order a day's runs: ``2026-11-20.json`` sorts after
+    ``2026-11-20-153247.json`` because '.' > '-' (T2378). A snapshot with no
+    string ``generated`` ranks below every one that has it.
+    """
+    path, snap = item
+    generated = snap.get("generated")
+    if isinstance(generated, str):
+        return True, generated, path.stem
+    return False, "", path.stem
+
+
+def snapshots(directory: Path | None = None) -> list[tuple[Path, dict[str, Any]]]:
+    """Return every readable snapshot with its path, oldest first."""
     folder = _root(directory) / HISTORY_NAME
     if not folder.is_dir():
-        return None
-    for path in sorted(folder.glob("*.json"), reverse=True):
+        return []
+    found: list[tuple[Path, dict[str, Any]]] = []
+    for path in folder.glob("*.json"):
         try:
             loaded = json.loads(path.read_text(encoding="utf-8"))
         except ValueError:
             continue
         if isinstance(loaded, dict):
-            return loaded
-    return None
+            found.append((path, loaded))
+    return sorted(found, key=_age)
+
+
+def last_snapshot(directory: Path | None = None) -> dict[str, Any] | None:
+    """Return the newest readable snapshot, or ``None`` if there is none."""
+    found = snapshots(directory)
+    return found[-1][1] if found else None
 
 
 def default_since(directory: Path | None = None) -> float | None:
