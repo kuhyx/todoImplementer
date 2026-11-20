@@ -2,7 +2,7 @@ import { trapTab } from "@/components/drawer-shell";
 /**
  * <ti-new-task>: kuhy's own task. The + button opens a dialog: first where it goes (RepoChooser: none, all or
  * several repos), then one description box whose first line is the title, files of any type by picker, camera,
- * paste or drop. Create sends one task per picked repo (none and all: one repo-less note that triage routes). It
+ * paste or drop. Create sends one task per picked repo (none, all and no choice: one repo-less note that triage routes, T2409). It
  * uploads each file once, unchanged (POST /api/upload, 100 MB each, 500 MB together; the server keeps the upload
  * for the next repo, T2399), then posts each task with their ids; the server adds the section,
  * presses the repo card's Start and answers the card, which the app then opens. A repo already sent is dropped
@@ -21,12 +21,20 @@ import { MAX_FILE, MAX_TOTAL, postNewTask, splitNote, uploadFile } from "@/lib/n
 import { routes } from "@/lib/routes";
 
 const BUSY = "Creating the task…";
-const INCOMPLETE = "Needs a repo choice and a description";
+const NEEDS_TEXT = "Needs a description";
+const NEEDS_PICK = "Pick the typed repo or clear it";
 const MB = 1024 * 1024;
 
 function block(button: HTMLButtonElement, reason: null | string, label: string): void {
   button.setAttribute("aria-disabled", String(reason !== null));
   button.title = reason ?? label;
+}
+
+/** The field a server refusal names: its request checks open with "repo must", "title must" or "body must" (http/newtask.py). */
+function refused(message: string): "body" | "repo" | null {
+  const [, name] = /^(repo|title|body) must/v.exec(message) ?? [];
+  if (name === undefined) return null;
+  return name === "repo" ? "repo" : "body";
 }
 
 export class TiNewTask extends HTMLElement {
@@ -51,7 +59,7 @@ export class TiNewTask extends HTMLElement {
       onClose: () => { this.#close(); },
       onFiles: (files) => { this.#add(files); },
       onGrow: () => { this.#grow(); },
-      onInput: () => { this.#paint(); },
+      onInput: () => { this.#form.body.removeAttribute("aria-invalid"); this.#paint(); },
       onKey: (event) => { this.#onKey(event); },
       onSubmit: () => void this.#submit(),
     }, this.#chooser.element);
@@ -141,14 +149,25 @@ export class TiNewTask extends HTMLElement {
     return { files: ids(false), images: ids(true).map((upload) => ({ upload })) };
   }
 
-  #reason(): null | string {
-    if (this.#busy) return BUSY;
-    return this.#chooser.targets().length > 0 && splitNote(this.#form.body.value).title !== "" ? null : INCOMPLETE;
+  /** Why Create cannot succeed, and the one field that fixes it (none while busy). */
+  #problem(): null | { field: "body" | "repo" | null; reason: string } {
+    if (this.#busy) return { field: null, reason: BUSY };
+    if (splitNote(this.#form.body.value).title === "") return { field: "body", reason: NEEDS_TEXT };
+    return this.#chooser.pending ? { field: "repo", reason: NEEDS_PICK } : null;
+  }
+
+  /** Marks (outline) and focuses one field; the dialog itself stays calm. */
+  #flag(field: "body" | "repo"): void {
+    if (field === "repo") this.#chooser.flag();
+    else {
+      this.#form.body.setAttribute("aria-invalid", "true");
+      this.#form.body.focus();
+    }
   }
 
   #paint(): void {
     const form = this.#form;
-    block(form.submit, this.#reason(), "Create and start");
+    block(form.submit, this.#problem()?.reason ?? null, "Create and start");
     form.submit.setAttribute("aria-busy", String(this.#busy));
     block(this.#opener, this.#busy ? BUSY : null, "New task");
     renderThumbs(form, this.#files, (index) => { this.#remove(index); });
@@ -156,8 +175,26 @@ export class TiNewTask extends HTMLElement {
     form.slot.replaceChildren(...(this.#busy && this.#slow ? [loader(text)] : []));
   }
 
+  /** Posts one task per target (uploads once, T2399); resolves with the last card id the server answered. */
+  async #send(csrf: string): Promise<string | undefined> {
+    const { body, title } = splitNote(this.#form.body.value);
+    let made: string | undefined;
+    for (const repo of this.#chooser.targets()) {
+      const { files, images } = await this.#upload(csrf);
+      const request = { ...(body !== "" && { body }), ...((files.length > 0) && { files }), ...((images.length > 0) && { images }), ...(repo !== null && { repo }), title };
+      const created = await postNewTask(request, csrf);
+      this.#chooser.sent(repo);
+      made = created.task?.id ?? made;
+    }
+    return made;
+  }
+
   async #submit(): Promise<void> {
-    if (this.#reason() !== null) return;
+    const problem = this.#problem();
+    if (problem !== null) {
+      if (problem.field !== null) this.#flag(problem.field);
+      return;
+    }
     const csrf = csrfToken();
     if (csrf === null) {
       showToast("This page has no CSRF token; reload it.", "error");
@@ -169,15 +206,7 @@ export class TiNewTask extends HTMLElement {
     this.#paint();
     const timer = setTimeout(() => { this.#slow = true; this.#paint(); }, SLOW_MS);
     try {
-      const { body, title } = splitNote(form.body.value);
-      let made: string | undefined;
-      for (const repo of this.#chooser.targets()) {
-        const { files, images } = await this.#upload(csrf);
-        const request = { ...(body !== "" && { body }), ...((files.length > 0) && { files }), ...((images.length > 0) && { images }), ...(repo !== null && { repo }), title };
-        const created = await postNewTask(request, csrf);
-        this.#chooser.sent(repo);
-        made = created.task?.id ?? made;
-      }
+      const made = await this.#send(csrf);
       form.body.value = "";
       form.body.style.height = "";
       for (const { url } of this.#files) if (url !== null) URL.revokeObjectURL(url);
@@ -187,7 +216,9 @@ export class TiNewTask extends HTMLElement {
       if (made !== undefined) this.dispatchEvent(new CustomEvent("task-created", { bubbles: true, detail: { id: made } }));
     } catch (error) {
       showToast(errorText(error), "error");
-      form.dialog.classList.add("nt-shake");
+      const field = refused(errorText(error));
+      if (field === null) form.dialog.classList.add("nt-shake");
+      else this.#flag(field);
     }
     clearTimeout(timer);
     this.#waiting = routes.ownTask;

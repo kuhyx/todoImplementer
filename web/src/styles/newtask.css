@@ -212,3 +212,10 @@ ti-new-task {
     animation: none;
   }
 }
+
+/* The one field Create needs fixed: outline plus focus, no words. */
+.nt-row [aria-invalid="true"] {
+  border-color: var(--danger);
+  outline: 2px solid var(--danger);
+  outline-offset: 1px;
+}

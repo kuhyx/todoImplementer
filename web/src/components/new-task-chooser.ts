@@ -32,7 +32,7 @@ export class RepoChooser {
     this.#onChange = onChange;
     this.typed = h("input", {
       attrs: { "aria-label": "Repo (owner/name)", autocomplete: "off", list: LIST_ID, name: "repo", spellcheck: "false", title: "Repo (owner/name)" },
-      on: { input: () => { this.#filter(); }, keydown: (event) => { this.#onKey(event); } },
+      on: { input: () => { this.#typing(); }, keydown: (event) => { this.#onKey(event); } },
     });
     this.#scopes = { all: this.#scopeChip("all"), none: this.#scopeChip("none") };
     this.#list = h("datalist", { attrs: { id: LIST_ID } });
@@ -71,6 +71,13 @@ export class RepoChooser {
     this.#onChange(isFolded);
   }
 
+  /** Typing edits the filter and lifts the mark of a refused text; the dialog repaints (an unpicked text blocks Create). */
+  #typing(): void {
+    this.typed.removeAttribute("aria-invalid");
+    this.#filter();
+    this.#onChange(this.#chips.hidden !== false);
+  }
+
   #filter(): void {
     const text = this.typed.value.trim().toLowerCase();
     for (const chip of this.#repoChips.querySelectorAll<HTMLElement>("[data-repo]")) chip.hidden = !String(chip.dataset.repo).toLowerCase().includes(text);
@@ -102,10 +109,21 @@ export class RepoChooser {
     this.#folded.replaceChildren(...(scope === "all" || scope === "none" ? [icon(GLYPHS[scope])] : [...this.#picked].map((repo) => h("span", { class: "nt-chip", text: repo }))));
   }
 
-  /** The repos still to send to; `[null]` is one repo-less note (none or all). */
+  /** The repos still to send to; `[null]` is one repo-less note (none, all, or no choice: triage routes it, T2409; typed text that is not picked is stopped by the caller). */
   targets(): (null | string)[] {
-    if (this.#scope === "some") return [...this.#picked];
-    return this.#scope === null ? [] : [null];
+    return this.#scope === "some" ? [...this.#picked] : [null];
+  }
+
+  /** Text typed in the filter that no Enter picked: Create would drop it, so it waits until it is picked or cleared. */
+  get pending(): boolean {
+    return this.#scope === null && this.typed.value.trim() !== "";
+  }
+
+  /** Shows the repo step as the thing to fix: opens it, marks the typed field and focuses it. */
+  flag(): void {
+    this.#fold(false);
+    this.typed.setAttribute("aria-invalid", "true");
+    this.typed.focus();
   }
 
   /** A repo whose task is made: a retry after a later refusal does not send it twice. */

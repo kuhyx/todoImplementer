@@ -16,6 +16,7 @@ import { makeDetail, makeUsage } from "#fixtures/fixture-detail";
 import { preset } from "#fixtures/fixture-presets";
 import { makeBoard, makeCards, NOW } from "#fixtures/fixtures";
 
+import { hasServedNewTask } from "./mock-newtask.ts";
 import { pairBody, PHONE_TYPES, sessionsBody, stampLocal, usageFixture } from "./mock-phone.ts";
 import { TRACK_ID, trackBody, umbrellaCard, workerLog } from "./mock-track.ts";
 
@@ -180,7 +181,7 @@ async function route(request: IncomingMessage, res: ServerResponse): Promise<voi
   if (path === "/api/board") { const board = makeBoard(cards); json(res, { ...board, build: BUILD, limit: { ...board.limit, credits: creditsNow() } }); return; }
   if (path === "/api/settings/credits-fallback" && request.method === "POST") { await setCredits(request, res); return; }
   if (path === "/api/usage") { json(res, makeUsage()); return; }
-  if (await hasServedPhone(request, res, path)) return;
+  if ((await hasServedPhone(request, res, path)) || (await hasServedNewTask(request, res, path, TOKEN))) return;
   if (path === "/api/live") { live(request, res, parameters.get("id") ?? ""); return; }
   if (hasServedUmbrella(res, path)) return;
   if (api !== "api" || kind !== "task" || id === undefined) {
