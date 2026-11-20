@@ -13,7 +13,8 @@ from todoimpl.todo_mcp.client import TodoClient
 from todoimpl.todo_mcp.model import TodoError
 
 POLLS = 6
-TIMEOUT = 0.3
+TIMEOUT = 0.3  # the parallel polls must all start inside one hang
+QUICK = 0.1  # the ladder tests poll one at a time: each hang costs one timeout
 NOT_ANSWERING = "todo MCP not answering (timeout)"
 
 
@@ -83,7 +84,7 @@ def test_t2005_cache_refresh_in_flight_is_not_repeated() -> None:
 
 def test_t2005_backs_off_on_the_ladder_then_recovers(fake: FakeTodoMcp) -> None:
     clock = Clock()
-    client = TodoClient(fake.url, fake.token, TIMEOUT, clock=clock)
+    client = TodoClient(fake.url, fake.token, QUICK, clock=clock)
     fake.hang()
     assert _poll(client) == NOT_ANSWERING  # failure 1: next try in 1 s
     fake.release()
@@ -110,7 +111,7 @@ def test_t2005_backs_off_on_the_ladder_then_recovers(fake: FakeTodoMcp) -> None:
 
 def test_t2005_a_403_after_timeouts_is_not_a_token_verdict(fake: FakeTodoMcp) -> None:
     clock = Clock()
-    client = TodoClient(fake.url, fake.token, TIMEOUT, clock=clock)
+    client = TodoClient(fake.url, fake.token, QUICK, clock=clock)
     fake.hang()
     assert _poll(client) == NOT_ANSWERING
     fake.release()
@@ -127,7 +128,7 @@ def test_a_403_on_a_healthy_server_still_says_token_rejected(fake: FakeTodoMcp) 
 @pytest.mark.parametrize("status", [500, 502])
 def test_server_errors_during_an_outage_back_off_too(fake: FakeTodoMcp, status: int) -> None:
     clock = Clock()
-    client = TodoClient(fake.url, fake.token, TIMEOUT, clock=clock)
+    client = TodoClient(fake.url, fake.token, QUICK, clock=clock)
     fake.hang()
     _poll(client)
     fake.release()
@@ -141,7 +142,7 @@ def test_server_errors_during_an_outage_back_off_too(fake: FakeTodoMcp, status: 
 
 def test_t2005_board_is_fresh_within_30s_of_the_todo_app_coming_back(fake: FakeTodoMcp) -> None:
     clock = Clock()
-    client = TodoClient(fake.url, fake.token, TIMEOUT, clock=clock)
+    client = TodoClient(fake.url, fake.token, QUICK, clock=clock)
 
     def fetch() -> list[CardTask]:
         client.list_tasks()
@@ -163,7 +164,7 @@ def test_t2005_board_is_fresh_within_30s_of_the_todo_app_coming_back(fake: FakeT
 
 def test_t2005_each_window_ends_with_exactly_one_probe(fake: FakeTodoMcp) -> None:
     clock = Clock()
-    client = TodoClient(fake.url, fake.token, TIMEOUT, clock=clock)
+    client = TodoClient(fake.url, fake.token, QUICK, clock=clock)
     fake.hang()
     _poll(client)
     for wait in (1, 2, 5, 10, 30, 30, 30):

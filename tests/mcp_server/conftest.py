@@ -38,7 +38,7 @@ def fake(monkeypatch: pytest.MonkeyPatch) -> Iterator[Fake]:
     url = f"http://127.0.0.1:{server.server_address[1]}"
     state = Fake(url)
     server.RequestHandlerClass = handler(state)
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True)
     thread.start()
     monkeypatch.setenv(URL_ENV, f"{url}/api/tokens")
     try:

@@ -67,13 +67,20 @@ CLAUDE_MD = f"# demo\n\n## Commands\n\n- run: `./run.sh`\n- deploy: `{DEPLOY_COM
 NO_DEPLOY_MD = "# demo\n\n## Commands\n\n- run: `./run.sh`\n"
 
 
+def git_shim(guard: Path) -> str:
+    """Write the `git` on PATH: real git at once, the push guard only when `push` is an argument."""
+    return (
+        f'#!/bin/sh\nfor a in "$@"; do [ "$a" = push ] && exec "{guard}" "$@"; done\nexec "$REAL_GIT" "$@"\n'
+    )
+
+
 def make_env(tmp: Path) -> tuple[Env, dict[str, str]]:
     """Build the world; return it and the env vars a test must set."""
     world = Env(tmp, tmp / "home", tmp / "bin", tmp / "fake", tmp / "root", tmp / "home" / "src")
     for folder in (world.home, world.bin, world.fake, world.src):
         folder.mkdir(parents=True)
     executable(world.bin / "claude", f'#!/bin/sh\nexec "{sys.executable}" "{SHIMS / "claude"}" "$@"\n')
-    executable(world.bin / "git", f'#!/bin/sh\nexec "{SHIMS / "git_push_refuse"}" "$@"\n')
+    executable(world.bin / "git", git_shim(SHIMS / "git_push_refuse"))
     executable(world.bin / "capped.sh", '#!/bin/sh\nexec "$@"\n')
     executable(world.bin / "gh", GH_SHIM)
     executable(world.bin / "systemctl", "#!/bin/sh\nexit 3\n")  # no unit is ever running: never the real one

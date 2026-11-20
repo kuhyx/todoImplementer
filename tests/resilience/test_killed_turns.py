@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+import pytest
+import schedfakes
 from runnerfakes import Env
 from schedfakes import CARD as SINGLE
 from schedfakes import IMPL, LIVE_OK, PLAN, state, wait, wait_stage
@@ -54,11 +56,16 @@ def test_t1902_a_turn_killed_six_times_asks_kuhy_after_the_bound(world: Env) -> 
     assert len(world.calls()) == 1 + retry.MAX_KILL_RETRIES + 1
 
 
-SLOW_KILL = ({"_fake": "sleep", "sec": 3.1}, *KILL)  # a loaded machine: each turn takes seconds, not tenths
+# A loaded machine, scaled 10x down: the wait budget below is 1 s per turn and each turn takes 0.3 s, so
+# seven turns outlast one shared 1 s wait (as 7 x 3.1 s outlasted one 20 s wait) but fit a budget that grows.
+SLOW_KILL = ({"_fake": "sleep", "sec": 0.31}, *KILL)
 
 
-def test_t1985_the_bound_is_reached_however_slow_each_turn_is(world: Env) -> None:
+def test_t1985_the_bound_is_reached_however_slow_each_turn_is(
+    world: Env, monkeypatch: pytest.MonkeyPatch
+) -> None:
     # Seven turns in a row once shared one 20 s wait; under a busy gate run that wait ran out first.
+    monkeypatch.setattr(schedfakes, "TURN_WAIT", 1.0)
     kills: list[tuple[dict[str, Any], ...]] = [SLOW_KILL] * (retry.MAX_KILL_RETRIES + 1)
     sched, _ = boot_single(world, PLAN, *kills, done_check="true")
     try:

@@ -143,7 +143,7 @@ class _Proxy(http.server.BaseHTTPRequestHandler):
 @pytest.fixture
 def fake_proxy() -> Iterator[tuple[int, type[_Proxy]]]:
     httpd = http.server.HTTPServer(("127.0.0.1", 0), _Proxy)
-    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    threading.Thread(target=httpd.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True).start()
     yield httpd.server_port, _Proxy
     httpd.shutdown()
     httpd.server_close()
