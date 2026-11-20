@@ -1,7 +1,8 @@
 {
-  "_source": "claude-api skill model table (cached 2026-09-25, read 2026-10-04; the Fable 5.2 row from the table cached 2026-11-03, read 2026-11-20). USD per million tokens. Cache writes are priced as multiples of input: 5m = 1.25x, 1h = 2x (verified 2026-10-04: a claude -p probe's total_cost_usd matched opus-5-5 at 2x for its 1h write to 7 digits). Entries marked assumed_cache_read use the standard 0.1x-of-input ratio because the table does not list them.",
+  "_source": "claude-api skill model table (cached 2026-09-25, read 2026-10-04; the Fable 5.2 row from the table cached 2026-11-03, read 2026-11-20; the Haiku 5.5 row (up to 100K-token prompts, cache read 0.1x input; longer prompts cost $0.50 in, $2.50 out, not modelled) and the Mythos 5.2 row (same model and price as Fable 5.2) from the same skill's models.md and model-migration.md, read 2026-11-20). Gateway models (free OmniRoute chain) cost kuhy nothing and are priced 0. USD per million tokens. Cache writes are priced as multiples of input: 5m = 1.25x, 1h = 2x (verified 2026-10-04: a claude -p probe's total_cost_usd matched opus-5-5 at 2x for its 1h write to 7 digits). Entries marked assumed_cache_read use the standard 0.1x-of-input ratio because the table does not list them.",
   "default": "claude-opus-5-5",
   "models": {
+    "claude-mythos-5-2": { "input": 8.0, "output": 40.0, "cache_read": 0.2 },
     "claude-fable-5-2": { "input": 8.0, "output": 40.0, "cache_read": 0.2 },
     "claude-fable-5-1": { "input": 10.0, "output": 50.0, "cache_read": 0.25 },
     "claude-opus-5-5": { "input": 4.0, "output": 20.0, "cache_read": 0.2 },
@@ -18,11 +19,20 @@
       "cache_read": 0.2,
       "assumed_cache_read": true
     },
+    "claude-haiku-5-5": { "input": 0.1, "output": 0.5, "cache_read": 0.01 },
     "claude-haiku-4-5": {
       "input": 1.0,
       "output": 5.0,
       "cache_read": 0.1,
       "assumed_cache_read": true
-    }
+    },
+    "agnes-2.5-flash": { "input": 0.0, "output": 0.0, "cache_read": 0.0 },
+    "gpt-oss-120b": { "input": 0.0, "output": 0.0, "cache_read": 0.0 },
+    "nvidia/nemotron-3-ultra-550b-a55b": { "input": 0.0, "output": 0.0, "cache_read": 0.0 },
+    "nvidia/nemotron-3-ultra-550b-a55b:free": { "input": 0.0, "output": 0.0, "cache_read": 0.0 },
+    "nvidia/nemotron-3.5-super-vl:free": { "input": 0.0, "output": 0.0, "cache_read": 0.0 },
+    "mistralai/mistral-large-2512": { "input": 0.0, "output": 0.0, "cache_read": 0.0 },
+    "aisingapore/Qwen-SEA-LION-v4-32B-IT": { "input": 0.0, "output": 0.0, "cache_read": 0.0 },
+    "kilo-auto/free": { "input": 0.0, "output": 0.0, "cache_read": 0.0 }
   }
 }

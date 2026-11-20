@@ -95,3 +95,47 @@ def test_t2370_fable_5_2_matches_the_measured_probe() -> None:
         "cache_read_input_tokens": 11826,
     }
     assert prices.price_of("claude-fable-5-2", usage) == pytest.approx(0.4225, abs=1e-4)
+
+
+FREE_GATEWAY_IDS = (
+    "agnes-2.5-flash",
+    "gpt-oss-120b",
+    "nvidia/nemotron-3-ultra-550b-a55b",
+    "nvidia/nemotron-3-ultra-550b-a55b:free",
+    "nvidia/nemotron-3.5-super-vl:free",
+    "mistralai/mistral-large-2512",
+    "aisingapore/Qwen-SEA-LION-v4-32B-IT",
+    "kilo-auto/free",
+)
+
+
+def test_t2380_haiku_5_5_has_its_own_price_row() -> None:
+    """Haiku 5.5 fell through to the Opus 5.5 default and was priced 40x too high."""
+    row = prices.PRICES.models["claude-haiku-5-5"]
+    # List price for prompts up to 100K tokens; cache reads are 0.1x input.
+    assert (row.input, row.output, row.cache_read) == (0.10, 0.50, 0.01)
+    assert row != prices.PRICES.for_model(prices.PRICES.default)
+    # The 4.5 row must not swallow 5.5 ids by prefix, nor the reverse.
+    assert prices.PRICES.for_model("claude-haiku-4-5").input == 1.0
+    assert prices.PRICES.for_model("claude-haiku-5-5-20261101").input == 0.10
+
+
+def test_t2380_mythos_5_2_is_priced_like_fable_5_2() -> None:
+    """Mythos 5.2 is the same model as Fable 5.2 with the same per-token price."""
+    row = prices.PRICES.models["claude-mythos-5-2"]
+    assert row == prices.PRICES.models["claude-fable-5-2"]
+    assert (row.input, row.output, row.cache_read) == (8.0, 40.0, 0.2)
+
+
+@pytest.mark.parametrize("model", FREE_GATEWAY_IDS)
+def test_t2380_free_gateway_model_has_its_own_zero_row(model: str) -> None:
+    """Gateway models cost kuhy nothing; they were billed as Opus 5.5."""
+    assert model in prices.PRICES.models
+    assert prices.PRICES.models[model] == prices.Price(0.0, 0.0, 0.0)
+    usage = {
+        "input_tokens": 1_000,
+        "output_tokens": 1_000,
+        "cache_creation_input_tokens": 1_000,
+        "cache_read_input_tokens": 1_000,
+    }
+    assert prices.price_of(model, usage) == 0.0
