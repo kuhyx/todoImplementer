@@ -190,6 +190,7 @@ session leaves are squashed and pushed. Start and Retry clear every counter (als
 | Gate step killed by a signal (exit < 0, 137, 143), e.g. OOM at capped.sh's 4 GiB | one rerun (`gate_kills`) | fix turn: shard it finer or cut its memory | `ship_fixes` 2 |
 | Gate step red (`GateRedError`) | fix turn with its tail | fix turn | `ship_fixes` 2 |
 | No `- deploy:` line (`NoDeployLineError`) | fix turn: add a working line and run it, or `- deploy: none (<why>)` | fix turn | `deploy_fixes` 2; the text then says Retry gives 2 more |
+| Deploy busy: exit 52, "rerun later" (tunedeck while it plays music, T2400) | rerun on the ladder, no fix turn | rerun | `retries` 12 (about 4 h) |
 | Deploy red (`DeployFailedError`), umbrella child or not | phone wait if the phone is why; a kill (exit < 0) reruns once (`deploy_kills`) | fix turn with the deploy log tail | `deploy_fixes` 2 |
 
 The -15 exits of 2556952d's gate steps (habit_stack, screen-locker, home_inventory) were OOM kills of the step's

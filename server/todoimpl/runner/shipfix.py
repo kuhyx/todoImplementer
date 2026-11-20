@@ -1,7 +1,7 @@
 """Ship failures that heal by themselves: a rerun on the ladder or a session fix turn (DOCS-landing.md).
 
 Only what Claude cannot do reaches kuhy (2026-11-19, umbrella 2556952d-0). A deploy blocked by kuhy's edits
-waits (T2007). A gate step or deploy killed by a signal reruns once as it is (T2340, T2341, T2343), and a gate
+waits (T2007), and so does a deploy that exits 52, "busy, rerun later" (T2400). A gate step or deploy killed by a signal reruns once as it is (T2340, T2341, T2343), and a gate
 step killed while it only waited for the build lock reruns without counting. Everything else that is Claude's
 work goes back to the session with a brief: a red or twice-killed gate step, a missing `- deploy:` line, a red
 deploy (T2050, T2342, T2343). Each kind has its own bound; past it the failure stays with kuhy.
@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from .deployheal import DirtyCheckoutError
 
 MAX_DEPLOY_WAITS = 12  # 1, 2, 5, 10 minutes, then 30 each: about 4 h, as long as a 5xx is retried
+BUSY_EXIT = 52  # a deploy's "busy, rerun later" (tunedeck while it plays): the ladder reruns it (T2400)
 MAX_DEPLOY_FIXES = 2  # session fix turns for a red or undeclared deploy per Start
 MAX_SHIP_FIXES = 2  # session fix turns for a refused commit, red checks or a red gate step per Start
 MAX_KILL_RERUNS = 1  # plain reruns of a gate step or deploy a signal killed, each per Start
@@ -53,6 +54,10 @@ def heal(st: RunState, err: GateRedError | NoDeployLineError | DeployFailedError
         return _fix(st, "ship_fixes", MAX_SHIP_FIXES, err, f"gate step {err.step} {what}")
     if isinstance(err, NoDeployLineError):
         return _fix(st, "deploy_fixes", MAX_DEPLOY_FIXES, err, "no deploy line, the session adds one")
+    if err.exit_code == BUSY_EXIT:  # nothing to fix: the target is busy (music playing); rerun later
+        if int(st.extra.get("retries", 0)) >= MAX_DEPLOY_WAITS:
+            raise err
+        raise retry.later(st, now, f"deploy busy (exit {BUSY_EXIT}): it runs again later")
     appfix.phone_wait(st, err, now)  # pushed, not deployed: maybe only because the phone is away
     if err.exit_code is not None and err.exit_code < 0 and _count(st, "deploy_kills", MAX_KILL_RERUNS):
         raise retry.later(st, now, f"deploy was killed (exit {err.exit_code}): it runs again", "killed")

@@ -143,3 +143,15 @@ def test_t2343_the_shipping_stage_sends_each_fixable_failure_back_to_implement(
     assert shipstage.shipping(d) == "implement"  # type: ignore[arg-type]
     assert d.lines
     assert st.extra["reship"] is True
+
+
+def test_t2400_a_deploy_that_says_busy_rerun_later_waits_on_the_ladder_not_for_kuhy() -> None:
+    st = _child()
+    busy = "deploy: tunedeck is playing; not interrupting it (exit 52, rerun later)"
+    with pytest.raises(retry.RetryLaterError) as later:
+        shipfix.heal(st, DeployFailedError.build(shipfix.BUSY_EXIT, busy), 100.0)
+    assert "busy (exit 52)" in later.value.why
+    assert ("deploy_fixes" in st.extra, "failure_tail" in st.extra) == (False, False)
+    st.extra["retries"] = shipfix.MAX_DEPLOY_WAITS
+    with pytest.raises(DeployFailedError):
+        shipfix.heal(st, DeployFailedError.build(shipfix.BUSY_EXIT, busy), 200.0)
