@@ -33,14 +33,9 @@ lint:
 	@$(UV) ruff check .
 	@$(UV) ruff format --check .
 
-# Test dirs import their helpers by bare name (pytest prepend mode), and several hold a conftest.py, so mypy
-# checks each dir on its own to keep module names unique.
+# Parallel mypy runs with a warm per-job cache under .mypy_cache/ (scripts/check_types.sh): cold ~9 s, warm ~2 s.
 types:
-	@$(UV) mypy --cache-dir=/dev/null server scripts tests/test_*.py
-	@MYPYPATH="mcp:server" $(UV) mypy --cache-dir=/dev/null mcp/todoimpl_mcp
-	@for d in tests/*/; do \
-		if compgen -G "$$d*.py" > /dev/null; then MYPYPATH="$$d:server:scripts:tests/shims:tests/runner:tests/umbrella:tests/service:tests/http:deploy:mcp" $(UV) mypy --cache-dir=/dev/null "$$d"; fi; \
-	done
+	@$(UV) bash scripts/check_types.sh
 
 # One pytest call per test dir (each well under the 60 s per-command cap), each writing its own coverage
 # file; `coverage` merges them and still enforces fail_under = 100 over server/, scripts/, deploy/ and mcp/.
