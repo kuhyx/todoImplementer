@@ -53,7 +53,7 @@ def test_t2312_keys_continue_after_a_restart(
     monkeypatch.setattr(live_mod, "KEEP", 3)
     backend.events = [{"type": "activity", "seq": 1}, {"type": "activity", "seq": 2}]
     card = backend.task_id
-    old = {f"s{n:09d}": {"type": "activity", "seq": n} for n in (1, 2, 366, 367, 368)}
+    old = {f"s{n:09d}": {"type": "activity"} for n in (1, 2, 366, 367, 368)}  # no seq: nothing to skip
     fake.set(f"{ROOT}/live/{card}", {**old, "junk": {"type": "x"}})
 
     async def go() -> None:
@@ -98,7 +98,7 @@ def test_a_quiet_feed_stops_once_the_watch_lapses(
     async def go() -> None:
         db = fake.rtdb()
         lv = Live(db, router, now=lambda: clock[0])
-        lv.poll = 0.01
+        lv.poll = lv.gather = 0.01
         await lv.watch(DEV, card)
         await lv.watch("other-dev", card)  # a second watcher shares the running mirror
         assert len(lv.mirrors) == 1
@@ -121,10 +121,10 @@ def test_a_failing_write_ends_the_mirror_loudly(
         lv = Live(db, router)
         await lv.watch(DEV, card)
 
-        async def broken(path: str, value: object) -> object:
+        async def broken(path: str, value: object) -> None:
             raise OSError("down")
 
-        db.put = broken  # type: ignore[method-assign]
+        db.patch = broken  # type: ignore[method-assign]
         await mirror_done(lv, card)
         await db.aclose()
 
