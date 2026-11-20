@@ -9,4 +9,6 @@ kuhy's notes:
 - also check mobile width
 Write /run/ab12cd34/plan.md: `## Approach` (files to touch, short), `## Acceptance criteria`.
 Number criteria `C1.`, `C2.` ... Each is observable behaviour in the live app: `I do X, I see Y`.
-Never a test or code property. Cover the done_check if there is one. End with `D:`.
+Never a test or code property. Cover the done_check if there is one.
+If the item or a spec answer has kuhy judge, approve or review a deliverable (mail, message, post, design), add `Cn. (kuhy) kuhy approves <it> in the board ask, then <the outward step, e.g. it is sent>`.
+End with `D:`.

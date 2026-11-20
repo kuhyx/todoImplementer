@@ -20,7 +20,7 @@ they mean. Lessons from the predecessor are in `DOCS-lessons.md`.
   close_task with the live-check report and the checks' output tails as evidence, remove worktree). CHANGE
   2026-11-05: no AI review loop and no verify/proof stage, ever. Screenshots are allowed, video is not. Excluded for good, never added to any backlog: video
   recording, remote hosts, meetings, Windows/macOS.
-  Live check verdict (kuhy, 2026-11-07): one done criterion is enough: the run goes on to Checks and the open ones
+  Live check verdict (kuhy, 2026-11-07; a `(kuhy)` criterion blocks it, DOCS-asks.md): one done criterion is enough: the run goes on to Checks and the open ones
   become one follow-up note (retried on a timer, never Needs you, no turn spent). Every start judges failed live checks
   again from their stored report, so a rule change reaches old runs. Least effort lists question cards first.
 - **Q5** Automatic: everything up to and including Ship. kuhy's clicks: Spec OK, Start, Cancel, lesson approval.

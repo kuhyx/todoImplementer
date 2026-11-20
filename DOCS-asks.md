@@ -41,6 +41,15 @@ run any phone, device or E2E check yourself, and write a `choice` per decision o
 exact step kuhy must take. Skipped for `spec`/`plan`, phone waits, error runs and umbrella children. After the budget
 the card parks with the old free-text ask.
 
+Approval criteria (`runner/approval.py`, T2362): when the item or a spec answer says kuhy judges, approves or reviews a
+deliverable (a mail, message, post or design), the plan writes that criterion as `Cn. (kuhy) ...`. The live check
+never ticks it. It shows the deliverable in its reply and ends `A:` with `choice c<n>: <question> | *approve | change`.
+The card waits in Needs you. A `change` or a Send note goes back to the same session, which edits the deliverable and
+asks again. `approve` resumes it to do the outward step, such as sending the mail, if the session has the means. Board
+sessions have no mail or Gmail tool: they run with `--strict-mcp-config`. Until asks.json holds kuhy's own `approve`
+for `c<n>` (an auto-adopted answer does not count), `live.settle` sends the session back once and then raises Needs
+you. The run never reaches Checks, never ships partly with a follow-up, and never defers the criterion.
+
 Ids: `[a-z][a-z0-9_-]{0,15}`; a hyphen reads as an underscore (`logo-pick` is `logo_pick`, T2134). A block that still
 fails makes the form note above quote the line that broke it and why (`parse.diagnose`).
 

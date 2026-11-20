@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from todoimpl.todo_mcp.model import TodoError
 
-from . import retry
+from . import approval, retry
 from .files import NeedsYouError
 from .parsing import parse_criteria, parse_live
 
@@ -116,6 +116,8 @@ def settle(d: Driver, report: str) -> str | None:
     extra.pop("live_redone", None)
     criteria = parse_criteria(d.plan_md())
     found = verdict(rows, criteria)
+    if (back := approval.owed(d, criteria)) is not None:  # kuhy's own criteria gate the rest (T2362)
+        return back
     if found.open:
         return _unfinished(d, report, found, criteria)
     extra.pop("live_fixes", None)

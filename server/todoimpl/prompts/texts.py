@@ -33,6 +33,16 @@ SELF_CHECK = (
     "Self-check: walk every acceptance criterion, run the done_check and the tests yourself, and state per "
     "criterion `Cn: done` or `Cn: not done` plus one line of evidence."
 )
+KUHY_PLAN = (  # runner/approval.py gates Ship on these (T2362)
+    "If the item or a spec answer has kuhy judge, approve or review a deliverable (mail, message, post, "
+    "design), add `Cn. (kuhy) kuhy approves <it> in the board ask, then <the outward step, e.g. it is sent>`."
+)
+KUHY_LIVE = (
+    "A `(kuhy)` criterion is kuhy's, never yours to tick. Until the runner reports his `approve`, put the "
+    "deliverable in your reply (full text, gaps, whether you can send or post it yourself), end `A:` with "
+    "`choice c<n>: <question> | *approve | change` in an `ask` block. On a change edit only the deliverable "
+    "and ask again; on `approve` do the outward step if you have the means, then tick it."
+)
 
 
 def _item(ctx: PromptContext) -> str:
@@ -90,7 +100,9 @@ def plan(ctx: PromptContext) -> str:
         _item(ctx),
         f"Write {ctx.run_dir}/plan.md: `## Approach` (files to touch, short), `## Acceptance criteria`.",
         "Number criteria `C1.`, `C2.` ... Each is observable behaviour in the live app: `I do X, I see Y`.",
-        "Never a test or code property. Cover the done_check if there is one. End with `D:`.",
+        "Never a test or code property. Cover the done_check if there is one.",
+        KUHY_PLAN,
+        "End with `D:`.",
     )
 
 
@@ -125,6 +137,7 @@ def live_check(ctx: PromptContext) -> str:
         "- [x] C1: what I did -> what I saw   (use `- [ ]` if it failed or could not be tried, and say why)",
         "A criterion that only passes once the work is on main (merged, deployed, restarted from main): land "
         "the work yourself, then check it. One that needs kuhy's phone: `- [~] C7: needs phone: <why>`.",
+        KUHY_LIVE,
         standing.grant(ctx),
         "Write the whole checklist yourself in this turn; no background agent, do not end with `R:`.",
         standing.WAITS,
