@@ -31,9 +31,14 @@ def test_t1862_an_oversized_note_body_is_cut_not_refused(tmp_path: Path) -> None
     validate("state", loaded.to_dict())
 
 
-def test_t1862_task_payload_shows_the_body_taken_at_pickup(tmp_path: Path) -> None:
-    rewritten = Note(body="rewritten later")
-    out = board.build_task(rewritten, run(note_body="taken at pickup"), tmp_path, ctx())
+def test_t1862_task_payload_shows_the_body_taken_at_pickup_once_the_note_has_none(tmp_path: Path) -> None:
+    emptied = Note(body="")
+    out = board.build_task(emptied, run(note_body="taken at pickup"), tmp_path, ctx())
     assert out["body"] == "taken at pickup"
     validate("task", out)
-    assert board.build_task(rewritten, run(), tmp_path, ctx())["body"] == "rewritten later"
+    edited = Note(body="rewritten later")  # a live edit wins over the snapshot (T2396)
+    assert (
+        board.build_task(edited, run(note_body="taken at pickup"), tmp_path, ctx())["body"]
+        == "rewritten later"
+    )
+    assert board.build_task(edited, run(), tmp_path, ctx())["body"] == "rewritten later"

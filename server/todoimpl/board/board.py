@@ -116,7 +116,7 @@ def build_task(
     umbrella = detail(task, run)
     return {
         "card": card,
-        "body": run.note_body if run is not None and run.note_body is not None else task.body,
+        "body": task.body or (run.note_body if run is not None and run.note_body is not None else ""),
         "done_check": task.done_check,
         "plan_md": _read(directory / "plan.md"),
         "questions": [vars(q).copy() for q in run.spec_questions] if run is not None else [],
