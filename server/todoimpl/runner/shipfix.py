@@ -1,10 +1,11 @@
 """Ship failures that heal by themselves: a rerun on the ladder or a session fix turn (DOCS-landing.md).
 
 Only what Claude cannot do reaches kuhy (2026-11-19, umbrella 2556952d-0). A deploy blocked by kuhy's edits
-waits (T2007), and so does a deploy that exits 52, "busy, rerun later" (T2400). A gate step or deploy killed by a signal reruns once as it is (T2340, T2341, T2343), and a gate
-step killed while it only waited for the build lock reruns without counting. Everything else that is Claude's
-work goes back to the session with a brief: a red or twice-killed gate step, a missing `- deploy:` line, a red
-deploy (T2050, T2342, T2343). Each kind has its own bound; past it the failure stays with kuhy.
+waits (T2007), and so does a deploy that exits 52, "busy, rerun later" (T2400). A gate step or deploy killed
+by a signal reruns once as it is (T2340, T2341, T2343), and a gate step killed while it only waited for the
+build lock reruns without counting. Everything else that is Claude's work goes back to the session with a
+brief: a red or twice-killed gate step, a missing `- deploy:` line, a red deploy (T2050, T2342, T2343). Each
+kind has its own bound; past it the failure stays with kuhy.
 """
 
 from __future__ import annotations
