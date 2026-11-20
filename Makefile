@@ -12,9 +12,11 @@ MESSAGE ?=
 # tree that already passed (scripts/fast_stamp.py, T2410).
 fast:
 	@k=$$(python3 scripts/fast_stamp.py key); $(MAKE) --no-print-directory -j$(JOBS) -O fast-steps; \
-	python3 scripts/fast_stamp.py record . "$$k"; echo "make fast: green"
+	$(MAKE) --no-print-directory test; python3 scripts/fast_stamp.py record . "$$k"; echo "make fast: green"
 
-fast-steps: lines private md regressions lint types test web
+# The checks run side by side; `test` runs after them on its own, because every capped job of one session
+# shares one 20 % CPU pool and the xdist run needs all of it to stay under the 60 s scope cap.
+fast-steps: lines private md regressions lint types web
 
 lines:
 	@python3 scripts/check_lines.py
