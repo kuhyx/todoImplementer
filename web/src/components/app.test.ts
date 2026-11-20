@@ -197,7 +197,7 @@ describe("ti-app", () => {
     const options = [...document.querySelectorAll("ti-new-task datalist option")].map((o) => o.getAttribute("value"));
     expect(options).toEqual(makeBoard().repos);
     q<HTMLButtonElement>("[data-new-task=open]").click();
-    expect(q<HTMLInputElement>("ti-new-task input[name=repo]").value).toBe("kuhyx/widget");
+    expect(q("ti-new-task [data-new-task=scope]").textContent).toBe("kuhyx/widget");
     const before = stub.calls.filter((c) => c.url === "/api/board").length;
     q("ti-new-task").dispatchEvent(new CustomEvent("task-created", { bubbles: true, detail: { id: READY } }));
     await settle(0);
