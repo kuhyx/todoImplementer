@@ -53,6 +53,8 @@ describe("drawer sections", () => {
     expect(asked).toEqual(["spec-ok"]);
     expect(renderNeeds(base, false, slot)?.querySelector("button")).toBeNull();
     expect(asked).toEqual(["spec-ok"]);
+    // Answered spec questions keep the Questions panel live: Spec OK still shows in its box.
+    expect(renderNeeds({ ...base, card: { ...base.card, needs } }, true, slot)?.querySelector("button")?.textContent).toBe("spec-ok");
   });
 
   it("needs banner names the need; an error shows alone or beside it", () => {

@@ -37,7 +37,8 @@ export function renderHead(detail: TaskDetail): HTMLElement {
  */
 export function renderNeeds(detail: TaskDetail, isQuiet = false, act?: ActionSlot): HTMLElement | null {
   const { needs } = detail.card;
-  if (needs === null || isQuiet) return detail.error === null ? null : h("p", { attrs: { role: "alert" }, class: "banner", text: detail.error });
+  // The question cards never say "click Spec OK", so that need keeps its box (and button) beside them.
+  if (needs === null || (isQuiet && needs.kind !== "spec_ok")) return detail.error === null ? null : h("p", { attrs: { role: "alert" }, class: "banner", text: detail.error });
   return h(
     "div",
     { attrs: { "data-kind": needs.kind }, class: "needs" },
