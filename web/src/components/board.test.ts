@@ -172,35 +172,28 @@ describe("toolbar", () => {
 });
 
 describe("renderUsage", () => {
-  it("shows both windows, resets, running count, today's dollars and build", () => {
+  it("shows the 7 d window with its reset and the build, not the 5 h one", () => {
     const text = renderUsage(makeUsage(), board, null, "abc1234", NOW).textContent;
-    expect(text).toContain("42%");
+    expect(text).not.toContain("42%");
     expect(text).toContain("77%");
-    expect(text).toMatch(/resets in 2 h 15 min/v);
-    expect(text).toContain("Today $12.37");
     expect(renderUsage(makeUsage(), board, null, null, NOW).querySelector("a")?.getAttribute("href")).toBe("/usage");
-    expect(text).toContain(`Running ${String(board.slots.used)}`);
-    expect(text).not.toMatch(/Running \d+\s*\//v);
-    expect(text).not.toContain("Slots");
-    expect(renderUsage(makeUsage(), { ...board, slots: { used: 7 } }, null, null, NOW).textContent).toContain("Running 7");
     expect(text).toContain("abc1234");
   });
 
   it("colours by threshold and handles missing windows, errors, limit and credit use", () => {
     const usage = makeUsage();
-    const hot = { ...usage, five_hour: { ...usage.five_hour!, utilization: 0.95 }, overage: { status: "allowed", using: true }, seven_day: null };
+    const hot = { ...usage, overage: { status: "allowed", using: true }, seven_day: { ...usage.seven_day!, utilization: 0.95 } };
     const element = renderUsage(hot, { ...board, limit: { active: true, credits: makeCredits({ text: "Server credits line." }), until: NOW + 600 } }, "Board not refreshed: down", null, NOW);
     expect(element.querySelector('[data-tone="danger"]')).not.toBeNull();
-    expect(element.textContent).toContain("no reading yet");
+    expect(renderUsage({ ...usage, seven_day: null }, null, null, null, NOW).textContent).toContain("no reading yet");
     expect(element.textContent).toContain("Overage in use");
     expect(element.textContent).toContain("Plan limit reached: runs resume in 10 min");
-    expect(element.textContent).toContain("Server credits line.");
+    expect(element.textContent).toContain("Server credits line.");  // the limit note still words it
     expect(element.querySelector('[role="alert"]')?.textContent).toBe("Board not refreshed: down");
-    const warm = renderUsage({ ...usage, five_hour: { ...usage.five_hour!, utilization: 0.8 } }, null, null, null, NOW);
+    const warm = renderUsage({ ...usage, seven_day: { ...usage.seven_day!, utilization: 0.8 } }, null, null, null, NOW);
     expect(warm.querySelector('[data-tone="warn"]')).not.toBeNull();
     const noUntil = renderUsage(null, { ...board, limit: { active: true, credits: makeCredits({ enabled: false, route: "plan", state: "off", text: "Credits are off." }), until: null } }, null, null, NOW);
     expect(noUntil.textContent).toContain("at an unknown time");
     expect(noUntil.textContent).toContain("Credits are off.");
-    expect(renderUsage(null, board, null, null, NOW).textContent).not.toContain("Today");
   });
 });

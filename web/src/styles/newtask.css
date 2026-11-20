@@ -1,7 +1,7 @@
 /* <ti-new-task>: the + button sits in the toolbar; its dialog is a centred sheet over a scrim. */
 ti-new-task {
   display: inline-flex;
-  align-self: flex-end;
+  align-self: center;
 }
 
 .nt-panel {

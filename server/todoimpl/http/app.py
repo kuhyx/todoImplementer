@@ -152,13 +152,14 @@ class Handler(BaseHTTPRequestHandler):
         log.info("%s %s", self.address_string(), format % args)
 
 
-def make_server(
+def make_server(  # noqa: PLR0913 - bind address, site and build, all keyword seams
     backend: Backend,
     host: str = "127.0.0.1",
     port: int = 8786,
     *,
     dist: Path = DEFAULT_DIST,
     build: str = "unknown",
+    build_name: str | None = None,
 ) -> AppServer:
     """Bind a server on a loopback address; the bound loopback origin is always an allowed Origin."""
     if host not in LOOPBACK:
@@ -168,5 +169,7 @@ def make_server(
     token = new_token()
     origins = (*DEFAULT_ORIGINS, f"http://127.0.0.1:{server.server_address[1]}")
     server.gate = Gate.create(server.server_address[1])
-    server.router = Router(backend, StaticSite(dist, token, build), token=token, origins=origins, build=build)
+    server.router = Router(
+        backend, StaticSite(dist, token, build, build_name), token=token, origins=origins, build=build
+    )
     return server

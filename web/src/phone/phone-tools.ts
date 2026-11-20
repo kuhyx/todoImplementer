@@ -1,8 +1,6 @@
-/** Header buttons for phones: pair one (PC only, shown when the server stamped `todoimpl-local`) and install the app (when Chrome offers it). */
-import { readMeta } from "@/lib/boot";
+/** The header's install button (when Chrome offers it); the QR pair button is gone (kuhy, 2026-11-20). */
 import { h } from "@/lib/dom";
 import { watchInstall } from "@/phone/install";
-import { openPairDialog } from "@/phone/pair-dialog";
 import { phoneButton } from "@/phone/phone-button";
 
 export interface PhoneTools {
@@ -11,18 +9,15 @@ export interface PhoneTools {
   el: HTMLElement;
 }
 
-export const isLocalPage = (): boolean => readMeta("todoimpl-local") === "1";
-
 export function createPhoneTools(): PhoneTools {
   const element = h("span", { class: "phone-tools" });
-  const pair = isLocalPage() ? phoneButton("qr", "Pair a phone", "pair", () => { openPairDialog(pair); }) : null;
   const install = phoneButton("install", "Install the app", "install", () => { void installer.install(); });
   const refresh = (): void => {
     install.hidden = !installer.canInstall();
-    element.hidden = pair === null && install.hidden;
+    element.hidden = install.hidden;
   };
   const installer = watchInstall(refresh);
-  element.append(...(pair === null ? [] : [pair]), install);
+  element.append(install);
   refresh();
   return { dispose: installer.dispose, el: element };
 }

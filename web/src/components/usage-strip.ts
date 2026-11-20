@@ -1,14 +1,11 @@
 import type { Board, Usage } from "@/lib/schemas";
 
-/** 5 h / 7 d plan windows, today's dollars, running count and any active limit. All numbers come from /api/usage and /api/board. */
+/** The one-row top bar: build name, the 7 d plan window, free models left/used, the paced credits, usage and sessions links; then banners. Numbers come from /api/usage and /api/board. */
 import { renderCreditsPace } from "@/components/credits-pace";
-import { renderCreditsToggle } from "@/components/credits-toggle";
 import { renderFree } from "@/components/free-strip";
 import { icon } from "@/components/icons";
 import { h } from "@/lib/dom";
-import { formatClock, formatIn, formatPercent, formatUsd } from "@/lib/format";
-
-const noop = (): void => undefined;
+import { formatClock, formatIn, formatPercent } from "@/lib/format";
 
 /** Icon link to the page of sessions kuhy started by hand; its name lives in `title` and `aria-label` (textgate). */
 function sessionsLink(): HTMLElement {
@@ -66,27 +63,22 @@ function overageAlert(board: Board | null): HTMLElement | null {
   return alert ? h("p", { attrs: { "data-kind": alert.kind, role: "alert" }, class: "banner alert-banner", text: alert.text }) : null;
 }
 
-/** `onCredits` runs after the credits toggle's POST settles (the app refreshes the board). */
-export function renderUsage(usage: null | Usage, board: Board | null, error: null | string, build: null | string, now: number, onCredits: () => void = noop): HTMLElement {
+export function renderUsage(usage: null | Usage, board: Board | null, error: null | string, build: null | string, now: number): HTMLElement {
   return h(
     "div",
     { class: "usage" },
     h("div", { class: "usage-row" },
-      h("h1", { class: "brand", text: "todoImplementer" }),
       build !== null && h("span", { class: "build", text: build }),
-      board !== null && h("span", { class: "slots", text: `Running ${String(board.slots.used)}` }),
-      board !== null && h("span", { class: "auto-close", text: `auto close: ${board.auto_close ? "on" : "off"}` }),
-      usage !== null && h("span", { class: "today", text: `Today ${formatUsd(usage.cost.today_usd)}` }),
+      usage !== null && meter("7 d", usage.seven_day, now),
+      usage !== null && renderFree(usage.free, now),
+      board !== null && renderCreditsPace(board.limit.credits),
       h("a", { attrs: { href: "/usage" }, class: "usage-link", text: "Usage details" }),
       sessionsLink(),
       usage !== null && usage.overage.using && h("span", { attrs: { "data-tone": "warn" }, class: "chip", text: "Overage in use" }),
     ),
-    usage !== null && h("div", { class: "usage-row" }, meter("5 h", usage.five_hour, now), meter("7 d", usage.seven_day, now), renderFree(usage.free, now)),
     error !== null && h("p", { attrs: { role: "alert" }, class: "banner", text: error }),
     keyBanner(board),
     overageAlert(board),
-    board !== null && renderCreditsToggle(board.limit.credits, onCredits),
-    board !== null && renderCreditsPace(board.limit.credits),
     limitNote(board, now),
   );
 }

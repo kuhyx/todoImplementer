@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 from todoimpl.board.state import run_root
 from todoimpl.relay import worker as relay
 
+from . import buildname
 from .app import DEFAULT_DIST, make_server
 
 if TYPE_CHECKING:
@@ -39,6 +40,22 @@ def git_build_id(repo: Path) -> str:
     return done.stdout.strip() or "unknown" if done.returncode == 0 else "unknown"
 
 
+def git_build_name(repo: Path) -> str:
+    """Return the city name of repo's HEAD (`buildname`, by commit count), "unknown" when git cannot say."""
+    try:
+        done = subprocess.run(  # noqa: S603 - fixed argv
+            ["git", "-C", str(repo), "rev-list", "--count", "HEAD"],  # noqa: S607
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except OSError, subprocess.SubprocessError:
+        return "unknown"
+    count = done.stdout.strip()
+    return buildname.name(int(count)) if done.returncode == 0 and count.isdigit() else "unknown"
+
+
 def serve(
     backend: Backend,
     host: str = "127.0.0.1",
@@ -49,7 +66,7 @@ def serve(
 ) -> None:
     """Bind and serve until shutdown() is called on the server (or the process is stopped)."""
     build = build or git_build_id(REPO)
-    server = make_server(backend, host, port, dist=dist, build=build)
+    server = make_server(backend, host, port, dist=dist, build=build, build_name=git_build_name(REPO))
     relay.start(server.router, build=build, root=run_root(), env=os.environ)  # off unless TODOIMPL_RELAY=1
     try:
         server.serve_forever()

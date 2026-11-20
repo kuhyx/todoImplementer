@@ -101,10 +101,8 @@ when an OAuth client exists; they are not live.
 
 ## Web side
 
-- Pair a phone: on the PC the server stamps `<meta name="todoimpl-local" content="1">`; the header then shows a QR icon
-  (all three pages). Tap -> POST /api/pair (CSRF header) -> modal with the QR of the one-time link, a countdown ring
-  and seconds left; a new code is minted when it expires; Esc, backdrop or X closes. Errors show a warning glyph
-  (title = the error, tap retries). No words in the UI (textgate). QR: uqr 0.1.3, drawn as one SVG path.
+- Pair a phone: the web header has no QR button any more (kuhy, 2026-11-20: "we should have a different automatic
+  way"); the phone app signs in through the Firebase relay (`DOCS-native-app.md`). POST /api/pair stays for the CLI.
 - Install: web/public/manifest.webmanifest + flat icons web/public/icons/{icon-192,icon-512,icon-maskable-512}.png,
   regenerated from favicon.svg by `pnpm --dir web icons` (rsvg-convert). No service worker on purpose: the page
   reloads itself when /version changes and a caching worker would serve stale builds.

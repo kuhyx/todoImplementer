@@ -34,7 +34,8 @@ describe.each([
     const element = document.createElement(tag);
     document.body.append(element);
     await settle(0);
-    expect(document.querySelector(`${header} .phone-tools [data-phone="pair"]`)).not.toBeNull();
+    expect(document.querySelector(`${header} .phone-tools [data-phone="install"]`)).not.toBeNull();
+    expect(document.querySelector(`${header} [data-phone="pair"]`)).toBeNull();
     const remove = vi.spyOn(globalThis, "removeEventListener");
     element.remove();
     expect(remove).toHaveBeenCalledWith("beforeinstallprompt", expect.any(Function));

@@ -37,12 +37,9 @@ describe("auto close on the board", () => {
     expect(renderHead(makeDetail(base)).querySelector(".drawer-auto")).toBeNull();
   });
 
-  it("names the switch in the header from the board's auto_close flag", () => {
+  it("keeps the auto_close flag in the board contract but shows no header switch (top bar, 2026-11-20)", () => {
     const off = makeBoard();
     expect(boardSchema.parse(off)).toEqual(off);
-    expect(renderUsage(null, off, null, null, NOW).querySelector(".auto-close")?.textContent).toBe("auto close: off");
-    const on = { ...off, auto_close: true };
-    expect(renderUsage(null, on, null, null, NOW).querySelector(".auto-close")?.textContent).toBe("auto close: on");
-    expect(renderUsage(null, null, null, null, NOW).querySelector(".auto-close")).toBeNull();
+    expect(renderUsage(null, { ...off, auto_close: true }, null, null, NOW).querySelector(".auto-close")).toBeNull();
   });
 });

@@ -2,11 +2,12 @@
 import { renderBoard } from "@/components/board-columns";
 import { defineDrawer, TiDrawer } from "@/components/drawer";
 import { loader } from "@/components/feedback";
+import { iconButton } from "@/components/icons";
 import { defineNewTask, TiNewTask } from "@/components/new-task";
 import { createToolbar, type Toolbar } from "@/components/toolbar";
 import { renderUsage } from "@/components/usage-strip";
 import { buildView } from "@/lib/board-model";
-import { pageBuild } from "@/lib/boot";
+import { pageBuildName } from "@/lib/boot";
 import { h, must } from "@/lib/dom";
 import { DEFAULT_STATE, formatHash, parseHash, type ViewState } from "@/lib/hash-state";
 import { errorText, getJson } from "@/lib/http";
@@ -21,6 +22,12 @@ export const USAGE_POLL_MS = 10_000;
 const nowSeconds = (): number => Math.floor(Date.now() / 1000);
 
 export class TiApp extends HTMLElement {
+  /** Search, repo and sort sit behind this button (kuhy, 2026-11-20: the top bar takes too much space). */
+  readonly #advanced = iconButton("search", "Advanced: search, repo, sort", { "aria-expanded": "false", "data-advanced": "" }, () => {
+    this.#advancedOpen = !this.#advancedOpen;
+    this.#syncAdvanced();
+  });
+  #advancedOpen = false;
   #board: Board | null = null;
   #boardError: null | string = null;
   #boardHost = h("main", { attrs: { "aria-live": "off" }, class: "board-host" }, loader(`Loading the board from ${routes.board}…`));
@@ -110,13 +117,13 @@ export class TiApp extends HTMLElement {
   #paintUsage(): void {
     const stale = this.#staleReason();
     this.#boardHost.toggleAttribute("data-stale", stale !== null);
-    this.#usageBody.replaceChildren(renderUsage(this.#usage, this.#board, stale ?? this.#usageError, pageBuild(), nowSeconds(), () => void this.#loadBoard()));
+    this.#usageBody.replaceChildren(renderUsage(this.#usage, this.#board, stale ?? this.#usageError, pageBuildName(), nowSeconds()));
   }
 
   #paintBoard(isForced: boolean): void {
     const board = this.#board;
     if (board === null) return;
-    this.#toolbar.el.hidden = false;
+    this.#syncAdvanced();
     this.#toolbar.update(board, this.#state);
     this.#newTask.repos = board.repos;
     this.#newTask.defaultRepo = this.#state.repo;
@@ -136,6 +143,13 @@ export class TiApp extends HTMLElement {
     if (focused) this.#boardHost.querySelector<HTMLElement>(`[data-id="${CSS.escape(focused)}"]`)?.focus();
   }
 
+  /** Open while asked for, and always while the link filters (a filter is never invisible). */
+  #syncAdvanced(): void {
+    const isShown = this.#board !== null && (this.#advancedOpen || this.#state.q !== "" || this.#state.repo !== "");
+    this.#toolbar.el.hidden = !isShown;
+    this.#advanced.setAttribute("aria-expanded", String(isShown));
+  }
+
   #bodies(): HTMLElement[] {
     return [...this.#boardHost.querySelectorAll<HTMLElement>(".col")].map((col) => must(col, ".col-body"));
   }
@@ -151,12 +165,11 @@ export class TiApp extends HTMLElement {
       this.#setState({ ...this.#state, task: (event as CustomEvent<{ id: string }>).detail.id }, "push");
       void this.#loadBoard();
     });
-    this.#toolbar.el.append(this.#newTask);
     this.#track.addEventListener("track-close", () => {
       this.#setState({ ...this.#state, umbrella: null }, "push");
     });
     this.#phone = createPhoneTools();
-    this.#usageHost.replaceChildren(this.#usageBody, this.#phone.el);
+    this.#usageHost.replaceChildren(this.#usageBody, this.#advanced, this.#newTask, this.#phone.el);
     this.append(this.#usageHost, this.#toolbar.el, this.#boardHost, this.#track, this.#drawer);
     this.#syncView();
     this.#paintUsage();

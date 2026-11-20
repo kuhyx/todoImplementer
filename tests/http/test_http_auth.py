@@ -106,7 +106,9 @@ def test_missing_index_is_none(tmp_path: Path) -> None:
 
 PLACEHOLDER = (
     '<html><head><meta charset="utf-8"><meta name="todoimpl-csrf" content="__TODOIMPL_CSRF__">'
-    '<meta name="todoimpl-build" content="__TODOIMPL_BUILD__"><title>t</title></head><body></body></html>'
+    '<meta name="todoimpl-build" content="__TODOIMPL_BUILD__">'
+    '<meta name="todoimpl-build-name" content="__TODOIMPL_BUILD__">'
+    "<title>t</title></head><body></body></html>"
 )
 
 
@@ -127,4 +129,4 @@ def test_t201_one_placeholder_only_still_gets_the_other_inserted(tmp_path: Path)
     (tmp_path / "index.html").write_text(page, encoding="utf-8")
     html = StaticSite(tmp_path, token="T", build="b").serve("/").body.decode()  # type: ignore[union-attr]
     assert html.count("todoimpl-csrf") == 1
-    assert html.count("todoimpl-build") == 1
+    assert html.count('"todoimpl-build"') == 1

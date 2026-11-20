@@ -8,7 +8,7 @@ Code: `server/todoimpl/runner/autocheck.py` (the poll) and `runner/closing.py` (
 
 - **Switch.** The switch is `$TODOIMPL_HOME/settings.json` `{"auto_close": true}`. If the key is absent, or the file
   is missing or bad, it is off. Every tick re-reads it. While it is off, the poll runs nothing and deletes the cache,
-  and the board header reads `auto close: off`. There is no endpoint for it.
+  and the card says so in its drawer (the header no longer shows the switch). There is no endpoint for it.
 - **Trust.** This is the todo-hooks rule, re-implemented read-only:
   - The trust file is `$TODO_HOOKS_TRUST_FILE`, or `~/.config/todo-hooks/trusted-checks` when that is unset.
   - The first token of each line is a hash. `#` lines are skipped.

@@ -60,8 +60,7 @@ describe("ti-app", () => {
     app.remove();
     await mountApp();
     expect(document.querySelectorAll(".col")).toHaveLength(4);
-    expect(q(".toolbar").hidden).toBe(false);
-    expect(q(".usage").textContent).toContain("Today $12.37");
+    expect(q(".toolbar").hidden).toBe(true);
     expect(q(".usage").textContent).toContain("abc1234");
   });
 
@@ -114,7 +113,7 @@ describe("ti-app", () => {
     q("select[name=sort]").dispatchEvent(new Event("change"));
     q('.tab[data-col="running"]').click();
     expect(location.hash).toBe("#q=gatelock&sort=cost&col=running");
-    q("button.btn").click();
+    q(".toolbar button.btn").click();
     expect(location.hash).toBe("#sort=cost&col=running");
   });
 

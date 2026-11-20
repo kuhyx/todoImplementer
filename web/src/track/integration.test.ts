@@ -106,7 +106,7 @@ describe("ti-app with the tracking view", () => {
     expect(app.dataset.view).toBe("umbrella");
     expect(q("ti-track").hidden).toBe(false);
     expect(document.querySelectorAll("ti-track .t-kid")).toHaveLength(6);
-    expect(q(".usage").textContent).toContain("Today");
+    expect(q(".usage").textContent).toContain("Usage details");
   });
 
   it("opens the live feed of the umbrella card over the run", async () => {

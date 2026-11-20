@@ -1,0 +1,75 @@
+/* Compact cards on wide screens (kuhy, 2026-11-20, part 89abc8ca-2: "see up to 10 tasks at once in each
+   column"). Chips, title and priority share the first line; a needs line takes one line;
+   the status, parts strip, partial, auto and meta flow together on the last line. Every line ellipsises; the full
+   text is in the drawer. Phones keep the roomy card from board.css. */
+@media (min-width: 1500px) {
+  .card {
+    flex-flow: row wrap;
+    align-items: center;
+    gap: 2px var(--space-2);
+    padding: var(--space-1) var(--space-3);
+  }
+
+  .group {
+    gap: var(--space-1);
+  }
+
+  .card .chip {
+    padding-block: 0;
+  }
+
+  .card-top {
+    display: contents;
+  }
+
+  .card-title {
+    flex: 1 1 0;
+    min-width: 0;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+  }
+
+  .card-top .card-prio {
+    order: 1;
+    margin-left: 0;
+  }
+
+  /* A zero-height full-width item: everything after it starts a new line, so the title keeps the first. */
+  .card::after {
+    order: 2;
+    flex-basis: 100%;
+    height: 0;
+    content: "";
+  }
+
+  .card > :is(.card-needs, .u-progress, .u-badge) {
+    order: 3;
+    flex: 0 0 100%;
+  }
+
+  .card > :is(.card-current, .p-strip, .card-partial, .card-auto, .card-badge, .card-meta) {
+    order: 4;
+    flex: 0 1 auto;
+    font-size: var(--text-caption);
+  }
+
+  .card > :is(.card-current, .card-needs, .card-partial, .card-auto, .card-meta) {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .card > .card-meta {
+    flex: 1 1 0;
+  }
+
+  /* Capped so the last line never wraps: the meta (basis 0) takes what is left. */
+  .card > :is(.card-current, .card-partial, .card-auto) {
+    max-width: 35%;
+  }
+
+  .card-category {
+    display: none;
+  }
+}

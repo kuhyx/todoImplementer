@@ -6,6 +6,8 @@ export function readMeta(name: string): null | string {
 
 export const csrfToken = (): null | string => readMeta("todoimpl-csrf");
 export const pageBuild = (): null | string => readMeta("todoimpl-build");
+/** The build's city name (server `buildname`); the hash when the page carries none. */
+export const pageBuildName = (): null | string => readMeta("todoimpl-build-name") ?? pageBuild();
 
 export interface InputSnapshot {
   focus: null | string;

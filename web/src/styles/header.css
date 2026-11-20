@@ -1,9 +1,10 @@
 /* Header: usage strip -------------------------------------------------- */
 
 /* Standalone PWA windows draw under the status bar and notch: the safe-area insets keep the header clear of them. */
+/* One row (kuhy, 2026-11-20): build name, 7 d meter, free numbers, credits bar, links, Advanced, + and install. */
 .usage-host {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--space-2);
   padding: max(var(--space-3), env(safe-area-inset-top)) max(var(--space-3), env(safe-area-inset-right)) var(--space-2)
     max(var(--space-3), env(safe-area-inset-left));
@@ -29,27 +30,16 @@
   gap: var(--space-2) var(--space-4);
 }
 
-.brand {
-  font-size: var(--text-subtitle);
-  letter-spacing: var(--tracking-title);
-}
-
-.build,
-.slots,
-.auto-close,
-.today {
+.build {
   font-size: var(--text-label);
-  color: var(--text-muted);
-}
-
-.today {
+  font-weight: 600;
   color: var(--text);
 }
 
 .meter-box {
   display: grid;
   flex: 1 1 10rem;
-  grid-template-columns: auto minmax(2rem, 1fr) auto;
+  grid-template-columns: auto minmax(4rem, 1fr) auto auto;
   align-items: center;
   gap: var(--space-1) var(--space-2);
   max-width: 32rem;
@@ -70,7 +60,6 @@
 }
 
 .meter-note {
-  grid-column: 1 / -1;
   font-size: var(--text-caption);
   color: var(--text-muted);
 }
@@ -170,22 +159,6 @@
 .sessions-link {
   color: var(--text);
   text-decoration: none;
-}
-
-.credits-toggle {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2) var(--space-3);
-  font-size: var(--text-label);
-}
-
-.credits-text {
-  color: var(--text-muted);
-}
-
-.credits-error {
-  color: var(--danger);
 }
 
 .credits-pace {

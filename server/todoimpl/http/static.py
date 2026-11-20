@@ -16,11 +16,12 @@ IMMUTABLE = "public, max-age=31536000, immutable"
 class StaticSite:
     """Serve files strictly inside root; unknown or escaping paths give None."""
 
-    def __init__(self, root: Path, token: str, build: str) -> None:
-        """Serve root; token and build are what every .html page is stamped with."""
+    def __init__(self, root: Path, token: str, build: str, build_name: str | None = None) -> None:
+        """Serve root; every .html page is stamped with token, build and its name (the build when none)."""
         self.root = root.resolve()
         self.token = token
         self.build = build
+        self.build_name = build_name or build
 
     def _index(self, page: str, *, local: bool) -> str:
         """Stamp the csrf token and build id: fill a shipped placeholder tag in place, else insert one.
@@ -28,7 +29,11 @@ class StaticSite:
         A local request also gets the `todoimpl-local` flag; a public one has any flag the page ships removed.
         """
         missing = ""
-        stamps = [("todoimpl-csrf", self.token), ("todoimpl-build", self.build)]
+        stamps = [
+            ("todoimpl-csrf", self.token),
+            ("todoimpl-build", self.build),
+            ("todoimpl-build-name", self.build_name),
+        ]
         if local:
             stamps.append(("todoimpl-local", "1"))
         else:
