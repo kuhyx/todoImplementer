@@ -16,6 +16,7 @@ import 'package:todo_implementer/ui/board/asks_view.dart';
 import 'package:todo_implementer/ui/board/detail_tabs.dart';
 import 'package:todo_implementer/ui/board/glyphs.dart';
 import 'package:todo_implementer/ui/board/live_feed.dart';
+import 'package:todo_implementer/ui/board/needs_line.dart';
 import 'package:todo_implementer/ui/board/needs_links.dart';
 import 'package:todo_implementer/ui/board/note_box.dart';
 import 'package:todo_implementer/ui/board/umbrella_view.dart';
@@ -126,6 +127,7 @@ class _DetailPageState extends State<DetailPage> {
 
   Widget _overview(TaskDetail d) {
     final needs = d.card.needs;
+    final specOk = inlineSpecOk(d.card);
     final lesson = d.lesson;
     final umbrella = d.umbrella;
     final send = d.card.actions.where((a) => a.id == 'send').firstOrNull;
@@ -145,16 +147,7 @@ class _DetailPageState extends State<DetailPage> {
           ),
         if (d.card.current.isNotEmpty) Text(d.card.current),
         if (needs != null)
-          ListTile(
-            leading: Icon(needsIcon(needs.category), color: AppPalette.warning),
-            title: SelectableText(needs.text),
-            subtitle: needs.command == null
-                ? null
-                : SelectableText(
-                    needs.command!,
-                    style: const TextStyle(fontFamily: 'monospace'),
-                  ),
-          ),
+          needsTile(needs, specOk, (_) => _ask('task_spec_ok', {})),
         if (needs != null) NeedsLinks(links: needs.links),
         if (d.error case final e? when e != needs?.text)
           ListTile(

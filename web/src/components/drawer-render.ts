@@ -24,13 +24,14 @@ export function paintDetail(root: HTMLElement, detail: TaskDetail, host: BarHost
   };
   const questions = ask.build(detail, act);
   const lesson = renderLesson(detail, act);
+  const needs = renderNeeds(detail, ask.interactive, act);
   const send = used.has("send") ? null : act("send");
   const rest = detail.card.actions
     .filter((action) => !used.has(action.id))
     .map((action) => renderAction(action, host, detail.card.id));
   const pending = detail.card.actions.find((action) => action.id === bar.pending);
   slot("head").replaceChildren(renderHead(detail));
-  slot("needs").replaceChildren(...present(renderNeeds(detail, ask.interactive)));
+  slot("needs").replaceChildren(...present(needs));
   slot("asks").replaceChildren(...present(renderAskItems(detail)));
   slot("actions").replaceChildren(h("div", { class: "actions" }, ...rest));
   slot("pending").replaceChildren(...present(pendingLoader(pending, detail.card.id, bar)));

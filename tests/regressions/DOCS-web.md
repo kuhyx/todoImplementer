@@ -52,3 +52,6 @@ Ids are global and never reused; the row's test is titled `[T<N>] ...` (vitest).
 | T2356 | The app's add task sent "all repos" as one task per board repo, so a cross-repo change became N unrelated cards; all now sends one repo-less note that triage routes as `all_repos` (umbrella) | app/test/ui/new_task_page_test.dart |
 | T2352 | The app's add task put the send button on its own row under the image buttons: it now ends the image row | app/test/ui/new_task_page_test.dart |
 | T2353 | Every open of a card's logs in the app started from a spinner and the whole feed: the relay keeps the last feed per card (and the newest 50 events on disk), so a reopen shows the lines at once | app/test/sync/feed_cache_test.dart |
+| T2357 | The app's card sheet said "click Spec OK" as plain text with the thumb-up far below in the bar: a spec_ok need now shows the thumb-up itself in the need line | app/test/ui/spec_ok_inline_test.dart |
+| T2358 | The app's detail page said "click Spec OK" with no way to click it there: its need line carries the thumb-up and sends `task_spec_ok` | app/test/ui/spec_ok_inline_test.dart |
+| T2359 | The web drawer's spec_ok need box said "click Spec OK" while the button sat in the action row: the box now holds the Spec OK button | web/src/components/sections.test.ts |

@@ -17,6 +17,7 @@ import 'package:todo_implementer/ui/board/glyphs.dart';
 import 'package:todo_implementer/ui/board/image_attach.dart';
 import 'package:todo_implementer/ui/board/image_strip.dart';
 import 'package:todo_implementer/ui/board/model_picker.dart';
+import 'package:todo_implementer/ui/board/needs_line.dart';
 import 'package:todo_implementer/ui/board/spec_answers.dart';
 
 /// Relay kind of a card action id (`spec-ok` -> `task_spec_ok`).
@@ -131,6 +132,7 @@ class _CardSheetState extends State<CardSheet> {
   Widget build(BuildContext context) {
     final card = widget.card;
     final needs = card.needs;
+    final specOk = inlineSpecOk(card);
     final offers = {for (final a in card.actions) a.id: a};
     final questions = _questions;
     final failure = _failure;
@@ -172,7 +174,11 @@ class _CardSheetState extends State<CardSheet> {
                 children: [
                   Icon(needsIcon(needs.category), color: AppPalette.warning),
                   const SizedBox(width: AppSpacing.sm),
-                  Expanded(child: SelectableText(needs.command ?? needs.text)),
+                  Expanded(
+                    child: specOk == null
+                        ? SelectableText(needs.command ?? needs.text)
+                        : specOkButton(specOk, _run),
+                  ),
                 ],
               ),
             const SizedBox(height: AppSpacing.md),
@@ -194,7 +200,7 @@ class _CardSheetState extends State<CardSheet> {
             ActionBar(
               actions: [
                 for (final a in card.actions)
-                  if (a.id != 'model') a,
+                  if (a.id != 'model' && a != specOk) a,
               ],
               onRun: _run,
             ),

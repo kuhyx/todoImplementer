@@ -31,8 +31,11 @@ export function renderHead(detail: TaskDetail): HTMLElement {
   );
 }
 
-/** `isQuiet` drops the need's own box (the question cards already say it) and keeps only an error banner. */
-export function renderNeeds(detail: TaskDetail, isQuiet = false): HTMLElement | null {
+/**
+ * `isQuiet` drops the need's own box (the question cards already say it) and keeps only an error banner.
+ * A spec_ok need puts the Spec OK button it asks for inside its own box (kuhy, 2026-11-20).
+ */
+export function renderNeeds(detail: TaskDetail, isQuiet = false, act?: ActionSlot): HTMLElement | null {
   const { needs } = detail.card;
   if (needs === null || isQuiet) return detail.error === null ? null : h("p", { attrs: { role: "alert" }, class: "banner", text: detail.error });
   return h(
@@ -41,6 +44,7 @@ export function renderNeeds(detail: TaskDetail, isQuiet = false): HTMLElement | 
     h("strong", { text: humanize(needs.kind) }),
     h("p", { text: needs.text }),
     renderNeedsLinks(needs.links),
+    needs.kind === "spec_ok" && act?.("spec-ok"),
     needs.command !== undefined && h("code", { attrs: { "data-fix-command": "" }, class: "fix-command", text: needs.command }),
     // A failed run's need text is usually its error verbatim (T1950): say it once.
     detail.error !== null && detail.error !== needs.text && h("p", { class: "needs-error", text: detail.error }),

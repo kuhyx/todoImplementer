@@ -40,6 +40,21 @@ describe("drawer sections", () => {
     expect(renderNeeds(base)?.querySelector("code")).toBeNull();
   });
 
+  it("[T2359] a spec_ok need carries the Spec OK button itself; other needs do not", () => {
+    const base = makeDetail(byStatus("needs_you"));
+    const needs = { category: "action" as const, effort: 1, kind: "spec_ok" as const, text: "click Spec OK" };
+    const asked: string[] = [];
+    const slot = (id: string): HTMLElement => {
+      asked.push(id);
+      return Object.assign(document.createElement("button"), { textContent: id });
+    };
+    const node = renderNeeds({ ...base, card: { ...base.card, needs } }, false, slot);
+    expect(node?.querySelector("button")?.textContent).toBe("spec-ok");
+    expect(asked).toEqual(["spec-ok"]);
+    expect(renderNeeds(base, false, slot)?.querySelector("button")).toBeNull();
+    expect(asked).toEqual(["spec-ok"]);
+  });
+
   it("needs banner names the need; an error shows alone or beside it", () => {
     const needy = makeDetail(byStatus("needs_you"));
     expect(renderNeeds(needy)?.textContent).toContain("Answer 2 questions so Claude can plan.");
