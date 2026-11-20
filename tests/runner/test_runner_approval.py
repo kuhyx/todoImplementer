@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import time
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, cast
@@ -34,9 +35,20 @@ def stub(run_dir: Path, client: FakeClient | None = None) -> Any:
     return cast("Driver", fake)
 
 
-def answered(run_dir: Path, **items: dict[str, str]) -> None:
-    """Write asks.json the way AskService does after kuhy's click."""
-    (run_dir / "asks.json").write_text(json.dumps({"items": items}), encoding="utf-8")
+def answered(run_dir: Path, **items: dict[str, Any]) -> None:
+    """Write asks.json the way AskService does after kuhy's click (stamped now unless given)."""
+    stamped = {key: {"at": time.time(), **record} for key, record in items.items()}
+    (run_dir / "asks.json").write_text(json.dumps({"items": stamped}), encoding="utf-8")
+
+
+def test_t2362_an_approval_from_an_earlier_cycle_does_not_count(tmp_path: Path) -> None:
+    d = stub(tmp_path)
+    (tmp_path / "plan.md").write_text(PLAN, encoding="utf-8")  # each cycle clears and rewrites the plan
+    planned = (tmp_path / "plan.md").stat().st_mtime
+    answered(tmp_path, c2={"state": "answered", "answer": "approve", "at": planned - 60})
+    assert settle(d, ALL_TICKED) == "live_check"
+    answered(tmp_path, c2={"state": "answered", "answer": "approve", "at": planned + 1})
+    assert settle(d, ALL_TICKED) == "checks"
 
 
 def test_t2362_session_ticking_kuhys_criterion_does_not_ship(tmp_path: Path) -> None:

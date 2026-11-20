@@ -39,10 +39,23 @@ def kuhy_ids(criteria: list[str]) -> list[str]:
     return [f"C{n}" for n, text in enumerate(criteria, 1) if MARK.match(text)]
 
 
+def _planned(run_dir: Path) -> float:
+    """Return when this cycle's plan was written: a new cycle deletes plan.md, the plan stage rewrites it."""
+    try:
+        return (run_dir / "plan.md").stat().st_mtime
+    except OSError:
+        return 0.0
+
+
 def approved(run_dir: Path, cid: str) -> bool:
-    """Return True when kuhy himself clicked `approve` on the ask named after the criterion."""
+    """Return True when kuhy himself clicked `approve` on the ask named after the criterion, this cycle.
+
+    asks.json outlives the cycles of a repo card (it holds his manual-part answers too) and criterion ids come
+    back, so an `approve` older than the plan belongs to an earlier deliverable.
+    """
     record = store.load(run_dir)["items"].get(cid.lower()) or {}
-    return record.get("state") == "answered" and str(record.get("answer", "")).lower() == APPROVE
+    clicked = record.get("state") == "answered" and str(record.get("answer", "")).lower() == APPROVE
+    return clicked and float(record.get("at") or 0) >= _planned(run_dir)
 
 
 def owed(d: Driver, criteria: list[str]) -> str | None:
