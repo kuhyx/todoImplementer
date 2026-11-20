@@ -33,6 +33,7 @@ class Ask:
     cont: bool = False
     new_session: bool = False
     note: str = ""  # cheap-tier addendum of the implement role
+    seed: str = ""  # why the session is fresh when the context cap cut the last one (`ctxcap.seed`)
 
 
 def prompt_for(d: Driver, ask: Ask) -> Callable[[Situation], str]:
@@ -48,14 +49,14 @@ def prompt_for(d: Driver, ask: Ask) -> Callable[[Situation], str]:
             with_plan=with_plan,
         )
 
-    def build_for(situation: Situation) -> str:
+    def text_for(situation: Situation) -> str:
         if situation == "killed":
             return build("resume_after_kill", d.context(nudge=ask.nudge, tier=ask.note))
         new = situation in ("", "idle") or ask.new_session  # no usable session: this turn starts a new one
         if ask.stage == "live_check" and new:  # seeded from the implementer's work; the plan is in the prompt
             ctx = d.context(handoff=handoff(with_plan=False), failure_tail=ask.failure_tail, nudge=ask.nudge)
             return build(ask.prompt or ask.stage, ctx)
-        if (situation == "idle" or ask.new_session) and ask.stage != "spec":
+        if (situation == "idle" or ask.new_session) and ask.stage not in ("spec", "plan") and not ask.prompt:
             ctx = d.context(handoff=handoff(with_plan=True), nudge=ask.nudge, tier=ask.note)
             return build("fresh_after_idle", ctx)
         return build(
@@ -65,5 +66,9 @@ def prompt_for(d: Driver, ask: Ask) -> Callable[[Situation], str]:
                 resumed=situation == "resume",
             ),
         )  # fmt: skip
+
+    def build_for(situation: Situation) -> str:
+        text = text_for(situation)
+        return f"{text}\n{ask.seed}" if ask.seed else text
 
     return build_for

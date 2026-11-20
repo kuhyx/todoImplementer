@@ -21,8 +21,12 @@
   "sessions": {
     "implement": {
       "session_id": "5f0e9c4a",
-      "last_turn_end": 1793879900.0
+      "last_turn_end": 1793879900.0,
+      "context_tokens": 212345
     }
+  },
+  "ctx_reseeds": {
+    "implement": 1
   },
   "checks": {
     "passed": true,

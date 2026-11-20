@@ -5,9 +5,13 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
+from .ctxcap import context_of
 from .limits import LimitInfo, blocking, parse_event
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 # Same accepted forms as ~/.claude/hooks/status_tag_stop.py (long forms still pass there).
 TAG_LINE = re.compile(
@@ -58,6 +62,7 @@ class TurnResult:
     denials: list[Denial] = field(default_factory=list)
     model_usage: dict[str, Any] = field(default_factory=dict)  # the result event's `modelUsage`
     live_usd: float = 0.0  # a credit turn's cost so far, estimated from its usage (list price)
+    context_tokens: int = 0  # the main thread's context at its latest assistant message (`ctxcap`)
 
 
 def parse_tag(text: str) -> str | None:
@@ -118,6 +123,7 @@ class StreamParser:
         self._last_ok = 0
         self._errors: dict[str, tuple[int, str]] = {}
         self._safety: set[str] = set()
+        self.on_context: Callable[[int], None] | None = None  # told each main-thread context (the cap brake)
 
     def feed(self, line: str) -> list[Activity]:  # noqa: PLR0911 - one return per event type
         """Parse one line; torn, non-JSON and uninteresting events (hooks, thinking) yield nothing."""
@@ -132,6 +138,7 @@ class StreamParser:
             self.result.session_id = sid
         kind = obj.get("type")
         if kind == "assistant":
+            self._context(obj)
             return self._assistant(obj.get("message"))
         if kind == "user":
             self._tool_results(obj.get("message"))
@@ -141,6 +148,13 @@ class StreamParser:
         if kind == "rate_limit_event":
             return self._limit(obj)
         return self._system(obj) if kind == "system" else []
+
+    def _context(self, obj: dict[str, Any]) -> None:
+        tokens = context_of(obj)
+        if tokens is not None:
+            self.result.context_tokens = tokens
+            if self.on_context is not None:
+                self.on_context(tokens)
 
     def _system(self, obj: dict[str, Any]) -> list[Activity]:
         subtype = obj.get("subtype")

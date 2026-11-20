@@ -1,5 +1,5 @@
 override
-New session after an idle break; the old one is gone. Handoff summary:
+New session; the old one is gone. Handoff summary:
 Stage implement; toggle component written, persistence missing.
 Item: Add dark mode toggle (repo: todo)
 Header needs a toggle that persists.

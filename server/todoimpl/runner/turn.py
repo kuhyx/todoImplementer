@@ -17,6 +17,7 @@ from todoimpl.board.status import SILENT, WAITS_FOR
 from todoimpl.credits import ledger, live, setting
 
 from . import adopt, allowlist, claude, credit, creditguard, files, guard, launch, orphans, session, watchdog
+from .ctxcap import brake, size
 from .files import KilledError
 from .modelswitch import pinned
 from .stream import StreamParser, TurnResult, state_tag
@@ -128,6 +129,7 @@ def _apply(env: TurnEnv, state: RunState, rec: orphans.Record, res: TurnResult, 
         "finished": res.finished,
         "exit_code": code,
         "num_turns": res.num_turns,
+        "context_tokens": res.context_tokens,
         "denials": [{"tool": d.tool_name, "hook": d.hook, "terminal": d.terminal} for d in res.denials],
     }
     files.write_json(files.sibling(env.run_dir, stem, files.RESULT_SUFFIX), record)
@@ -137,7 +139,8 @@ def _apply(env: TurnEnv, state: RunState, rec: orphans.Record, res: TurnResult, 
         estimate=res.live_usd,
     )  # fmt: skip
     if res.session_id:
-        state.sessions[role] = {"session_id": res.session_id, "last_turn_end": env.now(), "route": route}
+        entry = {"session_id": res.session_id, "last_turn_end": env.now(), "route": route}
+        state.sessions[role] = entry | size(res)
         state.session_id = res.session_id
     state.extra["route"] = route
     if models.get("ran"):  # the card's model line (card.schema `model`) when no pin names one
@@ -181,6 +184,7 @@ def _consume(env: TurnEnv, state: RunState, rec: orphans.Record) -> TurnResult |
             lambda until: state.extra.__setitem__("overage_hit", until),
             env.now,
         )
+    parser.on_context = brake(state, role, handle.stop)  # the context cap stops either route's turn
     show, silent = (functools.partial(_show, env, state, key) for key in (WAITS_FOR, SILENT))
     show(None)  # a wait saved before a restart is no longer known
     silent(None)

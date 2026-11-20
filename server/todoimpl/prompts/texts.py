@@ -202,7 +202,7 @@ def resume_after_kill(ctx: PromptContext) -> str:
 def fresh_after_idle(ctx: PromptContext) -> str:
     """Start a new session after idle: the handoff summary is all it remembers."""
     return _post(
-        "New session after an idle break; the old one is gone. Handoff summary:",
+        "New session; the old one is gone. Handoff summary:",
         ctx.handoff or "(none)",
         _item(ctx),
         f"Plan: read {ctx.run_dir}/plan.md.",

@@ -14,6 +14,7 @@ from todoimpl.repotask.prompt import addendum
 
 from . import answered, checks, deploy, phone, resume, retry, stepwatch, tags, tiering, turncheck, worktree
 from .askform import needs_form
+from .ctxcap import go_on, mark, seed
 from .files import KilledError, NeedsYouError
 from .grant import auto_grant
 from .linknudge import needs_link
@@ -185,15 +186,15 @@ class Driver:
             raise LimitHitError(choice.until or ctx.now())
         nudge = st.extra.pop("nudge", False)
         cont = bool(st.extra.pop("r_continue", False))
-        new_session = bool(st.extra.pop("fresh", False))
+        reseed = seed(st, role)  # the role's last session was cut at the context cap: this one is fresh
+        new_session = bool(st.extra.pop("fresh", False)) or bool(reseed)
         if new_session:
             st.sessions.pop(role, None)
         if fresh := ctx.inbox():
             st.extra.setdefault("notes", []).extend(fresh)
             st.extra[phone.REPLIED] = True  # this turn takes kuhy's reply in: its ask may not return (T1981)
         plan = tiering.plan_turn(self, role)
-
-        ask = Ask(stage, prompt, failure_tail, nudge, cont, new_session, plan.note)
+        ask = Ask(stage, prompt, failure_tail, nudge, cont, new_session, plan.note, reseed)
         build_for = prompt_for(self, ask)
 
         env = TurnEnv(ctx.run_dir, worktree.turn_dir(st, self.item.repo), ctx.publish, ctx.register, ctx.now)
@@ -206,14 +207,13 @@ class Driver:
             self.save()
             failure = retry.failure(st, now=ctx.now(), stage=stage, reason=exc.text, tail="", killed=True)
             raise failure from exc
-        st.extra["last_reply"] = res.text[-1500:]
+        st.extra["last_reply"] = res.text[-1500:] if res.finished else st.extra.get("last_reply", "")
         if res.finished and not res.is_error:
             phone.after_turn(st, ctx.run_dir, res, stage)
+        cut = mark(st, role, res)  # a turn stopped at the context cap: the role's next turn is fresh
         self.save()
         self._check_turn(res)
-        # the credit cap stopped the turn: go on at once, on the plan
-        if st.extra.pop("cap_hit", None) and not res.finished:
-            st.extra["r_continue"] = True
+        if go_on(st, res, cut=cut):  # a cap stopped the turn: go on at once (credits: on the plan)
             return self.turn(role, stage, failure_tail=failure_tail, prompt=prompt)
         resume.rest(self, res, stage)  # a wait or resume line of Claude's own rests on the ladder (T2104)
         if any(note(self, res, stage) for note in (gate, auto_grant, needs_form, answered.back, needs_link)):

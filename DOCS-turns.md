@@ -163,3 +163,26 @@ healthy wait. Code: `runner/watchdog.py` (the follower's side), `runner/deadwait
 - The standing prompt carries the wait rules (`standing.WAITS`): event waits, no self-matching `pgrep -f`, no
   background job inside `$(...)`, no `flock -n` polling or when_free.sh, no wait on another card, no periodic
   "still waiting" output. The self-resume note (T2104) asks for one event wait, no sleep loop.
+
+## Context cap (T2363-T2369)
+
+kuhy's order (2026-11-20, after sessions reached 1.22 M tokens and $212 of spend sat above 300 k): a board session
+never grows past `$TODOIMPL_CTX_CAP` tokens (default 300000, `0` = off). Code: `runner/ctxcap.py`; the hook is
+`StreamParser.on_context`, set in `turn._consume` for both routes (plan CLI and credit SDK print the same stream).
+
+- Meter: each main-thread assistant event gives input + cache creation + cache read tokens; an event with a
+  `parent_tool_use_id` (a subagent) and output tokens are not counted. It reads each turn's own stream, so a session
+  that was already running at deploy is cut on its first event over the cap. A context at the cap counts.
+- At the cap the turn is stopped through the normal stop (`handle.stop`) and the same stage goes on at once with the
+  role's session dropped: the prompt is the handoff summary (`session.handoff_summary`, built from files) plus a
+  `(runner)` line: the previous session was stopped at the context cap, uncommitted work may sit in the worktree,
+  check `git status` and `git log`. The seed stays on the role until one of its turns finishes.
+- Not a failure: `ctxcap.mark` and `go_on` run before the failure path, so `retries`, `crash_retries` and
+  `kill_retries` stay as they were, no backoff is added and the card never rests on kuhy. The cut turn's empty
+  reply does not replace `last_reply`.
+- State: `sessions[role].context_tokens` (latest main-thread context of its last turn), top-level `ctx_reseeds`
+  (role -> cuts), and `context_tokens` in each turn's `result.json`. While a role's seed is pending,
+  `ctx_fresh[role]` = `{tokens, cap, streak}`; `ctx_hit` only lives between the stop and `mark`. No feed line, no
+  banner, no notification; the journal has one `context cap:` line per cut.
+- Loop guard: a role cut `MAX_STREAK` (8) times in a row without a finished turn is left alone until one finishes
+  (a cap below a fresh session's own start would otherwise respawn for ever).
