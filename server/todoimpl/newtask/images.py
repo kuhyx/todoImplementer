@@ -55,10 +55,10 @@ def _link_or_copy(source: Path, target: Path) -> None:
 
 
 def attach(files: Sequence[Staged], base: Path, folder: str) -> tuple[str, ...]:
-    """Link (else copy) staged files to `<base>/<folder>/<uuid>.<ext>`; answer `![](url)` or `[name](url)` for each.
+    """Link (else copy) staged files to `<base>/<folder>/<uuid>.<ext>`; answer `![](url)` or `[name](url)`.
 
-    The staged file stays for the 24 h sweep: the board's + sends one task per picked repo with the same upload ids,
-    so kuhy's phone uploads each file once (T2399).
+    The staged file stays for the 24 h sweep: the board's + sends one task per picked repo with the same
+    upload ids, so kuhy's phone uploads each file once (T2399).
     """
     lines = []
     for staged in files:

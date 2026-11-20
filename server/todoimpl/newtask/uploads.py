@@ -1,9 +1,9 @@
 """Staged attachments: POST /api/upload streams one file here, the new-task POST claims them by id.
 
 Layout: `<root>/<id>/data` (the bytes) and `<root>/<id>/name` (the name kuhy's file had), root
-`$TODOIMPL_UPLOADS_ROOT` or `$TODOIMPL_HOME/uploads`. A new task links (else copies) it into the dufs folder
-(`images.attach`) and leaves it here, so one upload serves every repo kuhy picked (T2399); each upload sweeps what
-is older than a day.
+`$TODOIMPL_UPLOADS_ROOT` or `$TODOIMPL_HOME/uploads`. A new task links (else copies) it into the dufs
+folder (`images.attach`) and leaves it here, so one upload serves every repo kuhy picked (T2399); each
+upload sweeps what is older than a day.
 """
 
 from __future__ import annotations
