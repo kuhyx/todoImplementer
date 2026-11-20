@@ -84,6 +84,7 @@ class NoteDoneWatcher:
         self._seen: dict[str, CardTask] = {}  # the open cards of the last snapshot
         self._retry: dict[str, Gone] = {}  # cards the todo app could not answer for yet
         self._quiet: dict[str, float] = {}  # card -> when to ask again
+        self._fails: dict[str, int] = {}  # card -> todo errors in a row for it
         self._at = 0.0
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
@@ -175,10 +176,15 @@ class NoteDoneWatcher:
             done = (run is None or not self._leaves(run, repotask=found.repotask)) and all(
                 self._is_done(k, notes) for k in found.keys
             )
-        except TodoError as exc:
-            log.warning("note-done %s: the todo app did not answer: %s", found.card, exc)
-            self._retry[found.card] = found
+        except TodoError as exc:  # once: ask at the next snapshot; again: wait a minute (deleted note: T2398)
+            streak = self._fails[found.card] = self._fails.get(found.card, 0) + 1
+            if streak == 1:
+                log.warning("note-done %s: the todo app did not answer: %s", found.card, exc)
+                self._retry[found.card] = found
+            else:
+                self._quiet[found.card] = self._clock() + QUIET
             return
+        self._fails.pop(found.card, None)
         if not done:
             self._quiet[found.card] = self._clock() + QUIET
             return

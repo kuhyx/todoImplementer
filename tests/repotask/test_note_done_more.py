@@ -115,3 +115,23 @@ def test_t2065_the_thread_looks_by_itself_and_survives_a_bad_tick(
     rig.until(lambda: _stage(rig, repo_card_id(repo)) == "done_manually")
     watcher.stop()
     assert len(calls) >= 3
+
+
+def test_t2398_a_run_whose_note_was_deleted_is_asked_about_once_a_minute_not_every_tick(rig: Rig) -> None:
+    repo = rig.repo()
+    save(rig.run_dir("deadbeef-0"), RunState(task_id="deadbeef-0", stage="spec_wait", repo=repo))
+    now = [1000.0]
+    watcher = NoteDoneWatcher(rig.cache, rig.client, rig.sched, rig.world.root, clock=lambda: now[0])
+
+    def asks() -> int:
+        return sum(1 for name, args in rig.fake.calls if name == "get_task" and "deadbeef" in str(args))
+
+    for _ in range(5):  # used to ask (and log a warning) at every snapshot, every 2 s for ever
+        rig.cache.refresh()
+        watcher.tick()
+    assert asks() == 2  # one retry at the next snapshot, then it waits
+    now[0] += notedone.QUIET + 1
+    rig.cache.refresh()
+    watcher.tick()
+    assert asks() == 3
+    assert _stage(rig, "deadbeef-0") == "spec_wait"  # a missing note changes nothing
