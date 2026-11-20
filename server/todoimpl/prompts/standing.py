@@ -22,7 +22,7 @@ GRANT = (
     "call is one step that ends within 60 s: one gate step or test shard per call, `git push` and a deploy "
     "as calls of their own, never chained after a gate; the inner loop runs only the tests of changed "
     "files. Only a job that cannot be split (a release build) runs via `systemd-run --user --collect "
-    "--slice=todoimpl.slice`; wait for it. Builds (make, flutter, gradle, pnpm, pytest, cargo, ...) "
+    "--slice=todoimpl.slice`; wait for it. Builds (flutter, gradle, pnpm, pytest, cargo, ...) "
     "queue in arrival order on one "
     "machine-wide build lock that the shims take for you, so a wait is normal: never kill a waiting build "
     "to retry, never touch build.lock, its holder file or build.queue by hand, never poll it with "

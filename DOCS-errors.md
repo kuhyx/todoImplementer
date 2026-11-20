@@ -141,8 +141,9 @@ test_board_appfix.py`, `web/src/components/app-error.test.ts`; regressions T2009
 ## Stalls (`stall/`, T2402, T2403)
 
 Rule (kuhy, 2026-11-20): no running card goes more than 60 s between two real activities. A real activity is one
-of the card's own `activity` events in `events.jsonl` (a tool call, text, a result). The board's `system` lines, a
-stream heartbeat and a touched file do not count, so nothing looks alive by pinging.
+of the card's own `activity` events in `events.jsonl` (a tool call, text, a result), or the turn's newest stream line
+when it is a tool result or an assistant message, thinking included (T2418). The board's `system` lines, claude's
+other stream lines and a touched file do not count, so nothing looks alive by pinging.
 
 - `stall/watch.py` ticks every 10 s. A card with a live turn (`turn.pid` alive) whose last real activity is over 60 s
   old is one stall episode. A fresh turn counts from its start. An episode counts once however many ticks it lasts.

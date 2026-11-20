@@ -81,13 +81,16 @@ across all board sessions and the board's own checks. Code: `server/todoimpl/run
   while anyone is queued, the holder or queue files exit 2, and under a held lock it runs as asked. A Bash deny
   rule would be inert: kuhy's session policy has `deny: []`.
 - Every turn gets one-line shims in `$TODOIMPL_HOME/shims` (flutter, dart, gradle, java for `./gradlew`, pnpm,
-  npm, yarn, vite, vitest, cargo, go, make, cmake, ninja, godot, pytest, uv, pre-commit) that run
-  `buildlock.sh <tool>`, plus the `flock` guard.
+  npm, yarn, vite, vitest, cargo, go, cmake, ninja, godot, pytest, uv, pre-commit) that run
+  `buildlock.sh <tool>`, plus the `flock` guard. `make` is no shim (T2415): a gate step like `make lint` did
+  0.04 s of work but queued minutes; each tool its recipes run locks itself, and `uv run <linter>` (the lanes'
+  linter list, `buildlock.LINTERS`) and `flutter|dart analyze` skip the lock. A plain make+gcc build runs unlocked. `ensure` deletes a shim
+  that left the list, so running sessions drop it at the next turn.
   Never node, npx, uvx, git, python or claude: MCP servers and claude itself use them.
 - The shims reach claude's Bash tool through `CLAUDE_ENV_FILE` (`$TODOIMPL_HOME/shims-env/<card>.sh`, sourced
   before every Bash command), not a PATH prefix: kuhy's zshrc puts `~/.local/bin` (flutter, dart, uv, pytest)
   in front of any inherited PATH. MCP servers and hooks keep the plain PATH, so none of them can hold the lock.
-- Under a held lock `TODOIMPL_BUILD_LOCK_HELD=1` is set, so nested tools (flutter -> gradle -> java, make ->
+- Under a held lock `TODOIMPL_BUILD_LOCK_HELD=1` is set, so nested tools (flutter -> gradle -> java, uv ->
   pytest) run at once. A version or help probe (`--version`, `-version`, `version`, `--help`, `-h`, `-V`, `help` as
   the only argument) and a dev server (`dev`, `serve`, `start`, `preview`, `watch`, also after `run`) skip it.
 - Only the wrapper's bash holds the lock fds; the tool runs without them (in the background, so the wrapper hears

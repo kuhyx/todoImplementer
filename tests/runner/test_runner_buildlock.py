@@ -53,9 +53,9 @@ def test_turn_env_points_claude_at_an_env_file_that_puts_the_shims_first(
 
 def test_ensure_leaves_unchanged_files_alone(tmp_path: Path) -> None:
     shims = buildlock.ensure(tmp_path)
-    before = (shims / "make").stat().st_ino
+    before = (shims / "cargo").stat().st_ino
     buildlock.ensure(tmp_path)
-    assert (shims / "make").stat().st_ino == before
+    assert (shims / "cargo").stat().st_ino == before
 
 
 def test_a_check_waits_for_the_lock_outside_its_timeout(world: Env, tmp_path: Path) -> None:

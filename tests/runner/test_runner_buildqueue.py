@@ -32,7 +32,7 @@ def world(tmp_path: Path) -> dict[str, str]:
     shims = buildlock.ensure(buildlock.root())
     fakebin = tmp_path / "fakebin"
     fakebin.mkdir()
-    executable(fakebin / "make", GATED)
+    executable(fakebin / "cmake", GATED)
     path = f"{shims}:{fakebin}:{os.environ['PATH']}"
     return {**os.environ, "PATH": path, "BUILD_LOG": str(tmp_path / "builds.log")}
 
@@ -57,7 +57,7 @@ def _blocked() -> int:
 def _start(env: dict[str, str], name: str, tmp_path: Path, **extra: str) -> subprocess.Popen[bytes]:
     err = (tmp_path / f"{name}.err").open("w")
     return subprocess.Popen(
-        ["make", name], env={**env, buildlock.CARD_VAR: f"card-{name}", **extra}, stderr=err
+        ["cmake", name], env={**env, buildlock.CARD_VAR: f"card-{name}", **extra}, stderr=err
     )
 
 
@@ -125,7 +125,7 @@ def test_t2164_a_killed_waiter_and_a_stale_ticket_never_block_the_queue(
     queue = base / buildqueue.QUEUE
     queue.mkdir(parents=True, exist_ok=True)
     (queue / "000000000001").write_text(
-        "999999 wait ? (make old) since 2026-11-19 10:00:00\n"
+        "999999 wait ? (cmake old) since 2026-11-19 10:00:00\n"
     )  # after a reboot
     go = tmp_path / "go"
     holder = _start({**world, "GO_FILE": str(go)}, "H", tmp_path)
@@ -149,7 +149,7 @@ def test_t2164_the_board_and_the_shims_share_one_queue(world: dict[str, str], tm
     order: list[str] = []
 
     def board() -> None:
-        with buildlock.held("card-board", "make test", 0):
+        with buildlock.held("card-board", "cmake test", 0):
             order.append("board")
             with open(world["BUILD_LOG"], "a") as log:  # noqa: PTH123 - same log as the fake builds
                 log.write("start board\n")
@@ -182,23 +182,25 @@ def test_t2164_the_queue_lists_live_tickets_in_order_and_drops_stale_ones(tmp_pa
     base = buildlock.root()
     buildlock.ensure(base)
     (base / buildqueue.QUEUE).mkdir(parents=True, exist_ok=True)
-    (base / buildqueue.QUEUE / "000000000003").write_text("1 wait ? (make dead) since 2026-11-19 10:00:00\n")
+    (base / buildqueue.QUEUE / "000000000003").write_text("1 wait ? (cmake dead) since 2026-11-19 10:00:00\n")
     (base / buildqueue.QUEUE / ".new.77").write_text("")
     with (
-        _ticket_held(base, "000000000002", f"{os.getpid()} held card-a (make a) since 2026-11-19 10:00:01\n"),
+        _ticket_held(
+            base, "000000000002", f"{os.getpid()} held card-a (cmake a) since 2026-11-19 10:00:01\n"
+        ),
         _ticket_held(base, "000000000005", "12 wait card-b (flutter build apk) since 2026-11-19 10:00:02\n"),
         _ticket_held(base, "000000000009", "garbage"),
     ):
         listed = buildqueue.listing(base)
         assert [(t.seq, t.pid, t.state, t.card, t.command) for t in listed] == [
-            (2, os.getpid(), "held", "card-a", "make a"),
+            (2, os.getpid(), "held", "card-a", "cmake a"),
             (5, 12, "wait", "card-b", "flutter build apk"),
             (9, 0, "wait", "?", ""),
         ]
         shown = subprocess.run(
             [str(base / buildlock.WRAPPER), "--queue"], capture_output=True, text=True, timeout=5, check=True
         ).stdout.splitlines()
-        assert shown[0].startswith("1 held card-a (make a) since 2026-11-19 10:00:01 pid ")
+        assert shown[0].startswith("1 held card-a (cmake a) since 2026-11-19 10:00:01 pid ")
         assert shown[1] == "2 wait card-b (flutter build apk) since 2026-11-19 10:00:02 pid 12"
         assert len(shown) == 3
     assert not (base / buildqueue.QUEUE / "000000000003").exists()

@@ -59,16 +59,16 @@ def _locked() -> Iterator[None]:
 
 
 def test_t1983_two_shims_racing_never_overlap(shims: Path, fakebin: Path, tmp_path: Path) -> None:
-    executable(fakebin / "make", SLOW)
+    executable(fakebin / "cargo", SLOW)
     log = tmp_path / "builds.log"
-    first = _start(["make", "A"], _env(shims, fakebin, "card-a", log))
+    first = _start(["cargo", "A"], _env(shims, fakebin, "card-a", log))
     _wait_for(log, "start A")
-    second = _start(["make", "B"], _env(shims, fakebin, "card-b", log))
+    second = _start(["cargo", "B"], _env(shims, fakebin, "card-b", log))
     _, err_b = second.communicate(timeout=20)
     first.communicate(timeout=20)
     assert (first.returncode, second.returncode) == (0, 0)
     assert log.read_text().splitlines() == ["start A", "end A", "start B", "end B"]
-    assert err_b.count("waiting for build lock held by card-a (make A) since ") == 1
+    assert err_b.count("waiting for build lock held by card-a (cargo A) since ") == 1
     assert (buildlock.root() / buildlock.HOLDER).read_text() == ""
 
 

@@ -31,12 +31,7 @@ LIGHT = "light"
 LIGHT_LOCK = "light.lock"
 LIGHT_HOLDER = "light.lock.holder"
 # Programs that only read the tree and report: linters, formatters in check mode, type checkers, git.
-LIGHT_TOOLS = frozenset(
-    shlex.split(
-        "ruff mypy pyright shellcheck shfmt black isort flake8 pylint bandit codespell yamllint actionlint"
-        " markdownlint eslint prettier git head tail grep wc sort cat"
-    )
-)
+LIGHT_TOOLS = buildlock.LINTERS | frozenset(shlex.split("git head tail grep wc sort cat"))
 WRAPPERS = frozenset({"capped.sh", "nice", "ionice", "env", "timeout", "uv", "python", "python3"})
 SEPARATORS = frozenset({";", "&&", "||", "|"})
 REDIRECT = re.compile(r"^(?:[<>][<>&]*|&[<>&]+)$")  # not a lone `&`: that is a background job

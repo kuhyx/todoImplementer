@@ -12,6 +12,7 @@ readonly HOLDER="$HERE/build.lock.holder"
 readonly QUEUE="$HERE/build.queue"
 readonly QLOCK="$HERE/build.queue.lock"
 readonly SHELLS=" bash sh zsh dash ksh fish node "
+readonly LINTERS=" @LINTERS@ " # filled in by buildlock.py from LINTERS (lanes.py shares it)
 readonly PREFIXES=" env nice nohup timeout ionice stdbuf time setsid capped.sh "
 REAL=""
 BIN=""
@@ -51,6 +52,23 @@ needs_lock() {
 	[[ "$sub" == run ]] && sub="${2:-}"
 	case "$sub" in dev | serve | start | preview | watch) return 1 ;; esac
 	return 0
+}
+
+# is_light TOOL ARGS...: true for `uv run [options] <linter> ...` and `flutter|dart analyze`: a linter only
+# reads the tree (T2415).
+is_light() {
+	[[ "${1##*/}" == flutter || "${1##*/}" == dart ]] && [[ "${2:-}" == analyze ]] && return 0
+	[[ "${1##*/}" == uv && "${2:-}" == run ]] || return 1
+	shift 2
+	while (($#)); do
+		case "$1" in
+		--with | --with-editable | --with-requirements | --project | --directory | --python | -p | --extra | \
+			--group | --only-group | --package | --env-file | --index | --default-index | -w) shift 2 || return 1 ;;
+		-*) shift ;;
+		*) [[ "$LINTERS" == *" $1 "* ]] && return 0 || return 1 ;;
+		esac
+	done
+	return 1
 }
 
 # is_script TOOL ARGS...: true when TOOL (after env/nice/timeout-like prefixes) runs a whole script: a shell,
@@ -161,7 +179,7 @@ main() {
 		echo "buildlock: $1 not found on PATH" >&2
 		exit 127
 	}
-	if [[ "${TODOIMPL_BUILD_LOCK_HELD:-}" == 1 || "$UNLOCKED" == 1 ]] || ! needs_lock "${@:2}"; then
+	if [[ "${TODOIMPL_BUILD_LOCK_HELD:-}" == 1 || "$UNLOCKED" == 1 ]] || ! needs_lock "${@:2}" || is_light "$@"; then
 		shift
 		exec "$REAL" "$@"
 	fi

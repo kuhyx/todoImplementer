@@ -37,9 +37,19 @@ SHIM_DIR = "shims"
 ENV_DIR = "shims-env"
 # Real build tools only. Never node, npx, uvx, git, python or claude: MCP servers and claude itself use them.
 TOOLS = (
-    "flutter", "dart", "gradle", "java", "pnpm", "npm", "yarn", "vite", "vitest", "cargo", "go", "make",
-    "cmake", "ninja", "godot", "pytest", "uv", "pre-commit",
+    "flutter", "dart", "gradle", "java", "pnpm", "npm", "yarn", "vite", "vitest", "cargo", "go", "cmake",
+    "ninja", "godot", "pytest", "uv", "pre-commit",
 )  # fmt: skip
+# `make` is no shim (T2415): a gate step like `make lint` did 0.04 s of work but queued minutes behind other
+# cards' builds; each heavy tool its recipes run (uv, pnpm, cargo) locks itself. A plain make+gcc build runs
+# unlocked. `uv run <linter>` skips the lock too: it only reads the tree. Shared with lanes.py.
+LINTERS = frozenset(
+    shlex.split(
+        "ruff mypy pyright shellcheck shfmt black isort flake8 pylint bandit codespell yamllint actionlint"
+        " markdownlint eslint prettier"
+    )
+)
+LINTERS_MARK = "@LINTERS@"
 # Guard shims: `flock` on the build lock, its holder or its queue is refused (it would jump the queue, T2167).
 GUARDS = ("flock",)
 # Build tuning for every turn: no Gradle daemon left behind, bounded workers and heap, four cargo jobs.
@@ -66,8 +76,14 @@ def ensure(base: Path) -> Path:
     """Write the wrapper, its queue lib and one shim per tool under `base`; return the shim dir."""
     wrapper = base / WRAPPER
     _put(base / QUEUE_LIB, Path(__file__).with_name(QUEUE_LIB).read_text(encoding="utf-8"), 0o644)
-    _put(wrapper, Path(__file__).with_name(WRAPPER).read_text(encoding="utf-8"), 0o755)
+    source = Path(__file__).with_name(WRAPPER).read_text(encoding="utf-8")
+    _put(wrapper, source.replace(LINTERS_MARK, " ".join(sorted(LINTERS))), 0o755)
     shims = base / SHIM_DIR
+    keep = {*TOOLS, *GUARDS, cardslice.SHIM}
+    if shims.is_dir():  # a tool that left TOOLS (make, T2415) must stop locking in the running sessions too
+        for stale in shims.iterdir():
+            if stale.name not in keep:
+                stale.unlink(missing_ok=True)
     for tool in TOOLS:
         _put(shims / tool, f'#!/bin/bash\nexec {shlex.quote(str(wrapper))} {tool} "$@"\n', 0o755)
     for tool in GUARDS:

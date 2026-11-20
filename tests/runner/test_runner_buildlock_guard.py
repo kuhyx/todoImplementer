@@ -32,8 +32,8 @@ def env(tmp_path: Path) -> dict[str, str]:
     shims = buildlock.ensure(buildlock.root())
     fakebin = tmp_path / "fakebin"
     fakebin.mkdir()
-    (fakebin / "make").write_text(GATED)
-    (fakebin / "make").chmod(0o755)
+    (fakebin / "cargo").write_text(GATED)
+    (fakebin / "cargo").chmod(0o755)
     path = f"{shims}:{fakebin}:{os.environ['PATH']}"
     return {**os.environ, "PATH": path, "ROOT": str(buildlock.root()), "BUILD_LOG": str(tmp_path / "log")}
 
@@ -68,10 +68,10 @@ def test_t2167_the_standing_prompt_forbids_touching_the_lock_by_hand() -> None:
 
 def test_t2167_a_lock_held_by_hand_waits_its_turn_in_the_queue(env: dict[str, str], tmp_path: Path) -> None:
     go = tmp_path / "go"
-    holder = subprocess.Popen(["make", "H"], env={**env, "GO_FILE": str(go)})
+    holder = subprocess.Popen(["cargo", "H"], env={**env, "GO_FILE": str(go)})
     _until(lambda: _starts(env) == ["start H"], "start H")
     before = _blocked()
-    waiter = subprocess.Popen(["make", "W"], env=env)
+    waiter = subprocess.Popen(["cargo", "W"], env=env)
     _until(lambda: _blocked() > before, "W queueing")
     busy = _bash('exec 9>>"$ROOT/build.lock"; flock -n 9', env, tmp_path)
     assert busy.returncode == 1  # a poll never jumps the queue

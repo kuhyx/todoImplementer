@@ -18,8 +18,8 @@ HINT = (
     "inside takes the lock itself; lock each heavy command on its own (buildlock.sh flutter build apk), or "
     "run the script plainly with PATH passed on (systemd-run -E PATH -E TODOIMPL_BUILD_CARD)\n"
 )
-GATE = ["make one held=1 by card-s (make one)", "make two held=1 by card-s (make two)"]
-SPAWN = "require('child_process').execSync('make n', {stdio: 'inherit'})"
+GATE = ["cargo one held=1 by card-s (cargo one)", "cargo two held=1 by card-s (cargo two)"]
+SPAWN = "require('child_process').execSync('cargo n', {stdio: 'inherit'})"
 
 
 @pytest.fixture
@@ -30,10 +30,10 @@ def env(tmp_path: Path) -> dict[str, str]:
     fakebin.mkdir()
     holder = buildlock.root() / buildlock.HOLDER
     executable(
-        fakebin / "make",
-        f'#!/bin/bash\necho "make $* held=$TODOIMPL_BUILD_LOCK_HELD by $(<{holder})" 2>/dev/null\n',
+        fakebin / "cargo",
+        f'#!/bin/bash\necho "cargo $* held=$TODOIMPL_BUILD_LOCK_HELD by $(<{holder})" 2>/dev/null\n',
     )
-    executable(tmp_path / "gate.sh", "#!/bin/bash\nmake one\nmake two\n")
+    executable(tmp_path / "gate.sh", "#!/bin/bash\ncargo one\ncargo two\n")
     return {**os.environ, "PATH": f"{fakebin}:{os.environ['PATH']}", buildlock.CARD_VAR: "card-s"}
 
 
@@ -61,14 +61,14 @@ def _locks(out: str) -> list[str]:
     ("argv", "stdin", "locks"),
     [
         (["bash", "gate.sh"], "", GATE),
-        (["sh", "-c", "make one && make two"], "", GATE),
-        (["bash"], "make one\nmake two\n", GATE),
+        (["sh", "-c", "cargo one && cargo two"], "", GATE),
+        (["bash"], "cargo one\ncargo two\n", GATE),
         (
-            ["python3", "-u", "-c", "import subprocess; subprocess.run(['make', 'p'])"],
+            ["python3", "-u", "-c", "import subprocess; subprocess.run(['cargo', 'p'])"],
             "",
-            ["make p held=1 by card-s (make p)"],
+            ["cargo p held=1 by card-s (cargo p)"],
         ),
-        (["node", "-e", SPAWN], "", ["make n held=1 by card-s (make n)"]),
+        (["node", "-e", SPAWN], "", ["cargo n held=1 by card-s (cargo n)"]),
         (["timeout", "-s", "KILL", "600", "bash", "gate.sh"], "", GATE),
         (["env", "A=1", "nice", "-n", "5", "bash", "gate.sh"], "", GATE),
         (["./gate.sh"], "", GATE),
@@ -79,7 +79,7 @@ def test_t2165_a_whole_script_runs_unlocked_and_each_tool_inside_locks_itself(
 ) -> None:
     done = _wrap(argv, env, tmp_path, stdin)
     assert done.returncode == 0, done.stderr
-    assert _locks(done.stdout) == locks  # the script itself never held the lock: each make did, on its own
+    assert _locks(done.stdout) == locks  # the script itself never held the lock: each cargo did, on its own
     assert done.stderr == HINT.format(cmd=" ".join(argv))
 
 
@@ -105,7 +105,7 @@ def test_t2165_a_script_run_plainly_locks_each_heavy_tool_on_its_own(
     [
         (["python3", "-m", "this_module_does_not_exist_x"], ""),
         (["bash", "--version"], "GNU bash"),
-        (["timeout", "5", "make", "x"], "make x held=1"),
+        (["timeout", "5", "cargo", "x"], "cargo x held=1"),
     ],
 )
 def test_t2165_a_module_run_a_probe_or_a_tool_behind_a_prefix_still_runs(
@@ -119,5 +119,5 @@ def test_t2165_a_module_run_a_probe_or_a_tool_behind_a_prefix_still_runs(
 def test_t2165_a_nested_script_under_a_held_lock_runs_at_once(env: dict[str, str], tmp_path: Path) -> None:
     done = _wrap(["bash", "gate.sh"], {**env, buildlock.HELD_VAR: "1"}, tmp_path)
     assert done.returncode == 0
-    assert done.stdout.startswith("make one held=1")
+    assert done.stdout.startswith("cargo one held=1")
     assert "whole script" not in done.stderr

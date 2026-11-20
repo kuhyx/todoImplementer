@@ -37,7 +37,7 @@ def env(tmp_path: Path) -> dict[str, str]:
     shims = buildlock.ensure(buildlock.root())
     fakebin = tmp_path / "fakebin"
     fakebin.mkdir()
-    for name, text in (("make", IDLE), ("cargo", BUSY), ("go", QUICK)):
+    for name, text in (("cmake", IDLE), ("cargo", BUSY), ("go", QUICK)):
         executable(fakebin / name, text)
     return {
         **os.environ,
@@ -84,7 +84,7 @@ def test_t2166_an_idle_holder_hands_the_lock_on_and_its_card_hears_it(
 ) -> None:
     sink = Sink()
     ceiling = holdceiling.Ceiling(sink, quiet=0.6)
-    idle = _popen(["make", "A"], {**env, buildlock.CARD_VAR: "card-a"}, tmp_path)
+    idle = _popen(["cmake", "A"], {**env, buildlock.CARD_VAR: "card-a"}, tmp_path)
     _until(lambda: "start A" in _log(env), "start A")
     nxt = _popen(["go", "B"], {**env, buildlock.CARD_VAR: "card-b"}, tmp_path)
     _ticks(ceiling, 0.3)
@@ -94,13 +94,13 @@ def test_t2166_an_idle_holder_hands_the_lock_on_and_its_card_hears_it(
     assert idle.poll() is None  # the idle build is never killed, it just runs on without the lock
     idle.terminate()
     _, err = idle.communicate(timeout=10)
-    assert "buildlock: released the build lock: make A did nothing for 2 min" in err
+    assert "buildlock: released the build lock: cmake A did nothing for 2 min" in err
     ((card, event),) = sink.events
     assert card == "card-a"
     assert event["type"] == "activity"
     assert event["kind"] == "system"
     assert event["text"].startswith(
-        "build lock taken back from make A: no CPU, disk or new process for 0.6 s"
+        "build lock taken back from cmake A: no CPU, disk or new process for 0.6 s"
     )
     assert (buildlock.root() / buildlock.HOLDER).read_text() == ""
 
@@ -124,13 +124,13 @@ def test_t2166_a_card_less_holder_is_named_by_its_run_dir_and_a_bare_sink_only_l
     run_wt.mkdir(parents=True)
     sink = Sink()
     ceiling = holdceiling.Ceiling(sink, quiet=0.3)
-    idle = _popen(["make", "A"], env, tmp_path, cwd=run_wt)
+    idle = _popen(["cmake", "A"], env, tmp_path, cwd=run_wt)
     _until(lambda: "start A" in _log(env), "start A")
     _tick_until(ceiling, lambda: bool(sink.events), "the cut")
     assert sink.events[0][0] == "c1-0"
     idle.kill()
     idle.wait(timeout=10)
-    outside = _popen(["make", "B"], env, tmp_path, cwd=tmp_path)
+    outside = _popen(["cmake", "B"], env, tmp_path, cwd=tmp_path)
     _until(lambda: "start B" in _log(env), "start B")
     bare = holdceiling.Ceiling(object(), quiet=0.3)
     _tick_until(bare, lambda: not buildqueue.listing(buildlock.root()), "the second cut")
@@ -144,7 +144,7 @@ def test_t2166_the_boards_own_checks_and_foreign_holders_are_left_alone(tmp_path
     ready, done = threading.Event(), threading.Event()
 
     def board() -> None:
-        with buildlock.held("card-board", "make test", 0):
+        with buildlock.held("card-board", "cmake test", 0):
             ready.set()
             done.wait(10)
 

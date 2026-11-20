@@ -6,6 +6,7 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
+import test_shard
 from todoimpl.apikey import cache
 from todoimpl.board import clone as clones
 from todoimpl.relay.status import NOTIFY, STATUS
@@ -150,3 +151,18 @@ def _no_real_checkouts(_scratch: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("TODOIMPL_REPO_PATHS", str(_scratch / "repo-paths" / "repo-paths.json"))
     monkeypatch.setattr(clones, "GH", "gh-disabled-in-tests")
     monkeypatch.setattr("todoimpl.service.known_repos.gh_repos", list)
+
+
+def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
+    """`TODOIMPL_TEST_SHARD=k/N` keeps shard k's files (`make test-shard`, T2416); unset, every test runs.
+
+    The shard collects all of `tests` and filters here: given as file arguments, pytest loads every dir's
+    `conftest` up front and `from conftest import X` picks the wrong one.
+    """
+    shard = os.environ.get(test_shard.SHARD_VAR)
+    if not shard:
+        return
+    root = Path(config.rootpath)
+    k, n = (int(part) for part in shard.split("/"))
+    keep = set(test_shard.files(root, k, n))
+    items[:] = [item for item in items if str(item.path.relative_to(root)) in keep]

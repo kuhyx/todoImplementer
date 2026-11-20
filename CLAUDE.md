@@ -25,7 +25,7 @@ Done manually, both ways (click closes the notes and rests the card; a note done
 - lint: `make lint`
 - coverage: `make test`
 - coverage-gaps: `coverage-gaps coverage.xml`
-- gate: `make fast` (in a board session one step per call, each under 60 s: `make lines private md regressions lint`, `make types`, `make web-lint`, `make web-test`, `make test`)
+- gate: `make fast` (in a board session one step per call, each under 60 s: `make lines private md regressions lint`, `make types`, `make web-lint`, `make web-test`, `make test-shard SHARD=1 COV_DIR=<dir>` for SHARD 1..6 into a new dir, then `make test-cov COV_DIR=<dir>`)
 
 ## Rules
 
