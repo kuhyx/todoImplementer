@@ -49,5 +49,6 @@ Ids are global and never reused; the row's test is titled `[T<N>] ...` (vitest).
 | T2349 | The app's add task was a half-height sheet: it is now a full-screen page whose text box fills the space | app/test/ui/new_task_page_test.dart |
 | T2350 | The app's add task had a title field kuhy does not need: the first line of the text is the title | app/test/ui/new_task_page_test.dart |
 | T2351 | The app's add task took one typed repo and kept the field on screen: a chooser takes none (a repo-less note), all or some repos, sends one task per repo, and folds to one row once picked | app/test/ui/new_task_page_test.dart |
+| T2356 | The app's add task sent "all repos" as one task per board repo, so a cross-repo change became N unrelated cards; all now sends one repo-less note that triage routes as `all_repos` (umbrella) | app/test/ui/new_task_page_test.dart |
 | T2352 | The app's add task put the send button on its own row under the image buttons: it now ends the image row | app/test/ui/new_task_page_test.dart |
 | T2353 | Every open of a card's logs in the app started from a spinner and the whole feed: the relay keeps the last feed per card (and the newest 50 events on disk), so a reopen shows the lines at once | app/test/sync/feed_cache_test.dart |

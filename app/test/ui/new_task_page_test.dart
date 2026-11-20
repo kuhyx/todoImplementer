@@ -130,22 +130,25 @@ void main() {
     );
   });
 
-  for (final (pick, want) in [
-    ('none', <Object?>[null]),
-    ('all', <Object?>['kuhyx/demo', 'kuhyx/other']),
-  ]) {
-    testWidgets('[T2351] $pick folds at once and sends $want', (tester) async {
-      final relay = await _open(tester);
-      await tester.tap(_key('nt-repo-$pick'));
-      await _settle(tester);
-      expect(_key('nt-repos'), findsNothing);
-      await tester.enterText(_key('nt-body'), 'Idea');
-      await _settle(tester);
-      await tester.tap(_key('nt-send'));
-      await _settle(tester);
-      expect([for (final a in _args(relay)) a['repo']], want);
-    });
+  Future<void> pickAndSend(WidgetTester tester, String pick) async {
+    final relay = await _open(tester);
+    await tester.tap(_key('nt-repo-$pick'));
+    await _settle(tester);
+    expect(_key('nt-repos'), findsNothing);
+    await tester.enterText(_key('nt-body'), 'Idea');
+    await _settle(tester);
+    await tester.tap(_key('nt-send'));
+    await _settle(tester);
+    expect([for (final a in _args(relay)) a['repo']], [null]);
   }
+
+  testWidgets('[T2351] none folds and sends one repo-less note', (tester) {
+    return pickAndSend(tester, 'none');
+  });
+
+  testWidgets('[T2356] all folds and sends one repo-less note', (tester) {
+    return pickAndSend(tester, 'all');
+  });
 
   testWidgets('[T2352] send sits in the image buttons row', (tester) async {
     await _open(tester, filter: 'other');

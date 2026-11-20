@@ -65,7 +65,7 @@ contracts/relay-*.schema.json   request, result, nodes (incl. the FCM ping)
 Board page details (kuhy, 2026-11-20): the strip shows two rings beside the credits switch, the fuller plan window
 (5 h or 7 d, from `snap/usage`) and the week's credit spend against `cap_usd` (red at the limit, dim when off); a tap
 lists the numbers and resets (T2348). Add task is a full-screen page: a repo chooser (none = one repo-less note triage
-routes, all = one task per board repo, some = one per picked repo) that folds once picked, one text box whose first
+routes, all = one repo-less note triage routes as all_repos, some = one per picked repo) that folds once picked, one text box whose first
 line is the title, and the image buttons, images and send in one row (T2349-T2352).
 
 The server keeps one dispatcher for both transports. The HTTP routes and the relay worker call the same function

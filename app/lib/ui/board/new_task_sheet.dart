@@ -2,8 +2,9 @@
 /// none, all or some repos, folded once picked, T2351), one text box whose
 /// first line is the title (no title field, T2350), and one row with the
 /// image buttons, the attached images and the send button (T2352). Sent as
-/// `new_task`: one per repo, or one with no repo for none. The box takes
-/// images (T2334): `[Image #N]` tags in the text, the bytes in `images`.
+/// `new_task`: one per picked repo, or one with no repo for none or all.
+/// The box takes images (T2334): `[Image #N]` tags in the text, the bytes
+/// in `images`.
 library;
 
 import 'package:design_system/design_system.dart';
@@ -76,8 +77,9 @@ class _NewTaskSheetState extends State<NewTaskSheet> {
 
   // The repos still to send to; [null] means one repo-less note.
   List<String?> _targets() => switch (_scope) {
-    RepoScope.none => const [null],
-    RepoScope.all => [...widget.repos],
+    // All is one cross-repo change: one note that triage routes as
+    // all_repos (an umbrella), not N unrelated cards (kuhy, 2026-11-20).
+    RepoScope.none || RepoScope.all => const [null],
     RepoScope.some => [..._picked],
     null => const [],
   };
@@ -109,11 +111,7 @@ class _NewTaskSheetState extends State<NewTaskSheet> {
       }
       // Sent: a retry after a later refusal must not send it twice.
       if (repo != null) {
-        setState(() {
-          if (_scope == RepoScope.all) _picked.addAll(widget.repos);
-          _scope = RepoScope.some;
-          _picked.remove(repo);
-        });
+        setState(() => _picked.remove(repo));
       }
     }
     await Navigator.of(context).maybePop();
