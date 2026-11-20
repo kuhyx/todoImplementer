@@ -67,7 +67,7 @@ resting stages; the rest are work stages. "auto" = no click; "click" = kuhy. Clo
 | plan | implement | plan.md written with acceptance criteria | auto |
 | implement | live_check | implementer's turn ends with tag D and its self-check | auto |
 | live_check | checks | report written (what was run, what was seen per criterion) | auto |
-| live_check | implement | report says a criterion is not met, fix attempt left (max 2) | auto |
+| live_check | implement | report says a criterion is not met, fix attempt left (max 1) | auto |
 | checks | shipping | all checks green (no rest at `gate` since T2060) | auto |
 | checks | implement | checks red, fix attempt left (max 2) | auto |
 | checks | failed | checks still red after the attempts | auto |
