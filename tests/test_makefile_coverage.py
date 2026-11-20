@@ -7,12 +7,11 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 FAKES = REPO / "tests" / "fixtures" / "fakecov"
-CHUNKS = "a b c"
 
 
 def make_env() -> dict[str, str]:
     """Fake pytest/coverage first on PATH; a board build-lock shim on PATH runs `make` at once (T2003)."""
-    env = {**os.environ, "PATH": f"{FAKES}:{os.environ['PATH']}", "FAKECOV_CHUNKS": "3", "MAKEFLAGS": ""}
+    env = {**os.environ, "PATH": f"{FAKES}:{os.environ['PATH']}", "FAKECOV_CHUNKS": "1", "MAKEFLAGS": ""}
     return {**env, "TODOIMPL_BUILD_LOCK_HELD": "1"}
 
 
@@ -20,7 +19,7 @@ def make_test(cwd: Path) -> subprocess.Popen[str]:
     """Start the real `test` recipe in cwd with fake pytest/coverage and no capped.sh (UV is plain `env`)."""
     shutil.copy(REPO / "Makefile", cwd / "Makefile")  # its sub-makes read ./Makefile
     env = make_env()
-    argv = ["make", "-s", "-C", str(cwd), "test", f"CHUNKS={CHUNKS}", "UV=env"]
+    argv = ["make", "-s", "-C", str(cwd), "test", "TESTCAP=env", "UV=env"]
     return subprocess.Popen(argv, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
 
 
@@ -30,7 +29,7 @@ def test_t1920_two_overlapping_make_test_runs_both_see_all_their_chunks(tmp_path
     second = make_test(tmp_path)
     outs = [p.communicate(timeout=30)[0] for p in (first, second)]
     assert [first.returncode, second.returncode] == [0, 0], outs
-    assert all("chunks 3 of 3" in out for out in outs), outs
+    assert all("chunks 1 of 1" in out for out in outs), outs
 
 
 def test_a_run_leaves_no_coverage_data_in_the_worktree(tmp_path: Path) -> None:

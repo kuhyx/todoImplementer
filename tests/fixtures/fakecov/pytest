@@ -3,4 +3,4 @@
 # written to $COVERAGE_FILE (as pytest-cov would), slowly enough for two make runs to overlap.
 set -euo pipefail
 sleep "${FAKECOV_SLEEP:-0.4}"
-echo "chunk $*" >"${COVERAGE_FILE:?}"
+echo "chunk $*" >>"${COVERAGE_FILE:?}"  # append: a data file shared by two runs would count two

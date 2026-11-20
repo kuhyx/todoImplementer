@@ -7,7 +7,7 @@ from urllib.parse import parse_qs, urlsplit
 import pytest
 from contract_lib import validate
 from httpfakes import INDEX, Live, call
-from phonefakes import COOKIE, PUBLIC, mint_url, pair, public, public_post, token_of
+from phonehttpfakes import COOKIE, PUBLIC, mint_url, pair, public, public_post, token_of
 
 ORIGIN = "https://agents.kuhy.duckdns.org"
 

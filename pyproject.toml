@@ -22,6 +22,7 @@ dev = [
     "pre-commit==4.7.0",
     "pytest==9.2.0",
     "pytest-cov==7.1.0",
+    "pytest-xdist==3.8.0",
     "ruff==0.17.6",
     "types-jsonschema==4.26.0.20261006",
 ]
@@ -33,6 +34,8 @@ package = false
 testpaths = ["tests"]
 pythonpath = ["server", "scripts", "tests/shims", "deploy"]
 addopts = "--strict-markers -q"
+# A passing test's tmp_path is deleted at once: only failures keep files (a full run once filled /tmp's inodes).
+tmp_path_retention_policy = "failed"
 
 [tool.coverage.run]
 source = ["server/todoimpl", "scripts", "deploy", "mcp/todoimpl_mcp"]

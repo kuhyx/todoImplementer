@@ -2,7 +2,7 @@
 
 import pytest
 from httpfakes import INDEX, Live, call
-from phonefakes import PUBLIC, pair, public, public_post, raw_get
+from phonehttpfakes import PUBLIC, pair, public, public_post, raw_get
 from todoimpl.http.device_gate import device_tokens, is_local
 
 PORT = 8786
