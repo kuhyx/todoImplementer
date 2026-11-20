@@ -14,8 +14,12 @@ import time
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from todoimpl.tokens.audit import filecache
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 TRANSCRIPT_ROOT = Path.home() / ".claude" / "projects"
 SECONDS_PER_DAY = 86400
@@ -54,10 +58,20 @@ def _file_counts(path: Path, pattern: re.Pattern[str]) -> dict[str, int]:
     return dict(counts)
 
 
+def _transcripts() -> Iterator[Path]:
+    """Yield main transcripts, then each session's subagent transcripts (T2371).
+
+    Subagents live at ``<project>/<session>/subagents/agent-*.jsonl``; skills and
+    MCP tools called inside them left the main transcript empty of those calls.
+    """
+    yield from TRANSCRIPT_ROOT.glob("*/*.jsonl")
+    yield from TRANSCRIPT_ROOT.glob("*/*/subagents/agent-*.jsonl")
+
+
 def _scan(pattern: re.Pattern[str], since: float) -> Counter[str]:
     """Count regex matches across transcripts modified after *since*."""
     found: Counter[str] = Counter()
-    for path in TRANSCRIPT_ROOT.glob("*/*.jsonl"):
+    for path in _transcripts():
         try:
             if path.stat().st_mtime < since:
                 continue

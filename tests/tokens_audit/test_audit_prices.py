@@ -72,3 +72,26 @@ def test_price_of_defaults_to_shipped_prices() -> None:
     usage = {"output_tokens": 1_000_000}
     assert prices.price_of("claude-sonnet-5-5", usage) == pytest.approx(10.0)
     assert prices.PRICES.default in prices.PRICES.models
+
+
+def test_t2370_fable_5_2_has_its_own_price_row() -> None:
+    """Fable 5.2 fell through to the Opus 5.5 default and was priced at half."""
+    row = prices.PRICES.for_model("claude-fable-5-2")
+    assert prices.PRICES.models["claude-fable-5-2"] == row
+    assert (row.input, row.output, row.cache_read) == (8.0, 40.0, 0.2)
+    assert row != prices.PRICES.for_model(prices.PRICES.default)
+    # The 5.1 row must not swallow 5.2 ids by prefix, nor the reverse.
+    assert prices.PRICES.for_model("claude-fable-5-1").input == 10.0
+    assert prices.PRICES.for_model("claude-fable-5-2-20261101").input == 8.0
+
+
+def test_t2370_fable_5_2_matches_the_measured_probe() -> None:
+    """`claude -p 'say ok'` billed total_cost_usd 0.4225 (18 output tokens)."""
+    usage = {
+        "input_tokens": 2,
+        "output_tokens": 18,
+        "cache_creation_input_tokens": 26211,
+        prices.CACHE_1H: 26211,
+        "cache_read_input_tokens": 11826,
+    }
+    assert prices.price_of("claude-fable-5-2", usage) == pytest.approx(0.4225, abs=1e-4)
