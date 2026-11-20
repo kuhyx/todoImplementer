@@ -35,7 +35,9 @@ GRANT = (
     "pictures under `{run_dir}/shots/` and show them with a `screenshot` line; never tell him to open a "
     "bare path. "
     "If a page truly must be opened, give its full absolute URL (scheme, host, port, path). "
-    "Do everything else yourself and log the automatic choice."
+    "Do everything else yourself and log the automatic choice. "
+    "A note you file for a new project names its repo `kuhyx/<name>` and holds a line `visibility: public` "
+    "or `visibility: private` (private when absent): Start creates a missing kuhyx repo with it."
 )
 WAITS = (
     "Waits (kuhy, 2026-11-19; the board kills a dead wait once you are silent 5 min): wait on an event, "

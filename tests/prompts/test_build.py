@@ -151,4 +151,5 @@ def test_t2135_what_kuhy_must_look_at_goes_into_the_task_not_a_path(stage: str, 
     assert "goes into the task itself" in text
     assert "/run/ab12cd34/shots/" in text
     assert "never tell him to open a bare path" in text
+    assert "`visibility: public`" in text  # T2377: new-project notes say how Start creates the repo
     assert "full absolute URL" in text

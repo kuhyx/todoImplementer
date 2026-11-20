@@ -121,7 +121,7 @@ class Driver:
     def _worktree(self) -> None:
         if self.state.closing:
             return  # a closing run has no worktree: it works read-only in the repo's main checkout
-        worktree.attach(self.state, self.item.repo, self.ctx.root)  # also rebases a reused worktree (T1864)
+        worktree.attach(self.state, self.item.repo, self.ctx.root, body=self.item.body)  # rebases too (T1864)
         self.save()
 
     def save(self) -> None:  # noqa: D102

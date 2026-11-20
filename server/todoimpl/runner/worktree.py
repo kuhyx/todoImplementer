@@ -71,11 +71,12 @@ def output_tail(proc: subprocess.CompletedProcess[str], limit: int = 600) -> str
     return both[-limit:]
 
 
-def repo_dir(repo: str | None, *, clone: bool = False) -> Path:
+def repo_dir(repo: str | None, *, clone: bool = False, public: bool = False) -> Path:
     """Return the local clone of a note's repo, or NeedsYouError saying what is missing.
 
     With `clone` (a run's first attach) a repo with no checkout anywhere is cloned to `<src>/<name>` with
-    `gh repo clone`; a failed clone ends the run naming gh's error (T2079).
+    `gh repo clone`; a failed clone ends the run naming gh's error (T2079). A `kuhyx/<name>` repo GitHub does
+    not have is a new project: it is created (`public` from the note's `visibility:` line) and cloned (T2377).
     """
     if not repo:
         msg = "The note has no repo: set kuhyx/<name> on it, or do it yourself"
@@ -86,7 +87,7 @@ def repo_dir(repo: str | None, *, clone: bool = False) -> Path:
     if not is_clone_of(path, repo) and clone:
         dest = clones.src_root() / name
         try:
-            clones.gh_clone(full, dest)
+            _clone_or_create(full, dest, public=public)
         except OSError as exc:
             msg = f"Repo {repo} has no local clone and cloning it into {dest} failed: {exc}"
             raise NeedsYouError(msg, "run_failed") from exc
@@ -95,6 +96,17 @@ def repo_dir(repo: str | None, *, clone: bool = False) -> Path:
         msg = f"Repo {repo} is not cloned at {path}: clone it there, then start again"
         raise NeedsYouError(msg, "handed_to_you")
     return path
+
+
+def _clone_or_create(full: str, dest: Path, *, public: bool) -> None:
+    """Clone `full`; a kuhyx repo GitHub does not have is created first. Only gh NOT_FOUND creates."""
+    try:
+        clones.gh_clone(full, dest)
+    except clones.RepoMissingError:
+        if full.partition("/")[0].lower() != OWNER.lower() or dest.exists():  # another origin (T2272)
+            raise
+        clones.gh_create(full, public=public)
+        clones.gh_clone(full, dest)
 
 
 def turn_dir(st: RunState, repo: str | None) -> Path:
@@ -201,15 +213,16 @@ def add(repo: Path, root: Path, run_id: str, prev_base: str | None = None, *, sy
     return Worktree(path, branch, base, ref, remote_branch, stopped and unresolved(path, ref))
 
 
-def attach(st: RunState, repo_name: str | None, root: Path) -> None:
+def attach(st: RunState, repo_name: str | None, root: Path, *, body: str = "") -> None:
     """Point the run at its worktree (create or rebase it) and record base, branch and any conflict.
 
     No rebase while a turn of the old server is still editing the worktree (it is adopted after this), nor
-    in the Ship drive: ship rebases itself and must never commit a half-rebased tree.
+    in the Ship drive: ship rebases itself and must never commit a half-rebased tree. `body` is the item's
+    text: its `visibility:` line picks how a missing kuhyx repo is created (T2377).
     """
     quiet = st.stage == "shipping" or orphans.read(root / st.task_id) is not None
     wt = add(
-        repo_dir(repo_name, clone=True),
+        repo_dir(repo_name, clone=True, public=clones.wants_public(body)),  # T2377
         root,
         st.task_id,
         st.base_sha if st.worktree else None,

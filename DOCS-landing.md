@@ -56,6 +56,12 @@ The board used to assume `~/src/<name>`; claude-config lives in `~/.claude`, so 
 A relative repo is never "missing" on the board. The first attach of a run (`repo_dir(clone=True)`) with no checkout
 runs `gh repo clone owner/name ~/src/<name>` (15 min cap), as the new-repo flow does; a failed clone ends the run in
 Needs you (`run_failed`, Retry works) with gh's error. Absolute-path repos still show "repo <path> not found".
+A new project (T2377): when gh says the repo does not exist ("Could not resolve to a Repository") and its owner is
+`kuhyx`, Start runs `gh repo create kuhyx/<name> --private|--public --add-readme` (a README commit on the default
+branch, so worktrees branch off it), clones it, and the run goes on; the session writes the scaffold. A note line
+`visibility: public` (or `private`, outside code fences, case-blind) picks the visibility; no line, or both, means
+private. Any other clone failure (network, auth) and any other owner fail as before and create nothing. The
+standing grant tells sessions to write that line on every new-project note they file.
 Sessions work in their own worktree off the resolved checkout; Ship, closing and deploy run there too, so claude-config
 deploys with a pull in `~/.claude` (`- deploy:` line of its CLAUDE.md: a ff-only pull there).
 
