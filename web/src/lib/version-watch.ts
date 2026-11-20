@@ -7,7 +7,10 @@ import { version } from "@/lib/schemas";
 
 export const VERSION_POLL_MS = 5000;
 
-export function watchVersion(reload: () => void = () => { location.reload(); }): () => void {
+/** The real reload; tests swap `page.reload` (jsdom's `location` cannot be stubbed in a vm pool). */
+export const page = { reload: (): void => { location.reload(); } };
+
+export function watchVersion(reload: () => void = () => { page.reload(); }): () => void {
   let baseline = pageBuild();
   return poll(async () => {
     try {

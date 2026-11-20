@@ -14,8 +14,10 @@ Every work-stage prompt (implement, fix, resume, fresh, live_check) carries it:
   the session creates under its run dir (`git -C ~/src/<other> worktree add <run dir>/wt-<name> -b todo/<item id>
   origin/main`), landed the same way. `~/src/todo` is edited the same way.
 - Also granted: installers, confirm scripts and other repo scripts, marker files, approving its own drafts.
-- Heavy commands still go through `capped.sh`; there is no 60 s limit for a session, long jobs run via
-  `systemd-run --user --collect` and the session waits.
+- Heavy commands still go through `capped.sh`. Every tool call is one step that ends within 60 s (one gate step or
+  test shard, push and deploy as calls of their own), because the stall watch files any quiet stretch over 60 s
+  as a top-priority bug (T2411). Only a job that cannot be split (a release build) runs via
+  `systemd-run --user --collect` while the session waits.
 - kuhy is asked only for a `Q:` question round, a decision, a check only he can hear (audio) and physical taps.
   Phone, device, emulator and E2E checks are the session's own (T2048).
 

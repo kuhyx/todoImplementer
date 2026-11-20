@@ -25,7 +25,7 @@ Done manually, both ways (click closes the notes and rests the card; a note done
 - lint: `make lint`
 - coverage: `make test`
 - coverage-gaps: `coverage-gaps coverage.xml`
-- gate: `make fast`
+- gate: `make fast` (in a board session one step per call, each under 60 s: `make lines private md regressions lint`, `make types`, `make web-lint`, `make web-test`, `make test`)
 
 ## Rules
 

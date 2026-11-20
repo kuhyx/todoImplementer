@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { watchVersion } from "@/lib/version-watch";
+import { page, watchVersion } from "@/lib/version-watch";
 import { installEventSource, settle, stubFetch } from "@/test/net";
 
 beforeEach(() => {
@@ -50,13 +50,16 @@ describe("watchVersion", () => {
   });
 
   it("defaults to a real page reload", async () => {
+    const real = page.reload;
+    expect(() => { real(); }).not.toThrow();
     const reload = vi.fn();
-    vi.stubGlobal("location", { reload });
+    page.reload = reload;
     stubFetch({ "GET /version": () => ({ build: "other", version: "1" }) });
     const stop = watchVersion();
     await settle(0);
     expect(reload).toHaveBeenCalled();
     stop();
+    page.reload = real;
   });
 });
 

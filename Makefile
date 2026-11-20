@@ -6,7 +6,7 @@ CAP ?= $(HOME)/.claude/scripts/capped.sh
 UV := $(CAP) uv run --frozen
 MESSAGE ?=
 
-.PHONY: fast fast-steps lines private md regressions lint types test cov-clean coverage web
+.PHONY: fast fast-steps lines private md regressions lint types test cov-clean coverage web web-lint web-test
 
 # The tree's key is taken before the steps run and stored once they pass; pre-commit skips the gate for a
 # tree that already passed (scripts/fast_stamp.py, T2410).
@@ -65,7 +65,11 @@ coverage:
 	@$(UV) env COVERAGE_FILE=$(COV_DIR)/.coverage coverage report
 
 # Web gates run once the Astro app exists (pnpm only).
-web:
-	@if [[ -f web/package.json ]]; then \
-		$(CAP) pnpm --dir web lint && $(CAP) pnpm --dir web test; \
-	else echo "web: no web/package.json yet, skipped"; fi
+# Two steps, so a session can run each in its own call under 60 s (T2411).
+web: web-lint web-test
+
+web-lint:
+	@if [[ -f web/package.json ]]; then $(CAP) pnpm --dir web lint; else echo "web: no web/package.json yet"; fi
+
+web-test:
+	@if [[ -f web/package.json ]]; then $(CAP) pnpm --dir web test; else echo "web: no web/package.json yet"; fi
