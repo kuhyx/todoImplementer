@@ -1,7 +1,7 @@
 """Ship failures that heal by themselves: a rerun on the ladder or a session fix turn (DOCS-landing.md).
 
 Only what Claude cannot do reaches kuhy (2026-11-19, umbrella 2556952d-0). A deploy blocked by kuhy's edits
-waits (T2007), and so does a deploy that exits 52, "busy, rerun later" (T2406). A gate step or deploy killed
+waits (T2007), and so does a deploy that exits 52, "busy, rerun later" (T2409). A gate step or deploy killed
 by a signal reruns once as it is (T2340, T2341, T2343), and a gate step killed while it only waited for the
 build lock reruns without counting. Everything else that is Claude's work goes back to the session with a
 brief: a red or twice-killed gate step, a missing `- deploy:` line, a red deploy (T2050, T2342, T2343). Each
@@ -25,7 +25,7 @@ if TYPE_CHECKING:
     from .deployheal import DirtyCheckoutError
 
 MAX_DEPLOY_WAITS = 12  # 1, 2, 5, 10 minutes, then 30 each: about 4 h, as long as a 5xx is retried
-BUSY_EXIT = 52  # a deploy's "busy, rerun later" (tunedeck while it plays): the ladder reruns it (T2406)
+BUSY_EXIT = 52  # a deploy's "busy, rerun later" (tunedeck while it plays): the ladder reruns it (T2409)
 MAX_DEPLOY_FIXES = 2  # session fix turns for a red or undeclared deploy per Start
 MAX_SHIP_FIXES = 2  # session fix turns for a refused commit, red checks or a red gate step per Start
 MAX_KILL_RERUNS = 1  # plain reruns of a gate step or deploy a signal killed, each per Start

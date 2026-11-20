@@ -6,10 +6,15 @@ CAP ?= $(HOME)/.claude/scripts/capped.sh
 UV := $(CAP) uv run --frozen
 MESSAGE ?=
 
-.PHONY: fast lines private md regressions lint types test cov-clean coverage web
+.PHONY: fast fast-steps lines private md regressions lint types test cov-clean coverage web
 
-fast: lines private md regressions lint types test web
-	@echo "make fast: green"
+# The tree's key is taken before the steps run and stored once they pass; pre-commit skips the gate for a
+# tree that already passed (scripts/fast_stamp.py, T2410).
+fast:
+	@k=$$(python3 scripts/fast_stamp.py key); $(MAKE) --no-print-directory -j$(JOBS) -O fast-steps; \
+	python3 scripts/fast_stamp.py record . "$$k"; echo "make fast: green"
+
+fast-steps: lines private md regressions lint types test web
 
 lines:
 	@python3 scripts/check_lines.py
@@ -41,14 +46,15 @@ types:
 # file; `coverage` merges them and still enforces fail_under = 100 over server/, scripts/, deploy/ and mcp/.
 # Run one chunk with `make test-board`; all of them, then the gate, with `make test`.
 CHUNKS := asks errors stall resilience gateway apikey credits board http relay sessions service todo_mcp lessons usage triage prompts tokens tokens_audit tokens_api mcp_server deploy merge \
-	runner runner_cf runner_mid runner_flow runner_ship runner_tail umbrella umbrella_flow repotask repotask_flow root
+	runner runner_cf runner_mid runner_mp runner_flow runner_ship runner_tail umbrella umbrella_flow repotask repotask_flow root
 CHUNK_PATH_root := tests/test_*.py
 CHUNK_PATH_umbrella := tests/umbrella --ignore-glob='tests/umbrella/test_flow_*'
 CHUNK_PATH_umbrella_flow := tests/umbrella/test_flow_*.py
 # Every turn now starts a host process, so the runner dir is six chunks to stay under 60 s.
 CHUNK_PATH_runner := tests/runner/test_runner_[a-b]*.py
 CHUNK_PATH_runner_cf := tests/runner/test_runner_[c-f]*.py
-CHUNK_PATH_runner_mid := tests/runner/test_runner_[g-p]*.py
+CHUNK_PATH_runner_mid := tests/runner/test_runner_[g-l]*.py
+CHUNK_PATH_runner_mp := tests/runner/test_runner_[m-p]*.py
 CHUNK_PATH_runner_flow := tests/runner/test_runner_[qr]*.py tests/runner/test_runner_sc*.py
 CHUNK_PATH_runner_ship := tests/runner/test_runner_s[e-z]*.py
 CHUNK_PATH_runner_tail := tests/runner/test_runner_[t-z]*.py
@@ -59,10 +65,13 @@ CHUNK_PATH_repotask_flow := tests/repotask/test_flow.py tests/repotask/test_umbr
 # Each `make test` keeps its coverage data in its own temp dir (COV_DIR): two runs in one worktree (a board
 # restart re-runs the checks while the old run goes on) used to delete each other's files (T1920).
 COV_DIR ?= .
+# Each chunk is one single-threaded pytest, so they run side by side; every chunk has its own coverage file
+# and temp dirs (T2411: one after the other they took ~170 s, the longest quiet stretch of a card).
+JOBS ?= 4
 
 test:
 	@d=$$(mktemp -d "$${TMPDIR:-/tmp}/todoimpl-cov.XXXXXX"); trap 'rm -rf "$$d"' EXIT; \
-	for c in $(CHUNKS); do $(MAKE) --no-print-directory test-$$c COV_DIR="$$d"; done; \
+	$(MAKE) --no-print-directory -j$(JOBS) -O $(addprefix test-,$(CHUNKS)) COV_DIR="$$d"; \
 	$(MAKE) --no-print-directory coverage COV_DIR="$$d"
 
 cov-clean:

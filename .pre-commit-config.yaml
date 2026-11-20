@@ -10,8 +10,8 @@ repos:
         files: \.(md|markdown)$
 
       - id: make-fast
-        name: make fast
-        entry: make fast
+        name: make fast (skipped for a tree it already passed, T2410)
+        entry: bash -c 'python3 scripts/fast_stamp.py check || make fast'
         language: system
         pass_filenames: false
         always_run: true
