@@ -145,7 +145,7 @@ def test_t2343_the_shipping_stage_sends_each_fixable_failure_back_to_implement(
     assert st.extra["reship"] is True
 
 
-def test_t2400_a_deploy_that_says_busy_rerun_later_waits_on_the_ladder_not_for_kuhy() -> None:
+def test_t2406_a_deploy_that_says_busy_rerun_later_waits_on_the_ladder_not_for_kuhy() -> None:
     st = _child()
     busy = "deploy: tunedeck is playing; not interrupting it (exit 52, rerun later)"
     with pytest.raises(retry.RetryLaterError) as later:
