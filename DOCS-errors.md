@@ -56,6 +56,9 @@ wait under 1 s without breaking existing behaviour. Do not ask kuhy anything; ta
 last`, and last the identity line `Error-Signature: <app>:<signature>`. Message text is flattened to one line and
 backticks become quotes, so an error cannot split the note.
 
+**Merged tickets (T2408).** The board merges similar notes by itself (`DOCS-merge.md`). The combined card carries each member's full text, so the `Error-Signature:` line survives; `ticket.find` matches it there, the `Seen:` line is rewritten in place and no second ticket is made.
+
+
 - **Dedup** by the `Error-Signature:` line of an open part, and by the ledger (`<run root>/app-errors.json`). A lost
   ledger finds the ticket again by its line; a twin title the todo app refuses is left alone.
 - **Count.** The `Seen:` line is rewritten only when the count changed (no note spam).

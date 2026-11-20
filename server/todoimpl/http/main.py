@@ -75,8 +75,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     except ImportError as exc:
         print(f"todoimpl: cannot wire the backend: {exc}", file=sys.stderr)
         return 2
-    if (merges := getattr(backend, "merge_service", None)) is not None:
-        merges.refresh_if_due()  # classify once at start, in the background
     with contextlib.suppress(KeyboardInterrupt):
         serve(backend, args.host, args.port)
     return 0

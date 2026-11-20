@@ -2,7 +2,6 @@
 import { renderBoard } from "@/components/board-columns";
 import { defineDrawer, TiDrawer } from "@/components/drawer";
 import { loader } from "@/components/feedback";
-import { defineMerges } from "@/components/merge-strip";
 import { defineNewTask, TiNewTask } from "@/components/new-task";
 import { createToolbar, type Toolbar } from "@/components/toolbar";
 import { renderUsage } from "@/components/usage-strip";
@@ -158,7 +157,7 @@ export class TiApp extends HTMLElement {
     });
     this.#phone = createPhoneTools();
     this.#usageHost.replaceChildren(this.#usageBody, this.#phone.el);
-    this.append(this.#usageHost, this.#toolbar.el, document.createElement("ti-merges"), this.#boardHost, this.#track, this.#drawer);
+    this.append(this.#usageHost, this.#toolbar.el, this.#boardHost, this.#track, this.#drawer);
     this.#syncView();
     this.#paintUsage();
     this.#toolbar.el.hidden = true;
@@ -177,7 +176,6 @@ export class TiApp extends HTMLElement {
 
 export function defineApp(): void {
   defineDrawer();
-  defineMerges();
   defineNewTask();
   defineTrack();
   if (!customElements.get("ti-app")) customElements.define("ti-app", TiApp);

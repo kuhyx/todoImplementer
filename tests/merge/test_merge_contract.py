@@ -7,7 +7,7 @@ import pytest
 from contract_lib import validate
 from jsonschema import ValidationError
 from mergefakes import Rig
-from test_merge_service import Brain, Clock, make
+from test_merge_service import Brain, Clock, looked, make
 
 DISABLED = False
 SUGGESTION: dict[str, Any] = {
@@ -28,7 +28,7 @@ SUGGESTION: dict[str, Any] = {
 def test_the_services_answers_validate(rig: Rig) -> None:
     rig.sections("kuhyx/a", [("Make a text-free", "x"), ("Make b text-free", "y")])
     service = make(rig, Brain(), Clock())
-    body = service.suggestions()
+    body = looked(service)
     assert len(body["suggestions"]) == 1
     validate("merge", body)
     group = body["suggestions"][0]["id"]

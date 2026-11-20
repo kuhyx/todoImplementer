@@ -64,7 +64,7 @@ class MergeService:
         spawn: Callable[[Callable[[], None]], None] = _spawn,
         umbrella: Callable[[str], str] = create_umbrella,
     ) -> None:
-        """Nothing runs until `suggestions()` or `refresh_if_due()` is called."""
+        """Nothing runs until `refresh_if_due()` is called (by the auto loop, `merge.auto`)."""
         self.client = client
         self.cache = cache
         self.root = root
@@ -141,6 +141,10 @@ class MergeService:
                 found.append(Suggestion(group_id, row["title"], row["reason"], members))
         return sorted(found, key=lambda s: (-len(s.members), s.title))
 
+    def pending(self) -> list[Suggestion]:
+        """Return the groups waiting to merge, largest first (the auto loop's work list)."""
+        return self._suggestions()
+
     def _view(self) -> list[dict[str, Any]]:
         out = []
         for s in self._suggestions():
@@ -160,8 +164,7 @@ class MergeService:
         return out
 
     def suggestions(self) -> dict[str, Any]:
-        """GET /api/merges: the cached suggestions; a due classification starts in the background."""
-        self.refresh_if_due()
+        """GET /api/merges: the cached suggestions. A read only: the auto loop classifies and merges."""
         return {"suggestions": self._view()}
 
     # ---- clicks ----

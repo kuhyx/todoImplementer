@@ -5,7 +5,7 @@ sessions. Spec and decisions: `DOCS-spec.md`. Lessons carried over from the pred
 Cheap tier (Sonnet manager, free models, Opus escalation) and human-made-first order: `DOCS-tiers.md`.
 Multi-day survival (kills, reboot, power cut, no internet, gateway down, durable writes, backoff ladder): `DOCS-resilience.md`.
 Umbrella tracking view and the free-token strip (gateway quotas, cooldowns, ETA): `DOCS-tracking.md`.
-Merging similar tasks (Haiku suggestions, one-click merge, umbrella notes, CLI): `DOCS-merge.md`.
+Merging similar tasks (Haiku groups, merged by the board itself with no click, umbrella notes, CLI): `DOCS-merge.md`.
 Manual Claude Code sessions page (status tags, resume, mark, delete, guard, phone): `DOCS-sessions.md`.
 One card, one run per repo (parts, ticks, per-repo lock, section-run transition, note migration CLI): `DOCS-repotask.md`.
 Asks as buttons in the note (`ask` block: choice, command, screenshot, risk rule, 24 h auto-adopt, sweep): `DOCS-asks.md`.

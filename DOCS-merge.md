@@ -1,9 +1,25 @@
 # Merge similar tasks
 
 Many open items ask for the same kind of work ("Make <app> text-free (textgate-rework)" in dozens of repos, or two
-notes for one thing). The board suggests groups of them, and a click merges a group into one note. Nothing merges
-without that click. Contract: `contracts/merge.schema.json`. Code: `server/todoimpl/merge/`, `server/todoimpl/http/merge.py`,
-web `components/merge-strip.ts`.
+notes for one thing). Haiku suggests groups of them and the board merges each valid group into one note by itself
+(T2406, kuhy 2026-11-20): no click, no strip on the web page, no page needed. Contract: `contracts/merge.schema.json`.
+Code: `server/todoimpl/merge/` (`auto.py` is the loop), `server/todoimpl/http/merge.py`. The phone app still reads
+the endpoints below (it shows a strip only while a group waits).
+
+## Automatic merge (`merge/auto.py`)
+
+`AutoMerge` is one thread started with the server (`build_backend`, next to the other loops). Every 30 s a tick calls
+`MergeService.refresh_if_due()` (a Haiku run in the background when notes are new or edited, see Suggestions), then
+merges each stored group through `MergeService.merge()`, the same `merge/apply.py` path as the CLI. A page GET never
+classifies or merges.
+
+- A group with a member that has a live run waits: it is asked again next tick, never dropped, no backoff.
+- A failed merge (todo MCP down, title taken, other merge running) is logged and retried after 60 s, doubling to
+  1 h; a success or a group that left the suggestions clears its delay. A restart resets the delays.
+- A dismissed group stays dismissed (`merge.json`, `dismissed`).
+- After each merge the list is read again: a cut renumbers the section ids behind it.
+- An app-error ticket may be merged: its `Error-Signature:` line travels in the combined body, so the errors loop
+  still finds it, refreshes its `Seen:` line and makes no second ticket (T2408, `DOCS-errors.md`).
 
 ## Members are items
 
@@ -21,12 +37,11 @@ by hand (CLI) next to members of one repo; it joins that repo (T2093).
 - Validated server-side (`parse_groups`): every id is a candidate, at least 2 distinct ids, a note in at most one
   group (a later group that reuses an id is dropped whole), title and reason are non-empty text, reason cut to its
   first line. Anything else is dropped; text that is not that JSON is a failed run.
-- When: `MergeService.refresh_if_due()` runs from every `GET /api/merges` and once at server start (`http/main.py`).
-  It starts a background thread when notes are new or edited since the last run (`merge/incremental.py`; `merge.json`
+- When: `MergeService.refresh_if_due()` runs from the auto loop (first tick at server start). It starts a background thread when notes are new or edited since the last run (`merge/incremental.py`; `merge.json`
   keeps `hashes`, a hash of the line the model saw per note) AND 10 minutes passed since it. Only those notes are sent,
   with the stored groups (title and ids) and the older ungrouped notes (id, repo, title) as context; the reply replaces
   the stored groups it overlaps and adds the rest. A removal alone asks nothing (ids and hashes are updated), an old
-  `merge.json` without hashes gets one full run. A request never waits on Haiku. A failed run keeps the old groups and retries after 10 minutes.
+  `merge.json` without hashes gets one full run. Nothing waits on Haiku. A failed run keeps the old groups and retries after 10 minutes.
 - Cached in `$TODOIMPL_HOME/merge.json`: `ids`, `at`, `groups`, `dismissed` (group fingerprints), `created`
   (fingerprint to merged note id). A restart with the same ids asks nothing.
 - A group id is `sha256(sorted member ids)[:12]`. The view cuts a stored group to the members that are still
@@ -35,7 +50,7 @@ by hand (CLI) next to members of one repo; it joins that repo (T2093).
 
 ## Endpoints (not task-scoped; Origin and `X-Todoimpl-Token` checked like every POST)
 
-- GET `/api/merges`: `{suggestions: [{id, title, reason, members: [{id, title, repo}], actions: [merge, dismiss]}]}`,
+- GET `/api/merges` (a plain read; the phone app's strip): `{suggestions: [{id, title, reason, members: [{id, title, repo}], actions: [merge, dismiss]}]}`,
   biggest group first. `merge` is disabled, with its reason, while a member has a live run.
 - POST `/api/merge/<group>/merge` and `/api/merge/<group>/dismiss`, empty body. Answer
   `{ok: true, new_id, suggestions}` (`new_id` null for dismiss) or the usual `{ok: false, error}`: 404 unknown group,
@@ -91,14 +106,11 @@ note's text and changes nothing. Exit 1 with the reason on a refusal. Uses `$TOD
 
 ## UI
 
-`<ti-merges>` above the board, polled every 5 s, hidden when empty. A card: merge glyph, member count, one
-row per member (its own title and repo), a merge and a dismiss icon button named by `aria-label`. A
-disabled merge keeps the server's reason as its tooltip. A click disables the card's buttons at once; after 1 s a
-spinner named `Merging` / `Dismissing` shows. A refusal shakes the card and shows the server's message as a toast.
-No words are invented: the proposed title and the reason line are in the API only.
+None on the web page (T2407). The phone app's `merge_strip.dart` shows a card only while a group waits (live run,
+failed merge); removing it from the app is open work.
 
 ## Tests
 
 `tests/merge/` (chunk `merge` in the Makefile): text, classifier (a `claude` shim on PATH), store, apply against the
-fake todo MCP, service, CLI with a shim for the todo CLI, wiring, contract; `tests/http/test_http_merge.py`;
-`web/src/components/merge-strip.test.ts` (also checks the Zod mirror against the schema).
+fake todo MCP, service, the auto loop (`test_merge_auto.py`), CLI with a shim for the todo CLI, wiring, contract;
+`tests/http/test_http_merge.py`; `tests/errors/test_loop_merged.py` (a merged error ticket).

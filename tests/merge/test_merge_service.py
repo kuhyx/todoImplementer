@@ -3,6 +3,7 @@
 import json
 import re
 from collections.abc import Callable
+from typing import Any
 
 from mergefakes import Rig
 from todoimpl.merge.service import INTERVAL, MergeService
@@ -48,6 +49,12 @@ def make(rig: Rig, brain: Brain, clock: Clock, jobs: list[Callable[[], None]] | 
     )
 
 
+def looked(service: MergeService) -> dict[str, Any]:
+    """Return what a page sees after the auto loop classified: refresh, then read."""
+    service.refresh_if_due()
+    return service.suggestions()
+
+
 def seed(rig: Rig) -> list[str]:
     return rig.sections("kuhyx/a", [("Make a text-free", "x"), ("Make b text-free", "y"), ("Other", "z")])
 
@@ -57,10 +64,10 @@ def test_a_get_classifies_in_the_background_and_caches_the_groups(rig: Rig) -> N
     brain = Brain()
     jobs: list[Callable[[], None]] = []
     service = make(rig, brain, Clock(), jobs)
-    assert service.suggestions() == {"suggestions": []}  # nothing waits on Haiku
+    assert looked(service) == {"suggestions": []}  # nothing waits on Haiku
     assert brain.prompts == []
     jobs.pop()()
-    view = service.suggestions()["suggestions"]
+    view = looked(service)["suggestions"]
     assert [s["title"] for s in view] == ["Both"]
     first = view[0]
     stored = rig.store().load().groups[0]["ids"]
@@ -74,8 +81,8 @@ def test_the_job_is_not_repeated_while_ids_and_clock_stand_still(rig: Rig) -> No
     seed(rig)
     brain, clock = Brain(), Clock()
     service = make(rig, brain, clock)
-    service.suggestions()
-    service.suggestions()
+    looked(service)
+    looked(service)
     assert len(brain.prompts) == 1  # same ids: no second call
 
 
@@ -83,13 +90,13 @@ def test_new_ids_wait_for_the_ten_minute_gap(rig: Rig) -> None:
     seed(rig)
     brain, clock = Brain(), Clock()
     service = make(rig, brain, clock)
-    service.suggestions()
+    looked(service)
     rig.sections("kuhyx/b", [("New one", "")])
     clock.now += INTERVAL - 1
-    service.suggestions()
+    looked(service)
     assert len(brain.prompts) == 1
     clock.now += 2
-    service.suggestions()
+    looked(service)
     assert len(brain.prompts) == 2
     assert "New one" in brain.prompts[1]
 
@@ -106,8 +113,8 @@ def test_a_second_job_does_not_start_while_one_runs(rig: Rig) -> None:
 def test_a_restart_with_the_same_ids_does_not_ask_again(rig: Rig) -> None:
     seed(rig)
     brain, clock = Brain(), Clock()
-    make(rig, brain, clock).suggestions()
-    make(rig, brain, clock).suggestions()  # a new server over the same merge.json
+    looked(make(rig, brain, clock))
+    looked(make(rig, brain, clock))  # a new server over the same merge.json
     assert len(brain.prompts) == 1
 
 
@@ -122,7 +129,7 @@ def test_manual_and_repoless_notes_are_not_candidates(rig: Rig) -> None:
     rig.sections("kuhyx/a", [("MANUAL WORK REQUIRED: do it", ""), ("Real", ""), ("Real two", "")])
     rig.fake.seed(None, "No repo", "")
     brain = Brain()
-    make(rig, brain, Clock()).suggestions()
+    looked(make(rig, brain, Clock()))
     assert "MANUAL" not in brain.prompts[0]
     assert "No repo" not in brain.prompts[0]
 
@@ -131,16 +138,16 @@ def test_a_failing_classifier_keeps_the_old_groups_and_retries_after_the_gap(rig
     seed(rig)
     brain, clock = Brain(), Clock()
     service = make(rig, brain, clock)
-    service.suggestions()
+    looked(service)
     rig.sections("kuhyx/b", [("New one", "")])
     clock.now += INTERVAL + 1
     brain.error = RuntimeError("haiku down")
-    service.suggestions()
-    assert len(service.suggestions()["suggestions"]) == 1  # the old group is still shown
+    looked(service)
+    assert len(looked(service)["suggestions"]) == 1  # the old group is still shown
     assert len(brain.prompts) == 2
     brain.error = None
     clock.now += INTERVAL + 1
-    service.suggestions()
+    looked(service)
     assert len(brain.prompts) == 3
 
 
@@ -149,5 +156,5 @@ def test_garbage_from_the_classifier_is_a_failed_run(rig: Rig) -> None:
     brain = Brain()
     brain.answer = lambda _ids: "not json"
     service = make(rig, brain, Clock())
-    assert service.suggestions() == {"suggestions": []}
+    assert looked(service) == {"suggestions": []}
     assert rig.store().load().ids is None

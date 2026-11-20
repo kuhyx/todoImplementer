@@ -2,8 +2,7 @@
 
 /* The view replaces the toolbar and the board; the usage strip stays on top. */
 ti-app[data-view="umbrella"] > .toolbar,
-ti-app[data-view="umbrella"] > .board-host,
-ti-app[data-view="umbrella"] > ti-merges {
+ti-app[data-view="umbrella"] > .board-host {
   display: none;
 }
 

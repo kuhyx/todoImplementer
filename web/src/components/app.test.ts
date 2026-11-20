@@ -65,6 +65,14 @@ describe("ti-app", () => {
     expect(q(".usage").textContent).toContain("abc1234");
   });
 
+  it("[T2407] shows no merge strip and never asks for merge suggestions (the board merges by itself)", async () => {
+    await mountApp();
+    await settle(BOARD_POLL_MS);
+    expect(document.querySelector("ti-merges")).toBeNull();
+    expect(customElements.get("ti-merges")).toBeUndefined();
+    expect(stub.calls.filter((call) => call.url.includes("/api/merge"))).toEqual([]);
+  });
+
   it("keeps the last board and says so when a poll fails, then recovers", async () => {
     await mountApp();
     boardBody = () => { throw new Error("x"); };

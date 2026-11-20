@@ -8,8 +8,6 @@ export const routes = {
   /** The readable issue log page (web/src/issues); `issues` above is its raw ndjson. */
   issuesPage: (id: string): string => `/issues#task=${encodeURIComponent(id)}`,
   live: (id: string): string => `/api/live?id=${encodeURIComponent(id)}`,
-  mergeAction: (group: string, action: string): string => `/api/merge/${group}/${action}`,
-  merges: "/api/merges",
   ownTask: "/api/new-task",
   post: (id: string, action: string): string => `/api/task/${encodeURIComponent(id)}/${action}`,
   /** `path` is run-dir relative ("shots/live2/v1.png"); the server serves it from under <run>/shots. */

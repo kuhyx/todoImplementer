@@ -106,6 +106,7 @@ def build_backend(
     from todoimpl.apikey.monitor import KeyMonitor  # noqa: PLC0415
     from todoimpl.asks.service import AskService  # noqa: PLC0415 - it imports http.backend
     from todoimpl.gateway.monitor import GatewayMonitor  # noqa: PLC0415 - gateway imports the runner
+    from todoimpl.merge.auto import AutoMerge  # noqa: PLC0415 - it imports the merge service
     from todoimpl.merge.service import MergeService  # noqa: PLC0415 - merge.apply imports service.cards
     from todoimpl.newtask.service import NewTaskService  # noqa: PLC0415 - it imports service.cards
     from todoimpl.runner.holdceiling import Ceiling  # noqa: PLC0415 - runner imports the service view
@@ -121,6 +122,7 @@ def build_backend(
         gateway=gateway,
     )  # fmt: skip
     backend.merge_service = MergeService(client, cache, root)
+    auto_merge = AutoMerge(backend.merge_service)
     new_tasks = NewTaskService(client, cache)
     backend.new_task_service = new_tasks
     backend.ask_service = AskService(cache, scheduler, root)
@@ -128,6 +130,7 @@ def build_backend(
     if refresh:
         cache.start()
         backend.ask_service.start()  # 24 h auto-adopt of reversible choices
+        auto_merge.start()  # Haiku groups similar notes, the board merges them itself (DOCS-merge.md)
         backend.triage_service.watch()  # labels notes without a repo (DOCS-triage.md)
         NoteDoneWatcher(cache, client, scheduler, root).start()  # a note done in the todo app (T2065)
         monitor.start()  # first check runs on its own thread: a slow network never delays startup
