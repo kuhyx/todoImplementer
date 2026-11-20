@@ -96,9 +96,9 @@ class _BoardPageState extends State<BoardPage> {
     MaterialPageRoute<void>(
       fullscreenDialog: true,
       builder: (_) => NewTaskSheet(
-      repos: board.repos,
-      relay: widget.relay,
-      onError: _record,
+        repos: board.repos,
+        relay: widget.relay,
+        onError: _record,
         repo: _state.repo.isEmpty || _state.repo == yours ? null : _state.repo,
       ),
     ),

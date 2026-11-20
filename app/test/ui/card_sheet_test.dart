@@ -79,7 +79,11 @@ void main() {
     relay.gate = Completer<void>();
     await tester.tap(find.byKey(const ValueKey('action-start')));
     await tester.pump();
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    // The board's usage rings are determinate indicators too (T2348).
+    final spinner = find.byWidgetPredicate(
+      (w) => w is CircularProgressIndicator && w.value == null,
+    );
+    expect(spinner, findsOneWidget);
     relay.gate!.complete();
     await tester.pumpAndSettle();
     expect(relay.sent.single.$2['args'], <String, dynamic>{});

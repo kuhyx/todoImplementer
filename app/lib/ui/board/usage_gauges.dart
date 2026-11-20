@@ -132,22 +132,21 @@ class UsageGauges extends StatelessWidget {
     return u == null ? null : objOr(u, key);
   }
 
-  Widget _row(IconData icon, String main, String? side, {Key? key}) =>
-      ListTile(
-        key: key,
-        dense: true,
-        leading: Icon(icon),
-        title: Text(main),
-        trailing: side == null
-            ? null
-            : Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.restart_alt, size: AppSpacing.md),
-                  Text(side),
-                ],
-              ),
-      );
+  Widget _row(IconData icon, String main, String? side, {Key? key}) => ListTile(
+    key: key,
+    dense: true,
+    leading: Icon(icon),
+    title: Text(main),
+    trailing: side == null
+        ? null
+        : Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.restart_alt, size: AppSpacing.md),
+              Text(side),
+            ],
+          ),
+  );
 
   @override
   Widget build(BuildContext context) {

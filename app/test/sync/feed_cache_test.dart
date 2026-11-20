@@ -32,7 +32,10 @@ void main() {
 
   Json line(int n) => {'type': 'activity', 'text': 'l$n', 'seq': n};
 
-  Future<List<List<Json>>> openFeed(RtdbBoardRelay r, {List<Json>? push}) async {
+  Future<List<List<Json>>> openFeed(
+    RtdbBoardRelay r, {
+    List<Json>? push,
+  }) async {
     events = StreamController<RtdbEvent>();
     final got = <List<Json>>[];
     final sub = r.liveFeed('c1').listen(got.add);
@@ -50,12 +53,15 @@ void main() {
     return got;
   }
 
-  test('[T2353] a reopened feed shows the last lines before any read', () async {
-    final r = relay(MemoryFeedCache());
-    await openFeed(r, push: [line(1), line(2)]);
-    final again = await openFeed(r);
-    expect(again.single.map((e) => e['text']), ['l1', 'l2']);
-  });
+  test(
+    '[T2353] a reopened feed shows the last lines before any read',
+    () async {
+      final r = relay(MemoryFeedCache());
+      await openFeed(r, push: [line(1), line(2)]);
+      final again = await openFeed(r);
+      expect(again.single.map((e) => e['text']), ['l1', 'l2']);
+    },
+  );
 
   test('[T2353] the newest lines survive an app restart', () async {
     SharedPreferences.setMockInitialValues({});

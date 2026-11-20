@@ -25,7 +25,9 @@ Future<FakeRelay> _open(WidgetTester tester, {String? filter}) async {
   await tester.pumpWidget(
     MaterialApp(
       theme: buildDarkTheme(),
-      home: Scaffold(body: SafeArea(child: BoardPage(relay: relay))),
+      home: Scaffold(
+        body: SafeArea(child: BoardPage(relay: relay)),
+      ),
     ),
   );
   relay.push(
@@ -111,7 +113,10 @@ void main() {
     await tester.tap(_key('nt-repos-done'));
     await tester.enterText(_key('nt-body'), 'Same fix');
     await _settle(tester);
-    relay.outcomes['new_task'] = const RelayFailed(code: 'conflict', error: 'x');
+    relay.outcomes['new_task'] = const RelayFailed(
+      code: 'conflict',
+      error: 'x',
+    );
     await tester.tap(_key('nt-send'));
     await _settle(tester);
     expect(_key('nt-failure'), findsOneWidget);
@@ -119,11 +124,10 @@ void main() {
     relay.outcomes.remove('new_task');
     await tester.tap(_key('nt-send'));
     await _settle(tester);
-    expect([for (final a in _args(relay)) a['repo']], [
-      'kuhyx/demo',
-      'kuhyx/demo',
-      'kuhyx/other',
-    ]);
+    expect(
+      [for (final a in _args(relay)) a['repo']],
+      ['kuhyx/demo', 'kuhyx/demo', 'kuhyx/other'],
+    );
   });
 
   for (final (pick, want) in [
@@ -148,5 +152,20 @@ void main() {
     final send = tester.getRect(_key('nt-send'));
     final gallery = tester.getRect(_key('nt-gallery'));
     expect(send.center.dy, closeTo(gallery.center.dy, 1));
+  });
+
+  testWidgets('[T2351] text alone cannot send; a tap in the box folds', (
+    tester,
+  ) async {
+    await _open(tester);
+    await tester.enterText(_key('nt-body'), 'Idea');
+    await _settle(tester);
+    expect(tester.widget<IconButton>(_key('nt-send')).onPressed, isNull);
+    await tester.tap(_key('nt-repo-kuhyx/other'));
+    await _settle(tester);
+    await tester.tap(_key('nt-body'));
+    await _settle(tester);
+    expect(_key('nt-repos'), findsNothing);
+    expect(tester.widget<IconButton>(_key('nt-send')).onPressed, isNotNull);
   });
 }
