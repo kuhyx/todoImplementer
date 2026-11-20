@@ -4,7 +4,7 @@ import { trapTab } from "@/components/drawer-shell";
  * several repos), then one description box whose first line is the title, files of any type by picker, camera,
  * paste or drop. Create sends one task per picked repo (none and all: one repo-less note that triage routes). It
  * uploads each file once, unchanged (POST /api/upload, 100 MB each, 500 MB together; the server keeps the upload
- * for the next repo, T2397), then posts each task with their ids; the server adds the section,
+ * for the next repo, T2399), then posts each task with their ids; the server adds the section,
  * presses the repo card's Start and answers the card, which the app then opens. A repo already sent is dropped
  * from the picks, so a retry after a refusal sends nothing twice. While that runs both
  * buttons are disabled with the reason; after 1 s a loader names what it waits on. At 640 px or less the dialog

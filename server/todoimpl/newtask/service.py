@@ -95,7 +95,7 @@ class NewTaskService:
         if isinstance(staged, str):
             raise BackendError(BAD, staged)
         folder = self._folder() if task.images or staged else ""
-        paths = noteimages.write(pictures, images.root() / folder, "")  # uploads stay for the next repo (T2397)
+        paths = noteimages.write(pictures, images.root() / folder, "")  # uploads stay for the next repo (T2399)
         links = [f"[Image #{n}]\n![]({images.URL}/{folder}/{p.name})" for n, p in enumerate(paths, 1)]
         links += images.attach(staged, images.root(), folder)
         return "\n\n".join([task.body, *links]).strip()

@@ -66,7 +66,7 @@ describe("ti-new-task repo chooser", () => {
     typed.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "a" }));
   });
 
-  it("[T2397] sends one task per picked repo, titled by the first line, the image uploaded once", async () => {
+  it("[T2399] sends one task per picked repo, titled by the first line, the image uploaded once", async () => {
     let up = 0;
     const element = mount({ [`POST ${routes.ownTask}`]: OK, [`POST ${routes.upload}`]: () => UP(ids[up++] ?? "") });
     const created = vi.fn();

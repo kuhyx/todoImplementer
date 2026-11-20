@@ -153,7 +153,7 @@ it folds to one row of the picks; a click opens it again. Step two is one descri
 is the title (`splitNote`; a first line over 200 characters keeps the whole text as the body). Then one row: attach,
 camera, the attachments, close and OK. OK sends one task per picked repo; none and all send one repo-less note that
 triage routes (`DOCS-triage.md`). A sent repo leaves the picks, so a retry after a refusal sends nothing twice. Each
-file uploads once: the server hard-links (else copies) it into each task and the 24 h sweep drops it (T2397). Files: any (picker with no
+file uploads once: the server hard-links (else copies) it into each task and the 24 h sweep drops it (T2399). Files: any (picker with no
 type filter, multi-select; a camera picker on touch devices; Ctrl+V; drag and drop). Images show as thumbnails, other files as a file icon and their name; each has a remove button. Caps: 100 MB
 per file, 500 MB per task, refused by name before upload (and again by the server). On Create the page sends each
 file unchanged to `POST /api/upload` (raw body, name percent-encoded in `X-Todoimpl-Name`; Origin and token checked

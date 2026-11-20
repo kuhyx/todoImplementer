@@ -62,7 +62,7 @@ def test_attach_puts_each_file_into_the_folder_and_links_images_inline(tmp_path:
 
 
 @pytest.mark.parametrize("linkable", [True, False])
-def test_t2397_attach_keeps_the_upload_so_every_picked_repo_claims_it(
+def test_t2399_attach_keeps_the_upload_so_every_picked_repo_claims_it(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, linkable: bool
 ) -> None:
     if not linkable:  # another filesystem: hard links fail, so it copies

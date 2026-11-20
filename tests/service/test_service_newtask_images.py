@@ -48,7 +48,7 @@ def test_t2321_images_are_numbered_in_order_above_their_links(rig: Rig, roots: t
     assert (folder / "1.jpg").read_bytes() == JPEG
     assert (folder / "2.png").read_bytes() == PNG
     assert re.search(rf"\[spec\.pdf\]\({URL}/[\w-]+/[\w-]+\.pdf\)", text)
-    assert sorted(p.name for p in staging.iterdir()) == sorted([shot, pdf])  # the next picked repo reuses them (T2397)
+    assert sorted(p.name for p in staging.iterdir()) == sorted([shot, pdf])  # the next picked repo reuses them (T2399)
 
 
 def test_t2321_the_session_reads_each_number_next_to_its_local_path(
