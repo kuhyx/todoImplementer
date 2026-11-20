@@ -126,7 +126,7 @@ describe("ti-new-task", () => {
   });
 
   it("closes without naming a card when the answer has none (a repo-less note)", async () => {
-    const { task: _task, ...loose } = OK;
+    const loose = { note: OK.note, ok: OK.ok, started: OK.started };
     const element = mount({ [`POST ${routes.ownTask}`]: () => Promise.resolve(Response.json(loose)) });
     const created = vi.fn();
     element.addEventListener("task-created", created);

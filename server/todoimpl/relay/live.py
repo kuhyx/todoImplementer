@@ -113,10 +113,8 @@ class Live:
             n += 1
             change[f"s{n:09d}"] = item
             kept.append(n)
-        while len(kept) > KEEP:
-            gone = f"s{kept.popleft():09d}"
-            if change.pop(gone, None) is None:
-                change[gone] = None
+        while len(kept) > KEEP:  # only stored keys go: `_fresh` caps a batch at KEEP
+            change[f"s{kept.popleft():09d}"] = None
         await self._rtdb.patch(f"live/{card}", change)
 
     async def _mirror(self, card: str, reply: SseReply) -> None:
