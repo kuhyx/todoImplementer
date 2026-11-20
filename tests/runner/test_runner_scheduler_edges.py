@@ -18,7 +18,7 @@ def _limit(resets_at: float) -> tuple[dict[str, object], ...]:
 
 
 def test_plan_limit_pauses_and_resumes_at_resets_at(world: Env) -> None:
-    sched, _ = boot(world, PLAN, _limit(time.time() + 1.0), IMPL, LIVE_OK, done_check="true")
+    sched, _ = boot(world, PLAN, _limit(time.time() + 3.0), IMPL, LIVE_OK, done_check="true")
     try:
         sched.start(CARD)
         wait(lambda: state(world).stage == "paused_limit")
