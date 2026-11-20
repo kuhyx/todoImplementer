@@ -1,4 +1,4 @@
-"""Staged attachments: claimed by id with the per-task cap, moved into the dufs folder, swept when stale."""
+"""Staged attachments: claimed by id with the per-task cap, linked into the dufs folder, swept when stale."""
 
 import os
 import re
@@ -42,7 +42,7 @@ def test_sweep_drops_staged_files_older_than_a_day(tmp_path: Path) -> None:
     assert list(tmp_path.iterdir()) == [tmp_path / "stray.txt"]
 
 
-def test_attach_moves_each_file_into_the_folder_and_links_images_inline(tmp_path: Path) -> None:
+def test_attach_puts_each_file_into_the_folder_and_links_images_inline(tmp_path: Path) -> None:
     base = tmp_path / "imgs"
     files = (
         stage(tmp_path / "up", b"%PDF", "Spec [v2].PDF"),
@@ -58,8 +58,28 @@ def test_attach_moves_each_file_into_the_folder_and_links_images_inline(tmp_path
     assert raw_m
     assert (base / "f-1" / pdf_m.group(1)).read_bytes() == b"%PDF"
     assert (base / "f-1" / png_m.group(1)).read_bytes() == b"\x89PNG"
-    assert not files[0].path.parent.exists()
     assert images.localize(pdf, base)[1] == (base / "f-1" / pdf_m.group(1),)
+
+
+@pytest.mark.parametrize("linkable", [True, False])
+def test_t2397_attach_keeps_the_upload_so_every_picked_repo_claims_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, linkable: bool
+) -> None:
+    if not linkable:  # another filesystem: hard links fail, so it copies
+
+        def refuse(*_args: object) -> None:
+            raise OSError(18, "cross-device link")
+
+        monkeypatch.setattr(os, "link", refuse)
+    staged = stage(tmp_path / "up", b"\x89PNG", "shot.png")
+    first = images.attach((staged,), tmp_path / "imgs", "f-1")
+    again = uploads.claim((staged.id,), tmp_path / "up")
+    assert not isinstance(again, str)
+    second = images.attach(again, tmp_path / "imgs", "f-2")
+    assert first != second
+    for line, folder in ((first[0], "f-1"), (second[0], "f-2")):
+        name = line.rsplit("/", 1)[1].rstrip(")")
+        assert (tmp_path / "imgs" / folder / name).read_bytes() == b"\x89PNG"
 
 
 @pytest.mark.parametrize(

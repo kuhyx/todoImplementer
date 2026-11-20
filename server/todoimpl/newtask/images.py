@@ -46,15 +46,26 @@ def label(name: str) -> str:
     return text or "file"
 
 
+def _link_or_copy(source: Path, target: Path) -> None:
+    """Hard-link `source` to `target` (no second copy of the bytes); copy when they sit on two filesystems."""
+    try:
+        os.link(source, target)
+    except OSError:
+        shutil.copyfile(source, target)
+
+
 def attach(files: Sequence[Staged], base: Path, folder: str) -> tuple[str, ...]:
-    """Move staged files to `<base>/<folder>/<uuid>.<ext>`; answer `![](url)` or `[name](url)` for each."""
+    """Link (else copy) staged files to `<base>/<folder>/<uuid>.<ext>`; answer `![](url)` or `[name](url)` for each.
+
+    The staged file stays for the 24 h sweep: the board's + sends one task per picked repo with the same upload ids,
+    so kuhy's phone uploads each file once (T2397).
+    """
     lines = []
     for staged in files:
         ext = extension_of(staged.name)
         file = f"{uuid.uuid4()}.{ext}"
         (base / folder).mkdir(parents=True, exist_ok=True)
-        shutil.move(staged.path, base / folder / file)
-        shutil.rmtree(staged.path.parent, ignore_errors=True)
+        _link_or_copy(staged.path, base / folder / file)
         url = f"{URL}/{folder}/{file}"
         lines.append(f"![]({url})" if ext in INLINE else f"[{label(staged.name)}]({url})")
     return tuple(lines)

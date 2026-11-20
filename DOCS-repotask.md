@@ -152,8 +152,8 @@ board repo, several at once; a typed `owner/name` filters the chips and Enter ad
 it folds to one row of the picks; a click opens it again. Step two is one description box (18 rows) whose first line
 is the title (`splitNote`; a first line over 200 characters keeps the whole text as the body). Then one row: attach,
 camera, the attachments, close and OK. OK sends one task per picked repo; none and all send one repo-less note that
-triage routes (`DOCS-triage.md`). A sent repo leaves the picks, so a retry after a refusal sends nothing twice; each
-repo uploads its own copy of the files, because the server moves them into that task. Files: any (picker with no
+triage routes (`DOCS-triage.md`). A sent repo leaves the picks, so a retry after a refusal sends nothing twice. Each
+file uploads once: the server hard-links (else copies) it into each task and the 24 h sweep drops it (T2397). Files: any (picker with no
 type filter, multi-select; a camera picker on touch devices; Ctrl+V; drag and drop). Images show as thumbnails, other files as a file icon and their name; each has a remove button. Caps: 100 MB
 per file, 500 MB per task, refused by name before upload (and again by the server). On Create the page sends each
 file unchanged to `POST /api/upload` (raw body, name percent-encoded in `X-Todoimpl-Name`; Origin and token checked
@@ -164,7 +164,7 @@ fills the visible viewport (`visualViewport`), the description grows with its te
 Code: `http/newtask.py`, `newtask/service.py`, `newtask/images.py`.
 
 1. A title an open section of that repo already has is refused (`conflict`): two parts nobody could tell apart.
-2. The files go to a fresh uuid4 folder: relay pictures as `<n>.jpg`, uploads moved byte-identical to
+2. The files go to a fresh uuid4 folder: relay pictures as `<n>.jpg`, uploads hard-linked (else copied) byte-identical to
    `<uuid4>.<ext>` (ext lower-cased, `bin` when unusable, the todo app's own rule) (root `$TODOIMPL_IMAGES_ROOT`, default
    `~/data/cloud/todo-images`, which dufs serves as `https://kuhy-cloud.duckdns.org/todo-images/`), written atomically.
 3. `add_task` appends `## title` with the details and one link per file, `![](<dufs url>)` for an image and

@@ -66,7 +66,7 @@ describe("ti-new-task repo chooser", () => {
     typed.dispatchEvent(new KeyboardEvent("keydown", { bubbles: true, key: "a" }));
   });
 
-  it("sends one task per picked repo, titled by the first line, with each its own upload of the image", async () => {
+  it("[T2397] sends one task per picked repo, titled by the first line, the image uploaded once", async () => {
     let up = 0;
     const element = mount({ [`POST ${routes.ownTask}`]: OK, [`POST ${routes.upload}`]: () => UP(ids[up++] ?? "") });
     const created = vi.fn();
@@ -78,8 +78,9 @@ describe("ti-new-task repo chooser", () => {
     await settle(0);
     expect(sentBodies()).toEqual([
       { body: "more\nlines [Image #1]", images: [{ upload: ids[0] }], repo: "kuhyx/demo", title: "Fix it" },
-      { body: "more\nlines [Image #1]", images: [{ upload: ids[1] }], repo: "kuhyx/other", title: "Fix it" },
+      { body: "more\nlines [Image #1]", images: [{ upload: ids[0] }], repo: "kuhyx/other", title: "Fix it" },
     ]);
+    expect(up).toBe(1);
     expect(created).toHaveBeenCalledOnce();
     expect(panel(element).hidden).toBe(true);
     q<HTMLButtonElement>(element, "[data-new-task=open]").click();
