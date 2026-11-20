@@ -18,7 +18,7 @@ from todoimpl.runner.pipeline import WORK_STAGES, CancelledError, LimitHitError
 from todoimpl.runner.restart import INTERRUPTED, resume_ship
 from todoimpl.todo_mcp.model import TodoError
 
-from . import archived, bounce, issues, note
+from . import archived, bounce, issues, note, sched
 from . import store as ustore
 from .children import Pool, Ticker
 from .rounds import run_round
@@ -154,6 +154,9 @@ class Umbrella:
         d = self.d
         shipping = d.state.stage == "shipping"
         retry_failed = bool(d.state.extra.pop("retry_children", False))
+        if notes := d.ctx.inbox():  # every drive empties the inbox, or the Scheduler requeues it (T2397)
+            sched.forward(self.run_dir, [c for c, k in self.kids.items() if not k.done], notes)
+            retry_failed = True
         self.sync()
         self._drop()
         try:

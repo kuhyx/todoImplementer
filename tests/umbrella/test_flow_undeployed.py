@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from runnerfakes import Env, FakeClient, executable, sh
 from tierfakes import Free
 from todoimpl.board import state as store
 from todoimpl.runner.scheduler import Scheduler
 from todoimpl.umbrella import bounce
+from todoimpl.umbrella import sched as sched_
 from todoimpl.umbrella.store import child_dir
 from umbrellarig import CARD, LIVE, NOTE, at_rest, boot, manager
 
@@ -152,3 +155,32 @@ def test_t1968_a_child_whose_push_landed_goes_on_to_its_deploy_after_a_restart(
     finally:
         again.close()
     assert (_count(world, "pushes"), "- [x] kuhyx/alpha" in client.tasks[NOTE].body) == (1, True)
+
+
+def test_t2397_a_note_sent_to_a_failed_umbrella_retries_its_children_and_never_loops(
+    world: Env, free: Free, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    sched, client = _failing_deploy(world, monkeypatch)
+    try:
+        sched.start(CARD)
+        at_rest(world, sched, "failed")
+        monkeypatch.setenv("DEPLOY_EXIT", "0")
+        sched.send(CARD, "Can you fix the child please?")  # used to requeue the drive every 2 s for ever
+        at_rest(world, sched, "shipped")
+    finally:
+        sched.close()
+    assert not (world.root / CARD / "inbox.json").exists()  # the drive took the note
+    child = store.load(world.root / CARD / "children" / KEY)
+    assert child is not None
+    assert "Can you fix the child please?" in child.extra["notes"]
+    assert "- [x] kuhyx/alpha" in client.tasks[NOTE].body
+
+
+def test_t2397_a_note_skips_a_child_that_never_started(tmp_path: Path) -> None:
+    started = store.RunState(task_id="u-1", stage="failed")
+    store.save(child_dir(tmp_path, "u-1"), started)
+    sched_.forward(tmp_path, ["u-1", "u-2"], ["fix it"])  # u-2 has no state yet: nothing to hand on
+    child = store.load(child_dir(tmp_path, "u-1"))
+    assert child is not None
+    assert child.extra["notes"] == ["fix it"]
+    assert store.load(child_dir(tmp_path, "u-2")) is None
