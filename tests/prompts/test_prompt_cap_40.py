@@ -1,4 +1,4 @@
-"""A Bash call ends at 40 s and every wait slice is 40 s, so a capped call plus the model's answer fits in 60 s (T2453)."""
+"""A Bash call and every wait slice end at 40 s: a capped call plus the answer fits in 60 s (T2453)."""
 
 import json
 

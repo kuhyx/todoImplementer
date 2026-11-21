@@ -1,6 +1,5 @@
 """Every turn streams partial messages, so a long answer writes stream lines as it goes (T2452)."""
 
-import json
 from pathlib import Path
 
 import pytest
@@ -15,7 +14,7 @@ def test_t2452_every_turn_streams_partial_messages(world: Env, tmp_path: Path) -
     assert argv[argv.index("--verbose") + 1] == "--include-partial-messages"
 
 
-def test_t2452_the_sdk_route_streams_partial_messages_too(world: Env, capsys: pytest.CaptureFixture[str]) -> None:
+def test_t2452_the_sdk_route_streams_them_too(world: Env, capsys: pytest.CaptureFixture[str]) -> None:
     world.script("abcd1234", {"_fake": "result", "text": "ok"})
     assert sdkturn.main([spec(world)]) == 0
     capsys.readouterr()
