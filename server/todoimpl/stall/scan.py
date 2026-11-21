@@ -117,7 +117,7 @@ def workers(run_dir: Path) -> float | None:
 
     A cheap-tier manager waits on its workers in the background; the free model prints its answer only at
     the end, so the manager's quiet is the worker's time. A worker is live while its pid file names a process.
-    A worker's end (its exit file) is activity too: the manager's quiet counts from it, not from before (T2468).
+    A worker's end (its exit file) is activity too: the manager's quiet counts from it (T2468).
     """
     ends: list[float] = []
     for exit_file in [*run_dir.glob(f"worker*.log{EXIT}"), *run_dir.glob(f"children/*/worker*.log{EXIT}")]:
