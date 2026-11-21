@@ -34,3 +34,14 @@ def test_t2426_a_non_image_or_bad_base64_is_refused(fake: FakeRtdb, router: Rout
 def test_t2426_more_than_eight_images_are_fine() -> None:
     refs = noteimages.parse([{"upload": f"{i:032x}"} for i in range(40)])
     assert len(refs) == 40
+
+
+def test_t2446_an_image_over_one_staging_chunk_is_staged_intact(fake: FakeRtdb, router: Router) -> None:
+    # A 107 KB phone screenshot came back as its first 64 KiB followed by its start again: every staging read
+    # returned the first n bytes. Each chunk now continues where the last one stopped.
+    data = PNG + bytes(range(256)) * ((uploads.CHUNK * 2) // 256)
+    body = {"data_b64": base64.b64encode(data).decode()}
+    [result] = answer(fake, board_handlers(router), [req("image_upload", body)])
+    claimed = uploads.claim([result["data"]["upload"]["id"]], uploads.root())
+    assert not isinstance(claimed, str)
+    assert claimed[0].path.read_bytes() == data

@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import binascii
+import io
 from typing import Any
 
 from rtdb_relay.server import RequestError
@@ -23,7 +24,8 @@ def _stage(data: bytes) -> dict[str, Any]:
         raise RequestError(code="bad_request", message="not a png, jpeg, webp or gif image")
     if len(data) > noteimages.MAX_INLINE:
         raise RequestError(code="bad_request", message=f"image over {noteimages.MAX_INLINE // uploads.MB} MB")
-    staged = uploads.stage(lambda n: data[:n], len(data), f"image.{ext}", uploads.root())
+    # A stream: each 64 KiB read continues where the last stopped (T2446: `data[:n]` restarted each one).
+    staged = uploads.stage(io.BytesIO(data).read, len(data), f"image.{ext}", uploads.root())
     return {"data": {"upload": {"id": staged.id, "name": staged.name, "size": staged.size}}}
 
 
