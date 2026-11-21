@@ -1,4 +1,4 @@
-"""T2447: on a card with several parts each criterion names its part; Ship closes a part on its own rows."""
+"""T2452: on a card with several parts each criterion names its part; Ship closes a part on its own rows."""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ def _item(*keys: str) -> Item:
     return Item("deadbeef", 0, "demo", "b", "kuhyx/demo", "todo", None, "kuhy", parts=tuple(map(part, keys)))
 
 
-def test_t2447_live_rows_and_plan_criteria_carry_the_part_key() -> None:
+def test_t2452_live_rows_and_plan_criteria_carry_the_part_key() -> None:
     rows = parse_live("- [x] C1 [aaaa1111-0]: ran -> saw\n- [ ] **C2 [bbbb2222-0]**: no\n- [x] C3: plain")
     assert [(r["criterion"], r["part"], r["done"], r["note"]) for r in rows] == [
         ("C1", "aaaa1111-0", True, "ran -> saw"),
@@ -39,7 +39,7 @@ def test_t2447_live_rows_and_plan_criteria_carry_the_part_key() -> None:
     assert kuhy_ids(parse_criteria(plan)) == ["C2"]
 
 
-def test_t2447_only_a_card_with_several_parts_asks_for_keyed_criteria(tmp_path: Path) -> None:
+def test_t2452_only_a_card_with_several_parts_asks_for_keyed_criteria(tmp_path: Path) -> None:
     assert TAG in prompt.addendum(_item("aaaa1111-0", "bbbb2222-0"), tmp_path)
     assert TAG not in prompt.addendum(_item("aaaa1111-0"), tmp_path)
     parts = (part("aaaa1111-0"), part("bbbb2222-0", human=True))
@@ -48,7 +48,7 @@ def test_t2447_only_a_card_with_several_parts_asks_for_keyed_criteria(tmp_path: 
     assert TAG not in prompt.addendum(lone, tmp_path)
 
 
-def test_t2447_each_part_keeps_only_its_own_live_rows() -> None:
+def test_t2452_each_part_keeps_only_its_own_live_rows() -> None:
     rows = live_summary("- [x] C1 [a-0]: saw a\n- [x] C2 [b-0]: saw b")
     text = f"Shipped abc.\n{rows}\ntests `t` exit 0:"
     assert "live C1 [a-0]: done (saw a)" in text
@@ -73,7 +73,7 @@ def _note(rig: Rig, id8: str) -> FakeNote:
     return next(n for key, n in rig.fake.store.notes.items() if key.startswith(id8))
 
 
-def test_t2447_ship_refuses_a_ticked_part_no_passed_criterion_names(rig: Rig) -> None:
+def test_t2452_ship_refuses_a_ticked_part_no_passed_criterion_names(rig: Rig) -> None:
     card, first, second = _ship(rig, "- [x] C1 [{a}]: saw alpha\n- [~] C2 [{b}]: needs phone: x\n\nD: done")
     failed = rig.wait(card, {"failed"})
     assert f"{second}-0" in str(failed.error)
@@ -83,7 +83,7 @@ def test_t2447_ship_refuses_a_ticked_part_no_passed_criterion_names(rig: Rig) ->
     assert _note(rig, second).status != "done"
 
 
-def test_t2447_each_closed_note_holds_only_its_own_evidence(rig: Rig) -> None:
+def test_t2452_each_closed_note_holds_only_its_own_evidence(rig: Rig) -> None:
     card, first, second = _ship(rig, "- [x] C1 [{a}]: saw alpha\n- [x] C2 [{b}]: saw gamma\n\nD: done")
     rig.wait(card, {"shipped"})
     text_a = _note(rig, first).text

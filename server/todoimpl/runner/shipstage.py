@@ -66,7 +66,7 @@ def _heal(d: Driver, failed: GateRedError | NoDeployLineError | DeployFailedErro
 
 
 def _check_parts(d: Driver, report: str) -> None:
-    """Refuse a ship that closes no part, or a ticked part no passed live row names (T2447)."""
+    """Refuse a ship that closes no part, or a ticked part no passed live row names (T2452)."""
     if not d.item.parts:  # a plain card: nothing to tick
         return
     if not files.ticked(d.ctx.run_dir, d.item):

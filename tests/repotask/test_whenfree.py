@@ -6,7 +6,7 @@ import time
 from typing import TYPE_CHECKING
 
 import pytest
-from repofakes import IMPL, LIVE, PLAN, Rig, live_for
+from repofakes import IMPL, PLAN, Rig, live_for
 from test_flow import NUDGED, seed, tick_before_start
 from todoimpl.board import state as store
 from todoimpl.runner import whenfree
