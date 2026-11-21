@@ -105,6 +105,14 @@ describe("renderBoard", () => {
     expect(root.querySelector('.tab[aria-current="true"]')?.textContent).toContain("Needs you");
   });
 
+  it("[T2461] Recently updated draws one flat list per column, named newest first", () => {
+    const state = { ...DEFAULT_STATE, sort: "updated" as const };
+    const root = mount(renderBoard(buildView(board, state), state, NOW, handlers()));
+    expect(root.querySelector(".group-name")).toBeNull();
+    expect(root.querySelector('.col[data-col="needs_you"] .group')?.getAttribute("aria-label")).toBe("Newest first");
+    expect(root.querySelector('.col[data-col="needs_you"] .card-meta')?.textContent).toMatch(/ · /v);
+  });
+
   it("reports clicks on cards and tabs", () => {
     const h = handlers();
     const root = mount(renderBoard(buildView(board, DEFAULT_STATE), DEFAULT_STATE, NOW, h));

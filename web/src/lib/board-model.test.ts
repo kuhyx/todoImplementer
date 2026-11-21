@@ -33,6 +33,17 @@ describe("buildView", () => {
     expect(backlog(buildView({ ...board, tasks }, DEFAULT_STATE))?.groups).toEqual([]);
   });
 
+  it("[T2461] Recently updated is one list per column across repos, newest first globally", () => {
+    const base = board.tasks.find((c) => c.column === "needs_you");
+    if (base === undefined) throw new Error("fixture");
+    const card = (id: string, repo: null | string, updated: number) => ({ ...base, id, repo, updated });
+    const tasks = [card("aaaaaaaa-0", "alpha", 10), card("zzzzzzzz-0", "zeta", 30), card("yyyyyyyy-0", null, 20)];
+    const needsYou = buildView({ ...board, tasks }, { ...DEFAULT_STATE, sort: "updated" }).find((c) => c.id === "needs_you");
+    expect(needsYou?.groups).toHaveLength(1);
+    expect(needsYou?.groups[0]?.label).toBe("");
+    expect(needsYou?.groups[0]?.cards.map((c) => c.id)).toEqual(["zzzzzzzz-0", "yyyyyyyy-0", "aaaaaaaa-0"]);
+  });
+
   it("filters by repo and by Yours", () => {
     const todo = buildView(board, { ...DEFAULT_STATE, repo: "todo" });
     expect(todo.flatMap((c) => c.groups.flatMap((g) => g.cards)).every((card) => card.repo === "todo")).toBe(true);

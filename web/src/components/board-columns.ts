@@ -21,12 +21,13 @@ function emptyText(column: ColumnView): string {
   return column.total === 0 ? "Nothing in this column." : "No note here matches the search or repo filter.";
 }
 
-/** A group with an empty label is the flat Least-effort list: no heading, the repo goes on each card. */
+/** A group with an empty label is a flat list (Least effort, Recently updated): no heading, the repo goes on each card. */
 function renderGroup(group: ColumnView["groups"][number], now: number, state: ViewState, handlers: ColumnHandlers): HTMLElement {
   const isFlat = group.label === "";
+  const flatName = state.sort === "updated" ? "Newest first" : "Easiest first";
   return h(
     "section",
-    { attrs: { "aria-label": isFlat ? "Easiest first" : group.label }, class: "group" },
+    { attrs: { "aria-label": isFlat ? flatName : group.label }, class: "group" },
     !isFlat && h("h3", { class: "group-head" }, h("span", { class: "group-name", text: group.label }), h("span", { class: "count", text: String(group.cards.length) })),
     ...group.cards.map((card) => {
       const button = renderCard(card, now, isFlat);
