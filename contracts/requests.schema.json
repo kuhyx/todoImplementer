@@ -42,8 +42,8 @@
     },
     "image_refs": {
       "type": "array",
-      "description": "Numbered images ([Image #N] is item N) for send and new_task, at most 8.",
-      "maxItems": 8,
+      "description": "Numbered images ([Image #N] is item N) for send and new_task: no real count cap (1000), the bytes are capped (T2426).",
+      "maxItems": 1000,
       "items": {"$ref": "#/$defs/image_ref"}
     },
     "image_ref": {

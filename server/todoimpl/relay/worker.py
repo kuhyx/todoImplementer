@@ -20,7 +20,7 @@ from rtdb_relay.unlock import unlock
 
 from todoimpl.version import __version__
 
-from . import bridge, connect, fcm, kinds
+from . import bridge, connect, fcm, imageupload, kinds
 from .layout import E2E, LAYOUT
 from .live import Live
 from .pinger import Pinger
@@ -77,7 +77,13 @@ def handlers(router: Router, publisher: Publisher, live: Live, notify: Handler) 
         return await live.watch(str(CURRENT.get()["dev"]), body["card"])
 
     table: dict[str, Handler] = {name: routed(kind) for name, kind in kinds.ROUTED.items()}
-    return {**table, "live_watch": watch, "snapshot_refresh": refresh, "notify_test": notify}
+    local = {
+        "live_watch": watch,
+        "snapshot_refresh": refresh,
+        "notify_test": notify,
+        "image_upload": imageupload.handle,
+    }
+    return {**table, **local}
 
 
 @dataclass(frozen=True)

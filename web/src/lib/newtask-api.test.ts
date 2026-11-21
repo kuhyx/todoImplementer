@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ownTaskRequest, ownTaskResponse, postNewTask, uploadFile, uploadResponse } from "@/lib/newtask-api";
+import { MAX_IMAGES, ownTaskRequest, ownTaskResponse, postNewTask, uploadFile, uploadResponse } from "@/lib/newtask-api";
 import { routes } from "@/lib/routes";
 import { contractValidator } from "@/test/contract-ajv";
 import { makeCards } from "@/test/fixtures";
@@ -28,7 +28,7 @@ describe("new task contract mirror", () => {
     for (const bad of [{ ...REQUEST, repo: "demo" }, { ...REQUEST, title: "a\nb" }, { ...REQUEST, title: " " }, { ...REQUEST, images: [{}] }, { ...REQUEST, extra: 1 }]) {
       expect(agree("requests", "new_task", ownTaskRequest, bad)).toEqual([false, false]);
     }
-    expect(agree("requests", "new_task", ownTaskRequest, { ...REQUEST, images: Array.from({ length: 9 }, () => ({ data_b64: "/9j/" })) })).toEqual([false, false]);
+    expect(agree("requests", "new_task", ownTaskRequest, { ...REQUEST, images: Array.from({ length: MAX_IMAGES + 1 }, () => ({ data_b64: "/9j/" })) })).toEqual([false, false]);
     expect(agree("requests", "new_task", ownTaskRequest, { ...REQUEST, files: [ID, "b".repeat(32)] })).toEqual([true, true]);
     for (const files of [["x"], [ID, ID]]) expect(agree("requests", "new_task", ownTaskRequest, { ...REQUEST, files })).toEqual([false, false]);
   });

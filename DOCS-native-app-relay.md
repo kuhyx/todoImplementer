@@ -88,6 +88,7 @@ Read kinds (lane `read`, up to 4 at once). The GET routes that a `snap` node doe
 | `umbrella`, `umbrella_log` | `GET /api/umbrella/<card>[/log/<log>]` | `{card}`, `{card, log}` | `umbrella.schema.json` |
 | `tokens` | `GET /api/tokens[<path>]?<query>` | `{path, query}` | the tokens router's body |
 | `live_watch` | `GET /api/live?id=<card>` (SSE) | `{card}` or `{card: null}` | `{}`; the feed lands in `live/{card}` |
+| `image_upload` | none (stages like `POST /api/upload`) | `{data_b64}` | `{upload: {id, name, size}}`; 40 MB req cap |
 | `snapshot_refresh` | `GET /api/board`, `/api/usage`, `/api/sessions`, `/api/merges` | `{}` | `{}`; nodes republished |
 | `notify_test` | none | `{}` | `{}`; sends one ping to the asking device |
 
@@ -98,9 +99,12 @@ A watch lasts 120 s; the app renews it every 60 s while the drawer is open and s
 ## Images (`[Image #N]`, T2320-T2322)
 
 Send to Claude and New task take numbered images through one shape: `images` = `requests.schema.json#/$defs/image_refs`,
-at most 8 `image_ref` items, item N being `[Image #N]` in the text. An item is `{upload: <id>}` (the page: POST
-`/api/upload` first, 10 MB) or `{data_b64}` (the app: inline bytes, 6 MB decoded, so relay kinds `task_send`
-`{card, args: {text, images}}` and `new_task` `{args: {..., images}}` work without an upload). The server reads the type
+any number of `image_ref` items (1000 as a sanity bound; the bytes are capped, `uploads.MAX_TASK`; kuhy 2026-11-21,
+T2426), item N being `[Image #N]` in the text. An item is `{upload: <id>}` or `{data_b64}` (inline bytes, 6 MB
+decoded). The page posts `/api/upload` first; the app sends each image alone as the relay kind `image_upload`
+`{data_b64}` (answered by the worker: staged like `/api/upload`, result `{upload: {id, name, size}}`), then
+`task_send` / `new_task` with `{upload: <id>}` items. A refused upload stops the send; a retry sends only the
+images that did not go up. The server reads the type
 from the first bytes (png, jpeg, webp, gif) and refuses anything else with the item's number
 (`newtask/noteimages.py`). Send copies each image to `<run>/inbox/<ms>-<N>.<ext>` and appends to the note
 `(runner) kuhy attached images; open each with the Read tool:` plus one `[Image #N] = <absolute path>` line each; the
@@ -110,8 +114,8 @@ image N as `<n>.<ext>` in the dufs folder under a `[Image #N]` line above its `!
 link into the local path.
 The app (T2330-T2336) offers gallery, camera and keyboard paste in both note boxes and the New task details as `#N`
 chips; the phone re-encodes picks to 1600 px JPEG, and `image_attach.dart` shrinks anything else to fit. Because the
-relay seals the whole `req` into one RTDB string (10 MB cap, about 16/9 of the bytes after two base64 passes), all
-images of one request share a 4.5 MB budget; a refusal shows as a red glyph.
+relay seals each `req` into one RTDB string (10 MB cap, about 16/9 of the bytes after two base64 passes), one image
+may be 4.5 MB; there is no count cap; a refusal shows as a red glyph.
 
 ## Results and errors
 

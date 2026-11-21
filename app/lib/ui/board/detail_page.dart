@@ -10,11 +10,11 @@ import 'dart:async';
 import 'package:design_system/design_system.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:todo_implementer/model/detail.dart';
-import 'package:todo_implementer/model/json.dart';
 import 'package:todo_implementer/sync/board_relay.dart';
 import 'package:todo_implementer/ui/board/asks_view.dart';
 import 'package:todo_implementer/ui/board/detail_tabs.dart';
 import 'package:todo_implementer/ui/board/glyphs.dart';
+import 'package:todo_implementer/ui/board/image_attach.dart';
 import 'package:todo_implementer/ui/board/live_feed.dart';
 import 'package:todo_implementer/ui/board/needs_line.dart';
 import 'package:todo_implementer/ui/board/needs_links.dart';
@@ -111,11 +111,14 @@ class _DetailPageState extends State<DetailPage> {
     await _load();
   }
 
-  Future<bool> _note(String text, List<Json> images) async {
-    final out = await widget.relay.send('task_send', {
-      'card': widget.card,
-      'args': {'text': text, if (images.isNotEmpty) 'images': images},
-    });
+  Future<bool> _note(String text, ImageAttach attach) async {
+    final (images, failed) = await attach.upload(widget.relay.send);
+    final out =
+        failed ??
+        await widget.relay.send('task_send', {
+          'card': widget.card,
+          'args': {'text': text, if (images.isNotEmpty) 'images': images},
+        });
     if (out is RelayFailed) {
       widget.onError(out);
       if (mounted) setState(() => _failure = out);

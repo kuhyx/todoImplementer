@@ -1,6 +1,7 @@
-// T2331: the app's image list for Send to Claude and New task: at most 8,
-// png/jpeg/webp/gif only, each shrunk to fit 6 MB and the relay's total
-// budget, the refusal named by its glyph, inline `{data_b64}` refs in order.
+// T2331, T2426: the app's image list for Send to Claude and New task: any
+// number, png/jpeg/webp/gif only, each shrunk to fit one relay request, the
+// refusal named by its glyph; each goes up alone as `image_upload` and the
+// task names the staged ids `{upload}` in order.
 import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -8,6 +9,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:todo_implementer/model/json.dart';
+import 'package:todo_implementer/sync/board_relay.dart';
 import 'package:todo_implementer/ui/board/image_attach.dart';
 import 'package:todo_implementer/ui/board/image_tags.dart';
 
@@ -59,17 +62,13 @@ void main() {
     );
   });
 
-  test('[T2331] eight images, each tagged; the ninth is refused', () async {
-    for (var i = 0; i < kMaxImages; i++) {
+  test('[T2426] any number of images, each tagged; no count cap', () async {
+    for (var i = 0; i < 30; i++) {
       await attach.add(png);
     }
-    expect(attach.images, hasLength(8));
+    expect(attach.images, hasLength(30));
     expect(attach.problem, isNull);
-    expect(text.text, contains('[Image #8]'));
-    await attach.add(png);
-    expect(attach.images, hasLength(8));
-    expect(attach.problem, ImageProblem.count);
-    expect(text.text, isNot(contains('[Image #9]')));
+    expect(text.text, contains('[Image #30]'));
   });
 
   test('[T2331] a HEIC or other non-image is refused untouched', () async {
@@ -80,46 +79,64 @@ void main() {
     expect(rooms, isEmpty);
   });
 
-  test('[T2331] each image is shrunk to the room it has left', () async {
+  test('[T2426] each image is shrunk to fit one relay request', () async {
     await attach.add(png);
-    // The relay's total budget is below the server's 6 MB per image.
-    expect(kMaxTotalBytes, lessThan(kMaxImageBytes));
-    expect(rooms.single, kMaxTotalBytes);
-    final p = png.length;
-    final big = Uint8List.fromList([
-      ...png,
-      ...List.filled(kMaxTotalBytes - 3 * p, 0),
-    ]);
-    await attach.add(big);
-    expect(rooms.last, kMaxTotalBytes - p);
     await attach.add(png);
-    expect(rooms.last, p);
-    expect(attach.images, hasLength(3));
-    await attach.add(png);
-    expect(attach.problem, ImageProblem.size);
-    expect(attach.images, hasLength(3));
+    expect(rooms, [kMaxImageBytes, kMaxImageBytes]);
     final refused = ImageAttach(text, shrink: (_, _) async => null);
     await refused.add(png);
     expect(refused.problem, ImageProblem.size);
     expect(refused.images, isEmpty);
   });
 
-  test('[T2331] remove renumbers; refs are inline base64 in order', () async {
-    final other = Uint8List.fromList([...png, 1]);
-    await attach.add(png);
-    await attach.add(other);
-    await attach.add(png);
-    attach.remove(0);
-    expect(text.text, '[Image #1] [Image #2] ');
-    expect(attach.refs, [
-      {'data_b64': base64Encode(other)},
-      {'data_b64': base64Encode(png)},
-    ]);
-    await attach.add(heic);
-    attach.clear();
-    expect(attach.images, isEmpty);
-    expect(attach.problem, isNull);
-  });
+  test(
+    '[T2426] remove renumbers; each image goes up once, refs in order',
+    () async {
+      final other = Uint8List.fromList([...png, 1]);
+      await attach.add(png);
+      await attach.add(other);
+      await attach.add(png);
+      attach.remove(0);
+      expect(text.text, '[Image #1] [Image #2] ');
+      final sent = <Json>[];
+      var fail = true;
+      Future<RelayOutcome> send(String kind, Json body) async {
+        expect(kind, 'image_upload');
+        sent.add(body);
+        if (sent.length == 2 && fail) {
+          fail = false;
+          return const RelayFailed(code: 'offline', error: 'x', retry: true);
+        }
+        return RelayOk({
+          'upload': {'id': 'id${sent.length}'},
+        });
+      }
+
+      final (_, failed) = await attach.upload(send);
+      expect(failed?.code, 'offline');
+      final (refs, ok) = await attach.upload(
+        send,
+      ); // the first is not sent twice
+      expect(ok, isNull);
+      expect(sent, [
+        {'data_b64': base64Encode(other)},
+        {'data_b64': base64Encode(png)},
+        {'data_b64': base64Encode(png)},
+      ]);
+      expect(refs, [
+        {'upload': 'id1'},
+        {'upload': 'id3'},
+      ]);
+      final noId = ImageAttach(text, shrink: (b, _) async => b);
+      await noId.add(png);
+      final (_, bad) = await noId.upload((_, _) async => const RelayOk({}));
+      expect(bad?.code, 'internal');
+      await attach.add(heic);
+      attach.clear();
+      expect(attach.images, isEmpty);
+      expect(attach.problem, isNull);
+    },
+  );
 
   test(
     '[T2331] a pasted image is added; an unreadable paste is named',

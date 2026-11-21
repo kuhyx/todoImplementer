@@ -115,6 +115,11 @@ class FakeRelay implements BoardRelay {
       }
     }
     await wait;
+    if (kind == 'image_upload' && !outcomes.containsKey(kind)) {
+      return RelayOk({
+        'upload': {'id': 'up-${body['data_b64']}'},
+      });
+    }
     return outcomes[kind] ?? const RelayOk({});
   }
 

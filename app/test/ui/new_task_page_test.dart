@@ -171,4 +171,26 @@ void main() {
     expect(_key('nt-repos'), findsNothing);
     expect(tester.widget<IconButton>(_key('nt-send')).onPressed, isNotNull);
   });
+
+  testWidgets('[T2425] a search box filters the repo chips; a typed owner/name '
+      'not on the board can be picked', (tester) async {
+    final relay = await _open(tester);
+    await tester.enterText(_key('nt-repo-search'), 'OTH');
+    await tester.pump();
+    expect(_key('nt-repo-kuhyx/demo'), findsNothing);
+    expect(_key('nt-repo-kuhyx/other'), findsOneWidget);
+    await tester.enterText(_key('nt-repo-search'), 'kuhyx/brand-new');
+    await tester.pump();
+    await tester.tap(_key('nt-repo-kuhyx/brand-new'));
+    await tester.pump();
+    await tester.tap(_key('nt-repos-done'));
+    await _settle(tester);
+    await tester.enterText(_key('nt-body'), 'Go');
+    await _settle(tester);
+    await tester.tap(_key('nt-send'));
+    await _settle(tester);
+    expect(_args(relay), [
+      {'repo': 'kuhyx/brand-new', 'title': 'Go'},
+    ]);
+  });
 }

@@ -45,7 +45,8 @@
     {"if": {"properties": {"kind": {"const": "umbrella_log"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/umbrella_log_body"}}}},
     {"if": {"properties": {"kind": {"const": "tokens"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/tokens_body"}}}},
     {"if": {"properties": {"kind": {"const": "live_watch"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/watch_body"}}}},
-    {"if": {"properties": {"kind": {"enum": ["snapshot_refresh", "notify_test"]}}}, "then": {"properties": {"body": {"$ref": "#/$defs/empty"}}}}
+    {"if": {"properties": {"kind": {"enum": ["snapshot_refresh", "notify_test"]}}}, "then": {"properties": {"body": {"$ref": "#/$defs/empty"}}}},
+    {"if": {"properties": {"kind": {"const": "image_upload"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/image_upload_body"}}}}
   ],
   "$defs": {
     "kind": {
@@ -56,7 +57,7 @@
         "new_task", "credits_fallback", "merge_merge", "merge_dismiss",
         "session_resume", "session_mark", "session_delete", "session_handoff",
         "task_detail", "task_issues", "task_shot", "umbrella", "umbrella_log", "tokens",
-        "live_watch", "snapshot_refresh", "notify_test"
+        "live_watch", "snapshot_refresh", "notify_test", "image_upload"
       ],
       "description": "The allowlist. Write kinds (lane act) mirror every POST route except /api/pair; read kinds (lane read) mirror the GET routes no snapshot node covers."
     },
@@ -64,6 +65,13 @@
     "rid": {"type": "string", "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$", "description": "ULID; the request key."},
     "item_id": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/item_id"},
     "empty": {"type": "object", "additionalProperties": false},
+    "image_upload_body": {
+      "type": "object",
+      "description": "One image from the app (T2426), staged like POST /api/upload; the result data is {upload: {id, name, size}} and a task names it as {upload: id}.",
+      "properties": {"data_b64": {"type": "string", "minLength": 4}},
+      "required": ["data_b64"],
+      "additionalProperties": false
+    },
     "card_args": {
       "type": "object",
       "description": "POST /api/task/<card>/<action> and .../ask/<verb>: args is that route's body; the per-kind allOf entry pins it to the requests.schema.json $def of the same name.",

@@ -37,9 +37,9 @@ def test_t2322_send_takes_inline_bytes_and_a_body_over_256_kb(live: Live) -> Non
 @pytest.mark.parametrize(
     ("images", "why"),
     [
-        ({}, "images must be a list of at most 8"),
+        ({}, "images must be a list of at most 1000"),
         ([{"upload": ID1}] * 2, "image 2 repeats an upload"),
-        ([{"upload": f"{i:032x}"} for i in range(9)], "images must be a list of at most 8"),
+        ([{"upload": f"{i:032x}"} for i in range(1001)], "images must be a list of at most 1000"),
         (["x"], "image 1 must be {upload} or {data_b64}"),
         ([{"upload": "../x"}], "image 1 must be {upload} or {data_b64}"),
         ([{"upload": ID1, "data_b64": b64(PNG)}], "image 1 must be {upload} or {data_b64}"),
@@ -58,7 +58,7 @@ def test_t2320_bad_images_are_400_and_send_nothing(live: Live, images: Any, why:
 
 @pytest.mark.parametrize(
     "images",
-    [[{"upload": ID1}] * 9, [{"upload": "nope"}], [{"upload": ID1, "x": 1}], [{}], "x"],
+    [[{"upload": ID1}] * 1001, [{"upload": "nope"}], [{"upload": ID1, "x": 1}], [{}], "x"],
 )
 def test_t2320_the_contract_refuses_what_the_server_refuses(images: Any) -> None:
     with pytest.raises(ValidationError):

@@ -50,6 +50,7 @@ def _shape(kind: str) -> tuple[frozenset[str], dict[str, Any]]:
         "live_watch": (frozenset({"card"}), {"card": lambda v: v is None or _text(v, CARD_ID)}),
         "snapshot_refresh": (frozenset(), {}),
         "notify_test": (frozenset(), {}),
+        "image_upload": (frozenset({"data_b64"}), {"data_b64": lambda v: isinstance(v, str) and len(v) > 0}),
     }
     shapes["merge_dismiss"] = shapes["merge_merge"]
     return shapes.get(kind, (frozenset({"args"}), {}))  # new_task, credits_fallback, session_*

@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 MAX_IMAGE = 10 * uploads.MB
 MAX_INLINE = 6 * uploads.MB  # 8 of them as base64 fit the 40 MB new-task body
-MAX_IMAGES = 8
+MAX_IMAGES = 1000  # no real cap (kuhy, 2026-11-21): the bytes are capped, uploads.MAX_TASK (T2426)
 KINDS = ((b"\x89PNG\r\n\x1a\n", "png"), (b"\xff\xd8\xff", "jpg"), (b"GIF87a", "gif"), (b"GIF89a", "gif"))
 NOT_IMAGE = "is not a PNG, JPEG, WebP or GIF"
 LEGEND = "(runner) kuhy attached images; open each with the Read tool:"

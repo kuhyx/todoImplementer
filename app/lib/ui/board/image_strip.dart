@@ -23,8 +23,11 @@ enum PickFrom {
 /// Picks up to [room] images from [from]; empty when kuhy cancels.
 typedef PickImages = Future<List<Uint8List>> Function(PickFrom from, int room);
 
+/// The room the strip asks for: no limit (T2426).
+const int kPickAll = 0;
+
 // Long side and JPEG quality the platform re-encodes to: a phone photo
-// lands near 0.5 MB, so eight fit the relay's total budget.
+// lands near 0.5 MB, well inside one image_upload request.
 const double _side = 1600;
 const int _quality = 80;
 
@@ -32,7 +35,7 @@ const int _quality = 80;
 /// phone; read as bytes so the web build works too.
 Future<List<Uint8List>> pickImages(PickFrom from, int room) async {
   final picker = ImagePicker();
-  final files = from == PickFrom.camera || room < 2
+  final files = from == PickFrom.camera || room == 1
       ? [
           ?await picker.pickImage(
             source: from == PickFrom.camera
@@ -47,7 +50,7 @@ Future<List<Uint8List>> pickImages(PickFrom from, int room) async {
           maxWidth: _side,
           maxHeight: _side,
           imageQuality: _quality,
-          limit: room,
+          limit: room < 2 ? null : room, // 0: as many as kuhy picks
         );
   return [for (final f in files) await f.readAsBytes()];
 }
@@ -65,7 +68,6 @@ PickImages imagePicker = pickImages;
     Icons.photo_size_select_large,
     'Too large for this message, even shrunk',
   ),
-  ImageProblem.count => (Icons.filter_9_plus, 'At most $kMaxImages images'),
   ImageProblem.unavailable => (
     Icons.no_photography_outlined,
     'The picker or camera gave no image',
@@ -109,8 +111,7 @@ class _ImageStripState extends State<ImageStrip> {
     final attach = widget.attach;
     setState(() => _busy = true);
     try {
-      final room = kMaxImages - attach.images.length;
-      for (final bytes in await imagePicker(from, room)) {
+      for (final bytes in await imagePicker(from, kPickAll)) {
         await attach.add(bytes);
       }
     } on PlatformException {
@@ -123,9 +124,7 @@ class _ImageStripState extends State<ImageStrip> {
   Widget _button(PickFrom from, IconData icon, String spoken) => IconButton(
     key: Key('${widget.prefix}-${from.name}'),
     icon: Icon(icon, semanticLabel: spoken),
-    onPressed: _busy || widget.attach.images.length >= kMaxImages
-        ? null
-        : () => _pick(from),
+    onPressed: _busy ? null : () => _pick(from),
   );
 
   // A chip drawn by hand: InputChip asserts when its avatar is taller than

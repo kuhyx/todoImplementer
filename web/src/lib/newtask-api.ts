@@ -7,7 +7,7 @@ import { apiError, type TaskCard, taskCard } from "@/lib/schemas-common";
 
 export const MAX_TITLE = 200;
 export const MAX_BODY = 20_000;
-export const MAX_IMAGES = 8;
+export const MAX_IMAGES = 1000; // no real cap: the bytes are capped (T2426)
 const MB = 1024 * 1024;
 export const MAX_FILE = 100 * MB;
 export const MAX_TOTAL = 500 * MB;

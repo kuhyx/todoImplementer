@@ -2,6 +2,8 @@
 /// all of the board's repos, or some. Open it shows glyph chips for none and
 /// all and one chip per repo (repo names are kuhy's own words); once a
 /// choice is made it folds to one row, and a tap on that row opens it again.
+/// A search box filters the chips (the board lists every GitHub repo, T2410);
+/// a typed `owner/name` that is not listed gets a chip of its own (T2425).
 library;
 
 import 'package:design_system/design_system.dart';
@@ -19,8 +21,8 @@ enum RepoScope {
   some,
 }
 
-/// The chooser, open or folded; the sheet owns the state.
-class RepoChooser extends StatelessWidget {
+/// The chooser, open or folded; the sheet owns the choice, this the search.
+class RepoChooser extends StatefulWidget {
   /// Creates the chooser.
   const new({
     required this.repos,
@@ -58,19 +60,53 @@ class RepoChooser extends StatelessWidget {
   /// Opens the folded row again.
   final VoidCallback onOpen;
 
+  @override
+  State<RepoChooser> createState() => _RepoChooserState();
+}
+
+final RegExp _ownerName = RegExp(r'^[\w.-]+/[\w.-]+$');
+
+/// The repos that match [query] (case-insensitive, any part of the name),
+/// picked ones always kept, plus a typed `owner/name` not listed yet.
+List<String> matchingRepos(
+  List<String> repos,
+  Set<String> picked,
+  String query,
+) {
+  final q = query.trim().toLowerCase();
+  final shown = [
+    for (final r in {...repos, ...picked})
+      if (q.isEmpty || r.toLowerCase().contains(q) || picked.contains(r)) r,
+  ];
+  final typed = query.trim();
+  if (_ownerName.hasMatch(typed) && !shown.contains(typed)) shown.add(typed);
+  return shown;
+}
+
+class _RepoChooserState extends State<RepoChooser> {
+  final TextEditingController _search = TextEditingController();
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  RepoChooser get w => widget;
+
   static String _short(String repo) => repo.split('/').last;
 
   Widget _scopeChip(RepoScope s, IconData icon, String spoken) => ChoiceChip(
     key: Key('nt-repo-${s.name}'),
-    selected: scope == s,
+    selected: w.scope == s,
     showCheckmark: false,
     label: Icon(icon, semanticLabel: spoken, size: AppSpacing.md),
-    onSelected: (_) => onScope(s),
+    onSelected: (_) => w.onScope(s),
   );
 
   Widget _folded() => InkWell(
     key: const Key('nt-repos-folded'),
-    onTap: onOpen,
+    onTap: w.onOpen,
     child: Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       child: Row(
@@ -78,7 +114,7 @@ class RepoChooser extends StatelessWidget {
           const Icon(Icons.folder_outlined, semanticLabel: 'Repos'),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
-            child: switch (scope) {
+            child: switch (w.scope) {
               RepoScope.none => const Align(
                 alignment: Alignment.centerLeft,
                 child: Icon(Icons.block, semanticLabel: 'No repo'),
@@ -88,7 +124,7 @@ class RepoChooser extends StatelessWidget {
                 child: Icon(Icons.select_all, semanticLabel: 'All repos'),
               ),
               _ => Text(
-                picked.map(_short).join(', '),
+                w.picked.map(_short).join(', '),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -102,38 +138,56 @@ class RepoChooser extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!open) return _folded();
+    if (!w.open) return _folded();
+    final picked = w.scope == RepoScope.some ? w.picked : const <String>{};
+    final shown = matchingRepos(w.repos, picked, _search.text);
     return Row(
       key: const Key('nt-repos'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxHeight: 200),
-            child: SingleChildScrollView(
-              child: Wrap(
-                spacing: AppSpacing.xs,
-                runSpacing: AppSpacing.xs,
-                children: [
-                  _scopeChip(RepoScope.none, Icons.block, 'No repo'),
-                  _scopeChip(RepoScope.all, Icons.select_all, 'All repos'),
-                  for (final r in repos)
-                    FilterChip(
-                      key: Key('nt-repo-$r'),
-                      selected: scope == RepoScope.some && picked.contains(r),
-                      label: Text(_short(r)),
-                      onSelected: (_) => onToggle(r),
-                    ),
-                ],
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                key: const Key('nt-repo-search'),
+                controller: _search,
+                autocorrect: false,
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.search, semanticLabel: 'Find repo'),
+                  isDense: true,
+                ),
+                onChanged: (_) => setState(() {}),
               ),
-            ),
+              const SizedBox(height: AppSpacing.xs),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 200),
+                child: SingleChildScrollView(
+                  child: Wrap(
+                    spacing: AppSpacing.xs,
+                    runSpacing: AppSpacing.xs,
+                    children: [
+                      _scopeChip(RepoScope.none, Icons.block, 'No repo'),
+                      _scopeChip(RepoScope.all, Icons.select_all, 'All repos'),
+                      for (final r in shown)
+                        FilterChip(
+                          key: Key('nt-repo-$r'),
+                          selected: picked.contains(r),
+                          label: Text(w.repos.contains(r) ? _short(r) : r),
+                          onSelected: (_) => w.onToggle(r),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
         IconButton(
           key: const Key('nt-repos-done'),
           icon: const Icon(Icons.check, semanticLabel: 'Done'),
-          onPressed: scope == RepoScope.some && picked.isNotEmpty
-              ? onFold
+          onPressed: w.scope == RepoScope.some && w.picked.isNotEmpty
+              ? w.onFold
               : null,
         ),
       ],

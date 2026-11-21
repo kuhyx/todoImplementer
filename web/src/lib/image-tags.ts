@@ -2,7 +2,7 @@
 export const IMAGE_TYPES: readonly string[] = ["image/png", "image/jpeg", "image/webp", "image/gif"];
 const MB = 1024 * 1024;
 export const MAX_IMAGE = 10 * MB;
-export const MAX_IMAGES = 8;
+export const MAX_IMAGES = 1000; // no real cap: the bytes are capped (T2426)
 const TAG = /\[Image #(\d+)\]( ?)/gv;
 
 /** Why `file` cannot be image number `count + 1`, or null when it can. */

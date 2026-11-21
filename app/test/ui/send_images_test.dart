@@ -1,6 +1,7 @@
 // T2332-T2336: the note box (drawer page and card sheet) and the new-task
 // sheet take images from the gallery, the camera or a paste as #N chips
-// that put `[Image #N]` at the caret, and send them as inline `{data_b64}`.
+// that put `[Image #N]` at the caret; each goes up as `image_upload` and the
+// send names it `{upload}` (T2426).
 import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -27,7 +28,7 @@ final Uint8List _heic = Uint8List.fromList([
   24,
   ...'ftypheic'.codeUnits,
 ]);
-Json _ref(Uint8List b) => {'data_b64': base64Encode(b)};
+Json _ref(Uint8List b) => {'upload': 'up-${base64Encode(b)}'};
 
 /// Swaps the platform picker for one that answers [out] and records calls.
 List<(PickFrom, int)> _fakePicker(List<Uint8List> Function() out) {
@@ -80,7 +81,7 @@ void main() {
     final relay = await pumpDetail(tester, detail: _sendDetail());
     await seek(tester, _key('detail-gallery'), 300);
     await hit(tester, _key('detail-gallery'));
-    expect(calls.single, (PickFrom.gallery, 8));
+    expect(calls.single, (PickFrom.gallery, kPickAll));
     expect(_chip('detail', 2), findsOneWidget);
     final box = _key('detail-send-text');
     expect(
@@ -130,10 +131,10 @@ void main() {
     await settle(tester);
     await tester.enterText(_key('send-text'), 'see');
     await _tap(tester, _key('sheet-camera'));
-    expect(calls.single, (PickFrom.camera, 8));
+    expect(calls.single, (PickFrom.camera, kPickAll));
     expect(_chip('sheet', 1), findsOneWidget);
     await _tap(tester, find.byKey(const ValueKey('action-send')));
-    expect(relay.sent.single.$2, {
+    expect(relay.sent.lastWhere((s) => s.$1 != 'image_upload').$2, {
       'card': 'c1',
       'args': {
         'text': 'see [Image #1]',
@@ -154,7 +155,7 @@ void main() {
     await tester.enterText(_key('nt-body'), 'Logo\nlike this');
     await _tap(tester, _key('nt-gallery'));
     await _tap(tester, _key('nt-send'));
-    expect(relay.sent.single.$2, {
+    expect(relay.sent.lastWhere((s) => s.$1 != 'image_upload').$2, {
       'args': {
         'repo': 'kuhyx/demo',
         'title': 'Logo',

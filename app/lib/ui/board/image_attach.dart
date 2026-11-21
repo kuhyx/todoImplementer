@@ -1,11 +1,11 @@
 /// The images of one text box (Send to Claude or New task details): each
-/// is checked, shrunk to fit and tagged `[Image #N]` at the caret, then sent
-/// inline as `{data_b64}` (DOCS-native-app-relay.md, "Images").
+/// is checked, shrunk to fit and tagged `[Image #N]` at the caret. Before the
+/// send each image goes up alone as an `image_upload` request and the send
+/// names the staged ids `{upload}` (DOCS-native-app-relay.md, "Images").
 ///
-/// Two caps: the server takes at most 6 MB per image, and the relay seals a
-/// whole request into one RTDB string (10 MB at most; base64 twice makes it
-/// about 16/9 of the bytes), so all images of one request share
-/// [kMaxTotalBytes].
+/// No count cap (kuhy, 2026-11-21, T2426): the relay seals a request into one
+/// RTDB string (10 MB at most; base64 twice makes it about 16/9 of the
+/// bytes), so each image alone fits [kMaxImageBytes].
 library;
 
 import 'dart:async';
@@ -17,17 +17,15 @@ import 'dart:ui' as ui;
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:todo_implementer/model/json.dart';
+import 'package:todo_implementer/sync/board_relay.dart';
 import 'package:todo_implementer/ui/board/image_tags.dart';
 
-/// At most this many images per message (`image_refs` maxItems).
-const int kMaxImages = 8;
+/// One image, so its sealed `image_upload` request stays under RTDB's 10 MB
+/// string limit.
+const int kMaxImageBytes = 9 * 512 * 1024;
 
-/// The server's cap on one decoded inline image.
-const int kMaxImageBytes = 6 * 1024 * 1024;
-
-/// All images of one request together, so the sealed request stays under
-/// RTDB's 10 MB string limit.
-const int kMaxTotalBytes = 9 * 512 * 1024;
+/// Sends one relay request (the board relay's `send`).
+typedef SendKind = Future<RelayOutcome> Function(String kind, Json body);
 
 /// The MIME types a keyboard paste may hand in.
 const List<String> kImageMimes = [
@@ -42,11 +40,8 @@ enum ImageProblem {
   /// Not png, jpeg, webp or gif.
   type,
 
-  /// Still over the room left after shrinking.
+  /// Still over [kMaxImageBytes] after shrinking.
   size,
-
-  /// Already [kMaxImages].
-  count,
 
   /// The picker, camera or paste gave nothing readable.
   unavailable,
@@ -97,6 +92,7 @@ class ImageAttach extends ChangeNotifier {
   final TextEditingController text;
   final Shrink _shrink;
   final List<Uint8List> _images = [];
+  final List<String?> _ids = []; // the staged upload of each image, once sent
   ImageProblem? _problem;
   int _pending = 0;
 
@@ -109,12 +105,34 @@ class ImageAttach extends ChangeNotifier {
   /// Why the last image was refused; null after a success.
   ImageProblem? get problem => _problem;
 
-  int get _total => _images.fold(0, (sum, b) => sum + b.length);
-
-  /// The `images` argument: inline base64, in order.
-  List<Json> get refs => [
-    for (final b in _images) {'data_b64': base64Encode(b)},
-  ];
+  /// Sends each image not sent yet as `image_upload`; returns the `images`
+  /// argument (`{upload: id}` in order), or the first refusal. A retry after
+  /// a refusal sends only the images that did not go up.
+  Future<(List<Json>, RelayFailed?)> upload(SendKind send) async {
+    for (var i = 0; i < _images.length; i++) {
+      if (_ids[i] != null) continue;
+      final out = await send('image_upload', {
+        'data_b64': base64Encode(_images[i]),
+      });
+      if (out is RelayFailed) return (const <Json>[], out);
+      final staged = (out as RelayOk).data['upload'];
+      final id = staged is Map ? staged['id'] : null;
+      if (id is! String) {
+        const why = 'image_upload answered no upload id';
+        return (
+          const <Json>[],
+          const RelayFailed(code: 'internal', error: why),
+        );
+      }
+      _ids[i] = id;
+    }
+    return (
+      [
+        for (final id in _ids) {'upload': id},
+      ],
+      null,
+    );
+  }
 
   /// Accepts images a keyboard pastes into the box (Gboard's clipboard).
   ContentInsertionConfiguration get paste => ContentInsertionConfiguration(
@@ -145,12 +163,13 @@ class ImageAttach extends ChangeNotifier {
   }
 
   Future<void> _add(Uint8List bytes) async {
-    if (_images.length >= kMaxImages) return refuse(ImageProblem.count);
     if (imageType(bytes) == null) return refuse(ImageProblem.type);
-    final room = math.min(kMaxImageBytes, kMaxTotalBytes - _total);
-    final fit = room <= 0 ? null : await _shrink(bytes, room);
-    if (fit == null || fit.length > room) return refuse(ImageProblem.size);
+    final fit = await _shrink(bytes, kMaxImageBytes);
+    if (fit == null || fit.length > kMaxImageBytes) {
+      return refuse(ImageProblem.size);
+    }
     _images.add(fit);
+    _ids.add(null);
     _problem = null;
     text.value = insertTag(text.value, _images.length);
     notifyListeners();
@@ -159,6 +178,7 @@ class ImageAttach extends ChangeNotifier {
   /// Drops image [index] (0-based) and its tag; later tags renumber.
   void remove(int index) {
     _images.removeAt(index);
+    _ids.removeAt(index);
     text.text = dropTag(text.text, index + 1);
     notifyListeners();
   }
@@ -166,6 +186,7 @@ class ImageAttach extends ChangeNotifier {
   /// No images, no reason shown (after a send went out).
   void clear() {
     _images.clear();
+    _ids.clear();
     _problem = null;
     notifyListeners();
   }

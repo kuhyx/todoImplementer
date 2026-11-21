@@ -90,8 +90,10 @@ class _NewTaskSheetState extends State<NewTaskSheet> {
       _failure = null;
     });
     final (title, body) = splitNote(_body.text);
-    final images = _images.refs;
-    for (final repo in _targets()) {
+    final (images, failed) = await _images.upload(
+      (kind, b) => widget.relay.send(kind, b),
+    );
+    for (final repo in failed == null ? _targets() : const <String?>[]) {
       final out = await widget.relay.send('new_task', {
         'args': {
           'repo': ?repo,
@@ -113,6 +115,14 @@ class _NewTaskSheetState extends State<NewTaskSheet> {
       if (repo != null) {
         setState(() => _picked.remove(repo));
       }
+    }
+    if (failed != null) {
+      if (!mounted) return;
+      widget.onError(failed);
+      return setState(() {
+        _busy = false;
+        _failure = failed;
+      });
     }
     await Navigator.of(context).maybePop();
   }

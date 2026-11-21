@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 type Lane = Literal["act", "read"]
 ASK_VERBS: Final = ("answer", "take-recommended", "run", "undo", "approve", "reject")
 SESSION_VERBS: Final = ("resume", "mark", "delete", "handoff")
-LOCAL: Final = ("live_watch", "snapshot_refresh", "notify_test")  # answered by the worker itself
+LOCAL: Final = ("live_watch", "snapshot_refresh", "notify_test", "image_upload")  # answered by the worker
 
 
 @dataclass(frozen=True)

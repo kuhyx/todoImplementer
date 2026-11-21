@@ -75,7 +75,7 @@ describe("[T2320] Send to Claude takes images", () => {
     input.dispatchEvent(new Event("change"));
     paste(Array.from({ length: MAX_IMAGES + 1 }, (_, n) => image(`p${String(n)}.png`)));
     expect(chips()).toHaveLength(MAX_IMAGES);
-    expect(toasts()).toContain(`p${String(MAX_IMAGES - 1)}.png: at most 8 images per message`);
+    expect(toasts()).toContain(`p${String(MAX_IMAGES - 1)}.png: at most ${String(MAX_IMAGES)} images per message`);
   });
 
   it("[T2320] removing a chip drops its tag and renumbers the rest", async () => {

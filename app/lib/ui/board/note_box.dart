@@ -7,12 +7,12 @@ library;
 import 'package:design_system/design_system.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:todo_implementer/model/board.dart';
-import 'package:todo_implementer/model/json.dart';
 import 'package:todo_implementer/ui/board/image_attach.dart';
 import 'package:todo_implementer/ui/board/image_strip.dart';
 
-/// Sends one note and its inline images; true when the PC took it.
-typedef NoteSend = Future<bool> Function(String text, List<Json> images);
+/// Sends one note; [images] uploads its images first (T2426). True when the
+/// PC took it.
+typedef NoteSend = Future<bool> Function(String text, ImageAttach images);
 
 /// The note box for [action] (the card's `send`).
 class NoteBox extends StatefulWidget {
@@ -45,7 +45,7 @@ class _NoteBoxState extends State<NoteBox> {
     final text = _text.text.trim();
     if (text.isEmpty) return;
     setState(() => _busy = true);
-    final taken = await widget.onSend(text, _images.refs);
+    final taken = await widget.onSend(text, _images);
     if (!mounted) return;
     setState(() {
       _busy = false;

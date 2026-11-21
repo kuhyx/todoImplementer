@@ -96,7 +96,10 @@ class _CardSheetState extends State<CardSheet> {
       case 'send':
         final text = _message.text.trim();
         if (text.isEmpty) return await HapticFeedback.heavyImpact();
-        final images = _images.refs;
+        final (images, failed) = await _images.upload(
+          (kind, body) => widget.relay.send(kind, body),
+        );
+        if (failed != null) return await _settle(failed);
         await _settle(
           await _send(kindOf(a.id), {
             'text': text,
