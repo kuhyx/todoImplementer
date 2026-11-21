@@ -32,17 +32,19 @@ def phone_wait(st: RunState, failed: DeployFailedError, now: float) -> None:
     """Rest a failed deploy as "waiting for the phone" when the phone is why it failed.
 
     Exit 30 says so; so does any failed deploy of an error run while the Pixel is not in `adb devices`. After
-    `MAX_TRIES` tries the failure is an ordinary one.
+    `MAX_TRIES` tries the failure is an ordinary one. Any other failure drops the wait an earlier deploy left:
+    else it holds this one (a dirty checkout, a Gradle error) in the phone wait for ever (T2465).
     """
     tries = int(st.extra.get(marks.PHONE_TRIES, 0)) + 1
-    if tries > MAX_TRIES:
-        return
-    away = failed.exit_code == PHONE_EXIT or (
-        marks.is_error_run(st) and SERIAL not in attached_serials(adb_command())
+    away = tries <= MAX_TRIES and (
+        failed.exit_code == PHONE_EXIT
+        or (marks.is_error_run(st) and SERIAL not in attached_serials(adb_command()))
     )
-    if away:
-        st.extra[marks.PHONE_TRIES] = tries
-        st.extra[marks.PHONE] = {"since": now, "tries": tries}
+    if not away:
+        st.extra.pop(marks.PHONE, None)
+        return
+    st.extra[marks.PHONE_TRIES] = tries
+    st.extra[marks.PHONE] = {"since": now, "tries": tries}
 
 
 def forget(st: RunState) -> None:

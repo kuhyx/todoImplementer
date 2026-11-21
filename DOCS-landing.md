@@ -177,7 +177,7 @@ the "session already pushed" path) and before the note closes, Ship runs the rep
   deploy runs again. 2 fix turns per Start (`deploy_fixes`, `shipfix.MAX_DEPLOY_FIXES`; Start, Retry and a note clear
   it), then Needs you; its text leads with the deploy's own `FAIL` lines when the 600-char tail would cut them. A
   phone wait (`appfix.phone_wait`) comes first; a blocked pull (T2007) gets no fix turn. Umbrella children get it
-  too (T2343).
+  too (T2343). A failure that is not the phone's (exit 30) drops the phone wait an earlier deploy left (T2465).
 - **Umbrella card.** Children that are pushed but not deployed are listed apart from children that need kuhy:
   `3 of 7 children need you: a (why); b. 4 pushed, not deployed: c (declares no deploy: command in CLAUDE.md); ...`.
 - **Self-healing.** The implement prompt (`prompts/standing.py`, `DEPLOY`) tells a session to add the line when the repo
