@@ -66,8 +66,9 @@ state, a number for steps, names in `aria-label` and `title`).
   the todo app); its subject is the first ticked part's title.
 - **Cycles.** A run that shipped while parts remain (unticked, new, or added by the live-check follow-up) is a
   finished cycle: the card is Backlog again (cost kept), Start begins cycle N+1 (`repotask/cycle.py` clears worktree,
-  session, plan, ticks, checks; cost and history stay). It never starts by itself, with one exception below. When
-  no open part is left the notes are closed and the card is Done (from the shipped run dir, `ClosedNotes`).
+  session, plan, ticks, checks and kuhy's notes, T2432; cost and history stay). It never starts by itself, with
+  one exception below. When no open part is left the notes are closed and the card is Done (from the shipped run
+  dir, `ClosedNotes`). A note sent after the Ship waits in the inbox and reaches cycle N+1.
 - **A handoff waits on an event, not a click** (kuhy, 2026-11-18; `runner/whenfree.py`). When a session moved to
   the board (DOCS-sessions.md, "Move to board") lands its part on a card whose run holds it (working, queued,
   `gate`, `spec_wait`, paused, `shipping`), Start is refused, so the handoff arms `<run dir>/start-when-free.json`
@@ -101,7 +102,8 @@ holder's drive ends. Repo spellings are normalised like the card grouping.
 
 ## Transition from per-section runs
 
-Existing run dirs `<id8>-<n>` and branches `todo/<id8>-<n>` are never touched or deleted.
+Existing run dirs `<id8>-<n>` and branches `todo/<id8>-<n>` are never deleted while they hold work; a resting
+run loses only its clean worktrees and landed branches (DOCS-landing.md, "A resting run frees its disk").
 
 - `repotask/legacy.py` (`older`) decides per section card. A run still **working** (stage `spec`, `plan`, `implement`,
   `live_check`, `checks`, `shipping`, or `paused_retry`) or one that waits on a click that only its own card offers

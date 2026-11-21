@@ -1,10 +1,11 @@
 """Ending a run by hand: Cancel (abandons the note) and Done manually (the work is done, no turn runs).
 
 Done manually (T2064, kuhy 2026-11-19) stops any live or queued turn, sends no new one, and rests the run at
-stage `done_manually`; the worktree stays, nothing is pushed or deployed. A live drive saves the state it
-loaded when its cancel lands, which would overwrite a stage written beside it, so the click writes a file of
-its own (`done-manually.json`, like `start-when-free.json`) and the stage is set once the drive has ended
-(`settle`, from `Scheduler.after_drive`). Server start settles every file still there (`recover`).
+stage `done_manually`; nothing is pushed or deployed (`reap` frees clean worktrees, T2433). A live drive
+saves the state it loaded when its cancel lands, which would overwrite a stage written beside it, so the
+click writes a file of its own (`done-manually.json`, like `start-when-free.json`) and the stage is set once
+the drive has ended (`settle`, from `Scheduler.after_drive`). Server start settles every file still
+there (`recover`).
 """
 
 from __future__ import annotations
@@ -17,7 +18,7 @@ from todoimpl.board.actions import FINAL_STAGES
 from todoimpl.board.status import CYCLE_ENDS, DONE_STAGES, MANUAL_STAGE
 from todoimpl.todo_mcp.model import TodoError
 
-from . import adopt, cardslice, modelswitch
+from . import adopt, cardslice, modelswitch, reap
 from .files import read_json, write_json
 
 if TYPE_CHECKING:
@@ -46,6 +47,7 @@ def cancel(sched: Scheduler, card: str) -> None:
             st.stage = "cancelled"
             sched.save(card, st)
             sched.bus.publish(card, {"type": "done"})
+            reap.spawn(sched, card)  # T2433
     cardslice.stop(card)  # its session's own jobs too: a render it started must not run on (T2401)
     try:  # a cancelled card is abandoned in the todo app too, where a whole note can be (T1815)
         sched.client.abandon(card)
@@ -91,6 +93,7 @@ def done_manually(
             sched.kill(card)  # the drive's cancel ends it; `after_drive` then calls `settle`
         else:
             settle(sched, card)
+            reap.spawn(sched, card)  # T2433
 
 
 def settle(sched: Scheduler, card: str) -> bool:

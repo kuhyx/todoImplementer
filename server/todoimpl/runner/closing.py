@@ -13,7 +13,7 @@ from todoimpl.board.parse import StateError
 from todoimpl.board.state import RunState
 from todoimpl.todo_mcp.model import TodoError
 
-from . import hold
+from . import hold, reap
 from .autocheck import POLL_TIMEOUT, note_red
 from .checks import record, run_check
 from .files import NeedsYouError
@@ -109,6 +109,7 @@ def close(sched: Scheduler, card: str) -> None:
             sched.mark_active(card, active=False)
             sched.save(card, st)
         sched.bus.publish(card, {"type": "done"})
+        reap.spawn(sched, card)  # T2433
 
 
 def _verified(sched: Scheduler, card: str, st: RunState) -> CheckResult:

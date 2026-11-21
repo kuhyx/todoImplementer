@@ -21,7 +21,8 @@ Disabled while the run is `shipping` ("shipping cannot be stopped"): a push in f
    (`Scheduler.after_recover` settles a file a restart cut). A card with no run gets a run dir with only this stage:
    it is the memory that keeps the Done card (`ClosedNotes`, also for a repo task).
 
-The worktree stays; nothing is pushed or deployed. A repo task whose parts reappear (a new part) is Backlog again
+Nothing is pushed or deployed; clean worktrees go, unpushed branches stay (DOCS-landing.md, "A resting run
+frees its disk"). A repo task whose parts reappear (a new part) is Backlog again
 like after a shipped cycle (`status.CYCLE_ENDS`); Start begins the next cycle, and Done manually works on that
 card again (a card already shipped or done manually with no part left is refused). The click is an intervention
 (`interventions.jsonl`, kind `done_manually`).

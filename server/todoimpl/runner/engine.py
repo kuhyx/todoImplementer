@@ -17,7 +17,7 @@ from todoimpl.umbrella.driver import driver_for
 from todoimpl.umbrella.note import is_umbrella
 from todoimpl.usage.limits import UNTIL_FILE
 
-from . import adopt, limits, orphans, recovery, retry
+from . import adopt, limits, orphans, reap, recovery, retry
 from .bus import Bus
 from .files import INBOX, read_json, write_json
 from .pipeline import Ctx
@@ -197,6 +197,7 @@ class Engine:
                 self._cancel.discard(card)
                 self._drives.discard(threading.current_thread())
                 self.after_drive(card)
+                reap.spawn(self, card)  # a run that came to rest frees its worktrees (T2433)
                 self._cv.notify_all()
             self.bus.publish(card, {"type": "done"})
 

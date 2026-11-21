@@ -25,6 +25,7 @@ def new_cycle(st: RunState, run_dir: Path) -> None:
         (run_dir / name).unlink(missing_ok=True)
     # The tier is decided from the cycle's parts; a card id outlives its cycles (T1999).
     # The last cycle's reply asked that cycle's questions: answering one now would steer this one (T2360).
+    # kuhy's notes were that cycle's too: each turn's prompt lists them all, so they were asked again (T2432).
     keys = (
         "spec_ok",
         "partial",
@@ -34,6 +35,7 @@ def new_cycle(st: RunState, run_dir: Path) -> None:
         "escalated",
         "escalate_reason",
         "last_reply",
+        "notes",
     )
     for key in keys:
         st.extra.pop(key, None)

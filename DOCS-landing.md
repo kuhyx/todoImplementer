@@ -204,3 +204,17 @@ capped scope after it had the build lock, not a timeout of the wait: the queue i
 `<child>/deploy/exit.json`) and asks `shipfix.heal`. A rerun puts the child in `shipping` at once (its
 `ship_resumes` start afresh), a fix turn in `implement`; the count is saved before any drive, so restarts never
 revive a child without end. When any child revived, the umbrella goes back to `implement` and is queued.
+
+## A resting run frees its disk (`runner/reap.py`, T2433)
+
+Ship removed only `<run>/wt`; the `<run>/wt-<name>` worktrees sessions add for other repos and their venvs stayed
+(the run root reached 112 GB). When a run comes to rest at `shipped`, `closed`, `cancelled` or `done_manually`
+(drive end, Close, an idle Cancel or Done manually), a thread removes every clean `<run>/wt*` worktree through the
+repo that owns it (`git worktree remove --force`, `prune`), deletes its `todo/*` branch when every commit is on a
+remote or landed by content (`git cherry`), keeps it otherwise (Retry and Restart re-add the worktree from it), and
+deletes top-level venvs and `node_modules`. It never touches a worktree with uncommitted changes, a run with a live
+turn, a pending inbox, handoff or Done-manually file, a dir some process has as cwd, or a run a Start took back
+(asked again before each worktree). state.json, events, logs, shots and turn files stay: the board reads them.
+Older runs: `python -m todoimpl.runner.sweep [--apply] [--exclude <run id>] [--budget 20]` (dry run by default,
+failed runs included; the budget is checked before each worktree, exit 3 = spent, run it again). A Done
+manually click that a restart settled (`stopping.recover`) waits for the next sweep.
