@@ -18,7 +18,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from todoimpl.runner import orphans
+from todoimpl.runner import freeworker, orphans
+from todoimpl.runner.workerwait import PID
 
 EVENTS = "events.jsonl"
 CARD = re.compile(r"^[0-9a-f]{8}-\d+$")
@@ -108,6 +109,23 @@ def last_output(run_dir: Path, stem: str | None) -> float | None:
     return None
 
 
+def workers(run_dir: Path) -> float | None:
+    """Return until when the card's live free workers count as its work: start plus their timeout (T2451).
+
+    A cheap-tier manager waits on its workers in the background; the free model prints its answer only at
+    the end, so the manager's quiet is the worker's time. A worker is live while its pid file names a process.
+    """
+    ends: list[float] = []
+    for pid_file in [*run_dir.glob(f"worker*.log{PID}"), *run_dir.glob(f"children/*/worker*.log{PID}")]:
+        try:
+            pid = int(pid_file.read_text(encoding="utf-8"))
+            if Path(f"/proc/{pid}").exists():
+                ends.append(pid_file.stat().st_mtime + freeworker.TIMEOUT)
+        except OSError, ValueError:
+            continue
+    return max(ends, default=None)
+
+
 def card_activity(root: Path, card: str) -> float | None:
     """Return a card's last real activity from a short tail of its events (the board polls it, T2404)."""
     return last_activity(root / card / EVENTS, BOARD_TAIL)
@@ -129,7 +147,12 @@ def running(root: Path) -> list[Running]:
             continue
         if not orphans.alive(rec.pid, rec.start):
             continue
-        own = (last_activity(run_dir / EVENTS), _stem_time(rec.stem), last_output(run_dir, rec.stem))
+        own = (
+            last_activity(run_dir / EVENTS),
+            _stem_time(rec.stem),
+            last_output(run_dir, rec.stem),
+            workers(run_dir),
+        )
         times = [t for t in own if t is not None]
         if times:
             found.append(Running(run_dir.name, run_dir, max(times), rec.pid))
