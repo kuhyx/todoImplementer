@@ -46,3 +46,22 @@ def test_t2452_stream_events_make_no_activity_cost_or_context() -> None:
     assert seen == []
     assert parser.result.context_tokens == 0
     assert Meter().feed(DELTA) is False
+
+
+def test_t2469_a_trailing_thinking_tokens_line_counts_at_the_files_time(tmp_path: Path) -> None:
+    # 2026-11-21 stream of f2199a40-0: while the model thinks, claude interleaves `system thinking_tokens`
+    # lines with the `thinking_delta` events, so the last line is often a system line and the walk fell
+    # back to the tool result before the thinking: a 90 s think read as a 90 s quiet
+    run_dir = tmp_path / "dddddddd-0"
+    run_dir.mkdir()
+    orphans.write(run_dir, stem=STEM, pid=os.getpid(), start=orphans.start_of(os.getpid()))
+    stream = run_dir / f"{STEM}.stream.jsonl"
+    rows = [
+        {"type": "user", "timestamp": "2026-11-21T16:00:00+00:00", "message": {"content": []}},
+        {"type": "system", "subtype": "status", "status": "requesting"},
+        DELTA,
+        {"type": "system", "subtype": "thinking_tokens", "estimated_tokens": 185},
+    ]
+    stream.write_text("".join(json.dumps(row) + "\n" for row in rows), "utf-8")
+    os.utime(stream, (1795280000.0, 1795280000.0))
+    assert [r.since for r in scan.running(tmp_path)] == [1795280000.0]

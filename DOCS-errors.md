@@ -165,6 +165,7 @@ Its end (`worker*.log.exit`) is activity too, so the manager's quiet counts from
   (`policy.turn_settings`, T2453); claude then backgrounds it and hands the model a result with 20 s to answer.
   The prompts' wait slices are 40 s too. Every turn runs with `--include-partial-messages` (T2452), so a long
   answer writes `stream_event` lines; a trailing one counts as activity, and they make no event, cost or context.
+  So does a trailing `system thinking_tokens` line: claude interleaves them with the thinking deltas (T2469).
   Not fixed by either: `stall-buildlock` (a queued build); a closed ticket of it reopens when seen.
 - A `stall-job` on a repo's own gate or test step (`check_gate_stamp.sh step <id>`, `test_shard.sh <shard>`,
   `test.sh --shard N/M`, T2450) is

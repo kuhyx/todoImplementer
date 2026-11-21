@@ -25,6 +25,7 @@ EVENTS = "events.jsonl"
 CARD = re.compile(r"^[0-9a-f]{8}-\d+$")
 TAIL = 256 * 1024  # bytes read from the end of events.jsonl: a long tool burst still holds a non-system line
 PARTIAL = "stream_event"  # a chunk of the message the model writes now (`--include-partial-messages`)
+THINKING = "thinking_tokens"  # claude's estimate of the thinking so far, written while the model thinks
 OUTPUT = frozenset({"assistant", "user"})  # stream lines that are real work: a message, or a tool's result
 BOARD_TAIL = 64 * 1024  # the board polls every running card, so it reads less than the watch does
 ADVISOR = (
@@ -80,12 +81,24 @@ def _pending_advisor(row: dict[str, object]) -> bool:
     return isinstance(last, dict) and last.get("type") == "server_tool_use"
 
 
+def _writing(row: object) -> bool:
+    """Tell whether a stream line is one claude writes only while the model streams (T2452, T2469).
+
+    While the model thinks, claude interleaves `system thinking_tokens` lines with the `thinking_delta`
+    events, so the last line is often such a system line.
+    """
+    if not isinstance(row, dict):
+        return False
+    return row.get("type") == PARTIAL or (row.get("type") == "system" and row.get("subtype") == THINKING)
+
+
 def last_output(run_dir: Path, stem: str | None) -> float | None:
     """Return when claude wrote its turn's newest message or tool result line (T2447).
 
-    claude writes `system` lines (task_*, thinking_tokens) right after a result, so the walk skips them and
+    claude writes `system task_*` lines right after a result, so the walk skips them, other system lines and
     any torn line and reads the line's own `timestamp`; a line without one counts only as the file's last
-    line (its mtime). An advisor call still waiting on its answer counts for `ADVISOR` s more (T2448).
+    line (its mtime), and a trailing partial or thinking_tokens line counts at the mtime (T2469). An advisor
+    call still waiting on its answer counts for `ADVISOR` s more (T2448).
     """
     path = run_dir / f"{stem}.stream.jsonl"
     try:
@@ -102,8 +115,8 @@ def last_output(run_dir: Path, stem: str | None) -> float | None:
         except ValueError:  # claude is mid-write, or the tail cut the line
             continue
         if not isinstance(row, dict) or row.get("type") not in OUTPUT:
-            if back == 0 and isinstance(row, dict) and row.get("type") == PARTIAL:
-                return mtime  # the model is writing its answer right now (T2452)
+            if back == 0 and _writing(row):
+                return mtime  # the model is writing its answer or thinking right now (T2452, T2469)
             continue
         at = _stamp(row)
         if at is None:
