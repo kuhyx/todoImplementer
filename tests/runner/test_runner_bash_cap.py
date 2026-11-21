@@ -1,4 +1,4 @@
-"""Every turn caps one Bash call at 40 s (T2453), so a long command hands control back before a 60 s stall (T2444).
+"""Every turn caps one Bash call at 40 s (T2453): a long command hands control back before a stall (T2444).
 
 kuhy's ~/.claude/settings.json sets `BASH_MAX_TIMEOUT_MS` to an hour and settings env beats the process env,
 so the cap must travel in `--settings`. At the cap claude moves the command to the background and the model
