@@ -87,7 +87,8 @@ def test_t1984_nested_shims_under_a_held_lock_do_not_deadlock(
 
 
 @pytest.mark.parametrize(
-    "args", [["--version"], ["help"], ["-version"], ["run", "dev"], ["preview", "--port", "1"]]
+    "args",
+    [["--version"], ["help"], ["-version"], ["run", "dev"], ["preview", "--port", "1"], ["mcp-server"]],
 )
 def test_probes_and_dev_servers_skip_the_lock(
     shims: Path, fakebin: Path, tmp_path: Path, args: list[str]

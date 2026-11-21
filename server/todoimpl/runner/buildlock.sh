@@ -42,15 +42,15 @@ find_real() {
 	return 1
 }
 
-# needs_lock ARGS...: false for a version/help probe and for a dev server, which would hold the lock for
-# as long as it serves.
+# needs_lock ARGS...: false for a version/help probe and for a dev or MCP server (`dart mcp-server`), which
+# would hold the lock for as long as it serves.
 needs_lock() {
 	if (($# == 1)); then
 		case "$1" in --version | -version | version | --help | -h | -V | help) return 1 ;; esac
 	fi
 	local sub="${1:-}"
 	[[ "$sub" == run ]] && sub="${2:-}"
-	case "$sub" in dev | serve | start | preview | watch) return 1 ;; esac
+	case "$sub" in dev | serve | start | preview | watch | mcp-server) return 1 ;; esac
 	return 0
 }
 
