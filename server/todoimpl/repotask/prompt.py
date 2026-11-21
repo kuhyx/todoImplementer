@@ -17,7 +17,8 @@ if TYPE_CHECKING:
 KEYED = (
     "Name the part in every acceptance criterion, in plan.md and live_check.md alike: `Cn [<part key>]: ...` "
     "(e.g. `- [x] C3 [<key>]: what I did -> what I saw`). Every part you tick needs a passed live criterion "
-    "of its own: a ticked part none names is not closed."
+    "of its own: a ticked part none names is not closed, and a `[~]` row closes none. What can be run now "
+    "is checked now (a command that must finish under 60 s: run it timed), never left for `after ship`."
 )
 
 

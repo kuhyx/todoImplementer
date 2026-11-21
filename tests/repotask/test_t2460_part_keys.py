@@ -75,10 +75,9 @@ def _note(rig: Rig, id8: str) -> FakeNote:
 
 def test_t2460_ship_refuses_a_ticked_part_no_passed_criterion_names(rig: Rig) -> None:
     card, first, second = _ship(rig, "- [x] C1 [{a}]: saw alpha\n- [~] C2 [{b}]: needs phone: x\n\nD: done")
-    failed = rig.wait(card, {"failed"})
-    assert f"{second}-0" in str(failed.error)
-    assert f"{first}-0" not in str(failed.error)
-    assert failed.extra["failed_stage"] == "shipping"
+    held = rig.wait(card, {"gate"})  # refused: the live check got the part back (T2467), nothing closed
+    assert f"[{second}-0]" in rig.world.calls()[-1]["prompt"]
+    assert (held.error, held.ship) == (None, None)
     assert "## [x]" not in _note(rig, first).text
     assert _note(rig, second).status != "done"
 

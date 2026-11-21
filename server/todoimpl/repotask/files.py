@@ -2,7 +2,8 @@
 
 `parts.json` is written only by the server (the parts of this drive, in work order). `parts-done.json` is
 written only by Claude, through `python -m todoimpl.repotask.tick` (which part is finished, the steps a part
-was split into), so the two writers never race. The board overlays the second onto the first.
+was split into), so the two writers never race. The board overlays the second onto the first. The server
+writes it in one case, under the same lock: Ship unticks a part no live row proved (`untick`, T2467).
 """
 
 from __future__ import annotations
@@ -124,6 +125,12 @@ def step_done(run_dir: Path, key: str, number: int) -> None:
 def reset(run_dir: Path) -> None:
     """Forget the ticks: a new cycle starts with every part open."""
     (run_dir / DONE).unlink(missing_ok=True)
+
+
+def untick(run_dir: Path, keys: list[str]) -> None:
+    """Take parts off the done list: Ship leaves a part with no live proof open (T2467)."""
+    with _locked(run_dir) as ticks:
+        _write(run_dir, Ticks(tuple(key for key in ticks.done if key not in keys), ticks.steps))
 
 
 def ticked(run_dir: Path, item: Item) -> list[Part]:

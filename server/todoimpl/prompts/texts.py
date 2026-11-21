@@ -52,7 +52,7 @@ KUHY_LIVE = (  # the implement and fix stages show deliverables too, so they car
 )
 
 
-def _item(ctx: PromptContext) -> str:
+def item(ctx: PromptContext) -> str:
     """Item, spec answers and kuhy's notes: the part every stage shares."""
     lines = [f"Item: {ctx.title} (repo: {ctx.repo})"]
     body, pictures = images.localize(f"{ctx.body}\n{ctx.parts}".strip(), images.root())  # dufs needs a login
@@ -70,7 +70,8 @@ def _item(ctx: PromptContext) -> str:
     return "\n".join(lines)
 
 
-def _plan(ctx: PromptContext) -> str:
+def plan_text(ctx: PromptContext) -> str:
+    """Return the plan's text for a new session, its path for a resumed one."""
     if ctx.plan_md and not ctx.resumed:  # a resumed session already holds the text
         return f"Plan ({ctx.run_dir}/plan.md):\n{ctx.plan_md}"
     return f"Plan: read {ctx.run_dir}/plan.md."
@@ -90,7 +91,7 @@ def spec(ctx: PromptContext) -> str:
     return "\n".join(
         [
             "Spec stage. Grill me on this item before any plan or code.",
-            _item(ctx),
+            item(ctx),
             "Reply with question cards only, exactly this format, a blank line between cards:",
             CARD,
             "Ask the whole frontier at once; no question may depend on another in the same round.",
@@ -105,7 +106,7 @@ def plan(ctx: PromptContext) -> str:
     """Write plan.md with numbered, live-observable acceptance criteria."""
     return _post(
         "Plan stage. Research is fine; edit nothing in the repo.",
-        _item(ctx),
+        item(ctx),
         f"Write {ctx.run_dir}/plan.md: `## Approach` (files to touch, short), `## Acceptance criteria`.",
         "Number criteria `C1.`, `C2.` ... Each is observable behaviour in the live app: `I do X, I see Y`.",
         "Never a test or code property. Cover the done_check if there is one.",
@@ -119,8 +120,8 @@ def implement(ctx: PromptContext) -> str:
     """Build it, then self-check against the plan (live exercising is the next stage)."""
     return _post(
         "Implement stage.",
-        _item(ctx),
-        _plan(ctx),
+        item(ctx),
+        plan_text(ctx),
         _rules(ctx),
         "Write the failing check first, see it red, implement, see it green.",
         SELF_CHECK,
@@ -136,9 +137,9 @@ def live_check(ctx: PromptContext) -> str:
     kind = detect_kind(ctx.worktree)
     return _post(
         f"Live check stage ({kind}). Do not change code; only verify.",
-        _item(ctx),
+        item(ctx),
         *([f"Handoff from the implementer (you are a fresh session):\n{ctx.handoff}"] if ctx.handoff else []),
-        _plan(ctx),
+        plan_text(ctx),
         f"Start the changed thing from {ctx.worktree}; exercise every criterion for real, as a user would.",
         f"Driver: {HINTS[kind]}",
         "Tests or reading code never count. No video. Never use kuhy's display :0.",
@@ -160,7 +161,7 @@ def live_checklist(ctx: PromptContext) -> str:
     """Redo of a live check that ended without its checklist: the checklist alone, nothing re-run."""
     return _post(
         ctx.failure_tail[-TAIL_CHARS:],
-        _plan(ctx),
+        plan_text(ctx),
         f"Write {ctx.run_dir}/live_check.md, one line per plan criterion, and reply with the same lines:",
         "- [x] C1: what I did -> what I saw   (`- [ ]` not seen working, `- [~] C7: needs phone: <why>`)",
         "Then end with `D:`.",
@@ -173,8 +174,8 @@ def fix(ctx: PromptContext) -> str:
     return _post(
         "Fix stage. The last live_check or checks run failed. Output tail:",
         f"```\n{tail}\n```",
-        _item(ctx),
-        _plan(ctx),
+        item(ctx),
+        plan_text(ctx),
         _rules(ctx),
         "Find the root cause, add a failing check for it first, fix, rerun the failing command until green.",
         SELF_CHECK,
@@ -187,7 +188,7 @@ def closing(ctx: PromptContext) -> str:
     """Confirm a done_check that passed on its own; read-only, the server closes the item on kuhy's click."""
     return _post(
         "Closing stage. This item's trusted done_check started passing on its own: confirm the evidence.",
-        _item(ctx),
+        item(ctx),
         f"Work read-only in {ctx.worktree}, the repo's main checkout: never edit, commit or push anything.",
         "Run the done_check once, read its output and say in one line what it proves for this item.",
         "The server re-runs the check after your turn and decides. End with `D:`.",
@@ -199,7 +200,7 @@ def resume_after_kill(ctx: PromptContext) -> str:
     return _post(
         "Your session was killed mid-work (restart or limit). Continue the stage you were in.",
         "Run `git status` and `git diff --stat` first; do not redo finished work.",
-        _item(ctx),
+        item(ctx),
         f"Plan: {ctx.run_dir}/plan.md.",
         _rules(ctx),
         "End with `D:`.",
@@ -211,7 +212,7 @@ def fresh_after_idle(ctx: PromptContext) -> str:
     return _post(
         "New session; the old one is gone. Handoff summary:",
         ctx.handoff or "(none)",
-        _item(ctx),
+        item(ctx),
         f"Plan: read {ctx.run_dir}/plan.md.",
         _rules(ctx),
         "Check `git status`, then continue where the summary stops. End with `D:`.",

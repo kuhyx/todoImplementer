@@ -33,7 +33,7 @@ REPO_POLL = 2.0
 COUNTERS = (
     "bounces", "live_fixes", "check_fixes", "nudges", "nudge", "retries", "crash_retries", "ask_grants",
     "ask_grant_total", "ask_forms", "ask_form_total", "ship_resumes", "self_resumes", "link_nudges",
-    "ship_fixes", "deploy_fixes", "reship", "gate_kills", "gate_waits", "deploy_kills",
+    "ship_fixes", "deploy_fixes", "reship", "gate_kills", "gate_waits", "deploy_kills", "proof_rounds",
 )  # fmt: skip
 
 

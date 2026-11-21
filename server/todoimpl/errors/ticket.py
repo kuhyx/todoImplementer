@@ -30,6 +30,11 @@ GOAL = (
     "Do not ask kuhy anything; take recommended answers."
 )
 DONE = "done: fixed, tests green, shipped and deployed (the error no longer reproduces)."
+PERF = (  # kuhy, 2026-11-21: a step over 60 s is the session's to fix, never his (T2467)
+    "How: measure where the time goes, then optimise in as many rounds as it takes (cache, drop redundant "
+    "work, parallelise, a faster tool); split it into calls under 60 s only when optimising ran out. Never "
+    "hand it to kuhy. Proof: the live check runs it timed and writes the seconds."
+)
 SEEN = re.compile(r"^[ \t]*Seen:")
 
 
@@ -68,7 +73,8 @@ def _regression(record: AppError, fixed_build: int) -> str:
 
 def body(record: AppError, *, regression: int | None = None) -> str:
     """Return the part's text: goal, done line, what is known of the error, the Seen and signature lines."""
-    lines = [GOAL, DONE, "", f"Error: {record.kind}: {_flat(record.message)}"]
+    how = [PERF] if record.kind.startswith("perf.") else []
+    lines = [GOAL, DONE, *how, "", f"Error: {record.kind}: {_flat(record.message)}"]
     for label, value in (("Top frame", record.top_frame), ("Detail", record.detail)):
         if value:
             lines.append(f"{label}: {_flat(value)}")

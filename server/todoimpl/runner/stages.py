@@ -13,7 +13,7 @@ from todoimpl.umbrella import bounce
 from todoimpl.umbrella.note import is_umbrella
 from todoimpl.umbrella.run import run as run_umbrella
 
-from . import hold, phone, tiering
+from . import hold, partproof, phone, tiering
 from .checks import SENTENCE_NOTE, discover, record, run_all
 from .closing import closing_stage
 from .files import NeedsYouError, write_json
@@ -126,10 +126,11 @@ def _live_check(d: Driver) -> str | None:  # noqa: PLR0911 - one return per way 
         report_file.unlink(missing_ok=True)
     shots.mkdir(parents=True, exist_ok=True)
     redo = str(st.extra.pop("live_redo", ""))  # set: ask for the checklist only, verify nothing again
+    brief, kind = partproof.ask(st, redo)  # a proof round asks only for the parts Ship named (T2467)
     attached, info = bool(st.extra.get("phone_attached")), st.extra.get("waiting_phone")
     carried = bool(st.extra.pop(phone.REPLY_CARRY, False))  # the reply came in before a hands nudge
     st.extra.pop(phone.REPLIED, None)  # else only a reply taken in by THIS turn counts
-    res = d.turn("live_check", "live_check", failure_tail=redo, prompt="live_checklist" if redo else "")
+    res = d.turn("live_check", "live_check", failure_tail=brief, prompt=kind)
     replied = bool(st.extra.pop(phone.REPLIED, False)) or carried
     if phone.hands_nudge(st, res, attached=attached, info=info):  # Claude tries the phone itself first
         st.extra[phone.REPLY_CARRY] = replied
@@ -151,6 +152,7 @@ def _live_check(d: Driver) -> str | None:  # noqa: PLR0911 - one return per way 
     if not report_file.exists() and res.tag != "R":
         report_file.write_text(res.text, encoding="utf-8")
     report = report_file.read_text(encoding="utf-8") if report_file.exists() else ""
+    report = partproof.settled(st, report_file, report)
     st.live_check = {
         "report_md": report,
         "shots": sorted(str(p.relative_to(run_dir)) for p in shots.rglob("*") if p.is_file()),

@@ -191,3 +191,8 @@ per ticket, into `<error state>/app-errors/heavy-builds.json` (`runner/heavybuil
 The record's repo is the one of the card that ran the build (its run dir's `state.json`); the app is that repo's
 name; the signature is `heavy-<tool>-<step>` (`godot --import` is `heavy-godot-import`). The errors loop makes it
 a part of that repo's card: make this build finish under 60 s. A build of no known card is not filed.
+
+A `perf.*` ticket never asks kuhy to act (2026-11-21, T2467). Its text tells the session to optimise first and
+split last, and that the live check proves it by running the step timed (`ticket.PERF`). A ticked perf part the
+live check only deferred goes back to the live check, not to Needs you (DOCS-repotask.md, "A ticked part needs
+its own passed live row").

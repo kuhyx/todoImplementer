@@ -60,6 +60,13 @@ state, a number for steps, names in `aria-label` and `title`).
 - A turn that ends the implement stage with `D:` while parts are unticked gets a runner nudge naming them, twice
   (`extra.part_nudges`); after that the run goes on and those parts stay open.
 - Ship with no ticked part is refused (Needs you, `run_failed`): it would push and close nothing.
+- **A ticked part needs its own passed live row** (T2460: on a card with several parts every criterion names
+  its part, `Cn [<key>]:`, and a `[~]` row proves nothing). Ship never hands such a part to kuhy (T2467,
+  `runner/partproof.py`): the part goes back to the live check, twice per Start (`extra.proof_rounds`), in a
+  turn that checks only the named parts (prompt `live_proof`) and writes only their rows; the board merges them
+  into the stored report. A `[ ]` row there gets the usual fix turn. After the two rounds the board unticks
+  the part itself and ships the proven ones: the part stays open for the next cycle. Only when no proven part
+  is left the run rests in Needs you, and Retry (the live check again) is its one step.
 - **Ship closes per part.** `ItemView.close_task(repo card)` closes the section of every ticked part (`## [x]` plus
   a `closed:` line, evidence = live-check summary and check tails); the note closes with its last section. The
   commit has one `Todo: <note id8>` trailer per note that has a ticked part (not per part: a note is the unit in

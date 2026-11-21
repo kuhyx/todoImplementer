@@ -29,6 +29,15 @@ def test_the_title_names_app_kind_message_and_the_short_signature() -> None:
     assert len(title) < 130
 
 
+def test_t2467_a_perf_ticket_says_optimise_first_split_last_and_how_it_is_proved() -> None:
+    text = ticket.body(record(kind="perf.heavybuild", message="a build held a build slot for over 60 s"))
+    assert "optimise" in text.splitlines()[2]
+    assert "split" in text.splitlines()[2]
+    assert "the live check runs it timed" in text
+    assert "Never hand it to kuhy" in text
+    assert ticket.PERF not in ticket.body(record())  # a crash ticket stays as it was
+
+
 def test_the_body_has_the_goal_the_done_line_and_the_signature_line() -> None:
     text = ticket.body(record())
     lines = text.splitlines()
