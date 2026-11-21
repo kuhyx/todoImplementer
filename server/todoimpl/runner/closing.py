@@ -1,4 +1,4 @@
-"""Closing runs: a passing trusted done_check, one read-only Sonnet turn, then the close, no click (T2060).
+"""Closing runs: a passing trusted done_check, one read-only Opus turn, then the close, no click (T2060).
 
 No plan, no implement, no worktree, no Ship; the repo's main checkout is never edited.
 """

@@ -45,7 +45,7 @@ resumes. A second click while it runs is `conflict`.
 ## Research
 
 `ResearchDriver` (`triage/research.py`, chosen by `driver_for` from the label): no worktree (cwd `<run dir>/research`),
-spec and plan skipped, one Sonnet turn at medium effort (`tiering.plan_turn`). The session reads each URL, writes
+spec and plan skipped, one turn on the role default, Opus 5.5 at high effort like every card turn (`tiering.plan_turn`, T2476). The session reads each URL, writes
 `research.md` (shown as the drawer's report) and `research.json` (2 to 5 actions: id, title, repo or null, body with a
 done condition; since T2091 an object `{"deliverable": ..., "actions": [...]}`, a plain list still reads) and ends on `A:` with one `choice cN: ... | Make note | *Skip | risk=reversible` per action (an ask
 has one answer, so no multi-select; all Skip = nothing to do; the 24 h auto-adopt of DOCS-asks.md applies). When every

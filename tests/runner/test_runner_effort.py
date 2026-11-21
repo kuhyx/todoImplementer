@@ -74,12 +74,12 @@ def test_t1897_credit_turns_keep_their_effort(world: Env, monkeypatch: pytest.Mo
     assert st.extra["route"] == "credits"
 
 
-def test_t1897_a_cheap_run_that_gives_up_reruns_at_high_effort_on_the_same_model(
+def test_t1897_a_cheap_run_that_gives_up_reruns_at_more_effort_on_the_same_model(
     world: Env, free: Free
 ) -> None:
-    """kuhy, 2026-11-10: the manager is Opus, so escalation is effort (medium, then high), not a model."""
+    """kuhy, 2026-11-10: the manager is Opus, so escalation is effort (high, then xhigh; T2476)."""
     st = run_to_gate(world, PLAN, GIVE_UP, IMPL, LIVE_OK, **CHEAP)
     first, second = implement_calls(world)
-    assert (first["model"], first["effort"]) == ("opus", "medium")
-    assert (second["model"], second["effort"]) == ("opus", "high")
+    assert (first["model"], first["effort"]) == ("opus", "high")
+    assert (second["model"], second["effort"]) == ("opus", "xhigh")
     assert st.extra["escalated"] is True

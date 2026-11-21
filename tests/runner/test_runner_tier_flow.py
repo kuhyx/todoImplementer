@@ -1,4 +1,4 @@
-"""The cheap tier end to end: Opus (medium effort) manages free models, escalation = high effort."""
+"""The cheap tier end to end: Opus (high effort) manages free models, escalation = xhigh effort (T2476)."""
 
 from __future__ import annotations
 
@@ -37,11 +37,11 @@ def run_to_gate(world: Env, *turns: tuple[dict[str, Any], ...], **fields: Any) -
         sched.close()
 
 
-def test_cheap_note_runs_on_opus_at_medium_effort_with_the_manager_addendum(world: Env, free: Free) -> None:
+def test_t2476_cheap_note_runs_opus_at_high_effort_with_the_manager_addendum(world: Env, free: Free) -> None:
     st = run_to_gate(world, PLAN, IMPL, LIVE_OK, **CHEAP)
     impl = implement_calls(world)
     assert [c["model"] for c in impl] == ["opus"]
-    assert [effort(c) for c in impl] == ["medium"]
+    assert [effort(c) for c in impl] == ["high"]
     assert "todoimpl.runner.freeworker" in str(impl[0]["prompt"])
     assert free.checked() == [st.worktree]
     assert (st.extra["tier"], st.extra["free_models"]) == ("cheap", True)
@@ -81,11 +81,11 @@ def test_gateway_down_means_opus_alone(world: Env, free: Free) -> None:
     assert st.extra["free_models"] is False
 
 
-def test_escalate_line_reruns_the_attempt_on_opus_with_the_reason(world: Env, free: Free) -> None:
+def test_t2476_escalate_line_reruns_the_attempt_on_opus_with_more_effort(world: Env, free: Free) -> None:
     st = run_to_gate(world, PLAN, GIVE_UP, IMPL, LIVE_OK, **CHEAP)
     first, second = implement_calls(world)
     assert (first["model"], second["model"]) == ("opus", "opus")
-    assert (effort(first), effort(second)) == ("medium", "high")
+    assert (effort(first), effort(second)) == ("high", "xhigh")
     assert "needs a refactor across modules" in str(second["prompt"])
     assert "claude-free -p" not in str(second["prompt"])
     assert st.extra["escalated"] is True

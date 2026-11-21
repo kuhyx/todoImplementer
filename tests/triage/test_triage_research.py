@@ -112,10 +112,10 @@ def test_t2073_only_a_repo_less_research_label_gets_the_research_driver(rig: Rig
     assert type(driver_for(ctx, rig.state, with_repo)) is Driver
 
 
-def test_t2073_the_research_turn_runs_on_sonnet_and_the_prompt_names_the_files(rig: Rig) -> None:
+def test_t2476_the_research_turn_takes_the_role_default_and_names_the_files(rig: Rig) -> None:
     rig.state.extra["research"] = True
     turn = tiering.plan_turn(Driver(rig.ctx(), rig.state, rig.item), "implement")
-    assert (turn.model, turn.effort, turn.note) == ("sonnet", "medium", "")
+    assert turn == tiering.Turn()  # the role default: Opus 5.5 at high effort, or the pin (T2476)
     ctx = PromptContext("t", "https://x.example/a", "", rig.dir / "research", rig.dir, notes=("also this",))
     text = build("research", ctx)
     assert text.startswith("override\n")

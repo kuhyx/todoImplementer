@@ -59,7 +59,7 @@ Round width `w` starts at 1. Each round:
 2. The server asks `freegate.check` per child: public repo, gateway answering, tools present. Anything else = **not
    free**: the manager does that child itself and it never counts as clean. A dead gateway also writes its exact
    error to the issue log.
-3. ONE manager turn (role `manager`, model opus, `--effort medium` (`claude.ROLE_EFFORT`), a fresh session per round, cwd the umbrella run dir) gets
+3. ONE manager turn (role `manager`, model opus, `--effort high` (`claude.ROLE_EFFORT`, T2471), a fresh session per round, cwd the umbrella run dir) gets
    `prompts/umbrella.py`: the children with worktree, task file, worker log and `free: yes|no`. It starts the free
    workers in parallel, watches them, fixes what they hit (permission blocks, broken edits, failing checks), finishes
    or redoes their work, runs each child's checks, and ends with one line per child:

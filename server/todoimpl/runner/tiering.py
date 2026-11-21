@@ -41,8 +41,8 @@ def plan_turn(d: Driver, role: str) -> Turn:
     st = d.state
     if role != IMPLEMENT:
         return Turn()
-    if st.extra.get("research"):  # reading and summarising: Sonnet at medium effort, no free workers
-        return Turn("sonnet", "", "medium")
+    if st.extra.get("research"):  # the role default like every card turn (T2476), no free workers
+        return Turn()
     # `tier` stays across a repo card's cycles; a cycle holding an error ticket is never cheap (T2445)
     if "tier" not in st.extra or tier.TICKET_LINE.search(d.item.body):
         st.extra["tier"] = "cheap" if tier.is_cheap(d.item.title, d.item.body, d.item.parts) else "normal"

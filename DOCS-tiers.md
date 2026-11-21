@@ -28,8 +28,8 @@ cycle (`repotask/cycle.py`) clears `tier`, `free_models`, `escalated` and `escal
 its cycles and the parts change.
 
 For a cheap run the **implement role** (the implement and fix stages, one session; the live check is its own
-Sonnet role since T1896) runs on
-`opus` at `--effort medium` (kuhy, 2026-11-10: the manager is Opus, not Sonnet; `runner/tier.py` `MANAGER_*`). The
+role since T1896) runs on
+`opus` at `--effort high` (kuhy, 2026-11-10: the manager is Opus, not Sonnet; high since 2026-11-21, T2476; `runner/tier.py` `MANAGER_*`). The
 credit route (`credit.py`) runs the `credits_model` setting (default `claude-opus-5-5`) for every role and passes the effort to the SDK.
 
 1. **Free models, only when allowed.** Before each implement or fix turn the server asks `freegate.check`: the
@@ -52,7 +52,7 @@ credit route (`credit.py`) runs the `credits_model` setting (default `claude-opu
 3. **Not allowed** (private repo, gateway down, tool missing): the addendum says to do the work alone, no
    `claude-free`. The feed names the reason.
 4. **Escalation, at most once per run.** A cheap implement turn that ends with a line `ESCALATE: <reason>`, or
-   that fails (the existing failure path, which retries on a timer), makes the next implement-role turn run at `--effort high`
+   that fails (the existing failure path, which retries on a timer), makes the next implement-role turn run at `--effort xhigh`
    (same model, more thought) with the normal prompt plus the reason (`state.extra.escalated`, `escalate_reason`). The session is
    resumed, so it sees the work done. After that an `ESCALATE:` line is ignored.
 
