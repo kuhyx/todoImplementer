@@ -19,7 +19,9 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from . import buildlock, buildqueue
+from todoimpl.board import state as store
+
+from . import buildlock, buildqueue, heavybuild
 
 log = logging.getLogger(__name__)
 PROC = Path("/proc")
@@ -90,6 +92,7 @@ class Ceiling:
         """`sink` is the scheduler: its `bus` (when it has one) tells the holder's card."""
         self._sink, self.quiet, self._every = sink, quiet, every
         self._seen: dict[int, _Seen] = {}  # by ticket number: every held slot is watched (T2422)
+        self._heavy: set[int] = set()  # tickets already filed as heavy builds (T2424)
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
 
@@ -122,9 +125,23 @@ class Ceiling:
             and t.pid != os.getpid()
             and buildlock.WRAPPER in _read(PROC / str(t.pid) / "cmdline")
         ]
-        self._seen = {seq: seen for seq, seen in self._seen.items() if seq in {t.seq for t in held}}
+        live = {t.seq for t in held}
+        self._seen = {seq: seen for seq, seen in self._seen.items() if seq in live}
+        self._heavy &= live
         for head in held:
+            self._weigh(head, base)
             self._look(head, base)
+
+    def _weigh(self, head: buildqueue.Ticket, base: Path) -> None:
+        """File a build that has held its slot for over `heavybuild.LIMIT` s, once per ticket."""
+        now = time.time()
+        if head.seq in self._heavy or heavybuild.held_for(head, now) < heavybuild.LIMIT:
+            return
+        self._heavy.add(head.seq)
+        card = _card(head, base)
+        repo = heavybuild.repo_of(store.run_root(), card) if card is not None else None
+        if repo is not None:
+            heavybuild.file(head, repo, now)
 
     def _look(self, head: buildqueue.Ticket, base: Path) -> None:
         cpu, io, pids, disk = _sample(head.pid)

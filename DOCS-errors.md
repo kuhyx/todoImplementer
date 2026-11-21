@@ -165,3 +165,12 @@ other stream lines and a touched file do not count, so nothing looks alive by pi
   counts.
 - Resolve and `fixed_build` happen once the whole Ship (push, deploy, close) is done, so a fix waiting for the phone
   is not reported fixed yet.
+
+## Heavy builds (T2424)
+
+kuhy, 2026-11-21: three builds run at once (DOCS-turns.md), and "if we get a heavy build optimize the hell out of
+it". The hold ceiling (`runner/holdceiling.py`) files every build that holds a build slot for over 60 s, once
+per ticket, into `<error state>/app-errors/heavy-builds.json` (`runner/heavybuild.py`, kind `perf.heavybuild`).
+The record's repo is the one of the card that ran the build (its run dir's `state.json`); the app is that repo's
+name; the signature is `heavy-<tool>-<step>` (`godot --import` is `heavy-godot-import`). The errors loop makes it
+a part of that repo's card: make this build finish under 60 s. A build of no known card is not filed.
