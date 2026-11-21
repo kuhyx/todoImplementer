@@ -62,18 +62,24 @@ def test_t1991_a_running_shell_below_claude_counts_as_a_build_in_progress(tmp_pa
     finally:
         shell.kill()
         shell.wait()
-    nested = subprocess.Popen(["bash", "-c", "sleep 5; :"])  # a shell whose child is no shell
+    assert idle.Clock(0.0).due(finished=True, now=99, limit=1, claude_pid=None)
+    assert not idle.Clock(0.0).due(finished=False, now=99, limit=1, claude_pid=None)
+    assert not idle.Clock(0.0).due(finished=True, now=0, limit=1, claude_pid=None)
+
+
+def test_t2436_a_shell_whose_child_is_no_shell_is_not_running() -> None:
+    """Wait for the child's exec: a forked child is still named bash until it becomes sleep (T2436)."""
+    nested = subprocess.Popen(["bash", "-c", "sleep 5; :"])
     try:
         deadline = time.monotonic() + 5
-        while not idle._children(nested.pid) and time.monotonic() < deadline:
+        while time.monotonic() < deadline and not any(
+            idle._read(idle.PROC / str(pid) / "comm") == "sleep" for pid in idle._children(nested.pid)
+        ):
             time.sleep(0.05)
         assert not idle.shell_running(nested.pid)
     finally:
         nested.kill()
         nested.wait()
-    assert idle.Clock(0.0).due(finished=True, now=99, limit=1, claude_pid=None)
-    assert not idle.Clock(0.0).due(finished=False, now=99, limit=1, claude_pid=None)
-    assert not idle.Clock(0.0).due(finished=True, now=0, limit=1, claude_pid=None)
 
 
 def test_t2194_a_turn_whose_background_job_just_ended_gets_to_answer_its_notice(
