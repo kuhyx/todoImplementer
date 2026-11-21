@@ -111,3 +111,14 @@ when an OAuth client exists; they are not live.
   pointers; checked at 390x844 on /, /usage, /sessions (and with a card drawer open): no horizontal overflow.
 - Dev: `pnpm --dir web mock` serves all three pages with fake data, the local meta and POST /api/pair;
   `astro dev` proxies /api and /version with changeOrigin so the device gate sees the loopback host.
+
+## Night
+
+kuhy sleeps from 22:55 to 05:55 local time (kuhy, 2026-11-21). In that window (`server/todoimpl/night.py`,
+`TODOIMPL_NIGHT=HH:MM-HH:MM` overrides it, `off` turns it off; tests run with `off`):
+- The device gate answers every public request with an empty 423 and `Retry-After` (seconds to 05:55), pairing
+  included. The PC's loopback requests are untouched.
+- The relay refuses every kind with `disabled` / `night`. A board change at night pings once, at 05:55.
+- The phone app shows a moon instead of the board (`app/lib/shell/night_lock.dart`) and lifts it by itself.
+- The standing grant (`prompts/standing.py` NIGHT) tells sessions to work on their own, take the recommended
+  answer and leave a question they truly cannot answer in an `ask` block for the morning, after every other part.

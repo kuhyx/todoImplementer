@@ -17,6 +17,8 @@ from typing import TYPE_CHECKING, Any, Final, Protocol
 
 from rtdb_relay.server import RequestError
 
+from todoimpl import night
+
 from .fcm import BadKeyError, FcmError, UnregisteredError
 from .server import CURRENT
 from .status import NOTIFY
@@ -115,6 +117,7 @@ class Pinger:
 
     async def _later(self) -> None:
         await asyncio.sleep(COALESCE_S)
+        await asyncio.sleep(night.to_morning())  # a night change pings once, at 05:55 (DOCS-phone.md)
         self._pending = None
         try:
             await self.broadcast()

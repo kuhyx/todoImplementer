@@ -16,8 +16,10 @@ from typing import TYPE_CHECKING, Any, Final
 
 import httpx
 from rtdb_relay.seal import Sealer
+from rtdb_relay.server import RequestError
 from rtdb_relay.unlock import unlock
 
+from todoimpl import night
 from todoimpl.version import __version__
 
 from . import bridge, connect, fcm, imageupload, kinds
@@ -83,7 +85,18 @@ def handlers(router: Router, publisher: Publisher, live: Live, notify: Handler) 
         "notify_test": notify,
         "image_upload": imageupload.handle,
     }
-    return {**table, **local}
+    return {name: by_day(handler) for name, handler in {**table, **local}.items()}
+
+
+def by_day(handler: Handler) -> Handler:
+    """Refuse the request while kuhy sleeps (DOCS-phone.md "Night"); serve it by day."""
+
+    async def run(body: dict[str, Any]) -> dict[str, Any]:
+        if night.is_night():
+            raise RequestError(code="disabled", message="night")
+        return await handler(body)
+
+    return run
 
 
 @dataclass(frozen=True)

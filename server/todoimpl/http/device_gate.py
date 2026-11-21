@@ -15,6 +15,8 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING
 from urllib.parse import parse_qs, urlsplit
 
+from todoimpl import night
+
 from .auth import PUBLIC_ORIGIN, check_post
 from .devices_store import MAX_TOKEN, DeviceStore, default_path
 from .pairing import PairCodes
@@ -97,6 +99,9 @@ class Gate:
         local = len(hosts) == 1 and is_local(hosts[0], self.port) and target.startswith("/")
         if local:
             return Admission(local=True)
+        if night.is_night():  # kuhy sleeps: the phone gets nothing, pairing included
+            retry = str(max(1, int(night.to_morning())))
+            return _plain(423, (("Retry-After", retry),), close=method == "POST")
         path = urlsplit(target).path
         if method == "GET" and (path in EXEMPT_PATHS or ICON_PATH.fullmatch(path)):
             return Admission(local=False)

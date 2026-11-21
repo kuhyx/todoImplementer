@@ -7,6 +7,12 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .context import PromptContext
 
+NIGHT = (
+    "kuhy sleeps from 22:55 to 05:55 (local time; his phone is locked out of the board then): in that "
+    "window work fully on your own, take the recommended answer to every question and log it; a question "
+    "you positively cannot answer yourself goes in an `ask` block for the morning, after you have done "
+    "every part and step that does not need it. "
+)
 GRANT = (
     "You have kuhy's standing permission to land your own work. Commit freely in the worktree. To land: "
     "`git fetch`, rebase onto origin/{base}, run the repo's gate, `git push origin HEAD:{base}`, and push "
@@ -42,7 +48,8 @@ GRANT = (
     "If a page truly must be opened, give its full absolute URL (scheme, host, port, path). "
     "Do everything else yourself and log the automatic choice. "
     "A note you file for a new project names its repo `kuhyx/<name>` and holds a line `visibility: public` "
-    "or `visibility: private` (private when absent): Start creates a missing kuhyx repo with it."
+    "or `visibility: private` (private when absent): Start creates a missing kuhyx repo with it. "
+    + NIGHT.rstrip()
 )
 WAITS = (
     "Waits (kuhy, 2026-11-19; the board kills a dead wait once you are silent 5 min): wait on an event, "
