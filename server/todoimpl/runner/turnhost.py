@@ -107,7 +107,10 @@ def _peer_pipe(run_dir: Path, argv: list[str]) -> tuple[peerpipe.HostPipe | None
     moved = peerpipe.stdin_argv(argv)
     if moved is None:
         return None, argv
-    return peerpipe.HostPipe.create(run_dir, moved[1]), moved[0]
+    try:
+        return peerpipe.HostPipe.create(run_dir, moved[1]), moved[0]
+    except OSError:  # no FIFO here: the turn runs as a plain `-p` turn, only without peer messages
+        return None, argv
 
 
 def run(run_dir: Path, stem: str, stop: Stop) -> int:

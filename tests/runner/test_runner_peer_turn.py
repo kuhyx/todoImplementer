@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import threading
 import time
 from typing import TYPE_CHECKING
@@ -79,3 +80,18 @@ def test_peer_turn_without_a_prompt_runs_as_before(world: Env, tmp_path: Path) -
     turnhost.run(run_dir, STEM, turnhost.Stop())
     assert files.read_json(run_dir / f"{STEM}.exit.json")["code"] == 0
     assert world.calls()[0]["via_stdin"] is False
+
+
+def test_a_fifo_that_cannot_be_made_falls_back_to_the_argv_prompt(
+    world: Env, tmp_path: Path, monkeypatch: object
+) -> None:
+    def refuse(*_a: object) -> None:
+        raise PermissionError
+
+    monkeypatch.setattr(os, "mkfifo", refuse)  # type: ignore[attr-defined]
+    run_dir, inv = _rig(world, tmp_path)
+    orphans.begin(run_dir, STEM, "implement", None)
+    _invoke(run_dir, inv)
+    turnhost.run(run_dir, STEM, turnhost.Stop())
+    assert files.read_json(run_dir / f"{STEM}.exit.json")["code"] == 0
+    assert (world.calls()[0]["prompt"], world.calls()[0]["via_stdin"]) == ("go", False)
