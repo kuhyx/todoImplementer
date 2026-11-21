@@ -113,7 +113,7 @@ def _invocation(inv: Invocation) -> str:
     """
     body = {
         "argv": list(inv.argv), "cwd": str(inv.cwd), "env": inv.env, "timeout": turn_timeout(),
-        "lock": str(buildlock.root() / buildlock.LOCK),
+        "lock": str(buildlock.root() / buildlock.LOCK), "peer": inv.peer,
     }  # fmt: skip
     return json.dumps(body)
 

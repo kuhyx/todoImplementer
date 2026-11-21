@@ -37,6 +37,7 @@ DENY_ALWAYS = ("Bash(git push:*)", "Bash(git push *)")
 DENY_READONLY = ("Edit", "Write", "NotebookEdit")
 READONLY_ROLES = frozenset({"classify", "closing"})
 KEY_VAR = "ANTHROPIC_API_KEY"
+PEER_VAR = "TODOIMPL_PEER_STDIN"  # 0: the prompt stays in argv, no peer messages mid-turn
 BG_WAIT_VAR = "CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS"  # 0: headless claude waits for background subagents
 
 
@@ -49,6 +50,7 @@ class Invocation:
     cwd: Path
     notes: tuple[str, ...] = ()
     route: str = "plan"
+    peer: bool = False  # the host feeds the prompt and peer messages on stdin (runner/peerpipe.py)
 
 
 @dataclass(frozen=True)
@@ -156,7 +158,8 @@ def build(  # noqa: PLR0913, PLR0917 - one argv, built in one place
         argv += ["--allowedTools", *allow]
     if opt.deny:
         argv += ["--disallowedTools", *opt.deny]
-    return Invocation(tuple(argv), opt.env, worktree, opt.notes)
+    peer = os.environ.get(PEER_VAR, "1") != "0"
+    return Invocation(tuple(argv), opt.env, worktree, opt.notes, peer=peer)
 
 
 def _signal_group(pgid: int, sig: signal.Signals) -> None:

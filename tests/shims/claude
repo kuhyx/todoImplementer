@@ -8,7 +8,7 @@ $FAKE_CLAUDE_DIR/calls.jsonl (argv, cwd, prompt, resume, model, CLAUDE_AUTO_CONT
 
 A script line is either a raw stream-json object (printed with the session id filled in) or a directive
 {"_fake": kind}: text, tool, tool_result, denied, result (optional `denials`), limit, write, sleep, spawn_sleeper, shell (a
-bash child for `sec` seconds, as a background Bash job), raw, stderr, exit; a first `bare` line
+bash child for `sec` seconds, as a background Bash job), raw, stderr, exit, stdin (replay the next stdin line); a first `bare` line
 suppresses the init event and the session id.
 """
 
@@ -109,14 +109,32 @@ def run(step: dict, sid: str, cwd: Path) -> int | None:
         sys.stderr.flush()
     elif kind == "exit":
         return int(step["code"])
+    elif kind == "stdin":  # wait for a peer line on stdin and replay it, as --replay-user-messages does
+        line = sys.stdin.readline()
+        if line:
+            emit({**json.loads(line), "isReplay": True, "session_id": sid})
     return None
+
+
+STDIN_FLAGS = ("--input-format", "stream-json", "--replay-user-messages")
+
+
+def stdin_prompt(argv: list[str]) -> list[str]:
+    """A peer-mode turn (runner/peerpipe.py) reads its prompt as the first stdin line: put it back after -p."""
+    if "--input-format" not in argv:
+        return argv
+    first = json.loads(sys.stdin.readline() or "{}")
+    rest = [a for a in argv if a not in STDIN_FLAGS]
+    at = rest.index("-p") + 1
+    return [*rest[:at], str(first.get("message", {}).get("content", "")), *rest[at:]]
 
 
 def main() -> int:
     base = Path(os.environ["FAKE_CLAUDE_DIR"])
-    opts = parse(sys.argv[1:])
+    argv = stdin_prompt(sys.argv[1:])
+    opts = parse(argv)
     cwd = Path.cwd()
-    call = {"argv": sys.argv[1:], "cwd": str(cwd), **opts, "auto_continue": os.environ.get("CLAUDE_AUTO_CONTINUE"),
+    call = {"argv": argv, "cwd": str(cwd), **opts, "via_stdin": argv != sys.argv[1:], "auto_continue": os.environ.get("CLAUDE_AUTO_CONTINUE"),
             "bg_wait": os.environ.get("CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS"),
             "api_key": "ANTHROPIC_API_KEY" in os.environ, "via_sdk": os.environ.get("FAKE_VIA_SDK") == "1",
             "phone_owner": os.environ.get("PHONE_LEASE_OWNER")}

@@ -24,7 +24,7 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from . import orphans, turnclock
+from . import orphans, peerpipe, turnclock
 from .files import EXIT_SUFFIX, STREAM_SUFFIX, sibling, write_json
 
 if TYPE_CHECKING:
@@ -74,8 +74,13 @@ def _finish(  # noqa: PLR0913 - the exit record's fields
     return 0
 
 
-def _wait(
-    proc: subprocess.Popen[bytes], stop: Stop, limit: float | None, err: Path, waiting: Callable[[], bool]
+def _wait(  # noqa: PLR0913 - the turn's process, limits and per-tick hooks
+    proc: subprocess.Popen[bytes],
+    stop: Stop,
+    limit: float | None,
+    err: Path,
+    waiting: Callable[[], bool],
+    each: Callable[[], None] = lambda: None,
 ) -> tuple[int, bool]:
     """Wait for claude; past `limit` seconds stop it (reason to the stderr log). Return (code, timed out).
 
@@ -87,6 +92,7 @@ def _wait(
         try:
             return proc.wait(timeout=TICK), timed_out
         except subprocess.TimeoutExpired:
+            each()
             if not timed_out and deadline.passed(time.monotonic()):
                 timed_out = True
                 with err.open("ab") as log:
@@ -94,6 +100,14 @@ def _wait(
                     log.write(f"turn exceeded its {limit:g} s limit, {free}: stopped by the host\n".encode())
                 stop(signal.SIGTERM, None)
             stop.escalate()
+
+
+def _peer_pipe(run_dir: Path, argv: list[str]) -> tuple[peerpipe.HostPipe | None, list[str]]:
+    """The turn's peer FIFO and its stdin argv (DOCS-peer.md); none when argv has no `-p <prompt>`."""
+    moved = peerpipe.stdin_argv(argv)
+    if moved is None:
+        return None, argv
+    return peerpipe.HostPipe.create(run_dir, moved[1]), moved[0]
 
 
 def run(run_dir: Path, stem: str, stop: Stop) -> int:
@@ -112,6 +126,7 @@ def run(run_dir: Path, stem: str, stop: Stop) -> int:
         rec is None or rec.stem != stem
     ):  # declared lost while this host was starting: do not run beside its successor
         return _finish(run_dir, stem, SUPERSEDED, None, "the server no longer waits for this turn")
+    pipe, argv = _peer_pipe(run_dir, argv) if inv.get("peer") else (None, argv)  # absent: an older server
     try:
         with (
             sibling(run_dir, stem, STREAM_SUFFIX).open("ab") as out,
@@ -121,13 +136,17 @@ def run(run_dir: Path, stem: str, stop: Stop) -> int:
                 argv,
                 cwd=cwd,
                 env=env,
-                stdin=subprocess.DEVNULL,
+                stdin=subprocess.DEVNULL if pipe is None else pipe.stdin,
                 stdout=out,
                 stderr=err,
                 start_new_session=True,
             )
     except OSError as exc:
+        if pipe is not None:
+            pipe.close()
         return _finish(run_dir, stem, SPAWN_FAILED, None, str(exc))
+    if pipe is not None:
+        pipe.started()
     stop.proc = proc
     me = os.getpid()
     orphans.write(
@@ -135,7 +154,10 @@ def run(run_dir: Path, stem: str, stop: Stop) -> int:
     )
     stream = sibling(run_dir, stem, STREAM_SUFFIX)
     waiting = turnclock.LockWait(proc.pid, run_dir, lock, stream)
-    code, timed_out = _wait(proc, stop, limit, sibling(run_dir, stem, ERR_SUFFIX), waiting)
+    each = (lambda: pipe.watch(stream)) if pipe is not None else (lambda: None)
+    code, timed_out = _wait(proc, stop, limit, sibling(run_dir, stem, ERR_SUFFIX), waiting, each)
+    if pipe is not None:
+        pipe.close()
     return _finish(run_dir, stem, code, proc.pid, timed_out=timed_out)
 
 

@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 from todoimpl.board.state import run_dir, run_root
 from todoimpl.credits import ledger
 from todoimpl.errors.loop import ErrorLoop
+from todoimpl.peer import service as peer
 from todoimpl.http.main import REPO, git_build_id
 from todoimpl.repotask import foldasks, legacy
 from todoimpl.runner.autocheck import AutoCloser
@@ -132,6 +133,7 @@ def build_backend(
     backend.ask_service = AskService(cache, scheduler, root)
     backend.triage_service = TriageService(client, cache, root, scheduler=scheduler)
     if refresh:
+        backend.peer_hub = peer.start(root, scheduler)  # sessions message each other (DOCS-peer.md)
         cache.start()
         backend.ask_service.start()  # 24 h auto-adopt of reversible choices
         auto_merge.start()  # Haiku groups similar notes, the board merges them itself (DOCS-merge.md)

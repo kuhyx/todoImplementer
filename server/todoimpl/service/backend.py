@@ -47,8 +47,7 @@ if TYPE_CHECKING:
     from .scheduling import SchedulerLike
 
 log = logging.getLogger("todoimpl.service")
-UPSTREAM = "upstream_unavailable"
-CONFLICT = "conflict"
+UPSTREAM, CONFLICT = "upstream_unavailable", "conflict"
 CARD_FIELDS = ("status", "column", "current", "needs", "actions")  # what live.schema.json adds to a stage
 
 
@@ -92,6 +91,7 @@ class ServiceBackend:
         self.new_task_service: NewTaskService | None = None  # POST /api/new-task
         self.triage_service: TriageService | None = None  # labels repo-less notes (DOCS-triage.md)
         self.known_repos: Callable[[], list[str]] = list  # GitHub repos beside the cards' (T2413)
+        self.peer_hub: object = None  # todoimpl.peer.hub.Hub, set by build_backend (DOCS-peer.md)
 
     def _context(self) -> Context:
         now = self._clock()
