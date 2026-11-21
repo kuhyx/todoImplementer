@@ -14,14 +14,13 @@ from pathlib import Path
 
 from todoimpl.runner import bgwait, buildlock, cardslice
 
+from . import program
 from .scan import Running
 
 CGROUP = Path(f"/sys/fs/cgroup/user.slice/user-{os.getuid()}.slice/user@{os.getuid()}.service")
 PRESSURE = 10.0  # % of the last 10 s in which every task of the slice waited on memory
 FULL = re.compile(r"^full avg10=(?P<avg>[\d.]+)", re.MULTILINE)
 GIB = 1 << 30
-
-ASSIGN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")  # an env assignment in front of a command
 
 
 def pressure(group: Path) -> float:
@@ -43,13 +42,6 @@ def biggest(group: Path) -> tuple[str, int] | None:
     return max(sizes, key=lambda pair: pair[1], default=None)
 
 
-def _word(command: str) -> str:
-    """Return a job's program as a signature word: `systemd-run`, `make`, `pnpm`; `A=1 x` names x (T2430)."""
-    words = [w for w in command.split() if not ASSIGN.match(w)]
-    first = words[0].rsplit("/", 1)[-1] if words else ""
-    return re.sub(r"[^a-z0-9_.-]", "", first.lower())[:30] or "unknown"
-
-
 def diagnose(run: Running) -> tuple[str, str]:
     """Return the stall's signature and a one-line detail."""
     parent = CGROUP / cardslice.PARENT
@@ -63,4 +55,6 @@ def diagnose(run: Running) -> tuple[str, str]:
         return "stall-model", "no command runs: waiting on the model"
     if wait["lock"]:
         return "stall-buildlock", f"waits on the build lock held by {wait['who']}"
-    return f"stall-job-{_word(str(wait['who']))}", f"waits on: {wait['who']}"
+    pid = bgwait.job(run.pid)  # the signature reads the whole script, the card only its first 60 chars
+    whole = bgwait.script(pid) if pid is not None else ""
+    return f"stall-job-{program.name(whole or str(wait['who']))}", f"waits on: {wait['who']}"

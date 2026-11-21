@@ -1,7 +1,7 @@
 """A job's signature names its program, not an env assignment in front of it (T2430)."""
 
 import pytest
-from todoimpl.stall import cause
+from todoimpl.stall import program
 
 
 @pytest.mark.parametrize(
@@ -9,10 +9,10 @@ from todoimpl.stall import cause
     [
         ("CAP_CPU_PCT=20 scripts/test.sh --shard 6/10 2>&1 | tail -n 1", "test.sh"),
         ("A=1 B=x /usr/bin/make -s test", "make"),
-        ("systemd-run --user --wait x", "systemd-run"),
-        ("X=1", "unknown"),
-        ("", "unknown"),
+        ("systemd-run --user --wait x", "x"),
+        ("X=1", "shell"),
+        ("", "shell"),
     ],
 )
 def test_t2430_the_word_skips_env_assignments(command: str, word: str) -> None:
-    assert cause._word(command) == word
+    assert program.name(command) == word

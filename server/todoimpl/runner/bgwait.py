@@ -140,6 +140,12 @@ def _holder(lock: Path) -> tuple[str, float | None]:
 holder = _holder  # the board's own checks name the holder they queue behind the same way (T2185)
 
 
+def job(claude_pid: int | None) -> int | None:
+    """Return the turn's oldest live background job, None when it runs none."""
+    jobs = tree(claude_pid)[1]
+    return min(jobs, key=lambda pid: started(pid) or 0.0) if jobs else None
+
+
 def scan(claude_pid: int | None, run_dir: Path, lock: Path) -> dict[str, Any] | None:
     """Return what the turn's live background job waits on (None: no job): `{lock, who, since}`."""
     below, jobs = tree(claude_pid)

@@ -36,8 +36,10 @@ def _run(tmp_path: Path) -> Running:
     return Running(CARD, tmp_path / CARD, 0.0, 1)
 
 
-def _scan(monkeypatch: pytest.MonkeyPatch, wait: dict[str, Any] | None) -> None:
+def _scan(monkeypatch: pytest.MonkeyPatch, wait: dict[str, Any] | None, script: str | None = None) -> None:
     monkeypatch.setattr(bgwait, "scan", lambda *_a: wait)
+    monkeypatch.setattr(bgwait, "job", lambda _pid: None if script is None else 7)
+    monkeypatch.setattr(bgwait, "script", lambda pid: script if pid == 7 else "")
 
 
 def test_t2402_memory_pressure_on_the_board_names_the_biggest_unit(cgroup: Path, tmp_path: Path) -> None:
@@ -69,10 +71,10 @@ def test_t2402_without_pressure_the_build_lock_a_job_or_the_model(
     assert cause.diagnose(_run(tmp_path)) == ("stall-buildlock", "waits on the build lock held by ba5c3ff1-0")
     _scan(monkeypatch, {"lock": False, "who": "/usr/bin/Systemd-Run --user --wait make", "since": 1.0})
     assert cause.diagnose(_run(tmp_path)) == (
-        "stall-job-systemd-run", "waits on: /usr/bin/Systemd-Run --user --wait make",
+        "stall-job-make", "waits on: /usr/bin/Systemd-Run --user --wait make",
     )  # fmt: skip
     _scan(monkeypatch, {"lock": False, "who": "", "since": 1.0})
-    assert cause.diagnose(_run(tmp_path))[0] == "stall-job-unknown"
+    assert cause.diagnose(_run(tmp_path))[0] == "stall-job-shell"
     _scan(monkeypatch, None)
     assert cause.diagnose(_run(tmp_path)) == ("stall-model", "no command runs: waiting on the model")
 
@@ -80,3 +82,14 @@ def test_t2402_without_pressure_the_build_lock_a_job_or_the_model(
 def test_t2402_an_unreadable_pressure_file_is_no_pressure(tmp_path: Path) -> None:
     assert cause.pressure(tmp_path / "missing") == 0.0
     assert cause.biggest(tmp_path / "missing") is None
+
+
+@pytest.mark.usefixtures("cgroup")
+def test_t2441_the_signature_reads_the_whole_script_not_the_cards_60_chars(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    home = "/home/kuhy/src/todoImplementer"
+    whole = f"PYTHONPATH={home}/server {home}/.venv/bin/python -m x"
+    cut = whole[:60]
+    _scan(monkeypatch, {"lock": False, "who": cut, "since": 1.0}, whole)
+    assert cause.diagnose(_run(tmp_path)) == ("stall-job-python", f"waits on: {cut}")

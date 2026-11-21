@@ -147,3 +147,11 @@ def test_t2124_a_plain_command_and_an_unreadable_process_still_give_a_line(
     assert bgwait.scan(CLAUDE, run_dir, lock) == {"lock": False, "who": "bash -c sleep 600;", "since": None}
     run = RunState(task_id="e1fa3e99-0", stage="implement", extra={WAITS_FOR: {"lock": False, "who": "x"}})
     assert current_line(Status.WORKING, run, None, 0.0) == "⏳ x"
+
+
+def test_t2441_the_job_is_the_oldest_shell_and_its_script_is_whole(
+    fake_proc: tuple[Path, Path, Path],
+) -> None:
+    assert bgwait.job(CLAUDE) == ZSH
+    assert bgwait.script(ZSH) == "scripts/bg.sh gate2 . bash /tmp/gate2.sh"
+    assert bgwait.job(None) is None

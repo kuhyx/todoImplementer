@@ -153,6 +153,11 @@ other stream lines and a touched file do not count, so nothing looks alive by pi
   (kind `perf.stall`). The errors loop turns the record into a ticket like any other app's.
 - The signature is the cause (`stall/cause.py`): `stall-memory` (memory pressure on the user slice, checked first,
   because under pressure every other wait is a symptom), `stall-buildlock`, `stall-job-<tool>`, `stall-model`.
+- `<tool>` is the program the job really runs, read from its whole script (`stall/program.py`), not the card's
+  60-character line: env assignments, `cd`/`export`/`set`, chores (`cat > f <<EOF`, `rm`), heredoc bodies,
+  `$(...)` and wrappers (`timeout`, `nice`, `capped.sh`, `systemd-run ... --wait`, `bash -c`) are skipped. A card's
+  `scratch/` or `children/` script is `script`; only setup left is `shell`. There is no `stall-job-unknown`.
+- A running card quiet over 1 min is reported and filed by this watch on its own: a 10 s tick, one ticket per cause.
 - A `stall-job` on a repo's own gate or test step (`check_gate_stamp.sh step <id>`, `test_shard.sh <shard>`) is
   filed as `perf.slowstep` (`slow-<step>`) in `app-errors/slow-steps.json` against the card's repo, like heavy
   builds; other stalls stay todoImplementer tickets. These routed slow-step tickets are stalls too: ungated and
