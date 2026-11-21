@@ -120,7 +120,7 @@ def test_handoff_guided_flow(box: tuple[Env, Stubber]) -> None:
 def test_handoff_prints_url_when_xdg_open_fails(box: tuple[Env, Stubber]) -> None:
     env, stub = box
     stub("xdg-open", "exit 3")
-    stub("xclip")
+    stub("xclip", "cat >/dev/null")  # reads its stdin like the real one (T2474)
     done = env.run("bash", str(HANDOFF), stdin=f"\n\n\n{CLIENT}\nshh\n")
     assert done.returncode == 0
     assert "open manually" in done.stdout
