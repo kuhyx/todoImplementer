@@ -2,12 +2,14 @@
 
 import os
 import shutil
+import threading
 from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
 import test_shard
 from todoimpl.apikey import cache
+from todoimpl.apikey.monitor import KeyMonitor
 from todoimpl.board import clone as clones
 from todoimpl.relay.status import NOTIFY, STATUS
 
@@ -56,6 +58,31 @@ def _no_real_credits_inputs(_scratch: Path, monkeypatch: pytest.MonkeyPatch) -> 
     monkeypatch.delenv("TODOIMPL_CLAUDE", raising=False)  # a board session sets it to the real claude (T2055)
     monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(empty / "claude"))  # no real OAuth token, no usage probe
     cache.put(None)
+
+
+KEY_MONITORS: list[KeyMonitor] = []  # every loop a test started; stopped when the test ends (T2434)
+
+
+@pytest.fixture(autouse=True)
+def _no_leaked_key_monitor(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """Stop every key monitor loop a test started (T2434).
+
+    One left running rewrites the process-wide key cache whenever a later test writes a key file, so that
+    test's credits route reads unusable.
+    """
+    start = KeyMonitor.start
+
+    def tracked(self: KeyMonitor) -> None:
+        KEY_MONITORS.append(self)
+        start(self)
+
+    monkeypatch.setattr(KeyMonitor, "start", tracked)
+    yield
+    while KEY_MONITORS:
+        KEY_MONITORS.pop().stop()
+    left = [t for t in threading.enumerate() if t.name == "apikey-monitor" and t.is_alive()]
+    if left:
+        pytest.fail("this test left an apikey-monitor loop running")
 
 
 @pytest.fixture(scope="session")

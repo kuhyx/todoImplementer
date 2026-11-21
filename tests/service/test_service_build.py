@@ -90,3 +90,15 @@ def test_t2065_the_board_watches_for_notes_done_in_the_todo_app(fake: FakeTodoMc
     backend = build_backend(root=tmp_path, build="x", client=client, scheduler=FakeScheduler())
     backend.cache.stop()
     assert any(t.name == "note-done" and t.is_alive() for t in threading.enumerate())
+
+
+def test_t2434_a_started_key_monitor_is_tracked_for_teardown(tmp_path: Path) -> None:
+    """The root conftest stops it when the test ends, so it cannot rewrite the key cache of later tests."""
+    from todoimpl.apikey.monitor import KeyMonitor  # noqa: PLC0415
+
+    assert KeyMonitor.start.__name__ == "tracked"
+    backend = build_backend(
+        root=tmp_path, build="x", client=TodoClient("http://127.0.0.1:1/mcp", "t"), scheduler=FakeScheduler()
+    )
+    backend.cache.stop()
+    assert any(t.name == "apikey-monitor" and t.is_alive() for t in threading.enumerate())
