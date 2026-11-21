@@ -1,7 +1,7 @@
 """A live free worker is the card's work: its manager waits on it, so the manager's quiet is no stall (T2451).
 
-2026-11-21: cheap-tier managers ran `freeworker wait worker-3.log` in the background and ended their turn; the free
-model worked for 6-9 min and printed its answer only at the end, so each wait was filed as `stall-job-python`.
+2026-11-21: cheap-tier managers ran `freeworker wait worker-3.log` in the background and ended their turn; the
+free model worked for 6-9 min and printed its answer only at the end, so each wait was a `stall-job-python`.
 """
 
 from __future__ import annotations
@@ -36,7 +36,7 @@ def test_t2451_a_live_worker_counts_as_work_until_its_timeout(tmp_path: Path) ->
 
 def test_t2451_a_dead_or_unreadable_worker_does_not(tmp_path: Path) -> None:
     run_dir = _card(tmp_path)
-    gone = subprocess.Popen(["true"])  # noqa: S607 - a pid that is surely over
+    gone = subprocess.Popen(["true"])  # a pid that is surely over
     gone.wait()
     _pid_file(run_dir / "worker-1.log.pid", gone.pid, 5000.0)
     _pid_file(run_dir / "worker-2.log.pid", "x", 6000.0)
