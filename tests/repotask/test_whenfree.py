@@ -6,7 +6,7 @@ import time
 from typing import TYPE_CHECKING
 
 import pytest
-from repofakes import IMPL, LIVE, PLAN, Rig
+from repofakes import IMPL, LIVE, PLAN, Rig, live_for
 from test_flow import NUDGED, seed, tick_before_start
 from todoimpl.board import state as store
 from todoimpl.runner import whenfree
@@ -31,7 +31,7 @@ def cycle_of(rig: Rig, card: str, cycle: int, timeout: float = 30.0) -> store.Ru
 def at_gate(rig: Rig) -> tuple[str, str]:
     """Bring a repo card to the gate with one ticked part and two open ones; return (card, note A)."""
     _, card, first, _ = seed(rig)
-    rig.script(card, PLAN, IMPL, *NUDGED, LIVE)
+    rig.script(card, PLAN, IMPL, *NUDGED, live_for(f"{first}-0"))
     tick_before_start(rig, card, f"{first}-0")
     rig.sched.start(card)
     rig.wait(card, {"gate"})

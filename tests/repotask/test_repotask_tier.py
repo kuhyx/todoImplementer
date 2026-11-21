@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from repofakes import IMPL, LIVE, PLAN, Rig
+from repofakes import IMPL, LIVE, PLAN, Rig, live_for
 from schedfakes import reply
 from tierfakes import Free
 from todoimpl.repotask import files
@@ -24,8 +24,9 @@ def implement_calls(rig: Rig) -> list[dict[str, Any]]:
 def run_to_gate(rig: Rig, repo: str, *note_ids: str) -> tuple[str, Any]:
     """Tick the notes' first parts (the fake claude cannot run the tick command), start, wait for the gate."""
     card = repo_card_id(repo)
-    write_json(rig.run_dir(card) / files.DONE, {"done": [f"{n}-0" for n in note_ids], "steps": {}})
-    rig.script(card, PLAN, IMPL, LIVE)
+    keys = [f"{n}-0" for n in note_ids]
+    write_json(rig.run_dir(card) / files.DONE, {"done": keys, "steps": {}})
+    rig.script(card, PLAN, IMPL, live_for(*keys))
     rig.sched.start(card)
     return card, rig.wait(card, {"gate"})
 

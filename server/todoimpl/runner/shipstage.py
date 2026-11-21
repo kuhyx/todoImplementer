@@ -67,7 +67,9 @@ def _heal(d: Driver, failed: GateRedError | NoDeployLineError | DeployFailedErro
 
 def _check_parts(d: Driver, report: str) -> None:
     """Refuse a ship that closes no part, or a ticked part no passed live row names (T2447)."""
-    if d.item.parts and not files.ticked(d.ctx.run_dir, d.item):
+    if not d.item.parts:  # a plain card: nothing to tick
+        return
+    if not files.ticked(d.ctx.run_dir, d.item):
         msg = "No part is ticked, so Ship would close nothing: tick the finished parts, then Retry"
         raise NeedsYouError(msg, "run_failed")
     if unproven := files.unproven(d.ctx.run_dir, d.item, parse_live(report)):

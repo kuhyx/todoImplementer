@@ -47,9 +47,21 @@ def test_parse_self_check_and_live_rows() -> None:
     live = "# Live\n- [x] C1: ran `cat hello.txt` -> saw hi\n"
     live += "- [ ] C2: could not start the app\n* [X] no id here\nx"
     assert parsing.parse_live(live) == [
-        {"criterion": "C1", "done": True, "note": "ran `cat hello.txt` -> saw hi", "deferred": False},
-        {"criterion": "C2", "done": False, "note": "could not start the app", "deferred": False},
-        {"criterion": "no id here", "done": True, "note": "no id here", "deferred": False},
+        {
+            "criterion": "C1",
+            "done": True,
+            "note": "ran `cat hello.txt` -> saw hi",
+            "part": None,
+            "deferred": False,
+        },
+        {
+            "criterion": "C2",
+            "done": False,
+            "note": "could not start the app",
+            "part": None,
+            "deferred": False,
+        },
+        {"criterion": "no id here", "done": True, "note": "no id here", "part": None, "deferred": False},
     ]
 
 
