@@ -12,7 +12,7 @@ export interface LiveHandlers {
   onState: (state: LiveState) => void;
 }
 
-const TYPES = ["activity", "stage", "cost", "done"] as const;
+const TYPES = ["activity", "stage", "cost", "done", "peer"] as const;
 
 function pathText(path: readonly PropertyKey[]): string {
   let text = "";

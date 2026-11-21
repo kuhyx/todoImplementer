@@ -47,6 +47,16 @@
     },
     {
       "type": "object",
+      "description": "A Peer thread row changed (DOCS-peer.md, T2473): the drawer replaces or adds it at once.",
+      "properties": {
+        "type": {"const": "peer"},
+        "message": {"$ref": "https://todoimplementer.local/contracts/peer.schema.json#/$defs/message"}
+      },
+      "required": ["type", "message"],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
       "description": "The run left the live set (waiting, finished or stopped); the page may close the stream.",
       "properties": {
         "type": {"const": "done"},

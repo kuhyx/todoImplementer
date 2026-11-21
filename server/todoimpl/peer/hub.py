@@ -159,6 +159,8 @@ class Hub:
             "text": f"{row['from']} → {row['to']}: {row['state']}",
         }  # fmt: skip
         self._publish(str(row["card"]), shown)
+        # the row itself: the open drawer merges it at once (T2473)
+        self._publish(str(row["card"]), {"type": "peer", "message": view(row)})
         self._cv.notify_all()
 
     def _known(self, msg_id: str) -> dict[str, Any]:

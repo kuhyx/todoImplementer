@@ -103,8 +103,9 @@ A refusal is `{ok: false, error: {code, message}, retry_after?}` (`code`: `bad_r
 The task drawer's head shows the card's Peer thread (`detail.peer`, `web/src/components/peer-thread.ts`):
 sender, recipient, text, a state icon (queued, delivered, answered, expired, dead end; the name is its
 title), the reply, the reason of an expired or dead-end message, and the send, delivery and answer times.
-No new UI text: everything shown is the data. Every change is published on the card's live feed, so an open
-drawer shows it at once.
+No new UI text: everything shown is the data. Every change is published on the card's live feed twice: an
+activity line, and a `peer` event carrying the row (`live.schema.json`), which the open drawer merges at once
+with no refetch (`web/src/components/drawer-live.ts`, T2473).
 
 ## Storage
 

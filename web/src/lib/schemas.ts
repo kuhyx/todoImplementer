@@ -8,7 +8,7 @@ import {
   taskCard, usd,
 } from "@/lib/schemas-common";
 import { free } from "@/lib/schemas-free";
-import { peerThread } from "@/lib/schemas-peer";
+import { peerMessage, peerThread } from "@/lib/schemas-peer";
 import { umbrellaDetail } from "@/lib/schemas-umbrella";
 
 const keyState = z.enum(["ok", "expiring", "expired", "invalid", "missing", "check_failed"]);
@@ -121,6 +121,7 @@ export const liveEvent = z.discriminatedUnion("type", [
   }),
   z.strictObject({ cost_usd: usd, type: z.literal("cost") }),
   z.strictObject({ status, type: z.literal("done") }),
+  z.strictObject({ message: peerMessage, type: z.literal("peer") }),
 ]);
 
 export type Board = z.infer<typeof board>;

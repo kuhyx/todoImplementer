@@ -5,6 +5,7 @@ import { type BarState, idleBar, optionValue, renderAction, slowTimer } from "@/
 import { isOnlyAsk } from "@/components/ask-model";
 import { AskPanel } from "@/components/ask-view";
 import { copyText, postAnswers, postReply } from "@/components/drawer-answers";
+import { mergeLive } from "@/components/drawer-live";
 import { paintDetail } from "@/components/drawer-render";
 import { buildShell, paintFocus, paintTabs, type Tab, trapTab } from "@/components/drawer-shell";
 import { createFeed } from "@/components/feed-view";
@@ -88,17 +89,12 @@ export class TiDrawer extends HTMLElement {
       this.#feed.append(event);
       return;
     }
-    const detail = this.#detail;
-    if (detail !== null && event.type === "stage") {
-      const { actions, column, current, needs, stage, status } = event;
-      this.#detail = { ...detail, card: { ...detail.card, actions, column, current, needs, stage, status } };
+    const merged = this.#detail === null ? null : mergeLive(this.#detail, event);
+    if (merged !== null) {
+      this.#detail = merged;
       this.#render();
     }
-    if (detail !== null && event.type === "cost") {
-      this.#detail = { ...detail, card: { ...detail.card, cost_usd: event.cost_usd } };
-      this.#render();
-    }
-    if (event.type === "cost" || this.#id === null) return;
+    if (event.type === "cost" || event.type === "peer" || this.#id === null) return;
     void this.#refresh(this.#id);
     this.dispatchEvent(new CustomEvent("task-changed", { bubbles: true }));
   }
