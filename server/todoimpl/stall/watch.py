@@ -13,7 +13,9 @@ import threading
 import time
 from typing import TYPE_CHECKING
 
-from . import cause, report, scan
+from todoimpl.runner import heavybuild
+
+from . import cause, report, scan, slowstep
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -68,6 +70,24 @@ class StallWatch:
                 continue
             signature, detail = self.diagnose(run)
             idle = round(now - run.since)
+            # If it's a stall-job on a repo's own gate/test step, file against that repo instead
+            job = detail.removeprefix("waits on: ")
+            step = slowstep.step_of(job)
+            if signature.startswith("stall-job-") and step is not None:
+                repo = heavybuild.repo_of(self.root, run.card)
+                if repo is not None and repo != report.REPO:
+                    slowstep.file(repo, step, f"card {run.card} quiet {idle} s: {detail}", now)
+                    row = {
+                        "at": now,
+                        "card": run.card,
+                        "since": run.since,
+                        "idle": idle,
+                        "signature": signature,
+                        "repo": repo,
+                    }
+                    report.log(self.root, {**row, "detail": detail})
+                    log.warning("card %s quiet %d s -> repo %s: %s", run.card, idle, repo, detail)
+                    continue
             report.file(signature, f"card {run.card} quiet {idle} s: {detail}", now)
             row = {"at": now, "card": run.card, "since": run.since, "idle": idle, "signature": signature}
             report.log(self.root, {**row, "detail": detail})

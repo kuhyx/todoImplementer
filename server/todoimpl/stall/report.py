@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING, Any
 from todoimpl import atomic
 from todoimpl.errors.sources import state_base
 from todoimpl.runner.files import read_json, write_json
+from todoimpl.stall.slowstep import PREFIX as SLOW_PREFIX
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -34,8 +35,14 @@ def path() -> Path:
 
 
 def is_stall(key: str) -> bool:
-    """Say whether an errors-loop key (`<app>:<signature>`) is a stall: it starts first and ungated."""
-    return key.startswith(f"{APP}:stall-")
+    """Say whether an errors-loop key (`<app>:<signature>`) is a stall: it starts first and ungated.
+
+    Matches:
+    - `todoimplementer:stall-...` (board's own stalls, cause from stall/cause.py)
+    - `<any app>:slow-...` (routed slow-step stalls from any repo, prefix from slowstep.py)
+    """
+    _app, colon, sig = key.partition(":")
+    return key.startswith(f"{APP}:stall-") or (bool(colon) and sig.startswith(SLOW_PREFIX))
 
 
 def _iso(at: float) -> str:

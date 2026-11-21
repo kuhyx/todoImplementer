@@ -153,6 +153,10 @@ other stream lines and a touched file do not count, so nothing looks alive by pi
   (kind `perf.stall`). The errors loop turns the record into a ticket like any other app's.
 - The signature is the cause (`stall/cause.py`): `stall-memory` (memory pressure on the user slice, checked first,
   because under pressure every other wait is a symptom), `stall-buildlock`, `stall-job-<tool>`, `stall-model`.
+- A `stall-job` on a repo's own gate or test step (`check_gate_stamp.sh step <id>`, `test_shard.sh <shard>`) is
+  filed as `perf.slowstep` (`slow-<step>`) in `app-errors/slow-steps.json` against the card's repo, like heavy
+  builds; other stalls stay todoImplementer tickets. These routed slow-step tickets are stalls too: ungated and
+  started first (reason `stall`).
 - A stall ticket is ungated and first: the loop starts it before any other error card and skips the usage gate for
   it (reason `stall`).
 
