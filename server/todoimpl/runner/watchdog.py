@@ -30,7 +30,8 @@ REAL_SUFFIX = ".real"
 NOISE = frozenset({"tool_progress", "rate_limit_event"})
 RULES = {
     "pgrep-self": "`pgrep -f {detail}` matched only its own command line, so it never ends. Wait on a "
-    "unit by name (`systemctl --user is-active <unit>`, `systemd-run --wait`), never `pgrep -f` with a "
+    "unit by name (`systemctl --user is-active <unit>`, `timeout 50 tail --pid=<pid> -f /dev/null`), "
+    "never `pgrep -f` with a "
     "pattern that is in your own command",
     "cross-card": "it waited on card {detail}, which is done or gone. Never wait on another card's process: "
     "the board sequences cards",

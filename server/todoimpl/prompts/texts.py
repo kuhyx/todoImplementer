@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from todoimpl import night
 from todoimpl.newtask import images
 
 from . import phone, standing
@@ -17,6 +18,10 @@ if TYPE_CHECKING:
     from .context import PromptContext
 
 OVERRIDE = "override"
+SPEC_NIGHT = (
+    "Now kuhy sleeps (22:55-05:55): ask him nothing, reply only `D:`; the plan takes the recommended answer "
+    "to every open choice and logs it."
+)
 TAIL_CHARS = 3000
 CARD = "❓ **Q1** - **<title>**: <body>\n➡️ <your recommended answer>"
 RULES = (
@@ -91,6 +96,7 @@ def spec(ctx: PromptContext) -> str:
             "Ask the whole frontier at once; no question may depend on another in the same round.",
             "Facts on disk are yours to find; only decisions are mine. No prose, plan, code or edits.",
             "End with `Q:`. If nothing is open, reply only `D:`.",
+            *([SPEC_NIGHT] if night.is_night() else []),
         ],
     )
 
@@ -104,6 +110,7 @@ def plan(ctx: PromptContext) -> str:
         "Number criteria `C1.`, `C2.` ... Each is observable behaviour in the live app: `I do X, I see Y`.",
         "Never a test or code property. Cover the done_check if there is one.",
         KUHY_PLAN,
+        standing.NIGHT.rstrip(),
         "End with `D:`.",
     )
 

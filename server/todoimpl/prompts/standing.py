@@ -53,10 +53,12 @@ GRANT = (
 )
 WAITS = (
     "Waits (kuhy, 2026-11-19; the board kills a dead wait once you are silent 5 min): wait on an event, "
-    "never poll, and in slices: one call waits at most 50 s (`timeout 50 systemd-run --wait ...` for a "
-    "unit you start, `timeout 50 inotifywait ...`, `systemctl --user is-active <unit>` by unit name, "
-    "`timeout 50 gh run watch`), then returns and the next call waits again (T2427); never `tail -f`, "
-    "`tail -F` or `journalctl -f` a log, it never ends; no self-made `until`/`while ... sleep` loop when "
+    "never poll, and in slices: one call waits at most 50 s. A long job starts once as a named unit without "
+    "`--wait` (`systemd-run --user --collect --unit=<name> ...`); each later call waits on it at most 50 s "
+    "(`timeout 50 tail --pid=$(systemctl --user show -p MainPID --value <name>) -f /dev/null`, then "
+    "`systemctl --user is-active <name>`) and never starts it again; likewise `timeout 50 inotifywait ...` "
+    "and `timeout 50 gh run watch` (T2427). Never follow a log (`tail -f <log>`, `journalctl -f`): it never "
+    "ends; no self-made `until`/`while ... sleep` loop when "
     "an event wait exists. Never `pgrep -f` "
     "a pattern that is in your own command line (it matches itself and never ends). Never start a "
     "background job (`&`) inside `$(...)`: it holds the pipe open, a deadlock. No `flock -n` polling and "
