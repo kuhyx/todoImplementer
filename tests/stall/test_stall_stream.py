@@ -62,3 +62,8 @@ def test_t2448_an_answered_advisor_call_is_plain_output(tmp_path: Path) -> None:
     done = {"type": "assistant", "timestamp": CALL, "message": {"content": [{"type": "advisor_tool_result"}]}}
     _stream(tmp_path, done)
     assert _since(tmp_path) == [AT]
+
+
+def test_t2447_a_stream_of_only_system_lines_is_no_output(tmp_path: Path) -> None:
+    _stream(tmp_path, {"type": "system", "subtype": "init"}, "[1]")
+    assert _since(tmp_path) == [1000.0]
