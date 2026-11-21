@@ -13,6 +13,9 @@ Every work-stage prompt (implement, fix, resume, fresh, live_check) carries it:
 - Never edit or commit in kuhy's own checkout (`~/src/<repo>`) working tree. Work in another repo goes in a worktree
   the session creates under its run dir (`git -C ~/src/<other> worktree add <run dir>/wt-<name> -b todo/<item id>
   origin/main`), landed the same way. `~/src/todo` is edited the same way.
+- Free workers (T2464) get the same limit by force: their task file names the child's repo ("everywhere" means that repo
+  only), their prompt names the worktree, and `Edit`/`Write`/`MultiEdit`/`NotebookEdit` are denied under `~/src`
+  (`$TODOIMPL_SRC`). An umbrella note saying "every app" had sent workers into nine other repos' checkouts.
 - Also granted: installers, confirm scripts and other repo scripts, marker files, approving its own drafts.
 - Heavy commands still go through `capped.sh`. Every tool call is one step that ends within 60 s (one gate step or
   test shard, push and deploy as calls of their own), because the stall watch files any quiet stretch over 60 s

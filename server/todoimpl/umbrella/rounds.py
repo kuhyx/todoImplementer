@@ -77,7 +77,13 @@ def _plan(kid: Child) -> str:
 def _write_task(cdir: Path, kid: Child) -> None:
     """Write the worker's task file: the textgate rules first when the child is a textgate rework."""
     text = coach.task_text(kid.text, textgate=coach.is_textgate(kid.text, kid.title))
-    atomic.write_text(cdir / "task.md", f"{text}\n\nWork only in this checkout. Do not run git push.\n")
+    scope = (  # T2464: a note saying "everywhere" sent free workers into kuhy's checkouts of other repos
+        f"This is one part of a larger note: yours is {kid.repo}. Other repos have their own parts, "
+        'so "everywhere" or "every app" above means this repo only; never edit another repo.'
+    )
+    atomic.write_text(
+        cdir / "task.md", f"{text}\n\n{scope}\nWork only in this checkout. Do not run git push.\n"
+    )
 
 
 def _ensure_rules(cdir: Path, kid: Child) -> None:
