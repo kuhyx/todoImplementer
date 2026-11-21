@@ -131,7 +131,7 @@ def _reopen(run_dir: Path, ids: list[str]) -> None:
 
 
 def _restale(d: Driver, missing: list[str]) -> list[str]:
-    """Return the criteria whose approve went stale: just now (the record is dropped) or on an earlier pass."""
+    """Return the criteria whose approve went stale: now (its record is dropped) or on an earlier pass."""
     now = [cid for cid in missing if _stale(d.ctx.run_dir, cid) is not None]
     _reopen(d.ctx.run_dir, now)
     earlier = [
@@ -151,7 +151,8 @@ def _reask(d: Driver, stale: list[str]) -> str:
         d.state.extra["stale_nudged"] = True
         d.state.extra["nudge"] = STALE.format(ids=", ".join(stale), first=stale[0].lower())
         return "live_check"
-    raise NeedsYouError(f"{', '.join(stale)}: approved before the plan changed; re-approve", "claude_action")
+    msg = f"{', '.join(stale)}: approved before the plan changed; re-approve"
+    raise NeedsYouError(msg, "claude_action")
 
 
 def owed(d: Driver, criteria: list[str]) -> str | None:
