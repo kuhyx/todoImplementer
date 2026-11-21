@@ -8,7 +8,7 @@ One row per bug, ids global and never reused. The row's test is named `test_t<N>
 | T2010 | The same error made a second ticket on every tick, and a lost ledger made a duplicate instead of finding the ticket by its `Error-Signature:` line | tests/errors/test_loop.py |
 | T2011 | A ticket made while weekly usage was high was forgotten: the gate is checked on every tick, so the card starts after the reset or when credits are back | tests/errors/test_loop.py |
 | T2012 | A burst of errors in several repos started every card at once and overshot the usage limit: at most one card starts per tick | tests/errors/test_loop.py |
-| T2013 | Free models were allowed by the gate but the card stayed on the plan: the ticket now gets `Tier: cheap` before it starts for that reason | tests/errors/test_loop.py |
+| T2013 | Free models were allowed by the gate but the card stayed on the plan: the ticket now gets `Tier: cheap` before it starts for that reason. Reversed by T2445 | tests/errors/test_loop.py |
 | T2014 | A card at work, failed or at its gate was started again, and a shipped cycle with parts left never began its next cycle | tests/errors/test_loop.py |
 | T2015 | A part the session never ticked was started again forever: at most three starts per ticket | tests/errors/test_loop.py |
 | T2016 | The count in the ticket was rewritten on every tick (note spam): only a changed count writes the `Seen:` line | tests/errors/test_loop.py |
@@ -42,3 +42,4 @@ One row per bug, ids global and never reused. The row's test is named `test_t<N>
 | T2440 | A card's throwaway scripts (`scratch/sh.sh 4`, `scratch/shs.sh`) opened one ticket per file name. A `scratch/` or `children/` script is now `stall-job-script` | tests/stall/test_stall_program.py |
 | T2441 | The signature came from the card's 60-character first line, so the cut decided the ticket. `cause.diagnose` now reads `bgwait.script` of the job (`bgwait.job`); the card line stays as the detail | tests/stall/test_stall_cause.py, tests/runner/test_runner_bgwait.py |
 | T2442 | The T2433 Ship test failed in shard 2: it checked the other repo's branches once its worktree dir was gone, but Ship deletes the branch a moment after removing the dir. The test now waits until only `main` is left | tests/repotask/test_reap_hooks.py |
+| T2445 | Error tickets were sent to free models: the start gate's last reason was `free` (public repo, gateway up), which added `Tier: cheap` to the ticket. kuhy (2026-11-21): free models are too dumb to fix errors. The gate now has only `weekly` and `credits`, and a card whose body holds an `Error-Signature:` line is never cheap, so tickets that already carry the line stay on the plan | tests/errors/test_no_free_models.py, tests/errors/test_gate.py |

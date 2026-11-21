@@ -17,6 +17,8 @@ sorts; the card payload has no `created_by`.
 A card is tier `cheap` when its section text (the item body) has a line `Tier: cheap` (case-insensitive) or its
 title contains `text-free (textgate-rework)`. A repo card (`DOCS-repotask.md`) is titled after the repo, so the title
 of any part the run works counts too (T1999): one cheap part makes the card cheap, as a `Tier:` line in any part did.
+A card holding an app error ticket (an `Error-Signature:` line) is never cheap: kuhy keeps error fixes off free
+models (2026-11-21, T2445).
 The scope is kuhy's, not a default: he asked for free models on the textgate reworks (note 4f77d502, 2026-11-10) and
 set Opus medium as the default model (`DOCS-turns.md`); every other card stays `normal`. Measured 2026-11-12: cheap
 cards averaged $26 against $14 for normal ones (n = 9 and 62), so widening the tier would not cut spend.

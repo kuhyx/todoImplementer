@@ -71,9 +71,8 @@ reset (`gate.py`). First that holds is the card's `reason`:
 1. `weekly`: `seven_day.utilization` below 0.80, from a probe no older than the probe interval (else read now;
    `oauth.fetch`, saved for the board). No login or no `seven_day` window fails closed.
 2. `credits`: the free API credits route takes a turn now (`credits.route.choose`, never `claim`).
-3. `free`: the repo is public and the free gateway answers (`freegate.check`). The ticket gets a `Tier: cheap` line
-   first, since that line is what lets free models work the card (`DOCS-tiers.md`; it makes the whole repo card
-   cheap for that cycle).
+Never free models (kuhy, 2026-11-21: "they are too dumb for it", T2445): there is no `free` reason, so a card
+over 80 % with no credits waits, and a card holding an `Error-Signature:` line is never cheap (`runner/tier.py`).
 
 A card starts only when it has no run, or its run is `shipped` (the next cycle: a cycle never starts by itself
 otherwise). A card at work, shipping, failed or cancelled is left alone. At most one card starts per tick, so a
@@ -173,7 +172,7 @@ other stream lines and a touched file do not count, so nothing looks alive by pi
 
 - One start per tick, three starts per ticket, five phone waits per cycle, 60 s tick.
 - A ticket closed by hand comes back on the next report (resolve it at the source to stop it).
-- The `free` reason adds `Tier: cheap` to the ticket; `weekly` and `credits` do not.
+- No reason adds `Tier: cheap` to a ticket, and a `Tier: cheap` line on a ticket's card is ignored (T2445).
 - A failed deploy with no Pixel attached counts as "waiting for the phone" for error runs only; any run's exit 30
   counts.
 - Resolve and `fixed_build` happen once the whole Ship (push, deploy, close) is done, so a fix waiting for the phone

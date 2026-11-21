@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
     from .record import AppError
 
-__all__ = ["Found", "add_tier", "body", "find", "refresh", "seen", "signatures", "title"]
+__all__ = ["Found", "body", "find", "refresh", "seen", "signatures", "title"]
 
 MESSAGE_IN_TITLE = 80
 GOAL = (
@@ -31,7 +31,6 @@ GOAL = (
 )
 DONE = "done: fixed, tests green, shipped and deployed (the error no longer reproduces)."
 SEEN = re.compile(r"^[ \t]*Seen:")
-CHEAP = re.compile(r"^[ \t]*tier:[ \t]*cheap[ \t]*$", re.IGNORECASE)
 
 
 @dataclass(frozen=True)
@@ -124,14 +123,4 @@ def refresh(note: str, key: str, seen_text: str) -> str | None:
         return None
     else:
         lines[at] = seen_text
-    return "\n".join(lines)
-
-
-def add_tier(note: str, key: str) -> str | None:
-    """Return the note with a `Tier: cheap` line in the part (free models take it); None when it has one."""
-    lines = note.split("\n")
-    spot = _spot(lines, key)
-    if spot is None or any(CHEAP.match(line) for line in lines[spot[1] : spot[0]]):
-        return None
-    lines.insert(spot[0], "Tier: cheap")
     return "\n".join(lines)

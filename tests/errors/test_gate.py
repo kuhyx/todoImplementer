@@ -18,14 +18,14 @@ def probe(used: float | None, at: float = NOW) -> oauth.Probe:
     return oauth.Probe(at, None, week)
 
 
-def gate(tmp: Path, *, fetched: oauth.Probe | None = None, credit: bool = False, free: bool = False) -> Gate:
+def gate(tmp: Path, *, fetched: oauth.Probe | None = None, credit: bool = False) -> Gate:
     calls: list[float] = []
 
     def fetch(now: float) -> oauth.Probe | None:
         calls.append(now)
         return fetched
 
-    made = Gate(fetch=fetch, credits=lambda _root, _now: credit, free=lambda _repo: free)
+    made = Gate(fetch=fetch, credits=lambda _root, _now: credit)
     made.calls = calls  # type: ignore[attr-defined]
     return made
 
@@ -66,16 +66,10 @@ def test_free_credits_open_the_gate_over_the_weekly_limit(tmp_path: Path) -> Non
     assert gate(tmp_path, fetched=probe(0.9), credit=True).check(tmp_path, "kuhyx/kartka", NOW) == "credits"
 
 
-def test_a_public_repo_with_a_live_free_gateway_opens_it_last(tmp_path: Path) -> None:
-    g = gate(tmp_path, fetched=probe(0.9), free=True)
-    assert g.check(tmp_path, "kuhyx/kartka", NOW) == "free"
-    assert (
-        gate(tmp_path, fetched=probe(0.9), credit=True, free=True).check(tmp_path, "kuhyx/kartka", NOW)
-        == "credits"
-    )
+def test_t2445_over_the_weekly_limit_without_credits_the_card_waits(tmp_path: Path) -> None:
+    assert gate(tmp_path, fetched=probe(0.9)).check(tmp_path, "kuhyx/kartka", NOW) is None
 
 
-def test_the_real_probes_answer_no_without_a_plan_login_or_a_clone(tmp_path: Path) -> None:
+def test_the_real_probes_answer_no_without_a_plan_login(tmp_path: Path) -> None:
     real = Gate()
     assert real.credits(tmp_path, NOW) is False  # the conftest turns the fallback off
-    assert real.free("kuhyx/not-cloned-anywhere") is False

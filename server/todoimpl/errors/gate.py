@@ -1,4 +1,6 @@
-"""May an error card start now? kuhy's rule: weekly plan usage under 80 %, or free credits, or free models.
+"""May an error card start now? kuhy's rule: weekly plan usage under 80 %, or free credits.
+
+Never free models (kuhy, 2026-11-21: "they are too dumb for it", T2445): a card waits for the plan or credits.
 
 Checked in that order; the first that holds is the card's `reason`. Anything unknown fails closed: no plan
 login, no `seven_day` window or a dead probe is not "under 80 %".
@@ -7,13 +9,11 @@ login, no `seven_day` window or a dead probe is not "under 80 %".
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from todoimpl.credits import route
-from todoimpl.runner import freegate, limitprobe
-from todoimpl.runner.files import NeedsYouError
-from todoimpl.runner.worktree import repo_dir
+from todoimpl.runner import limitprobe
 from todoimpl.usage import oauth
 
 if TYPE_CHECKING:
@@ -27,21 +27,12 @@ def _credits(root: Path, now: float) -> bool:
     return route.choose(root, now).route == route.CREDITS
 
 
-def _free(repo: str) -> bool:
-    """Say whether free models may work on the repo: public, tools present, gateway answering."""
-    try:
-        return freegate.check(repo_dir(repo)).allowed
-    except NeedsYouError:  # not cloned here: nothing to run free models on
-        return False
-
-
 @dataclass
 class Gate:
     """The three probes, replaceable in tests; `fetch` asks the plan for its real usage."""
 
     fetch: Callable[[float], oauth.Probe | None] = oauth.fetch
     credits: Callable[[Path, float], bool] = _credits
-    free: Callable[[str], bool] = field(default=_free)
 
     def _weekly(self, root: Path, now: float) -> bool:
         """Weekly use below the limit, from a probe no older than the probe interval (else read it now)."""
@@ -54,9 +45,8 @@ class Gate:
         return week is not None and week.utilization < WEEKLY_MAX
 
     def check(self, root: Path, repo: str, now: float) -> str | None:
-        """Return why a card of `repo` may start (`weekly`, `credits` or `free`), or None to wait."""
+        """Return why a card of `repo` may start (`weekly` or `credits`), or None to wait."""
+        del repo  # every repo waits the same way; kept so callers name the card's repo
         if self._weekly(root, now):
             return "weekly"
-        if self.credits(root, now):
-            return "credits"
-        return "free" if self.free(repo) else None
+        return "credits" if self.credits(root, now) else None

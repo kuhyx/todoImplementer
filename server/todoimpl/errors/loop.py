@@ -177,17 +177,6 @@ class ErrorLoop:
             return
         ledger.put(self.root, record.key, count=record.count)
 
-    def _cheap(self, parts: Sequence[tuple[str, ticket.Found]]) -> None:
-        """Free models take the card only when its part says `Tier: cheap`: add that line before the start."""
-        for key, found in parts:
-            try:
-                note = self.tasks.get_task(found.note)
-                if (text := ticket.add_tier(note.body, key)) is not None:
-                    self.tasks.update_task(found.note, body=text)
-            except TodoError as exc:
-                log.warning("error %s: tier line not added: %s", key, exc)
-        self.refresh()
-
     def _wanted(self, cards: Sequence[CardTask]) -> dict[str, list[tuple[str, ticket.Found]]]:
         """Return card id -> its tickets that may still start (open part, fewer than MAX_STARTS), by key."""
         wanted: dict[str, list[tuple[str, ticket.Found]]] = {}
@@ -221,8 +210,6 @@ class ErrorLoop:
             reason = "stall" if stall else self.gate.check(self.root, str(data[keys[0]]["repo"]), now)
             if reason is None:
                 continue
-            if reason == "free":
-                self._cheap(parts)
             try:
                 self.starter.start(
                     card, auto_ship=True, extra={KEY: {"reason": reason, "keys": keys, "at": now}}

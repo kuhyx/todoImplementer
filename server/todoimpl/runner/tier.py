@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 
 CHEAP_LINE = re.compile(r"^[ \t]*tier:[ \t]*cheap[ \t]*$", re.IGNORECASE | re.MULTILINE)
 CHEAP_TITLE = re.compile(r"text-free\s*\(textgate-rework\)", re.IGNORECASE)
+TICKET_LINE = re.compile(r"^[ \t]*Error-Signature:", re.MULTILINE)  # an app error ticket (errors/ticket.py)
 ESCALATE_LINE = re.compile(r"^[ \t]*ESCALATE:[ \t]*(.*?)[ \t]*$", re.IGNORECASE | re.MULTILINE)
 REASON_MAX = 300
 NO_REASON = "no reason given"
@@ -26,6 +27,8 @@ def is_cheap(title: str, body: str, parts: Iterable[Part] = ()) -> bool:
     any part the run works counts like the card title. One cheap part makes the card cheap, as a
     `Tier: cheap` line in any part's text already did.
     """
+    if TICKET_LINE.search(body):  # error fixes never go to free models (kuhy, 2026-11-21, T2445)
+        return False
     titles = (title, *(part.title for part in parts if part.actionable))
     return CHEAP_LINE.search(body) is not None or any(CHEAP_TITLE.search(t) for t in titles)
 

@@ -72,13 +72,12 @@ def test_t2012_at_most_one_card_starts_per_tick(world: World) -> None:
     assert {c[1] for c in world.starts()} == {CARD, repo_card_id("kuhyx/tutor")}
 
 
-def test_t2013_a_free_gateway_start_marks_the_ticket_cheap_first(world: World) -> None:
+def test_t2013_t2445_a_started_ticket_is_never_marked_cheap(world: World) -> None:
     world.entries(kartka_entry())
-    world.reason = "free"
+    world.reason = "credits"
     world.tick()
-    assert "Tier: cheap" in world.note_text()
-    assert len(world.tools("update_task")) == 1
-    assert world.sched.extras[0]["app_error"]["reason"] == "free"  # type: ignore[index]
+    assert "Tier: cheap" not in world.note_text()
+    assert world.sched.extras[0]["app_error"]["reason"] == "credits"  # type: ignore[index]
 
 
 def test_t2014_a_card_at_work_or_failed_is_not_started_again(world: World) -> None:
@@ -199,29 +198,6 @@ def test_a_count_that_cannot_be_written_is_tried_again_next_tick(world: World) -
     assert world.ledger()[KEY]["count"] == 2
     world.tick()
     assert world.ledger()[KEY]["count"] == 9
-
-
-def test_a_part_that_is_already_cheap_gets_no_second_tier_line(world: World) -> None:
-    world.entries(kartka_entry())
-    world.reason = None
-    world.tick()
-    (note,) = world.fake.store.notes.values()
-    note.text = note.text.replace("Error-Signature:", "Tier: cheap\nError-Signature:")
-    world.rig.backend.cache.refresh()
-    world.reason = "free"
-    world.tick()
-    assert world.tools("update_task") == []
-    assert len(world.starts()) == 1
-
-
-def test_a_tier_line_that_cannot_be_written_does_not_stop_the_start(world: World) -> None:
-    world.entries(kartka_entry())
-    world.reason = None
-    world.tick()
-    world.fake.force_text("update_task", "boom", is_error=True)
-    world.reason = "free"
-    world.tick()
-    assert len(world.starts()) == 1
 
 
 def test_a_card_with_an_unreadable_run_is_left_alone(world: World) -> None:

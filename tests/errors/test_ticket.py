@@ -104,15 +104,6 @@ def test_refresh_adds_a_seen_line_a_hand_edit_removed() -> None:
     assert "Seen: 2x\nError-Signature: kartka:1" in got
 
 
-def test_add_tier_puts_one_cheap_line_before_the_signature() -> None:
-    body = f"## Fix mine\n{ticket.body(record())}"
-    got = ticket.add_tier(body, "kartka:02b0d43d9f")
-    assert got is not None
-    assert "Tier: cheap\nError-Signature: kartka:02b0d43d9f" in got
-    assert ticket.add_tier(got, "kartka:02b0d43d9f") is None
-    assert ticket.add_tier(body, "kartka:missing") is None
-
-
 def test_signatures_lists_every_line_of_a_text() -> None:
     assert ticket.signatures(
         "a\n  Error-Signature: x:1  \nError-Signature: y:2\nnot Error-Signature: z:3"
