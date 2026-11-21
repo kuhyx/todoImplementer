@@ -145,6 +145,7 @@ def build(  # noqa: PLR0913, PLR0917 - one argv, built in one place
     """Build the plan route: kuhy's full setup but strict MCP (T1986); the prompt goes right after -p."""
     opt = options(role, prompt, worktree, resume, extra_dirs, allow, model, effort)
     argv = [claude_bin(), "-p", prompt, "--model", opt.model, "--output-format", "stream-json", "--verbose"]
+    argv += ["--include-partial-messages"]  # a long answer streams lines as it goes (T2452)
     argv += ["--permission-mode", opt.permission_mode, "--add-dir", *opt.add_dirs]
     argv += ["--effort", opt.effort]
     argv += ["--strict-mcp-config", "--mcp-config", json.dumps({"mcpServers": opt.mcp_servers})]

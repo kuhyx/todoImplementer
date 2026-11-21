@@ -27,7 +27,7 @@ def test_t2199_a_working_prompt_names_every_wait_rule(stage: str, ctx: PromptCon
 
 def test_t2199_the_self_resume_note_asks_for_an_event_wait_not_a_sleep_loop() -> None:
     assert "short sleeps" not in resume.RESUMED
-    assert "timeout 50 tail --pid=" in resume.RESUMED  # T2427: a wait is at most 50 s per call
+    assert "timeout 40 tail --pid=" in resume.RESUMED  # T2427, T2453: a wait is at most 40 s per call
 
 
 @pytest.mark.parametrize("stage", ["implement", "fix", "live_check", "resume_after_kill", "fresh_after_idle"])

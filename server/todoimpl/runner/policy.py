@@ -15,9 +15,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 KEYS = frozenset({"permission_mode", "add_dirs", "disable_hooks", "deny"})
-# One Bash call ends at 50 s (claude moves it to the background), so the model gets a result before the
-# board's 60 s stall line (T2444). kuhy's settings.json sets an hour, and settings env beats the process env.
-BASH_CAP_MS = "50000"
+# One Bash call ends at 40 s (claude moves it to the background), so the model gets a result and 20 s to
+# answer it before the board's 60 s stall line (T2444, T2453). kuhy's settings.json sets an hour, and settings env beats the process env.
+BASH_CAP_MS = "40000"
 BASH_CAP = {"BASH_DEFAULT_TIMEOUT_MS": BASH_CAP_MS, "BASH_MAX_TIMEOUT_MS": BASH_CAP_MS}
 
 

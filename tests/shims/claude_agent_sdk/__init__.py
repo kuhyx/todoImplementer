@@ -24,6 +24,7 @@ class ClaudeAgentOptions:
     effort: str | None = None
     mcp_servers: dict[str, Any] = field(default_factory=dict)
     strict_mcp_config: bool = False
+    include_partial_messages: bool = False
     max_buffer_size: int | None = None
 
 

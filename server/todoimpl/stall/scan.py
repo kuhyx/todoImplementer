@@ -24,6 +24,7 @@ from todoimpl.runner.workerwait import PID
 EVENTS = "events.jsonl"
 CARD = re.compile(r"^[0-9a-f]{8}-\d+$")
 TAIL = 256 * 1024  # bytes read from the end of events.jsonl: a long tool burst still holds a non-system line
+PARTIAL = "stream_event"  # a chunk of the message the model writes now (`--include-partial-messages`)
 OUTPUT = frozenset({"assistant", "user"})  # stream lines that are real work: a message, or a tool's result
 BOARD_TAIL = 64 * 1024  # the board polls every running card, so it reads less than the watch does
 ADVISOR = (
@@ -101,6 +102,8 @@ def last_output(run_dir: Path, stem: str | None) -> float | None:
         except ValueError:  # claude is mid-write, or the tail cut the line
             continue
         if not isinstance(row, dict) or row.get("type") not in OUTPUT:
+            if back == 0 and isinstance(row, dict) and row.get("type") == PARTIAL:
+                return mtime  # the model is writing its answer right now (T2452)
             continue
         at = _stamp(row)
         if at is None:

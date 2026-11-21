@@ -160,10 +160,11 @@ names a process) counts as work until its start plus its 3600 s timeout: its man
   `$(...)` and wrappers (`timeout`, `nice`, `capped.sh`, `systemd-run ... --wait`, `bash -c`) are skipped. A card's
   `scratch/` or `children/` script is `script`; only setup left is `shell`. There is no `stall-job-unknown`.
 - A running card quiet over 1 min is reported and filed by this watch on its own: a 10 s tick, one ticket per cause.
-- A session's own long command cannot cause one: every turn's `--settings` caps a Bash call at 50 s
-  (`policy.turn_settings`); claude then backgrounds it and hands the model a result.
-  Not yet fixed by it: `stall-model` from one message the model writes for over 60 s (claude streams no line
-  meanwhile) and `stall-buildlock` (a queued build); a closed ticket of either reopens when seen.
+- A session's own long command cannot cause one: every turn's `--settings` caps a Bash call at 40 s
+  (`policy.turn_settings`, T2453); claude then backgrounds it and hands the model a result with 20 s to answer.
+  The prompts' wait slices are 40 s too. Every turn runs with `--include-partial-messages` (T2452), so a long
+  answer writes `stream_event` lines; a trailing one counts as activity, and they make no event, cost or context.
+  Not fixed by either: `stall-buildlock` (a queued build); a closed ticket of it reopens when seen.
 - A `stall-job` on a repo's own gate or test step (`check_gate_stamp.sh step <id>`, `test_shard.sh <shard>`,
   `test.sh --shard N/M`, T2450) is
   filed as `perf.slowstep` (`slow-<step>`) in `app-errors/slow-steps.json` against the card's repo, like heavy

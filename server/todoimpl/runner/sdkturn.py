@@ -86,6 +86,7 @@ async def turn(spec: dict[str, Any], seen: Seen) -> None:
         mcp_servers=spec.get("mcp_servers", {}),
         strict_mcp_config=spec.get("strict_mcp_config", False),
         max_buffer_size=MAX_LINE,
+        include_partial_messages=True,  # a long answer streams lines as it goes, as `claude -p` does (T2452)
         # The SDK sends no Claude Code prompt unless asked; `claude -p` always does.
         system_prompt={"type": "preset", "preset": "claude_code"},
     )
