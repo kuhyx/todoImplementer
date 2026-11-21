@@ -40,6 +40,8 @@ def test_t2438_no_stall_is_job_unknown(script: str, word: str) -> None:
         ("pnpm --dir web -s remove uqr 2>&1 | tail -2; git diff --stat", "pnpm"),
         ("journalctl --user -f -o cat -u kartka-deploy 2>&1 | tail", "journalctl"),
         ("timeout -k 5 50s tail --pid=1 -f /dev/null", "tail"),
+        ("timeout 58 ~/.claude/scripts/capped.sh make test-shard SHARD=1 COV_DIR=/x", "make"),
+        ("SKIP=pytest timeout 58 ~/.claude/scripts/capped.sh make web-test", "make"),
         ("CAP_MEM=4G ~/.claude/scripts/capped.sh pytest -q", "pytest"),
         ('bash -lc "cd /x && pnpm test"', "pnpm"),
         ("if [ -f x ]; then make -s; fi", "make"),
