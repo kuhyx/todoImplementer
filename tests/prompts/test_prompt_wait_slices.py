@@ -1,0 +1,10 @@
+"""A wait is a step too: every call returns within 50 s, so a long job never reads as a stall (T2427)."""
+
+from todoimpl.prompts import standing
+
+
+def test_t2427_waits_come_in_slices_of_50_s() -> None:
+    assert "timeout 50" in standing.WAITS
+    assert "journalctl -f" in standing.WAITS
+    assert "tail -f" in standing.WAITS
+    assert "wait for it." not in standing.GRANT

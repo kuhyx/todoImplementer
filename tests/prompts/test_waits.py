@@ -12,9 +12,9 @@ RULES = (
     "`flock -n`",
     "when_free.sh",
     "another card",
-    "`systemd-run --wait`",
-    "`inotifywait`",
-    "`gh run watch`",
+    "systemd-run --wait",
+    "inotifywait",
+    "gh run watch",
     "still waiting",
 )
 

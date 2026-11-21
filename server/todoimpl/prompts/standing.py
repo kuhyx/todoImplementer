@@ -28,7 +28,7 @@ GRANT = (
     "call is one step that ends within 60 s: one gate step or test shard per call, `git push` and a deploy "
     "as calls of their own, never chained after a gate; the inner loop runs only the tests of changed "
     "files. Only a job that cannot be split (a release build) runs via `systemd-run --user --collect "
-    "--slice=todoimpl.slice`; wait for it. Builds (flutter, gradle, pnpm, pytest, cargo, ...) "
+    "--slice=todoimpl.slice`; wait for it in 50 s slices. Builds (flutter, gradle, pnpm, pytest, cargo, ...) "
     "queue in arrival order on a "
     "machine-wide build lock (three builds at once) that the shims take for you, so a wait is normal: "
     "never kill a waiting build "
@@ -53,8 +53,11 @@ GRANT = (
 )
 WAITS = (
     "Waits (kuhy, 2026-11-19; the board kills a dead wait once you are silent 5 min): wait on an event, "
-    "never poll: `systemd-run --wait`, `systemctl --user is-active <unit>` by unit name, `inotifywait`, "
-    "`gh run watch`; no self-made `until`/`while ... sleep` loop when an event wait exists. Never `pgrep -f` "
+    "never poll, and in slices: one call waits at most 50 s (`timeout 50 systemd-run --wait ...` for a "
+    "unit you start, `timeout 50 inotifywait ...`, `systemctl --user is-active <unit>` by unit name, "
+    "`timeout 50 gh run watch`), then returns and the next call waits again (T2427); never `tail -f`, "
+    "`tail -F` or `journalctl -f` a log, it never ends; no self-made `until`/`while ... sleep` loop when "
+    "an event wait exists. Never `pgrep -f` "
     "a pattern that is in your own command line (it matches itself and never ends). Never start a "
     "background job (`&`) inside `$(...)`: it holds the pipe open, a deadlock. No `flock -n` polling and "
     "no when_free.sh: a build waits on the lock by itself. Never wait on another card's process or unit: "
