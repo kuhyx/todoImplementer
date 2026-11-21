@@ -155,3 +155,10 @@ def test_t2441_the_job_is_the_oldest_shell_and_its_script_is_whole(
     assert bgwait.job(CLAUDE) == ZSH
     assert bgwait.script(ZSH) == "scripts/bg.sh gate2 . bash /tmp/gate2.sh"
     assert bgwait.job(None) is None
+
+
+def test_t2449_newest_names_the_start_of_the_youngest_job(fake_proc: tuple[Path, Path, Path]) -> None:
+    proc, _lock, _run_dir = fake_proc
+    assert bgwait.newest(CLAUDE) == max(filter(None, map(bgwait.started, bgwait.tree(CLAUDE)[1])))
+    (proc / str(CLAUDE) / "task" / str(CLAUDE) / "children").write_text("")
+    assert bgwait.newest(CLAUDE) is None

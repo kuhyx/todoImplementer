@@ -146,6 +146,11 @@ def job(claude_pid: int | None) -> int | None:
     return min(jobs, key=lambda pid: started(pid) or 0.0) if jobs else None
 
 
+def newest(claude_pid: int | None) -> float | None:
+    """Return when the turn's youngest live background job started, None when none or unreadable (T2449)."""
+    return max(filter(None, map(started, tree(claude_pid)[1])), default=None)
+
+
 def scan(claude_pid: int | None, run_dir: Path, lock: Path) -> dict[str, Any] | None:
     """Return what the turn's live background job waits on (None: no job): `{lock, who, since}`."""
     below, jobs = tree(claude_pid)

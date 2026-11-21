@@ -21,6 +21,7 @@ CGROUP = Path(f"/sys/fs/cgroup/user.slice/user-{os.getuid()}.slice/user@{os.getu
 PRESSURE = 10.0  # % of the last 10 s in which every task of the slice waited on memory
 FULL = re.compile(r"^full avg10=(?P<avg>[\d.]+)", re.MULTILINE)
 GIB = 1 << 30
+GRACE = 1.0  # s: a process start time is read in whole seconds of boot time plus clock ticks
 
 
 def pressure(group: Path) -> float:
@@ -51,7 +52,9 @@ def diagnose(run: Running) -> tuple[str, str]:
             hog = f"; biggest unit {top[0]} {top[1] / GIB:.1f} GiB" if top else ""
             return "stall-memory", f"{group.name} memory pressure full avg10={full:.0f}%{hog}"
     wait = bgwait.scan(run.pid, run.run_dir, buildlock.root() / buildlock.LOCK)
-    if wait is None:
+    young = bgwait.newest(run.pid)
+    if wait is None or (not wait["lock"] and young is not None and young < run.since - GRACE):
+        # T2449: every job is older than the last activity, so its (capped) result already reached the model
         return "stall-model", "no command runs: waiting on the model"
     if wait["lock"]:
         return "stall-buildlock", f"waits on the build lock held by {wait['who']}"

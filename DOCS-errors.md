@@ -140,9 +140,11 @@ test_board_appfix.py`, `web/src/components/app-error.test.ts`; regressions T2009
 ## Stalls (`stall/`, T2402, T2403)
 
 Rule (kuhy, 2026-11-20): no running card goes more than 60 s between two real activities. A real activity is one
-of the card's own `activity` events in `events.jsonl` (a tool call, text, a result), or the turn's newest stream line
-when it is a tool result or an assistant message, thinking included (T2418). The board's `system` lines, claude's
-other stream lines and a touched file do not count, so nothing looks alive by pinging.
+of the card's own `activity` events in `events.jsonl` (a tool call, text, a result), or the turn's newest tool result
+or assistant message line in its stream, thinking included (T2418), at that line's own `timestamp` (T2447: claude
+writes `system task_*` lines right after a result, so the last line alone hid it). The board's `system` lines,
+claude's other stream lines and a touched file do not count, so nothing looks alive by pinging. An advisor call
+(`server_tool_use`, answered in 60-140 s with nothing streamed) counts as work for 240 s after it (T2448).
 
 - `stall/watch.py` ticks every 10 s. A card with a live turn (`turn.pid` alive) whose last real activity is over 60 s
   old is one stall episode. A fresh turn counts from its start. An episode counts once however many ticks it lasts.
@@ -159,9 +161,10 @@ other stream lines and a touched file do not count, so nothing looks alive by pi
 - A running card quiet over 1 min is reported and filed by this watch on its own: a 10 s tick, one ticket per cause.
 - A session's own long command cannot cause one: every turn's `--settings` caps a Bash call at 50 s
   (`policy.turn_settings`); claude then backgrounds it and hands the model a result.
-  Not yet fixed by it: `stall-model` (claude writes no stream line while it generates one long message, so a
-  60 s answer looks quiet) and `stall-buildlock` (a queued build); a closed ticket of either reopens when seen.
-- A `stall-job` on a repo's own gate or test step (`check_gate_stamp.sh step <id>`, `test_shard.sh <shard>`) is
+  Not yet fixed by it: `stall-model` from one message the model writes for over 60 s (claude streams no line
+  meanwhile) and `stall-buildlock` (a queued build); a closed ticket of either reopens when seen.
+- A `stall-job` on a repo's own gate or test step (`check_gate_stamp.sh step <id>`, `test_shard.sh <shard>`,
+  `test.sh --shard N/M`, T2450) is
   filed as `perf.slowstep` (`slow-<step>`) in `app-errors/slow-steps.json` against the card's repo, like heavy
   builds; other stalls stay todoImplementer tickets. These routed slow-step tickets are stalls too: ungated and
   started first (reason `stall`).

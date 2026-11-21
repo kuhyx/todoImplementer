@@ -204,3 +204,17 @@ def test_t2437_routed_step_is_a_stall_key() -> None:
     assert report.is_stall("kartka:slow-gate-test-s3") is True
     assert report.is_stall("kartka:crash-x") is False
     assert report.is_stall("todoimplementer:stall-model") is True
+
+
+@pytest.mark.parametrize(
+    ("command", "expected"),
+    [
+        ('timeout 55 scripts/test.sh --shard 3/10 2>&1 | grep -A3 "Fai', "test-shard-3-10"),
+        ("./scripts/test.sh --shard=2/4", "test-shard-2-4"),
+        ("scripts/test.sh", None),
+        ("scripts/test.sh --shard", None),
+    ],
+)
+def test_t2450_a_repos_sharded_test_script_is_its_own_step(command: str, expected: str | None) -> None:
+    """2026-11-21: cleanup-plate's `scripts/test.sh --shard N/M` became a todoImplementer ticket."""
+    assert slowstep.step_of(command) == expected

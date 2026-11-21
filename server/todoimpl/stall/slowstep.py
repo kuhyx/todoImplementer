@@ -32,6 +32,8 @@ GATE_STEP = re.compile(r"(?:.*/)?(?:check_)?gate_stamp\.sh\s+step\s+(\S+)")
 # Test shard forms:
 # scripts/test_shard.sh <shard>
 TEST_SHARD = re.compile(r"(?:.*/)?test_shard\.sh\s+(\S+)")
+# scripts/test.sh --shard N/M (T2450)
+SHARD_FLAG = re.compile(r"(?:^|[\s/])test\.sh\s+--shard[=\s](\d+)/(\d+)")
 
 
 def step_of(command: str) -> str | None:
@@ -40,6 +42,7 @@ def step_of(command: str) -> str | None:
     Matches (command may have 2>&1 | head -2 etc. after it, and env assignments before):
     - scripts/check_gate_stamp.sh step <id> -> <id> (e.g. gate-test-s3)
     - scripts/test_shard.sh <shard> -> test-shard-<shard>
+    - scripts/test.sh --shard N/M -> test-shard-N-M
     - anything else -> None
     """
     # Strip env assignments from the front
@@ -54,6 +57,9 @@ def step_of(command: str) -> str | None:
     m = TEST_SHARD.search(cmd)
     if m:
         return f"test-shard-{m.group(1)}"
+    m = SHARD_FLAG.search(cmd)
+    if m:
+        return f"test-shard-{m.group(1)}-{m.group(2)}"
     return None
 
 

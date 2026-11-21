@@ -38,6 +38,7 @@ def _run(tmp_path: Path) -> Running:
 
 def _scan(monkeypatch: pytest.MonkeyPatch, wait: dict[str, Any] | None, script: str | None = None) -> None:
     monkeypatch.setattr(bgwait, "scan", lambda *_a: wait)
+    monkeypatch.setattr(bgwait, "newest", lambda _pid: None if wait is None else wait["since"])
     monkeypatch.setattr(bgwait, "job", lambda _pid: None if script is None else 7)
     monkeypatch.setattr(bgwait, "script", lambda pid: script if pid == 7 else "")
 
@@ -93,3 +94,17 @@ def test_t2441_the_signature_reads_the_whole_script_not_the_cards_60_chars(
     cut = whole[:60]
     _scan(monkeypatch, {"lock": False, "who": cut, "since": 1.0}, whole)
     assert cause.diagnose(_run(tmp_path)) == ("stall-job-python", f"waits on: {cut}")
+
+
+@pytest.mark.usefixtures("cgroup")
+def test_t2449_a_job_older_than_the_last_activity_is_the_models_wait(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A capped call's job lives on, but its result reached the model: the quiet is the model's (T2449)."""
+    _scan(monkeypatch, {"lock": False, "who": "scratch/shs.sh", "since": 100.0}, "scratch/shs.sh")
+    run = Running(CARD, tmp_path / CARD, 200.0, 1)
+    assert cause.diagnose(run) == ("stall-model", "no command runs: waiting on the model")
+    monkeypatch.setattr(bgwait, "newest", lambda _pid: 199.5)  # a job started with the last activity
+    assert cause.diagnose(run)[0] == "stall-job-script"
+    monkeypatch.setattr(bgwait, "newest", lambda _pid: None)  # its start cannot be read: still a job
+    assert cause.diagnose(run)[0] == "stall-job-script"
