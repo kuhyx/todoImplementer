@@ -158,6 +158,8 @@ other stream lines and a touched file do not count, so nothing looks alive by pi
   `$(...)` and wrappers (`timeout`, `nice`, `capped.sh`, `systemd-run ... --wait`, `bash -c`) are skipped. A card's
   `scratch/` or `children/` script is `script`; only setup left is `shell`. There is no `stall-job-unknown`.
 - A running card quiet over 1 min is reported and filed by this watch on its own: a 10 s tick, one ticket per cause.
+  Not yet fixed by it: `stall-model` (claude writes no stream line while it generates one long message, so a
+  60 s answer looks quiet) and `stall-buildlock` (a queued build); a closed ticket of either reopens when seen.
 - A `stall-job` on a repo's own gate or test step (`check_gate_stamp.sh step <id>`, `test_shard.sh <shard>`) is
   filed as `perf.slowstep` (`slow-<step>`) in `app-errors/slow-steps.json` against the card's repo, like heavy
   builds; other stalls stay todoImplementer tickets. These routed slow-step tickets are stalls too: ungated and

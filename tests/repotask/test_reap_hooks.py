@@ -35,12 +35,15 @@ def gone(rig: Rig, *paths: Path) -> None:
     rig.until(lambda: not any(p.exists() for p in paths))
 
 
-def test_t2433_ship_removes_the_sessions_other_worktrees_too(rig: Rig) -> None:
+def test_t2442_ship_removes_the_sessions_other_worktrees_too(rig: Rig) -> None:
     card, side = at_gate(rig)
     rig.sched.ship(card)
     rig.wait(card, {"shipped"})
     gone(rig, side, rig.run_dir(card) / "wt")
-    assert sh(rig.world.src / "other", "git", "branch", "--format=%(refname:short)").split() == ["main"]
+    # T2442: the branch goes a moment after its worktree's dir, so wait for it rather than look once
+    rig.until(
+        lambda: sh(rig.world.src / "other", "git", "branch", "--format=%(refname:short)").split() == ["main"]
+    )
     assert (rig.run_dir(card) / "state.json").is_file()
 
 
