@@ -25,14 +25,13 @@ ROLE_MODELS = {
     "closing": "opus",
     "implement": "opus",
     "live_check": "opus",  # verify-and-report work: its own fresh session, seeded from the handoff
-    "verify": "opus",
     "classify": "haiku",
 }
 # Default reasoning effort per role: high (kuhy, 2026-11-21); the classifier is plain extraction.
 # `--effort` is in claude 2.1.322.
 ROLE_EFFORT = {
     "spec": "high", "plan": "high", "manager": "high", "closing": "high", "implement": "high",
-    "live_check": "high", "verify": "high", "classify": "low",
+    "live_check": "high", "classify": "low",
 }  # fmt: skip
 # Sessions load kuhy's real ~/.claude allow rules, which permit pushing; only the Ship click may push.
 DENY_ALWAYS = ("Bash(git push:*)", "Bash(git push *)")

@@ -50,3 +50,8 @@ def test_t2471_card_turns_default_to_opus_at_high_effort() -> None:
     assert {claude.ROLE_MODELS[r] for r in card_roles} == {"opus"}
     assert {claude.ROLE_EFFORT[r] for r in card_roles} == {"high"}
     assert (claude.ROLE_MODELS["classify"], claude.ROLE_EFFORT["classify"]) == ("haiku", "low")
+
+
+def test_t2475_every_role_has_a_caller_so_none_hides_from_a_live_check() -> None:
+    # `verify` had no caller since the reviewer loop went (kuhy: no review stage), so C19 could never see it run
+    assert set(claude.ROLE_MODELS) == {"spec", "plan", "manager", "closing", "implement", "live_check", "classify"}
