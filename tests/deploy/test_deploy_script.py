@@ -80,7 +80,7 @@ def test_t1857_an_existing_sdk_venv_is_kept_and_only_the_pin_is_applied(box: tup
     python.chmod(0o755)
     done = env.run("bash", str(DEPLOY_SH), TODOIMPL_SDK_VENV=str(venv), **FAST_WAIT)
     assert done.returncode == 0, done.stderr
-    assert "uv venv" not in env.calls
+    assert f"uv venv --quiet --python 3.15.2 {venv}" not in env.calls  # the peer mcp venv is another one
     assert "uv pip install" in env.calls
 
 
@@ -110,3 +110,28 @@ def test_deploy_fails_when_lingering_cannot_be_turned_on(box: tuple[Env, Stubber
     done = env.run("bash", str(DEPLOY_SH), **FAST_WAIT)
     assert done.returncode == 1
     assert "lingering" in done.stderr
+
+
+def test_deploy_builds_the_peer_mcp_venv_and_registers_it_once(box: tuple[Env, Stubber]) -> None:
+    env, stub = box
+    _stubs(stub)
+    stub("claude")
+    done = env.run("bash", str(DEPLOY_SH), **FAST_WAIT)
+    assert done.returncode == 0, done.stderr
+    venv = env.home / ".venvs" / "todoimpl-mcp"
+    assert f"uv pip install --quiet --python {venv}/bin/python -e" in env.calls
+    add = f"claude mcp add --scope user peer -- {venv}/bin/python -m todoimpl_mcp.peer_server"
+    assert add in env.calls
+    (env.home / ".claude.json").write_text('{"mcpServers": {"peer": {"type": "stdio"}}}')
+    again = env.run("bash", str(DEPLOY_SH), **FAST_WAIT)
+    assert again.returncode == 0, again.stderr
+    assert env.calls.count("claude mcp add") == 1
+
+
+def test_a_failed_peer_registration_does_not_fail_the_deploy(box: tuple[Env, Stubber]) -> None:
+    env, stub = box
+    _stubs(stub)
+    stub("claude", "exit 3")
+    done = env.run("bash", str(DEPLOY_SH), **FAST_WAIT)
+    assert done.returncode == 0, done.stderr
+    assert "peer mcp not registered" in done.stdout

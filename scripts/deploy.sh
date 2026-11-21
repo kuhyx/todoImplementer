@@ -83,6 +83,22 @@ ensure_sdk_venv() {
 	uv pip install --quiet --python "${venv}/bin/python" -r "${DEPLOY_DIR}/requirements-sdk.txt"
 }
 
+# ensure_peer_mcp: the `peer` MCP server's venv (mcp/, editable, so a pull updates it) for board turns
+# (runner/mcpconf.py) and, registered once in ~/.claude.json, for interactive sessions (DOCS-peer.md).
+ensure_peer_mcp() {
+	local venv="${HOME}/.venvs/todoimpl-mcp"
+	step "peer mcp venv ${venv}"
+	if [[ ! -x "${venv}/bin/python" ]]; then
+		uv venv --quiet --python "$(<"${REPO_DIR}/.python-version")" "$venv"
+	fi
+	uv pip install --quiet --python "${venv}/bin/python" -e "${REPO_DIR}/mcp"
+	if jq -e '.mcpServers.peer' "${HOME}/.claude.json" >/dev/null 2>&1; then
+		return 0
+	fi
+	claude mcp add --scope user peer -- "${venv}/bin/python" -m todoimpl_mcp.peer_server >/dev/null 2>&1 ||
+		step "peer mcp not registered: run claude mcp add --scope user peer -- ${venv}/bin/python -m todoimpl_mcp.peer_server"
+}
+
 restart_server() {
 	step "installing ${UNIT} and ${SLICE}"
 	install_unit "$UNIT"
@@ -137,6 +153,7 @@ main() {
 	expected="$(head_build)"
 	build_toolchain
 	ensure_sdk_venv
+	ensure_peer_mcp
 	ensure_linger
 	restart_server
 	wait_for_build "$expected"

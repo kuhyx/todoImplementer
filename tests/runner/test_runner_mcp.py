@@ -83,3 +83,48 @@ def test_t1986_the_credit_route_is_strict_too(world: Env, monkeypatch: pytest.Mo
     assert spec["mcp_servers"] == {"godot-mcp-runtime": GODOT}
     assert spec["strict_mcp_config"] is True
     assert inv.argv[:3] == (sys.executable, "-m", "todoimpl.runner.sdkturn")
+
+
+def _peer_venv(world: Env) -> Path:
+    python = world.home / ".venvs" / "todoimpl-mcp" / "bin" / "python"
+    python.parent.mkdir(parents=True)
+    python.write_text("#!/bin/sh\n")
+    return python
+
+
+def test_every_board_turn_gets_the_peer_server_by_path_never_by_secret(world: Env) -> None:
+    python = _peer_venv(world)
+    wt = worktree(world, "pyproject.toml")
+    inv = claude.build("implement", "go", wt)
+    peer = config(inv)["mcpServers"]["peer"]
+    assert peer["command"] == str(python)
+    assert peer["args"] == ["-m", "todoimpl_mcp.peer_server"]
+    env = peer["env"]
+    assert env["TODOIMPL_PEER_CARD"] == "abcd1234-0"
+    assert env["TODOIMPL_PEER_MAX_WAIT"] == "40"
+    key = Path(env["TODOIMPL_PEER_KEY_FILE"])
+    assert key.parent == wt.parent
+    assert key.stat().st_mode & 0o777 == 0o600
+    secret = key.read_text().strip()
+    token = Path(env["TODOIMPL_PEER_TOKEN_FILE"]).read_text().strip()
+    assert secret not in " ".join(inv.argv)
+    assert token not in " ".join(inv.argv)
+    argv = list(inv.argv)
+    assert "mcp__peer" in argv[argv.index("--allowedTools") :]
+    line = argv[argv.index("--append-system-prompt") + 1]
+    assert "not from kuhy" in line
+    assert "reply_peer" in line
+
+
+def test_peer_server_url_follows_the_server_env(world: Env, monkeypatch: pytest.MonkeyPatch) -> None:
+    _peer_venv(world)
+    monkeypatch.setenv("TODOIMPL_PEER_URL", "http://127.0.0.1:9999/api/peer")
+    env = mcpconf.servers(worktree(world, None))["peer"]["env"]
+    assert env["TODOIMPL_PEER_URL"] == "http://127.0.0.1:9999/api/peer"
+
+
+def test_credit_turn_gets_the_peer_line_too(world: Env) -> None:
+    _peer_venv(world)
+    opt = claude.options("implement", "go", worktree(world, None))
+    assert "not from kuhy" in opt.system_append
+    assert "mcp__peer" in opt.allow

@@ -130,3 +130,11 @@ def test_runs_as_main(
         runpy.run_path(sdkturn.__file__, run_name="__main__")
     assert stop.value.code == 0
     assert lines(capsys)[-1]["type"] == "result"
+
+
+def test_the_peer_line_is_appended_to_the_preset(world: Env, capsys: pytest.CaptureFixture[str]) -> None:
+    world.script("abcd1234", {"_fake": "result", "text": "ok"})
+    assert sdkturn.main([spec(world, system_append="peer line")]) == 0
+    capsys.readouterr()
+    (opt,) = options(world)
+    assert opt["system_prompt"] == {"type": "preset", "preset": "claude_code", "append": "peer line"}

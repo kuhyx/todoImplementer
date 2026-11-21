@@ -16,6 +16,9 @@ main() {
     echo "venv ready: ${VENV_DIR}"
     echo '"token-dashboard": {"type": "stdio", "command": "'"${VENV_DIR}"'/bin/python",'
     echo ' "args": ["-m", "todoimpl_mcp.server"], "env": {}}'
+    # The peer server (DOCS-peer.md); scripts/deploy.sh registers it with `claude mcp add` itself.
+    echo '"peer": {"type": "stdio", "command": "'"${VENV_DIR}"'/bin/python",'
+    echo ' "args": ["-m", "todoimpl_mcp.peer_server"], "env": {}}'
 }
 
 main "$@"

@@ -70,6 +70,7 @@ class Options:
     notes: tuple[str, ...]
     effort: str = "medium"
     mcp_servers: dict[str, Any] = field(default_factory=dict)  # strict: only these start (mcpconf.py)
+    system_append: str = ""  # one line appended to Claude Code's system prompt (the peer envelope)
 
 
 def claude_bin() -> str:
@@ -117,6 +118,9 @@ def options(  # noqa: PLR0913, PLR0917 - one set of turn options, built in one p
     )  # images: the note's
     hooks = policy.turn_settings(hooks_off=pol.disable_hooks)
     notes = (pol.warning,) if pol.warning else ()
+    servers = mcpconf.servers(worktree)
+    peer = mcpconf.PEER in servers
+    allow = (*allow, *(mcpconf.PEER_ALLOW if peer else ()))
     return Options(
         prompt,
         model or model_for(role),
@@ -130,7 +134,8 @@ def options(  # noqa: PLR0913, PLR0917 - one set of turn options, built in one p
         worktree,
         notes,
         effort_for(role, effort),
-        mcpconf.servers(worktree),
+        servers,
+        mcpconf.PEER_LINE if peer else "",
     )
 
 
@@ -154,8 +159,10 @@ def build(  # noqa: PLR0913, PLR0917 - one argv, built in one place
     if resume:
         argv += ["--resume", resume]
     argv += ["--settings", opt.settings]
-    if allow:
-        argv += ["--allowedTools", *allow]
+    if opt.system_append:
+        argv += ["--append-system-prompt", opt.system_append]
+    if opt.allow:
+        argv += ["--allowedTools", *opt.allow]
     if opt.deny:
         argv += ["--disallowedTools", *opt.deny]
     peer = os.environ.get(PEER_VAR, "1") != "0"

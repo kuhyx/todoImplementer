@@ -68,6 +68,12 @@ def tee(base: type, seen: Seen) -> type:
     return Tee
 
 
+def _append(spec: dict[str, Any]) -> dict[str, str]:
+    """The peer line (mcpconf.PEER_LINE) added to the preset, as `--append-system-prompt` adds it."""
+    line = spec.get("system_append")
+    return {"append": line} if isinstance(line, str) and line else {}
+
+
 async def turn(spec: dict[str, Any], seen: Seen) -> None:
     """Run the turn to its end; whatever the CLI prints lands in `seen` and on stdout."""
     sdk = importlib.import_module("claude_agent_sdk")
@@ -88,7 +94,7 @@ async def turn(spec: dict[str, Any], seen: Seen) -> None:
         max_buffer_size=MAX_LINE,
         include_partial_messages=True,  # a long answer streams lines as it goes, as `claude -p` does (T2452)
         # The SDK sends no Claude Code prompt unless asked; `claude -p` always does.
-        system_prompt={"type": "preset", "preset": "claude_code"},
+        system_prompt={"type": "preset", "preset": "claude_code", **_append(spec)},
     )
     transport = tee(base, seen)(prompt=spec["prompt"], options=options)
     async for _ in sdk.query(prompt=spec["prompt"], options=options, transport=transport):
