@@ -49,10 +49,10 @@ class RepoLocks:
                 if not self._held[key]:
                     del self._held[key]
 
-    def wait(self, repo: str, holder: str, stop: Callable[[], bool]) -> bool:
-        """Block until `holder` has the repo; False when `stop()` says to give up first."""
+    def wait(self, repo: str, holder: str, stop: Callable[[], bool], *, force: bool = False) -> bool:
+        """Block until `holder` has the repo; False when `stop()` says to give up; `force` never waits."""
         gate = threading.Event()
-        while self.acquire(repo, holder) is not None:
+        while self.acquire(repo, holder, force=force) is not None:
             if stop():
                 self.release(holder)
                 return False

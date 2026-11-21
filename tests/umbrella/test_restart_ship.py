@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
+import pytest
 from runnerfakes import Env
 from tierfakes import Free
 from todoimpl.board import state as store
+from todoimpl.runner.repolock import RepoLocks
 from todoimpl.runner.restart import MAX_RESUMES
 from todoimpl.runner.scheduler import Scheduler
 from todoimpl.umbrella.children import fresh_state
@@ -107,3 +109,22 @@ def test_t1988_an_umbrella_kuhy_clicked_ship_on_ships_its_children_again_after_a
     parent = store.load(world.root / CARD)
     assert parent is not None
     assert "ship_resumes" not in parent.extra  # the children count their own resumes
+
+
+def test_t2463_a_cut_ship_does_not_wait_for_another_run_of_its_repo_nor_burn_its_resumes(
+    world: Env, free: Free, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    sched, client = boot(world, 1)
+    sched.close()
+    cid = _seed(world, client, "shipping")
+    (kid,) = children(client.tasks[NOTE].body, NOTE)
+    plain = RepoLocks.__init__
+
+    def busy(self: RepoLocks) -> None:
+        plain(self)
+        self.acquire(kid.repo, "other-run")  # another run of the repo grabbed it first after the restart
+
+    monkeypatch.setattr(RepoLocks, "__init__", busy)
+    child = _after_restart(world, client, cid, "shipped")  # red before: it queued behind other-run
+    assert (child.stage, child.error) == ("shipped", None)
+    assert child.extra["ship_resumes"] == 1

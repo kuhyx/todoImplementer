@@ -150,7 +150,9 @@ the "session already pushed" path) and before the note closes, Ship runs the rep
   closes (closing a closed note overwrites the evidence); a rebase the restart cut half way (`<run dir>/rebasing`) is
   aborted first. At most 2 automatic resumes per click (`ship_resumes`, reset by Ship and Retry); then the run fails
   "Ship was interrupted by a restart N times in a row ..." and Retry goes straight back to `shipping`, as does Retry on
-  the older form of that failure. An umbrella child is resumed the same way.
+  the older form of that failure. An umbrella child is resumed the same way, and a child found in `shipping` takes
+  its repo's lock with `force` (it was already working): it never queues behind another run of the repo, so a restart
+  cannot burn a resume while the Ship waits (T2463).
 - **Deploy into kuhy's checkout (T2007).** A deploy that starts with `git -C ~/src/<repo> pull --ff-only` fails when
   that checkout has uncommitted edits at paths the push changed (git: "would be overwritten by merge", tracked or
   untracked). `runner/deployheal.py` reads that text from the failed record only. If every blocking file already equals

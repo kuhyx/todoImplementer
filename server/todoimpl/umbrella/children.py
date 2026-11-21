@@ -161,7 +161,8 @@ class Pool:
         """Drive one child once its repo is free (the repo task or another child may hold it); then let go."""
         cid, locks = driver.state.task_id, self.ctx.locks
         try:
-            if not locks.wait(self.kids[cid].repo, cid, self.ctx.cancelled):
+            cut = driver.state.stage == "shipping"  # a cut Ship was working: it never queues (T2463)
+            if not locks.wait(self.kids[cid].repo, cid, self.ctx.cancelled, force=cut):
                 return
             driver.run()
         except adopt.Detached:

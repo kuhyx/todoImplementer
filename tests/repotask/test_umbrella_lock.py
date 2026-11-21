@@ -101,7 +101,8 @@ def test_a_child_cancelled_while_it_waits_for_its_repo_never_runs() -> None:
     pool.detached = False
     pool.kids = {"aaaa1111-0": SimpleNamespace(repo="kuhyx/a")}  # type: ignore[dict-item]
     pool.ctx = SimpleNamespace(locks=locks, cancelled=lambda: True)  # type: ignore[assignment]
-    driver = SimpleNamespace(state=SimpleNamespace(task_id="aaaa1111-0"), run=lambda: ran.append("ran"))
+    state = SimpleNamespace(task_id="aaaa1111-0", stage="implement")
+    driver = SimpleNamespace(state=state, run=lambda: ran.append("ran"))
     pool._drive(driver)  # type: ignore[arg-type]
     assert ran == []
     assert locks.waits() == {}
