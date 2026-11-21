@@ -34,7 +34,11 @@ def _word(row: dict[str, object]) -> str:
 def live_summary(report: str) -> str:
     """One line per criterion of the live check, for the close evidence."""
     rows = parse_live(report)
-    return "\n".join(f"live {r['criterion']}: {_word(r)} ({r['note']})" for r in rows)
+    return "\n".join(f"live {r['criterion']}{_key(r)}: {_word(r)} ({r['note']})" for r in rows)
+
+
+def _key(row: dict[str, object]) -> str:
+    return f" [{row['part']}]" if row["part"] else ""
 
 
 def _ship_plan(d: Driver, wt: Path, live: str) -> ShipPlan:
@@ -61,6 +65,19 @@ def _heal(d: Driver, failed: GateRedError | NoDeployLineError | DeployFailedErro
     return "implement"
 
 
+def _check_parts(d: Driver, report: str) -> None:
+    """Refuse a ship that closes no part, or a ticked part no passed live row names (T2447)."""
+    if d.item.parts and not files.ticked(d.ctx.run_dir, d.item):
+        msg = "No part is ticked, so Ship would close nothing: tick the finished parts, then Retry"
+        raise NeedsYouError(msg, "run_failed")
+    if unproven := files.unproven(d.ctx.run_dir, d.item, parse_live(report)):
+        keys = ", ".join(f"[{p.key}] {p.title}" for p in unproven)
+        msg = (
+            f"No passed live criterion names {keys}: check it live as `Cn [<key>]`, or untick it, then Retry"
+        )
+        raise NeedsYouError(msg, "run_failed")
+
+
 def shipping(d: Driver) -> str | None:
     """Ship the run (an umbrella ships its children); return `shipped`, or the stage a refusal sends it to."""
     if is_umbrella(d.item.body):  # Ship ships every child at its gate
@@ -68,10 +85,9 @@ def shipping(d: Driver) -> str | None:
     if bounce.unverified(d.state):  # a child ships only on green checks, whatever path led here (T1955)
         return "checks"
     st, wt = d.state, Path(str(d.state.worktree))
-    if d.item.parts and not files.ticked(d.ctx.run_dir, d.item):
-        msg = "No part is ticked, so Ship would close nothing: tick the finished parts, then Retry"
-        raise NeedsYouError(msg, "run_failed")
-    live = live_summary(str((st.live_check or {}).get("report_md", "")))
+    report = str((st.live_check or {}).get("report_md", ""))
+    _check_parts(d, report)
+    live = live_summary(report)
     plan = _ship_plan(d, wt, live)
     st.extra.pop(SHIP_STEP, None)
     try:

@@ -32,6 +32,12 @@ IMPL = (
 LIVE = ({"_fake": "result", "text": "- [x] C1: ran it -> saw it\n\nD: done"},)
 
 
+def live_for(*keys: str) -> tuple[dict[str, str], ...]:
+    """Return a live check passing one criterion per part key (a keyed card needs one per part, T2447)."""
+    rows = "".join(f"- [x] C{i} [{key}]: ran it -> saw it\n" for i, key in enumerate(keys, 1))
+    return ({"_fake": "result", "text": f"{rows}\nD: done"},)
+
+
 @dataclass
 class Rig:
     """Everything a repo-task test touches."""

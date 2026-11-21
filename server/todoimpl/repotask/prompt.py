@@ -6,12 +6,19 @@ from typing import TYPE_CHECKING
 
 from todoimpl.asks.view import decided
 
+from . import files
 from .tick import command
 
 if TYPE_CHECKING:
     from pathlib import Path
 
     from todoimpl.todo_mcp.items import Item
+
+KEYED = (
+    "Name the part in every acceptance criterion, in plan.md and live_check.md alike: `Cn [<part key>]: ...` "
+    "(e.g. `- [x] C3 [<key>]: what I did -> what I saw`). Every part you tick needs a passed live criterion "
+    "of its own: a ticked part none names is not closed."
+)
 
 
 def addendum(item: Item, run_dir: Path) -> str:
@@ -52,4 +59,6 @@ def addendum(item: Item, run_dir: Path) -> str:
         "step. Never end the implement stage with `D:` while a part is unticked: finish it, or say with `A:` "
         "what stops you. Only ticked parts are closed in the todo app when kuhy ships."
     )
+    if files.keyed(item):  # Ship closes a part only on a passed live row naming it (T2447)
+        lines.append(KEYED)
     return "\n".join(lines)

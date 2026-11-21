@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from todoimpl.repotask import files, legacy
 from todoimpl.repotask.legacy import Older
+from todoimpl.runner.parsing import for_part
 from todoimpl.todo_mcp.items import Item
 from todoimpl.todo_mcp.model import Task, TodoError
 from todoimpl.umbrella.note import is_umbrella
@@ -107,7 +108,7 @@ class ItemView:
             raise TodoError(msg)
         for part in done:  # close_item re-reads the note and fails closed on a section that moved
             item = Item(part.note_id, part.index, part.title, part.body, task.repo, "todo", part.done_check)
-            self._client.close_item(item, evidence)
+            self._client.close_item(item, for_part(evidence, part.key))  # its own live rows only (T2447)
 
     def tick_child(self, card: str, cid: str, mark: str = "x") -> None:
         """Tick child `cid`'s checkbox in the umbrella note behind `card` (`mark` `-` drops it)."""

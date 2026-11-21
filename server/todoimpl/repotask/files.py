@@ -132,6 +132,19 @@ def ticked(run_dir: Path, item: Item) -> list[Part]:
     return [part for part in item.parts if part.actionable and part.key in done]
 
 
+def keyed(item: Item) -> bool:
+    """Return True when the run works on several parts: then every criterion names its part (T2447)."""
+    return sum(part.actionable for part in item.parts) > 1
+
+
+def unproven(run_dir: Path, item: Item, rows: list[dict[str, object]]) -> list[Part]:
+    """Return the ticked parts of a keyed item no done, non-deferred live row names: Ship refuses them."""
+    if not keyed(item):
+        return []
+    proven = {row["part"] for row in rows if row["done"] and not row["deferred"]}
+    return [part for part in ticked(run_dir, item) if part.key not in proven]
+
+
 def commit_identity(item: Item, run_dir: Path) -> tuple[str, list[str]]:
     """Return the commit subject title and the note ids for the `Todo:` trailers (the ticked parts' notes)."""
     done = ticked(run_dir, item) if item.parts else []

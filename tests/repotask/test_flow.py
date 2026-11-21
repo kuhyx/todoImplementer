@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 from contract_lib import validate
-from repofakes import IMPL, LIVE, PLAN, Rig
+from repofakes import IMPL, LIVE, PLAN, Rig, live_for
 from runnerfakes import sh
 from schedfakes import reply
 from todoimpl.board.types import MANUAL_REASON
@@ -32,7 +32,7 @@ def tick_before_start(rig: Rig, card: str, *keys: str) -> None:
 
 def test_t1912_ship_closes_only_the_ticked_parts_and_names_their_notes(rig: Rig) -> None:
     repo, card, first, second = seed(rig)
-    rig.script(card, PLAN, IMPL, *NUDGED, LIVE)
+    rig.script(card, PLAN, IMPL, *NUDGED, live_for(f"{first}-0", f"{second}-0"))
     tick_before_start(rig, card, f"{first}-0", f"{second}-0")
     rig.sched.start(card)
     st = rig.wait(card, {"gate"})
@@ -67,7 +67,7 @@ def test_t1912_ship_closes_only_the_ticked_parts_and_names_their_notes(rig: Rig)
 
 def test_start_after_a_shipped_cycle_begins_the_next_one(rig: Rig) -> None:
     _, card, first, _ = seed(rig)
-    rig.script(card, PLAN, IMPL, *NUDGED, LIVE)
+    rig.script(card, PLAN, IMPL, *NUDGED, live_for(f"{first}-0"))
     tick_before_start(rig, card, f"{first}-0")
     rig.sched.start(card)
     rig.wait(card, {"gate"})
@@ -121,7 +121,7 @@ def test_t2114_after_claudes_parts_ship_the_manual_part_rests_on_the_card_as_you
     rig.note(repo, "MANUAL WORK REQUIRED: rotate the key", "do it by hand")
     card = repo_card_id(repo)
     assert [c["id"] for c in rig.backend.board()["tasks"]] == [card]  # one card, both parts
-    rig.script(card, PLAN, IMPL, LIVE)
+    rig.script(card, PLAN, IMPL, live_for(f"{work}-0"))
     tick_before_start(rig, card, f"{work}-0")
     rig.sched.start(card)
     rig.wait(card, {"gate"})
