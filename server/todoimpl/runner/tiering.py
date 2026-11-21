@@ -43,7 +43,8 @@ def plan_turn(d: Driver, role: str) -> Turn:
         return Turn()
     if st.extra.get("research"):  # reading and summarising: Sonnet at medium effort, no free workers
         return Turn("sonnet", "", "medium")
-    if "tier" not in st.extra:
+    # `tier` stays across a repo card's cycles; a cycle holding an error ticket is never cheap (T2445)
+    if "tier" not in st.extra or tier.TICKET_LINE.search(d.item.body):
         st.extra["tier"] = "cheap" if tier.is_cheap(d.item.title, d.item.body, d.item.parts) else "normal"
     if not _cheap(d):
         return Turn()
