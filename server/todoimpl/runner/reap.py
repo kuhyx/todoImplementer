@@ -180,6 +180,18 @@ def summary(rep: Report) -> str:
 AUTO = ("shipped", "closed", "cancelled", MANUAL_STAGE)  # a failed run is left for Retry (the sweep takes it)
 _cleaning: set[str] = set()
 _guard = threading.Lock()
+_settled = threading.Condition(_guard)
+
+
+def settle(card: str) -> None:
+    """Block until no reap of `card` runs: a drive must not use a worktree a reap is removing (T2443).
+
+    The reap asks `ok` before each worktree only, so a Restart that lands during a removal waits here for that
+    one removal; the next `ok` sees the drive and stops. Never call it under the Scheduler's lock: `ok`
+    takes it.
+    """
+    with _settled:
+        _settled.wait_for(lambda: card not in _cleaning)
 
 
 def spawn(sched: Engine, card: str) -> threading.Thread | None:
@@ -208,5 +220,6 @@ def _after(sched: Engine, card: str) -> None:
     except Exception:
         log.exception("reap %s failed", card)
     finally:
-        with _guard:
+        with _settled:
             _cleaning.discard(card)
+            _settled.notify_all()

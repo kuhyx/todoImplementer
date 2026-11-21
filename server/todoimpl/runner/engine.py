@@ -205,6 +205,7 @@ class Engine:
         """Let the Scheduler react (paused runs and pending notes); callers hold the lock."""
 
     def _drive(self, card: str) -> None:
+        reap.settle(card)  # a Restart right after Cancel waits for the run's reap (T2443)
         run_dir = self.root / card
         st = store.load(run_dir)
         if st is None:

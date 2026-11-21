@@ -68,7 +68,7 @@ def test_cancel_kills_a_live_turn_and_start_restarts(world: Env) -> None:
         for turn in (PLAN, IMPL, LIVE_OK):
             world.script("abcd1234", *turn)
         sched.start(CARD)
-        wait_stage(world, sched, "gate")
+        wait_stage(world, sched, "gate", turns=3)
     finally:
         sched.close()
 
