@@ -92,7 +92,7 @@ class Ceiling:
         """`sink` is the scheduler: its `bus` (when it has one) tells the holder's card."""
         self._sink, self.quiet, self._every = sink, quiet, every
         self._seen: dict[int, _Seen] = {}  # by ticket number: every held slot is watched (T2422)
-        self._heavy: set[int] = set()  # tickets already filed as heavy builds (T2424)
+        self._heavy: set[tuple[int, int]] = set()  # (seq, pid) already filed as heavy builds (T2424)
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
 
@@ -127,7 +127,7 @@ class Ceiling:
         ]
         live = {t.seq for t in held}
         self._seen = {seq: seen for seq, seen in self._seen.items() if seq in live}
-        self._heavy &= live
+        self._heavy &= {(t.seq, t.pid) for t in held}  # a seq comes back once the queue empties
         for head in held:
             self._weigh(head, base)
             self._look(head, base)
@@ -135,9 +135,9 @@ class Ceiling:
     def _weigh(self, head: buildqueue.Ticket, base: Path) -> None:
         """File a build that has held its slot for over `heavybuild.LIMIT` s, once per ticket."""
         now = time.time()
-        if head.seq in self._heavy or heavybuild.held_for(head, now) < heavybuild.LIMIT:
+        if (head.seq, head.pid) in self._heavy or heavybuild.held_for(head, now) < heavybuild.LIMIT:
             return
-        self._heavy.add(head.seq)
+        self._heavy.add((head.seq, head.pid))
         card = _card(head, base)
         repo = heavybuild.repo_of(store.run_root(), card) if card is not None else None
         if repo is not None:
