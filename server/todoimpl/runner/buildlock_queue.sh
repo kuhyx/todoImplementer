@@ -1,17 +1,58 @@
 #!/bin/bash
 # The build lock's ticket queue and the `flock` guard, sourced by buildlock.sh (same protocol: buildqueue.py).
 # A waiter takes the next numbered ticket in build.queue under build.queue.lock and holds an flock on it while
-# it waits and while it builds; it waits on the nearest earlier ticket until none is left. A ticket whose flock
+# it waits and while it builds; it goes once fewer than SLOTS live tickets are ahead (T2419), then takes a free
+# slot lock (take_slot). A ticket whose flock
 # we get is dead (killed, rebooted) and is removed, except a board check's (` board`), kept for its restarted
 # server (T2168). The fds here are picked by bash ({var}), so a caller's fd 7 or 8 is never clobbered.
-# Needs from the wrapper: QUEUE QLOCK LOCK HOLDER FLOCK WHAT, and the globals TICKET TFD SAID.
+# Needs from the wrapper: QUEUE QLOCK LOCK HOLDER SLOTS RECHECK FLOCK WHAT, and the globals TICKET TFD SAID
+# SLOT_HOLDER.
+
+# slot_lock N: print slot N's lock file (slot 0 is build.lock, which old wrappers take).
+slot_lock() {
+	if (($1)); then echo "$LOCK.$1"; else echo "$LOCK"; fi
+}
+
+# limit: the flock timeout words for one wait: none with one slot (wait as long as it takes).
+limit() {
+	((SLOTS > 1)) && echo "-w $RECHECK"
+	return 0
+}
 
 say_waiting() {
 	((SAID)) && return 0
 	SAID=1
-	local held=""
-	[[ -s "$HOLDER" ]] && held="$(<"$HOLDER")"
+	local held="" n f
+	for ((n = 0; n < SLOTS; n++)); do
+		f="$(slot_lock "$n").holder"
+		[[ -s "$f" ]] && held+="${held:+ + }$(<"$f")"
+	done
 	echo "waiting for build lock held by ${held:-another build}; $1 ahead" >&2
+}
+
+# take_slot: take a free slot lock on fd 9 and set SLOT_HOLDER; all busy (an old wrapper, a hand-held lock):
+# wait on slot 0, looking again every RECHECK s when there is more than one slot.
+take_slot() {
+	local n lock
+	while :; do
+		for ((n = 0; n < SLOTS; n++)); do
+			lock="$(slot_lock "$n")"
+			exec 9>>"$lock"
+			if "$FLOCK" -n 9; then
+				SLOT_HOLDER="$lock.holder"
+				return 0
+			fi
+			exec 9>&-
+		done
+		say_waiting 0
+		exec 9>>"$LOCK"
+		# shellcheck disable=SC2046 # limit prints flock words
+		if "$FLOCK" $(limit) 9; then
+			SLOT_HOLDER="$HOLDER"
+			return 0
+		fi
+		exec 9>&-
+	done
 }
 
 # write_ticket PATH STATE: what `--queue` and the hold ceiling read; rewritten in place, never replaced,
@@ -38,19 +79,29 @@ take_ticket() {
 	exec {qfd}>&-
 }
 
-# wait_turn: wait on the nearest earlier ticket until none is left; a kept board place is passed over.
+# wait_turn: wait until fewer than SLOTS live tickets are ahead. Each look settles the dead ones (removed; a
+# kept board place is passed over). With one slot it blocks on the nearest live ticket until it ends; with
+# more, for RECHECK s, then it counts again, so any build that ends lets it on (T2420).
 wait_turn() {
 	local mine="${TICKET##*/}" f prev fd ahead line skip=" "
 	while :; do
 		prev="" ahead=0
 		for f in "$QUEUE"/[0-9]*; do
-			[[ -e "$f" && "${f##*/}" < "$mine" && "$skip" != *" ${f##*/} "* ]] && prev="$f" && ahead=$((ahead + 1))
+			[[ -e "$f" && "${f##*/}" < "$mine" && "$skip" != *" ${f##*/} "* ]] || continue
+			{ exec {fd}<"$f"; } 2>/dev/null || continue
+			if "$FLOCK" -n "$fd"; then
+				read -r line <&"$fd" || true
+				if [[ "$line" == *" board" ]]; then skip+="${f##*/} "; else rm -f "$f"; fi
+			else
+				prev="$f" ahead=$((ahead + 1))
+			fi
+			exec {fd}<&-
 		done
-		[[ -n "$prev" ]] || break
+		((ahead >= SLOTS)) || break
 		{ exec {fd}<"$prev"; } 2>/dev/null || continue
-		"$FLOCK" -n "$fd" || { say_waiting "$ahead" && "$FLOCK" "$fd" && skip=" "; }
-		read -r line <&"$fd" || true
-		if [[ "$line" == *" board" ]]; then skip+="${prev##*/} "; else rm -f "$prev"; fi
+		say_waiting "$ahead"
+		# shellcheck disable=SC2046 # limit prints flock words
+		"$FLOCK" $(limit) "$fd" && skip=" "
 		exec {fd}<&-
 	done
 }
@@ -106,8 +157,8 @@ guard_flock() {
 		[[ "$word" =~ ^[0-9]+$ ]] && target="/proc/$$/fd/$word"
 		[[ -e "$target" ]] && target="$(realpath -- "$target")" || target="$(realpath -m -- "$target")"
 		case "$target" in
-		"$(realpath -m -- "$LOCK")") lock=1 ;;
-		"$(realpath -m -- "$HOLDER")"* | "$(realpath -m -- "$QUEUE")"*)
+		"$(realpath -m -- "$LOCK")" | "$(realpath -m -- "$LOCK")".[0-9]) lock=1 ;;
+		"$(realpath -m -- "$HOLDER")"* | "$(realpath -m -- "$QUEUE")"* | "$(realpath -m -- "$LOCK")".*.holder*)
 			echo "buildlock: refusing flock on the build lock's holder or queue files: run each heavy command" \
 				"plainly (the shims queue it) or as buildlock.sh <tool> [args...]; see the queue with" \
 				"buildlock.sh --queue" >&2

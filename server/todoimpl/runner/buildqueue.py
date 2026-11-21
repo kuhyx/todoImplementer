@@ -3,8 +3,9 @@
 flock alone is not FIFO: on a loaded PC a woken waiter is slow to run and a later arrival takes the lock in
 that gap, so one card waited ~20 min behind newer ones. Now each waiter writes
 `<root>/build.queue/<12 digits>` (the next number, under `build.queue.lock`) and holds an flock on that
-ticket while it waits and while it builds. It waits on the nearest earlier ticket until none is left, then
-takes `build.lock`, which stays the one mutex (old wrappers and hand-held locks still exclude). A ticket whose
+ticket while it waits and while it builds. It goes once fewer than `slots` live tickets are ahead of it (one
+slot: it waits on the nearest earlier ticket; more: on that ticket for `RECHECK` s, then it counts again, so
+any build that ends lets it on), then takes a free slot lock (buildlock.py, T2419). A ticket whose
 flock anyone can take is dead: its owner was killed or the PC rebooted; the next look removes it, so no stale
 ticket blocks the queue.
 A ticket's line: `<pid> <wait|held> <card> (<cmd>) since <time>`.
@@ -18,7 +19,7 @@ import os
 import re
 import time
 from dataclasses import dataclass
-from typing import IO, TYPE_CHECKING
+from typing import IO, TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
@@ -29,6 +30,8 @@ QLOCK = "build.queue.lock"
 DIGITS = 12
 WIDE = 120  # characters of the command kept in a ticket
 RESERVE = 300.0  # s a dead board check's place is kept for its restarted server (T2168)
+RECHECK = 2.0  # s a waiter with more than one slot blocks on one ticket before it counts again (T2420)
+POLL = 0.05  # s between tries of a lock with a time limit (fcntl has no timed flock)
 BOARD = " board"  # a ticket of the server's own checks (`buildlock.held`) ends with this
 LINE = re.compile(
     r"(?P<pid>\d+) (?P<state>wait|held|gone) (?P<card>\S+) \((?P<cmd>.*)\) since (?P<at>.+?)"
@@ -114,23 +117,56 @@ def listing(base: Path) -> list[Ticket]:
     return live
 
 
-def _wait(mine: Path, on_wait: Callable[[int], None]) -> None:
-    """Wait on the nearest earlier ticket until none is left; a reserved place is passed over (T2168)."""
-    passed: set[str] = set()
-    while earlier := [p for p in tickets(mine.parent.parent) if p.name < mine.name and p.name not in passed]:
+def lock_within(fh: IO[Any], limit: float | None) -> bool:
+    """Take `fh`'s flock, waiting at most `limit` s (None: as long as it takes); say whether we got it."""
+    if limit is None:
+        fcntl.flock(fh, fcntl.LOCK_EX)
+        return True
+    end = time.monotonic() + limit
+    while True:
         try:
-            fh = earlier[-1].open("rb")
+            fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            if time.monotonic() >= end:
+                return False
+            time.sleep(POLL)
+        else:
+            return True
+
+
+def _live_ahead(mine: Path, passed: set[str]) -> list[Path]:
+    """Return the live tickets before `mine`; a dead one is settled on the way (kept places join `passed`)."""
+    live = []
+    for path in tickets(mine.parent.parent):
+        if path.name >= mine.name or path.name in passed:
+            continue
+        try:
+            fh = path.open("rb")
         except FileNotFoundError:
             continue
         with fh:
             try:
                 fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except BlockingIOError:
-                on_wait(len(earlier))
-                fcntl.flock(fh, fcntl.LOCK_EX)
+                live.append(path)
+            else:
+                if _settle(path, fh):
+                    passed.add(path.name)
+    return live
+
+
+def _wait(mine: Path, on_wait: Callable[[int], None], slots: int) -> None:
+    """Wait until fewer than `slots` live tickets are ahead; a reserved place is passed over (T2168)."""
+    passed: set[str] = set()
+    while len(ahead := _live_ahead(mine, passed)) >= slots:
+        try:
+            fh = ahead[-1].open("rb")
+        except FileNotFoundError:
+            continue
+        with fh:
+            on_wait(len(ahead))
+            if lock_within(fh, None if slots == 1 else RECHECK):
                 passed.clear()  # a passed place may have been taken back meanwhile: look again
-            if _settle(earlier[-1], fh):
-                passed.add(earlier[-1].name)
 
 
 def _claim(base: Path, card: str, command: str) -> tuple[Path, IO[str]] | None:
@@ -161,7 +197,7 @@ def _claim(base: Path, card: str, command: str) -> tuple[Path, IO[str]] | None:
 
 @contextlib.contextmanager
 def queued(
-    base: Path, card: str, command: str, on_wait: Callable[[int], None]
+    base: Path, card: str, command: str, on_wait: Callable[[int], None], slots: int = 1
 ) -> Iterator[Callable[[], None]]:
     """Take a ticket (or this check's kept place) and wait for its turn; yield a call that marks it held."""
     queue = base / QUEUE
@@ -185,7 +221,7 @@ def queued(
         mine.write_text(_line("held", card, command), encoding="utf-8")  # same inode: the lock stays
 
     try:
-        _wait(mine, on_wait)
+        _wait(mine, on_wait, slots)
         yield mark
     finally:
         mine.unlink(missing_ok=True)

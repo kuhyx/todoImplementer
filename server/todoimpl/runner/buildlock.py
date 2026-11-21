@@ -1,7 +1,9 @@
-"""One build at a time across every board session and check (DOCS-turns.md, "One build at a time").
+"""Three builds at a time across every board session and check (DOCS-turns.md, "Three builds at a time").
 
-~25 sessions building at once froze kuhy's PC (2026-11-11). The lock is `<root>/build.lock` (flock), taken in
-arrival order through the ticket queue (buildqueue.py, T2164). Turns
+~25 sessions building at once froze kuhy's PC (2026-11-11), so one build ran at a time; heavy builds then
+queued 4-6 deep, and kuhy picked three at once on 2026-11-21 (each card is capped at 10 GiB, the board at
+18 GiB, T2405). The lock is `SLOTS` flock files, `<root>/build.lock` and `build.lock.<n>`, each with its
+`<lock>.holder`, taken in arrival order through the ticket queue (buildqueue.py, T2164, T2419). Turns
 get it through one-line shims in `<root>/shims` that run `<root>/buildlock.sh <tool>`; the server's own
 checks take it in `held` before their timeout starts, so a queued check never times out while it waits.
 A PATH prefix in the turn env does not reach claude's Bash tool (kuhy's zshrc puts ~/.local/bin first), so
@@ -31,6 +33,9 @@ HELD_VAR = "TODOIMPL_BUILD_LOCK_HELD"  # set under a held lock: nested tools run
 CARD_VAR = "TODOIMPL_BUILD_CARD"
 LOCK = "build.lock"
 HOLDER = "build.lock.holder"
+SLOTS = 3  # kuhy, 2026-11-21: three builds at once (was one, 2026-11-11)
+SLOTS_VAR = "TODOIMPL_BUILD_SLOTS"  # tests pin it; the wrapper reads it too
+SLOTS_MARK = "@SLOTS@"
 WRAPPER = "buildlock.sh"
 QUEUE_LIB = "buildlock_queue.sh"  # the wrapper sources it; written first: a new wrapper never sees an old one
 SHIM_DIR = "shims"
@@ -46,7 +51,7 @@ TOOLS = (
 LINTERS = frozenset(
     shlex.split(
         "ruff mypy pyright shellcheck shfmt black isort flake8 pylint bandit codespell yamllint actionlint"
-        " markdownlint eslint prettier"
+        " markdownlint eslint prettier coverage"  # coverage combine/report only read data files (T2423)
     )
 )
 LINTERS_MARK = "@LINTERS@"
@@ -77,7 +82,8 @@ def ensure(base: Path) -> Path:
     wrapper = base / WRAPPER
     _put(base / QUEUE_LIB, Path(__file__).with_name(QUEUE_LIB).read_text(encoding="utf-8"), 0o644)
     source = Path(__file__).with_name(WRAPPER).read_text(encoding="utf-8")
-    _put(wrapper, source.replace(LINTERS_MARK, " ".join(sorted(LINTERS))), 0o755)
+    source = source.replace(LINTERS_MARK, " ".join(sorted(LINTERS))).replace(SLOTS_MARK, str(SLOTS))
+    _put(wrapper, source, 0o755)
     shims = base / SHIM_DIR
     keep = {*TOOLS, *GUARDS, cardslice.SHIM}
     if shims.is_dir():  # a tool that left TOOLS (make, T2415) must stop locking in the running sessions too
@@ -104,6 +110,46 @@ def turn_env(card: str) -> dict[str, str]:
     return {"CLAUDE_ENV_FILE": str(env_file), CARD_VAR: card, **own, **TUNING}
 
 
+def slots() -> int:
+    """Return how many builds may run at once: `$TODOIMPL_BUILD_SLOTS`, else `SLOTS` (at least one)."""
+    found = os.environ.get(SLOTS_VAR, "")
+    return max(int(found), 1) if found.isdigit() else SLOTS
+
+
+def slot_lock(base: Path, n: int) -> Path:
+    """Return slot `n`'s lock file: `build.lock` for slot 0 (old wrappers take it), `build.lock.<n>` after."""
+    return base / (LOCK if n == 0 else f"{LOCK}.{n}")
+
+
+def holder_of(lock: Path) -> Path:
+    """Return the holder file of a slot lock: `<lock>.holder`."""
+    return lock.with_name(f"{lock.name}.holder")
+
+
+def holders(base: Path) -> str:
+    """Return who holds the slots, longest-held first, joined by ` + ` ("" when none)."""
+    found = [_read(holder_of(slot_lock(base, n))) for n in range(slots())]
+    return " + ".join(sorted((h for h in found if h), key=lambda h: h.rpartition(" since ")[2]))
+
+
+def _take_slot(base: Path, wait: Callable[[int], None]) -> IO[str]:
+    """Take a free slot's lock; when all are busy (an old wrapper, a hand-held lock) wait on slot 0."""
+    while True:
+        for n in range(slots()):
+            fh = slot_lock(base, n).open("a", encoding="utf-8")
+            try:
+                fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                fh.close()
+                continue
+            return fh
+        wait(0)
+        fh = slot_lock(base, 0).open("a", encoding="utf-8")
+        if buildqueue.lock_within(fh, None if slots() == 1 else buildqueue.RECHECK):
+            return fh
+        fh.close()
+
+
 def _read(path: Path) -> str:
     try:
         return path.read_text(encoding="utf-8").strip()
@@ -127,25 +173,17 @@ def held(
         return
     base = root()
     base.mkdir(parents=True, exist_ok=True)
-    holder = base / HOLDER
     said: list[int] = []
 
     def wait(ahead: int) -> None:
         if not said:
             said.append(ahead)
-            _say(out, WAITING.format(held=_read(holder) or "another build", ahead=ahead))
+            _say(out, WAITING.format(held=holders(base) or "another build", ahead=ahead))
             if on_wait is not None:
                 on_wait()
 
-    with (
-        buildqueue.queued(base, card, command, wait) as mark,
-        (base / LOCK).open("a", encoding="utf-8") as lock,
-    ):
-        try:
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            wait(0)
-            fcntl.flock(lock, fcntl.LOCK_EX)
+    with buildqueue.queued(base, card, command, wait, slots()) as mark, _take_slot(base, wait) as lock:
+        holder = holder_of(Path(lock.name))
         since = time.strftime("%Y-%m-%d %H:%M:%S")
         atomic.write_text(holder, f"{card} ({command[:120]}) since {since}\n", durable=False)
         mark()

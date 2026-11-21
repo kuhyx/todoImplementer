@@ -1,7 +1,8 @@
 #!/bin/bash
-# Run one build tool under the board's machine-wide build lock (DOCS-turns.md, "One build at a time").
+# Run one build tool under the board's machine-wide build lock (DOCS-turns.md, "Three builds at a time").
 # Usage: buildlock.sh <tool> [args...] | --queue | --flock <flock args>; the shims in ./shims call it. Builds
-# run in arrival order through flocked tickets in build.queue, then build.lock (protocol: buildqueue.py). Only
+# run in arrival order through flocked tickets in build.queue, then take a free one of SLOTS slot locks
+# (build.lock, build.lock.1, ...; each with <lock>.holder; protocol: buildqueue.py, T2419). Only
 # this bash holds the lock fds: the tool runs without them, so a daemon it leaves never keeps the lock.
 set -euo pipefail
 
@@ -9,6 +10,9 @@ readonly HERE="${BASH_SOURCE[0]%/*}"
 readonly SHIMS="$HERE/shims"
 readonly LOCK="$HERE/build.lock"
 readonly HOLDER="$HERE/build.lock.holder"
+readonly SLOTS="${TODOIMPL_BUILD_SLOTS:-@SLOTS@}" # filled in by buildlock.py from SLOTS; tests pin it
+readonly RECHECK=2 # s a waiter blocks on one ticket or slot before it looks again (more than one slot)
+SLOT_HOLDER="$HOLDER"
 readonly QUEUE="$HERE/build.queue"
 readonly QLOCK="$HERE/build.queue.lock"
 readonly SHELLS=" bash sh zsh dash ksh fish node "
@@ -105,7 +109,7 @@ is_script() {
 release() {
 	((RELEASED)) && return 0
 	RELEASED=1
-	: >"$HOLDER"
+	: >"$SLOT_HOLDER"
 	exec 9>&-
 	drop_ticket
 }
@@ -119,12 +123,11 @@ cut() {
 run_locked() {
 	take_ticket
 	wait_turn
-	exec 9>>"$LOCK"
-	"$FLOCK" -n 9 || { say_waiting 0 && "$FLOCK" 9; }
+	take_slot
 	local now
 	printf -v now '%(%F %T)T' -1
-	printf '%s (%s) since %s\n' "${TODOIMPL_BUILD_CARD:-?}" "${WHAT:0:120}" "$now" >"$HOLDER.$$"
-	mv -f "$HOLDER.$$" "$HOLDER"
+	printf '%s (%s) since %s\n' "${TODOIMPL_BUILD_CARD:-?}" "${WHAT:0:120}" "$now" >"$SLOT_HOLDER.$$"
+	mv -f "$SLOT_HOLDER.$$" "$SLOT_HOLDER"
 	write_ticket "$TICKET" held
 	export TODOIMPL_BUILD_LOCK_HELD=1
 	trap cut USR1

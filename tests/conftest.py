@@ -110,6 +110,7 @@ def _no_real_build_lock(_scratch: Path, monkeypatch: pytest.MonkeyPatch) -> None
     monkeypatch.setenv("TODOIMPL_BUILD_ROOT", str(_scratch / "build-lock"))
     monkeypatch.delenv("TODOIMPL_BUILD_LOCK_HELD", raising=False)
     monkeypatch.delenv("TODOIMPL_BUILD_CARD", raising=False)
+    monkeypatch.setenv("TODOIMPL_BUILD_SLOTS", "1")  # one slot unless a test asks for more (T2419)
 
 
 @pytest.fixture(autouse=True)

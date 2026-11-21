@@ -72,7 +72,7 @@ test-shard:
 
 test-cov:
 	@for f in $(SHARD_FILES); do [[ -f "$$f" ]] || { echo "test-cov: missing $$f" >&2; exit 1; }; done; \
-	$(UV) env COVERAGE_FILE="$(COV_DIR)/.coverage" coverage combine -q --keep $(SHARD_FILES) && \
+	COVERAGE_FILE="$(COV_DIR)/.coverage" $(UV) coverage combine -q --keep $(SHARD_FILES) && \
 	$(MAKE) --no-print-directory coverage COV_DIR="$(COV_DIR)"
 
 cov-clean:
@@ -82,7 +82,7 @@ test-%:
 	@$(UV) env COVERAGE_FILE=$(COV_DIR)/.coverage.$* pytest tests/$* --cov --cov-fail-under=0 --cov-report= -q
 
 coverage:
-	@$(UV) env COVERAGE_FILE=$(COV_DIR)/.coverage coverage report
+	@COVERAGE_FILE=$(COV_DIR)/.coverage $(UV) coverage report
 
 # Web gates run once the Astro app exists (pnpm only).
 # Two steps, so a session can run each in its own call under 60 s (T2411).

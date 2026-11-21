@@ -1,4 +1,4 @@
-"""Hold ceiling (T2166): a build-lock holder whose process tree does nothing for 2 min gives the lock on.
+"""Hold ceiling (T2166, T2422): any build-lock holder whose tree does nothing for 2 min gives its slot on.
 
 A holder stuck in pipe_read, futex or sleep (a deadlocked script, a poll loop with nothing to poll) kept every
 other card queued for 18-21 min. Every `every` s the server samples the holding ticket's tree (the wrapper and
@@ -89,7 +89,7 @@ class Ceiling:
     def __init__(self, sink: object, *, quiet: float = QUIET, every: float = EVERY) -> None:
         """`sink` is the scheduler: its `bus` (when it has one) tells the holder's card."""
         self._sink, self.quiet, self._every = sink, quiet, every
-        self._seen: _Seen | None = None
+        self._seen: dict[int, _Seen] = {}  # by ticket number: every held slot is watched (T2422)
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
 
@@ -113,26 +113,29 @@ class Ceiling:
                 log.exception("hold ceiling tick failed")
 
     def tick(self) -> None:
-        """Sample the holder once; cut it when its tree has been quiet for `quiet` s."""
+        """Sample every holder once; cut one whose tree has been quiet for `quiet` s."""
         base = buildlock.root()
-        live = buildqueue.listing(base)
-        head = live[0] if live and live[0].state == "held" else None
-        if (
-            head is None
-            or head.pid == os.getpid()
-            or buildlock.WRAPPER not in _read(PROC / str(head.pid) / "cmdline")
-        ):
-            self._seen = None
-            return
+        held = [
+            t
+            for t in buildqueue.listing(base)
+            if t.state == "held"
+            and t.pid != os.getpid()
+            and buildlock.WRAPPER in _read(PROC / str(t.pid) / "cmdline")
+        ]
+        self._seen = {seq: seen for seq, seen in self._seen.items() if seq in {t.seq for t in held}}
+        for head in held:
+            self._look(head, base)
+
+    def _look(self, head: buildqueue.Ticket, base: Path) -> None:
         cpu, io, pids, disk = _sample(head.pid)
-        now, seen = time.monotonic(), self._seen
-        moved = seen is None or seen.seq != head.seq or disk or pids != seen.pids or io != seen.io
+        now, seen = time.monotonic(), self._seen.get(head.seq)
+        moved = seen is None or disk or pids != seen.pids or io != seen.io
         if moved or seen is None or cpu - seen.cpu > TRACE * max(now - seen.at, 0.1):
-            self._seen = _Seen(head.seq, cpu, io, pids, now, now)
+            self._seen[head.seq] = _Seen(head.seq, cpu, io, pids, now, now)
             return
         seen.cpu, seen.at = cpu, now
         if now - seen.quiet_since >= self.quiet:
-            self._seen = None
+            del self._seen[head.seq]
             self._cut(head, base)
 
     def _cut(self, head: buildqueue.Ticket, base: Path) -> None:

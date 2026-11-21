@@ -86,3 +86,12 @@ def test_t2415_the_wrapper_and_the_lanes_share_one_linter_list() -> None:
     line = next(ln for ln in text.splitlines() if ln.startswith("readonly LINTERS="))
     assert line.startswith(f'readonly LINTERS=" {" ".join(sorted(buildlock.LINTERS))} " #')
     assert buildlock.LINTERS <= lanes.LIGHT_TOOLS
+
+
+def test_t2423_coverage_combine_and_report_skip_a_busy_build_lock(busy: dict[str, str]) -> None:
+    """`make test-cov` ran `capped.sh uv run coverage combine`: it queued inside the 60 s scope (killed)."""
+    combine = ["uv", "run", "--frozen", "coverage", "combine", "-q"]
+    for argv in (combine, ["uv", "run", "coverage", "report"]):
+        done = _wrap(argv, busy, 5)
+        assert done.returncode == 0
+        assert "waiting" not in done.stderr

@@ -15,7 +15,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from .buildlock import CARD_VAR, HOLDER
+from .buildlock import CARD_VAR, holders, slot_lock, slots
 from .buildqueue import tickets
 
 PROC = Path("/proc")
@@ -94,8 +94,9 @@ def _key(path: Path) -> str:
 
 
 def waiters(lock: Path) -> list[int]:
-    """Return the pids blocked on `lock` (flock) or on a ticket of its queue (T2164), from `/proc/locks`."""
-    keys = {_key(path) for path in (lock, *tickets(lock.parent))} - {""}
+    """Return the pids blocked on any slot of `lock` (flock) or on a ticket of its queue (T2164, T2421)."""
+    lock_slots = (slot_lock(lock.parent, n) for n in range(slots()))
+    keys = {_key(path) for path in (lock, *lock_slots, *tickets(lock.parent))} - {""}
     found = []
     for line in read(PROC / "locks").splitlines():
         parts = line.split()
@@ -118,8 +119,8 @@ def mine(pid: int, below: set[int], run_dir: Path) -> bool:
 
 
 def _holder(lock: Path) -> tuple[str, float | None]:
-    """Return who holds the lock (its card, or its command for a card-less build) and since when."""
-    found = HELD.fullmatch(read(lock.with_name(HOLDER)))
+    """Return who holds the lock longest (its card, or its command for a card-less build) and since when."""
+    found = HELD.fullmatch(holders(lock.parent).split(" + ")[0])
     if found is None:
         return "?", None
     who = found["card"] if found["card"] != "?" else found["cmd"]

@@ -49,17 +49,25 @@ Code: `server/todoimpl/modelpick.py` (names, plain regex, no LLM), `runner/model
   `--resume <id> --model <pin>` (claude 2.1.328 switches a resumed session's model; probed 2026-11-19).
 - The card shows `model`: the pin, else the model the latest turn ran on (`state.extra.last_model`).
 
-## One build at a time
+## Three builds at a time
 
-kuhy's order (2026-11-11, after ~25 sessions building at once froze the PC): exactly one build runs at a time
-across all board sessions and the board's own checks. Code: `server/todoimpl/runner/buildlock.{py,sh}`.
+kuhy's order: at most three builds run at once across all board sessions and the board's own checks
+(2026-11-21; it was exactly one from 2026-11-11, after ~25 sessions building at once froze the PC; one slot let
+heavy builds queue 4-6 deep for minutes). The per-card 10 GiB and board 18 GiB caps (T2405) keep three safe.
+Code: `server/todoimpl/runner/buildlock.{py,sh}`; `buildlock.SLOTS` (`$TODOIMPL_BUILD_SLOTS` in tests).
 
-- The lock is `flock` on `$TODOIMPL_HOME/build.lock`; `build.lock.holder` says `<card> (<cmd>) since <t>`, and a
-  waiter prints `waiting for build lock held by ...; <n> ahead` to stderr once, then waits. Nothing times the wait out.
+- The lock is `SLOTS` flock files: `$TODOIMPL_HOME/build.lock` (slot 0, the one old wrappers take) and
+  `build.lock.1`, `build.lock.2`; each slot's `<lock>.holder` says `<card> (<cmd>) since <t>`, and a waiter
+  prints `waiting for build lock held by <holders, joined by +>; <n> ahead` to stderr once, then waits. Nothing
+  times the wait out.
+- Slots (T2419, T2420): a waiter goes once fewer than `SLOTS` live tickets are ahead of it, then takes the first
+  free slot (all busy, from an old wrapper or a hand-held lock: it waits on slot 0). It blocks on the nearest live
+  ticket for 2 s at a time (`buildqueue.RECHECK`) and counts again, so any build that ends lets it on.
+  `bgwait.waiters` sees a waiter on any slot file or ticket; the stall detail names the longest holder (T2421).
 - Arrival order (T2164, `runner/buildqueue.py`, same protocol in the wrapper): a build first takes the next
-  ticket `build.queue/<12 digits>` under `build.queue.lock` and flocks it while it waits and builds; it waits on
-  the nearest earlier ticket, then on `build.lock`, which stays the one mutex (an old wrapper or a hand-held lock
-  still excludes). A ticket whose flock is free is dead (killed waiter, reboot) and is removed by whoever meets
+  ticket `build.queue/<12 digits>` under `build.queue.lock` and flocks it while it waits and builds; it waits
+  for its turn as above, then takes a slot lock (an old wrapper or a hand-held lock on `build.lock` still holds
+  slot 0). A ticket whose flock is free is dead (killed waiter, reboot) and is removed by whoever meets
   it. A ticket's line: `<pid> <wait|held> <card> (<cmd>) since <t>`; `buildlock.sh --queue` lists them in order.
 - A board check keeps its place across a server restart (T2168): its ticket ends in ` board`; dead, it is
   stamped `gone` and kept 5 min (`buildqueue.RESERVE`), passed over by every waiter, and the restarted server's
@@ -70,8 +78,8 @@ across all board sessions and the board's own checks. Code: `server/todoimpl/run
   code is the script's, so a caller (siege's `hold_build_lock`) never breaks. Under a held lock it runs as
   before. Better: run the script plainly; the Bash tool's PATH has the shims; a `systemd-run` job needs
   `-E PATH -E TODOIMPL_BUILD_CARD` (a repo's `scripts/bg.sh` passes PATH). `python -m x` is one tool.
-- Hold ceiling (T2166, `runner/holdceiling.py`, a server thread): every 10 s it samples the holding ticket's
-  process tree; 2 min with no CPU beyond 1 %, no read or write bytes, no new or gone process and none in disk
+- Hold ceiling (T2166, `runner/holdceiling.py`, a server thread): every 10 s it samples each holding ticket's
+  process tree (every slot, T2422); 2 min with no CPU beyond 1 %, no read or write bytes, no new or gone process and none in disk
   sleep, and it sends the wrapper SIGUSR1: the wrapper lets go of the lock and ticket, the tool runs on unkilled,
   and the card (or the run dir the wrapper works in) gets a `system` activity event. The server's own checks
   and a pid that is no buildlock.sh are skipped.
