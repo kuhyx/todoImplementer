@@ -70,7 +70,10 @@ class HostPipe:
     def started(self) -> None:
         """Claude holds the read end now: drop the host's copy and feed the prompt."""
         os.close(self.stdin)
-        self._writer.start()
+        with self._lock:
+            if self._closed:  # the turn already ended
+                return
+            self._writer.start()
 
     def _feed(self) -> None:
         line = json.dumps({"type": "user", "message": {"role": "user", "content": self._prompt}}) + "\n"
@@ -106,6 +109,7 @@ class HostPipe:
             self._closed = True
             for name in (FIFO, NEW):
                 (self._run / name).unlink(missing_ok=True)
-        self._writer.join(JOIN)
+        if self._writer.ident is not None:  # started: let it finish (or fail on the closed pipe) first
+            self._writer.join(JOIN)
         with contextlib.suppress(OSError):
             os.close(self._wr)

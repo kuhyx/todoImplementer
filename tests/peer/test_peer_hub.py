@@ -144,3 +144,28 @@ def test_state_survives_a_restart(tmp_path: Path) -> None:
     again = make_world(tmp_path)
     assert again.hub.get(sent["id"])["text"] == "q"
     assert again.hub.identify(label="a", sender=me.id).id == me.id
+
+
+def test_echo_seen_on_a_later_round_delivers_without_writing_again(tmp_path: Path) -> None:
+    w = make_world(tmp_path)
+    w.pipe.auto_echo = False
+    sent = w.hub.send(w.hub.identify(label="a"), CARD, "q")
+    w.hub.tick()
+    w.pipe.echo.add(str(w.pipe.lines[CARD][0]["uuid"]))
+    w.hub.tick()
+    assert len(w.pipe.lines[CARD]) == 1
+    assert w.hub.get(sent["id"])["state"] == "delivered"
+
+
+def test_a_label_takes_messages_from_board_sessions_only(tmp_path: Path) -> None:
+    w = make_world(tmp_path)
+    desk = w.hub.identify(label="desk")
+    w.hub.inbox(desk, 0.0)
+    with pytest.raises(Refusal, match="board sessions only"):
+        w.hub.send(w.hub.identify(label="other"), desk.id, "hi")
+
+
+def test_a_corrupt_thread_file_is_ignored(tmp_path: Path) -> None:
+    (tmp_path / CARD).mkdir()
+    (tmp_path / CARD / "peer.json").write_text('{"not": "a list"}')
+    assert make_world(tmp_path).hub.thread(CARD) == []

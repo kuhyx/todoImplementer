@@ -42,10 +42,3 @@ def card_key(token: str, card: str) -> str:
 def same(given: str | None, expected: str) -> bool:
     """Constant-time comparison; a missing value never matches."""
     return given is not None and hmac.compare_digest(given.encode(), expected.encode())
-
-
-def write_card_key(root: Path, card: str) -> Path:
-    """Write the card's key into its run dir (0600) and return the path."""
-    path = root / card / KEY_FILE
-    atomic.write_text(path, card_key(ensure(root), card) + "\n", mode=0o600)
-    return path

@@ -165,3 +165,19 @@ def test_answers_and_the_card_thread_match_the_contract(served: tuple[World, int
     assert [m["state"] for m in thread] == ["answered", "delivered"]
     validate("peer", thread, "thread")
     assert thread_of(tmp_path / "nothing") == []
+
+
+def test_bad_wait_and_bad_length(served: tuple[World, int]) -> None:
+    _, port = served
+    status, got = call(port, "inbox", {"label": "a", "wait": "soon"})
+    assert (status, got["error"]["message"]) == (400, "wait must be a number of seconds")
+    status, got = call(port, "inbox", {"label": "a", "wait": True})
+    assert status == 400
+    conn = http.client.HTTPConnection("127.0.0.1", port, timeout=10)
+    conn.putrequest("POST", "/api/peer/send", skip_host=True)
+    conn.putheader("Host", f"127.0.0.1:{port}")
+    conn.putheader("Content-Length", "nope")
+    conn.endheaders()
+    resp = conn.getresponse()
+    assert resp.status == 400
+    conn.close()

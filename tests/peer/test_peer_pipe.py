@@ -101,3 +101,26 @@ def test_watch_ignores_other_lines(tmp_path: Path, line: bytes) -> None:
     assert (run / FIFO).exists()
     pipe.close()
     assert proc.wait(5) == 0
+
+
+def test_close_before_the_prompt_is_fed_skips_the_rename(tmp_path: Path) -> None:
+    run = tmp_path / CARD
+    run.mkdir()
+    pipe = peerpipe.HostPipe.create(run, "p")
+    proc = subprocess.Popen([sys.executable, "-c", READER], stdin=pipe.stdin, stdout=subprocess.DEVNULL)
+    pipe.close()  # the turn ended before claude was handed its stdin
+    pipe.started()
+    assert pipe._writer.ident is None
+    assert proc.wait(5) == 0
+
+
+def test_writer_that_finishes_after_close_does_not_publish_the_fifo(tmp_path: Path) -> None:
+    run = tmp_path / CARD
+    run.mkdir()
+    pipe = peerpipe.HostPipe.create(run, "p")
+    pipe._closed = True
+    pipe._feed()  # the prompt fits the pipe buffer: the write returns, then it sees the close
+    assert not (run / FIFO).exists()
+    assert (run / peerpipe.NEW).exists()
+    os.close(pipe.stdin)
+    os.close(pipe._wr)

@@ -11,7 +11,7 @@ from launchfakes import invoke as _invoke
 from launchfakes import rig as _rig
 from todoimpl.peer.hub import Hub
 from todoimpl.peer.pipe import RunPipe
-from todoimpl.runner import files, orphans, turnhost
+from todoimpl.runner import claude, files, orphans, turnhost
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -58,4 +58,24 @@ def test_peer_off_keeps_the_prompt_in_argv(world: Env, tmp_path: Path, monkeypat
     orphans.begin(run_dir, STEM, "implement", None)
     _invoke(run_dir, inv)
     turnhost.run(run_dir, STEM, turnhost.Stop())
+    assert world.calls()[0]["via_stdin"] is False
+
+
+def test_peer_turn_whose_claude_cannot_start_leaves_no_fifo(world: Env, tmp_path: Path) -> None:
+    run_dir, inv = _rig(world, tmp_path)
+    broken = claude.Invocation((str(tmp_path / "no-such-claude"), "-p", "go"), inv.env, inv.cwd, peer=True)
+    orphans.begin(run_dir, STEM, "implement", None)
+    _invoke(run_dir, broken)
+    turnhost.run(run_dir, STEM, turnhost.Stop())
+    assert files.read_json(run_dir / f"{STEM}.exit.json")["code"] == turnhost.SPAWN_FAILED
+    assert not list(run_dir.glob("peer.fifo*"))
+
+
+def test_peer_turn_without_a_prompt_runs_as_before(world: Env, tmp_path: Path) -> None:
+    run_dir, inv = _rig(world, tmp_path)
+    bare = claude.Invocation(tuple(a for a in inv.argv if a not in {"-p", "go"}), inv.env, inv.cwd, peer=True)
+    orphans.begin(run_dir, STEM, "implement", None)
+    _invoke(run_dir, bare)
+    turnhost.run(run_dir, STEM, turnhost.Stop())
+    assert files.read_json(run_dir / f"{STEM}.exit.json")["code"] == 0
     assert world.calls()[0]["via_stdin"] is False

@@ -83,3 +83,12 @@ def test_scheduler_without_bus_publishes_nowhere(tmp_path: Path) -> None:
             return set()
 
     service.start(tmp_path, Bare()).tick()
+
+
+def test_token_is_made_once_and_then_kept(tmp_path: Path) -> None:
+    from todoimpl.peer import token  # noqa: PLC0415
+
+    first = token.ensure(tmp_path)
+    assert token.ensure(tmp_path) == first
+    (tmp_path / token.FILE).write_text("\n")
+    assert token.ensure(tmp_path) not in {"", first}
