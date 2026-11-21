@@ -1,2 +1,2 @@
 # The Claude Agent SDK for credit turns (a separate venv: the server runtime is stdlib-only).
-claude-agent-sdk==0.2.186
+claude-agent-sdk==0.2.187
