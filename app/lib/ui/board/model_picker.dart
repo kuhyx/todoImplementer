@@ -1,6 +1,7 @@
 /// The model picker (action `model`): one chip per server choice, the
-/// pinned one selected. A model shows its short name (kuhy's own pick, like a
-/// title); `default` is a glyph. A tap pins it and the card's stage runs again
+/// model the card runs on selected. A model shows its short name (kuhy's own
+/// pick, like a title); the default model carries the default glyph inline
+/// (T2470). A tap pins it and the card's stage runs again
 /// on it (modelswitch on the server). A disabled picker keeps its reason as
 /// screen-reader text (textgate).
 library;
@@ -25,7 +26,7 @@ class ModelPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final current = action.value ?? 'default';
+    final current = action.value;
     return Semantics(
       label: action.spoken,
       container: true,
@@ -36,8 +37,19 @@ class ModelPicker extends StatelessWidget {
           for (final c in action.choices)
             ChoiceChip(
               key: ValueKey('model-${c.id}'),
-              label: c.id == 'default'
-                  ? Icon(Icons.auto_mode, semanticLabel: c.label)
+              label: c.isDefault
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      spacing: AppSpacing.xs,
+                      children: [
+                        Text(c.label),
+                        const Icon(
+                          Icons.auto_mode,
+                          size: 16,
+                          semanticLabel: 'default',
+                        ),
+                      ],
+                    )
                   : Text(c.label),
               selected: c.id == current,
               onSelected: action.enabled && c.id != current

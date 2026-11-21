@@ -33,7 +33,11 @@ class CardAction {
       option: o == null ? null : CardAction.fromJson(o),
       choices: [
         for (final c in objs(j, 'choices'))
-          (id: str(c, 'id'), label: str(c, 'label')),
+          (
+            id: str(c, 'id'),
+            label: str(c, 'label'),
+            isDefault: strOr(c, 'note') == 'default',
+          ),
       ],
     );
   }
@@ -53,12 +57,13 @@ class CardAction {
   /// Ask "sure?" first (ship, cancel).
   final bool confirm;
 
-  /// copy-resume / copy-fix: the text to copy; model: the pinned model id
-  /// or `default`.
+  /// copy-resume / copy-fix: the text to copy; model: the id of the model
+  /// the card runs on (the pin, else the latest turn's, else the default).
   final String? value;
 
-  /// model only: the picker's rows (the id a tap sends, a short name).
-  final List<({String id, String label})> choices;
+  /// model only: the picker's rows (the id a tap sends, a short name, and
+  /// whether it is the model the roles run unpinned).
+  final List<({String id, String label, bool isDefault})> choices;
 
   /// start only: the auto_ship checkbox.
   final CardAction? option;

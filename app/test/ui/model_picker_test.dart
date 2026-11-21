@@ -9,11 +9,11 @@ import '../support/fakes.dart';
 
 const _choices = [
   {'id': 'claude-fable-5-2', 'label': 'Fable 5.2'},
-  {'id': 'claude-opus-5-5', 'label': 'Opus 5.5'},
-  {'id': 'default', 'label': 'Default'},
+  {'id': 'claude-opus-5-5', 'label': 'Opus 5.5', 'note': 'default'},
+  {'id': 'claude-sonnet-5-5', 'label': 'Sonnet 5.5'},
 ];
 
-Json _picker({bool enabled = true, String value = 'default'}) => {
+Json _picker({bool enabled = true, String value = 'claude-opus-5-5'}) => {
   ...action('model', enabled: enabled, value: value),
   'choices': _choices,
 };
@@ -29,7 +29,7 @@ Future<FakeRelay> _open(WidgetTester tester, Json pick) async {
   );
   final c = {
     ...card('c1', column: 'running', status: 'working', actions: [pick]),
-    'model': 'opus',
+    'model': 'Opus 5.5',
   };
   relay.push(boardJson([c]));
   await tester.pumpAndSettle();
@@ -44,10 +44,10 @@ void main() {
   ) async {
     final relay = await _open(tester, _picker());
     expect(find.byKey(const Key('card-model')), findsOneWidget);
-    expect(find.text('opus'), findsOneWidget);
+    expect(find.text('Opus 5.5'), findsNWidgets(2)); // the chip and its button
     expect(find.byKey(const ValueKey('action-model')), findsNothing);
     final pinned = tester.widget<ChoiceChip>(
-      find.byKey(const ValueKey('model-default')),
+      find.byKey(const ValueKey('model-claude-opus-5-5')),
     );
     expect(pinned.selected, isTrue);
     await tester.tap(find.byKey(const ValueKey('model-claude-fable-5-2')));
@@ -57,6 +57,23 @@ void main() {
       'card': 'c1',
       'args': {'model': 'claude-fable-5-2'},
     });
+  });
+
+  testWidgets('[T2470] the default model carries the default glyph inline', (
+    tester,
+  ) async {
+    await _open(tester, _picker(value: 'claude-sonnet-5-5'));
+    expect(find.byKey(const ValueKey('model-default')), findsNothing);
+    final opus = find.byKey(const ValueKey('model-claude-opus-5-5'));
+    expect(
+      find.descendant(of: opus, matching: find.byIcon(Icons.auto_mode)),
+      findsOneWidget,
+    );
+    expect(find.byIcon(Icons.auto_mode), findsOneWidget);
+    final sonnet = tester.widget<ChoiceChip>(
+      find.byKey(const ValueKey('model-claude-sonnet-5-5')),
+    );
+    expect(sonnet.selected, isTrue);
   });
 
   testWidgets('[T2220] the detail overview shows the model', (tester) async {
