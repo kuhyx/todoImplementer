@@ -134,3 +134,28 @@ def test_no_hub_means_no_route(tmp_path: Path) -> None:
         server.shutdown()
         server.server_close()
         thread.join(5)
+
+
+def test_answers_and_the_card_thread_match_the_contract(served: tuple[World, int], tmp_path: Path) -> None:
+    from contract_lib import validate  # noqa: PLC0415
+    from todoimpl.peer.book import thread_of  # noqa: PLC0415
+
+    world, port = served
+    _, sent = call(port, "send", {"label": "desk", "to": CARD, "text": "q"})
+    validate("peer", sent)
+    world.hub.tick()
+    _, answered = call(port, "reply", {"card": CARD, "card_key": world.hub.card_key(CARD), "id": sent["message"]["id"], "text": "a"})
+    validate("peer", answered)
+    _, box = call(port, "inbox", {"label": "desk", "sender": sent["sender"]})
+    validate("peer", box)
+    task = world.hub.task_sender(CARD)
+    world.hub.send(task, f"desk#{sent['sender']}", "back")
+    _, box = call(port, "inbox", {"label": "desk", "sender": sent["sender"]})
+    assert box["messages"]
+    validate("peer", box)
+    _, refused = call(port, "send", {"label": "desk", "to": "zzzz9999-0", "text": "x"})
+    validate("peer", refused)
+    thread = thread_of(tmp_path / CARD)
+    assert [m["state"] for m in thread] == ["answered", "delivered"]
+    validate("peer", thread, "thread")
+    assert thread_of(tmp_path / "nothing") == []

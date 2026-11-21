@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from todoimpl.asks.view import items as ask_items
+from todoimpl.peer.book import thread_of
 from todoimpl.runner.parsing import parse_questions
 
 from .card import Context, build_card
@@ -138,4 +139,5 @@ def build_task(
         "lesson": run.lesson if run is not None else None,
         "error": run.error if run is not None else None,
         **({"umbrella": umbrella} if umbrella is not None else {}),
+        **({"peer": peer} if (peer := thread_of(directory)) else {}),
     }

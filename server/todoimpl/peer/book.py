@@ -25,6 +25,12 @@ def view(msg: dict[str, Any]) -> dict[str, Any]:
     return {k: v for k, v in msg.items() if k not in PRIVATE}
 
 
+def thread_of(directory: Path) -> list[dict[str, Any]]:
+    """A run dir's Peer thread as the card shows it, straight from its file (the task drawer reads this)."""
+    rows = read_json(directory / FILE)
+    return [view(r) for r in rows if isinstance(r, dict)] if isinstance(rows, list) else []
+
+
 class Book:
     """Every card's thread."""
 

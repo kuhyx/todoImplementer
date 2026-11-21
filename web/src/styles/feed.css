@@ -50,3 +50,37 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+/* The Peer thread in the drawer head (components/peer-thread.ts). */
+.peer-thread {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.peer-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  align-items: center;
+  font-size: var(--text-label);
+  color: var(--text-muted);
+}
+.peer-state svg {
+  width: 1em;
+  height: 1em;
+}
+.peer-text,
+.peer-reply,
+.peer-reason {
+  margin: 0;
+  white-space: pre-wrap;
+}
+.peer-reply {
+  padding-left: var(--space-2);
+  border-left: 2px solid var(--text-muted);
+}
+.peer-reason {
+  color: var(--warning);
+}

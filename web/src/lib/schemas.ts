@@ -8,6 +8,7 @@ import {
   taskCard, usd,
 } from "@/lib/schemas-common";
 import { free } from "@/lib/schemas-free";
+import { peerThread } from "@/lib/schemas-peer";
 import { umbrellaDetail } from "@/lib/schemas-umbrella";
 
 const keyState = z.enum(["ok", "expiring", "expired", "invalid", "missing", "check_failed"]);
@@ -55,6 +56,7 @@ export const taskDetail = z.strictObject({
   error: z.string().nullable(),
   lesson: lesson.nullable(),
   live_check: liveCheck.nullable(),
+  peer: peerThread.optional(),
   plan_md: z.string().nullable(),
   questions: z.array(question),
   resume_command: z.string().nullable(),

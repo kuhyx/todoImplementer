@@ -80,6 +80,7 @@
     },
     "umbrella": {"$ref": "https://todoimplementer.local/contracts/umbrella.schema.json#/$defs/detail", "description": "Only for an umbrella note: child rows and round history."},
     "self_check": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/self_check"},
+    "peer": {"$ref": "https://todoimplementer.local/contracts/peer.schema.json#/$defs/thread", "description": "The Peer thread: messages other sessions sent to this task or it sent; absent when there are none."},
     "live_check": {
       "anyOf": [
         {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/live_check"},

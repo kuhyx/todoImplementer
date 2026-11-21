@@ -1,0 +1,87 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://todoimplementer.local/contracts/peer.schema.json",
+  "title": "POST /api/peer/{send,await,inbox,reply} answers and the card's Peer thread (DOCS-peer.md)",
+  "description": "Loopback only, X-Todoimpl-Peer-Token from $TODOIMPL_HOME/peer.token; a refusal is $defs/refusal.",
+  "oneOf": [
+    {"$ref": "#/$defs/message_answer"},
+    {"$ref": "#/$defs/inbox_answer"},
+    {"$ref": "#/$defs/refusal"}
+  ],
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9]{8}-[0-9]+\\.[0-9a-f]{12}$", "description": "<card>.<hex12>"},
+    "maybe_epoch": {
+      "anyOf": [{"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"}, {"type": "null"}]
+    },
+    "message": {
+      "type": "object",
+      "description": "One message of a card's Peer thread; the card keeps its last 50.",
+      "properties": {
+        "id": {"$ref": "#/$defs/id"},
+        "card": {"type": "string", "description": "The card whose thread holds it: the task it went to, else the task that sent it."},
+        "to_card": {"type": ["string", "null"], "description": "The task it went to; null for a session label."},
+        "from": {"type": "string", "description": "<label>#<id4>; task:<card>#<id4> for a board session."},
+        "from_id": {"type": "string", "pattern": "^[0-9a-f]{4}$"},
+        "to": {"type": "string"},
+        "to_id": {"type": "string", "pattern": "^[0-9a-f]{4}$"},
+        "text": {"type": "string", "maxLength": 8192},
+        "state": {"enum": ["queued", "delivered", "answered", "expired", "dead_end"]},
+        "reply": {"type": ["string", "null"]},
+        "hop": {"type": "integer", "minimum": 1, "maximum": 7},
+        "reply_to": {"anyOf": [{"$ref": "#/$defs/id"}, {"type": "null"}]},
+        "at": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"},
+        "delivered_at": {"$ref": "#/$defs/maybe_epoch"},
+        "answered_at": {"$ref": "#/$defs/maybe_epoch"},
+        "reason": {"type": ["string", "null"], "description": "Why it expired or is a dead end."}
+      },
+      "required": [
+        "id", "card", "to_card", "from", "from_id", "to", "to_id", "text", "state", "reply", "hop", "reply_to",
+        "at", "delivered_at", "answered_at", "reason"
+      ],
+      "additionalProperties": false
+    },
+    "thread": {"type": "array", "items": {"$ref": "#/$defs/message"}, "maxItems": 50},
+    "caller": {
+      "type": "object",
+      "properties": {
+        "ok": {"const": true},
+        "sender": {"type": "string", "pattern": "^[0-9a-f]{4}$", "description": "Send it back on later calls."},
+        "as": {"type": "string", "description": "<label>#<id4>"}
+      },
+      "required": ["ok", "sender", "as"]
+    },
+    "message_answer": {
+      "description": "send, await and reply.",
+      "allOf": [{"$ref": "#/$defs/caller"}],
+      "properties": {"ok": true, "sender": true, "as": true, "message": {"$ref": "#/$defs/message"}},
+      "required": ["message"],
+      "unevaluatedProperties": false
+    },
+    "inbox_answer": {
+      "allOf": [{"$ref": "#/$defs/caller"}],
+      "properties": {
+        "ok": true, "sender": true, "as": true,
+        "messages": {
+          "type": "array",
+          "items": {
+            "allOf": [{"$ref": "#/$defs/message"}],
+            "description": "text is the envelope-wrapped text the session reads.",
+            "properties": {"text": {"type": "string"}}
+          }
+        }
+      },
+      "required": ["messages"],
+      "unevaluatedProperties": false
+    },
+    "refusal": {
+      "type": "object",
+      "properties": {
+        "ok": {"const": false},
+        "error": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/error"},
+        "retry_after": {"type": "number", "minimum": 0, "description": "Seconds until trying again can work."}
+      },
+      "required": ["ok", "error"],
+      "additionalProperties": false
+    }
+  }
+}
