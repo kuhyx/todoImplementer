@@ -24,8 +24,10 @@ import "@/phone/phone.css";
   </head>
   <body>
     <usage-app></usage-app>
+    <footer class="kuhy-credit-footer"><kuhy-credit></kuhy-credit></footer>
     <noscript><p>The usage views need JavaScript.</p></noscript>
     <script>
+      import "@kuhyx/kuhy-credit";
       import { boot } from "@/usage/boot";
 
       boot();

@@ -24,8 +24,10 @@ import "@/issues/css/issues.css";
   </head>
   <body>
     <issues-app></issues-app>
+    <footer class="kuhy-credit-footer"><kuhy-credit></kuhy-credit></footer>
     <noscript><p>The issue log needs JavaScript.</p></noscript>
     <script>
+      import "@kuhyx/kuhy-credit";
       import { boot } from "@/issues/boot";
 
       boot();

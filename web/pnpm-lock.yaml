@@ -175,6 +175,9 @@ importers:
 
   .:
     dependencies:
+      '@kuhyx/kuhy-credit':
+        specifier: github:kuhyx/utils#kuhy-credit-v0.3.2&path:kuhy_credit/web
+        version: https://codeload.github.com/kuhyx/utils/tar.gz/adeb40f68e1d6c701da43e396fc46bffa3ef10c7#path:kuhy_credit/web
       '@kuhyx/web-ui':
         specifier: github:kuhyx/utils#web_ui-v0.5.0&path:/web_ui
         version: https://codeload.github.com/kuhyx/utils/tar.gz/decf5824e609b099f9455be93c4d09b4c1fd6cae#path:/web_ui(astro@7.4.13(@types/node@26.6.6)(yaml@2.9.1))
@@ -883,6 +886,11 @@ packages:
 
   '@keyv/serialize@1.1.1':
     resolution: {integrity: sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA==}
+
+  '@kuhyx/kuhy-credit@https://codeload.github.com/kuhyx/utils/tar.gz/adeb40f68e1d6c701da43e396fc46bffa3ef10c7#path:kuhy_credit/web':
+    resolution: {gitHosted: true, integrity: sha512-nlqA7vXYvl053ES7BoC9Uyby+HaU264rgcp6Booid5WKIgG1nOYbWN85Tmidkyj8IeKWdLVPT+OwQM+LuRM7nw==, path: kuhy_credit/web, tarball: https://codeload.github.com/kuhyx/utils/tar.gz/adeb40f68e1d6c701da43e396fc46bffa3ef10c7}
+    version: 0.3.2
+    engines: {node: '>=24', pnpm: '>=10'}
 
   '@kuhyx/ts-config@https://codeload.github.com/kuhyx/utils/tar.gz/b164bf9592c94b6ae38c3bb161edc7d496f06c21#path:/ts_config':
     resolution: {gitHosted: true, integrity: sha512-xvDE0coW9aNc9VScNJ491iZ6/MpT3HNHYR3LH0i8s6Yy2LFQi/bi3GI4cozHiBRnVAAyfEowFOV18VBIaCZ9qw==, path: /ts_config, tarball: https://codeload.github.com/kuhyx/utils/tar.gz/b164bf9592c94b6ae38c3bb161edc7d496f06c21}
@@ -4491,6 +4499,8 @@ snapshots:
       keyv: 5.6.0
 
   '@keyv/serialize@1.1.1': {}
+
+  '@kuhyx/kuhy-credit@https://codeload.github.com/kuhyx/utils/tar.gz/adeb40f68e1d6c701da43e396fc46bffa3ef10c7#path:kuhy_credit/web': {}
 
   '@kuhyx/ts-config@https://codeload.github.com/kuhyx/utils/tar.gz/b164bf9592c94b6ae38c3bb161edc7d496f06c21#path:/ts_config(@typescript-eslint/eslint-plugin@8.73.0(@typescript-eslint/parser@8.73.0(eslint@10.15.0(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3))(eslint@10.15.0(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3))(@typescript-eslint/parser@8.73.0(eslint@10.15.0(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3))(eslint@10.15.0(supports-color@7.2.0))(supports-color@7.2.0)(typescript-eslint@8.73.0(eslint@10.15.0(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3))(typescript@6.0.3)(vitest@5.1.1)':
     dependencies:

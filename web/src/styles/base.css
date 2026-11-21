@@ -137,6 +137,12 @@ textarea {
   }
 }
 
+.kuhy-credit-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-2, 8px);
+}
+
 input,
 select,
 textarea {
