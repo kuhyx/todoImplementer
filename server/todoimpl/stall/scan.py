@@ -19,7 +19,7 @@ from datetime import datetime
 from pathlib import Path
 
 from todoimpl.runner import freeworker, orphans
-from todoimpl.runner.workerwait import PID
+from todoimpl.runner.workerwait import EXIT, PID
 
 EVENTS = "events.jsonl"
 CARD = re.compile(r"^[0-9a-f]{8}-\d+$")
@@ -117,8 +117,14 @@ def workers(run_dir: Path) -> float | None:
 
     A cheap-tier manager waits on its workers in the background; the free model prints its answer only at
     the end, so the manager's quiet is the worker's time. A worker is live while its pid file names a process.
+    A worker's end (its exit file) is activity too: the manager's quiet counts from it, not from before (T2468).
     """
     ends: list[float] = []
+    for exit_file in [*run_dir.glob(f"worker*.log{EXIT}"), *run_dir.glob(f"children/*/worker*.log{EXIT}")]:
+        try:
+            ends.append(exit_file.stat().st_mtime)
+        except OSError:
+            continue
     for pid_file in [*run_dir.glob(f"worker*.log{PID}"), *run_dir.glob(f"children/*/worker*.log{PID}")]:
         try:
             pid = int(pid_file.read_text(encoding="utf-8"))

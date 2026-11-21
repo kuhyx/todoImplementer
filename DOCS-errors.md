@@ -146,6 +146,7 @@ writes `system task_*` lines right after a result, so the last line alone hid it
 claude's other stream lines and a touched file do not count, so nothing looks alive by pinging. An advisor call
 (`server_tool_use`, answered in 60-140 s with nothing streamed) counts as work for 240 s after it (T2448). A live free worker of the card (`worker*.log.pid`
 names a process) counts as work until its start plus its 3600 s timeout: its manager waits on it (T2451).
+Its end (`worker*.log.exit`) is activity too, so the manager's quiet counts from the worker's end (T2468).
 
 - `stall/watch.py` ticks every 10 s. A card with a live turn (`turn.pid` alive) whose last real activity is over 60 s
   old is one stall episode. A fresh turn counts from its start. An episode counts once however many ticks it lasts.

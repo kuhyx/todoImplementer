@@ -41,3 +41,13 @@ def test_t2451_a_dead_or_unreadable_worker_does_not(tmp_path: Path) -> None:
     _pid_file(run_dir / "worker-1.log.pid", gone.pid, 5000.0)
     _pid_file(run_dir / "worker-2.log.pid", "x", 6000.0)
     assert [r.since for r in scan.running(tmp_path)] == [1000.0]
+
+
+def test_t2468_a_worker_that_just_ended_counts_as_work_at_its_end(tmp_path: Path) -> None:
+    # 2026-11-21 f2199a40-0: the worker ran 22 min; it exited, its pid file went, and the watch filed the
+    # manager's 254 s of quiet 2 s later, though the manager answered 7 s after the worker's end
+    run_dir = _card(tmp_path)
+    _pid_file(run_dir / "children" / "eeeeeeee-3" / "worker-3.log.exit", 0, 7000.0)
+    _pid_file(run_dir / "worker-1.log.exit", 0, 6000.0)
+    (run_dir / "worker-2.log.exit").symlink_to(run_dir / "gone")  # removed between the listing and the stat
+    assert [r.since for r in scan.running(tmp_path)] == [7000.0]
