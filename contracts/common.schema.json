@@ -57,10 +57,10 @@
         "enabled": {"type": "boolean"},
         "reason": {"type": ["string", "null"]},
         "confirm": {"type": "boolean", "description": "Page asks 'sure?' first (ship, cancel, wont, done-manually)."},
-        "value": {"type": "string", "description": "copy-resume and copy-fix: the text to copy; model: the pinned model id, or `default`."},
+        "value": {"type": "string", "description": "copy-resume and copy-fix: the text to copy; model: the pressed model id (kuhy's pin, else the latest turn's model, else the default one)."},
         "choices": {
           "type": "array", "minItems": 1, "description": "model only: the picker's rows; a click sends {model: id} and reruns the card's stage on it.",
-          "items": {"type": "object", "properties": {"id": {"type": "string", "minLength": 1}, "label": {"type": "string", "minLength": 1}}, "required": ["id", "label"], "additionalProperties": false}
+          "items": {"type": "object", "properties": {"id": {"type": "string", "minLength": 1}, "label": {"type": "string", "minLength": 1}, "note": {"const": "default", "description": "the model the roles run unpinned: its button says so inline"}}, "required": ["id", "label"], "additionalProperties": false}
         },
         "option": {
           "type": "object",

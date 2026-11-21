@@ -29,10 +29,11 @@ def test_t1892_a_credit_turn_records_the_model_it_wanted_and_the_one_it_ran_on(
         (impl,) = _results(world, "implement")[:1]
         assert impl["model"] == "sonnet"
         assert impl["wanted_model"] == "opus"
-        assert st.extra["credit_downgrade"] == {"implement": {"wanted": "opus", "ran": "sonnet"}}
+        down = {"wanted": "opus", "ran": "sonnet"}  # every card role wants Opus (T2471)
+        assert st.extra["credit_downgrade"] == {"plan": down, "implement": down, "live_check": down}
         validate("state", st.to_dict())  # the new key is in the contract
         (plan,) = _results(world, "plan")
-        assert plan["model"] == plan["wanted_model"] == "sonnet"
+        assert (plan["model"], plan["wanted_model"]) == ("sonnet", "opus")
     finally:
         sched.close()
 

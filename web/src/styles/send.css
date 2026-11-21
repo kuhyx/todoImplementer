@@ -58,3 +58,15 @@
   border-color: var(--accent);
   color: var(--on-fill);
 }
+
+/* The default model's inline note (T2470): smaller and muted, the pressed fill keeps it readable */
+.model-picker .choice-note {
+  margin-left: var(--space-1);
+  font-size: var(--text-caption);
+  color: var(--text-muted);
+}
+
+.model-picker .btn[aria-pressed="true"] .choice-note {
+  color: inherit;
+  opacity: 0.8;
+}

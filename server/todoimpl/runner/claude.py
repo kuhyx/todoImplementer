@@ -16,21 +16,23 @@ from todoimpl.newtask import images
 
 from . import buildlock, mcpconf, policy
 
+# Every card role runs Opus 5.5 at high effort unpinned (kuhy, 2026-11-21: "default should be opus 5.5 with
+# high effort"; before: Sonnet for spec, plan, closing and the live check, medium effort). T2471.
 ROLE_MODELS = {
-    "spec": "sonnet",
-    "plan": "sonnet",
+    "spec": "opus",
+    "plan": "opus",
     "manager": "opus",  # umbrella rounds: runs the free workers (kuhy, 2026-11-10: opus, not sonnet)
-    "closing": "sonnet",
+    "closing": "opus",
     "implement": "opus",
-    "live_check": "sonnet",  # verify-and-report work: its own fresh session, seeded from the handoff
+    "live_check": "opus",  # verify-and-report work: its own fresh session, seeded from the handoff
     "verify": "opus",
     "classify": "haiku",
 }
-# Default reasoning effort per role (the article's yardstick: medium by default); the classifier is plain
-# extraction. A fix turn and the cheap tier's retry raise it to high; `--effort` is in claude 2.1.322.
+# Default reasoning effort per role: high (kuhy, 2026-11-21); the classifier is plain extraction.
+# `--effort` is in claude 2.1.322.
 ROLE_EFFORT = {
-    "spec": "medium", "plan": "medium", "manager": "medium", "closing": "medium", "implement": "medium",
-    "live_check": "medium", "verify": "medium", "classify": "low",
+    "spec": "high", "plan": "high", "manager": "high", "closing": "high", "implement": "high",
+    "live_check": "high", "verify": "high", "classify": "low",
 }  # fmt: skip
 # Sessions load kuhy's real ~/.claude allow rules, which permit pushing; only the Ship click may push.
 DENY_ALWAYS = ("Bash(git push:*)", "Bash(git push *)")

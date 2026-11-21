@@ -30,7 +30,8 @@ MODELS: Final = (
     Model("claude-sonnet-5-5", "sonnet", "5.5", "Sonnet 5.5"),
     Model("claude-haiku-5-5", "haiku", "5.5", "Haiku 5.5"),
 )
-DEFAULT: Final = "default"  # drops the pin: the role, tier and escalation rules pick again
+DEFAULT: Final = "default"  # a note's word that drops the pin: the role, tier and escalation rules pick again
+DEFAULT_MODEL: Final = "claude-opus-5-5"  # what the roles run unpinned (kuhy, 2026-11-21): its button says so
 PIN: Final = "model_pin"  # state.extra key
 IDS: Final = (*(m.id for m in MODELS), DEFAULT)
 
@@ -94,6 +95,15 @@ def label(model_id: str) -> str:
     return next((m.label for m in MODELS if m.id == model_id), model_id)
 
 
+def resolve(name: str) -> str:
+    """Return the picker id of a model a turn ran on ("sonnet", "claude-sonnet-5-5"), else the name itself."""
+    flat = name.lower().removeprefix("claude-").split("-")[0]
+    return next((m.id for m in MODELS if name == m.id or flat == m.family), name)
+
+
 def choices() -> list[dict[str, str]]:
-    """Return the picker's choices (action.schema `choices`): every model, then `default`."""
-    return [{"id": m.id, "label": m.label} for m in MODELS] + [{"id": DEFAULT, "label": "Default"}]
+    """Return the picker's choices (action.schema `choices`): every model; the default one carries a note."""
+    return [
+        {"id": m.id, "label": m.label} | ({"note": "default"} if m.id == DEFAULT_MODEL else {})
+        for m in MODELS
+    ]

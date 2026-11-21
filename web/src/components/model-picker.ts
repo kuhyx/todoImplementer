@@ -2,8 +2,9 @@ import type { BarHost } from "@/components/action-bar";
 import type { Action, ActionChoice } from "@/lib/schemas-common";
 
 /**
- * The model picker (action `model`): one short button per server choice, the pinned one pressed. A click
- * sends {model: id}; the server pins it and runs the card's stage again on it (modelswitch).
+ * The model picker (action `model`): one short button per server choice, the model the card runs on pressed;
+ * the default model's button carries an inline note (T2470). A click sends {model: id}; the server pins it and
+ * runs the card's stage again on it (modelswitch).
  */
 import { h } from "@/lib/dom";
 
@@ -28,8 +29,10 @@ export function renderPicker(action: Action, choices: ActionChoice[], host: BarH
           if (!isBlocked && choice.id !== action.value) host.activate({ ...action, value: choice.id });
         },
       },
-      text: choice.label,
-    });
+    },
+    choice.label,
+    choice.note !== undefined && h("span", { class: "choice-note", text: choice.note }),
+    );
   },
   );
   return h(

@@ -49,12 +49,12 @@ def test_cheap_note_runs_on_opus_at_medium_effort_with_the_manager_addendum(worl
     assert "tier cheap" in feed(world)
 
 
-def test_live_check_of_a_cheap_run_is_its_own_sonnet_medium_session_without_the_addendum(
+def test_live_check_of_a_cheap_run_is_its_own_opus_high_session_without_the_addendum(
     world: Env, free: Free
 ) -> None:
     run_to_gate(world, PLAN, IMPL, LIVE_OK, **CHEAP)
     live = world.calls()[2]
-    assert (live["model"], effort(live)) == ("sonnet", "medium")  # T1896
+    assert (live["model"], effort(live)) == ("opus", "high")  # T1896, T2471
     assert "claude-free" not in str(live["prompt"])
 
 
@@ -91,9 +91,9 @@ def test_escalate_line_reruns_the_attempt_on_opus_with_the_reason(world: Env, fr
     assert st.extra["escalated"] is True
     assert st.extra["escalate_reason"] == "needs a refactor across modules"
     assert (world.calls()[-1]["model"], effort(world.calls()[-1])) == (
-        "sonnet",
-        "medium",
-    )  # live check: own role
+        "opus",
+        "high",
+    )  # live check: own role (T2471)
     assert "escalated" in feed(world)
 
 
@@ -120,7 +120,7 @@ def test_an_escalated_run_does_not_escalate_again_on_failure(world: Env, free: F
 def test_ordinary_note_is_untouched(world: Env, free: Free) -> None:
     st = run_to_gate(world, PLAN, IMPL, LIVE_OK, done_check="true")
     assert [c["model"] for c in implement_calls(world)] == ["opus"]
-    assert effort(implement_calls(world)[0]) == "medium"  # T1897: every role has a default
+    assert effort(implement_calls(world)[0]) == "high"  # T1897: every role has a default (T2471: high)
     assert "claude-free" not in str(implement_calls(world)[0]["prompt"])
     assert st.extra["tier"] == "normal"
     assert not {"free_models", "escalated"} & set(st.extra)

@@ -61,7 +61,11 @@ export const actionOption = z
   .refine(hasReason, { message: "a disabled option needs a reason" });
 
 /** One row of the model picker: the id the click sends, a short name. */
-export const actionChoice = z.strictObject({ id: z.string().min(1), label: z.string().min(1) });
+export const actionChoice = z.strictObject({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  note: z.literal("default").optional(), // the model the roles run unpinned (T2470)
+});
 
 export const action = z
   .strictObject({

@@ -23,7 +23,7 @@ def test_build_has_the_agreed_argv_and_env(world: Env, tmp_path: Path) -> None:
         "--add-dir",
         str(tmp_path),
         "--effort",
-        "medium",
+        "high",
         "--strict-mcp-config",
         "--mcp-config",
         '{"mcpServers": {}}',
@@ -47,8 +47,8 @@ def test_classify_is_read_only_and_models_follow_roles(
     assert "--resume" not in inv.argv
     assert inv.argv[-5:] == ("Bash(git push:*)", "Bash(git push *)", "Edit", "Write", "NotebookEdit")
     assert [claude.model_for(r) for r in ("spec", "plan", "implement", "classify")] == [
-        "sonnet",
-        "sonnet",
+        "opus",
+        "opus",
         "opus",
         "haiku",
     ]
@@ -91,10 +91,10 @@ def test_effort_comes_from_the_caller_else_the_roles_default(tmp_path: Path) -> 
     def effort(inv: claude.Invocation) -> str | None:
         return inv.argv[inv.argv.index("--effort") + 1] if "--effort" in inv.argv else None
 
-    assert effort(claude.build("manager", "p", tmp_path)) == "medium"
+    assert effort(claude.build("manager", "p", tmp_path)) == "high"
     assert effort(claude.build("implement", "p", tmp_path, effort="high")) == "high"
     assert effort(claude.build("manager", "p", tmp_path, effort="low")) == "low"
-    assert effort(claude.build("implement", "p", tmp_path)) == "medium"
+    assert effort(claude.build("implement", "p", tmp_path)) == "high"
     assert effort(claude.build("classify", "p", tmp_path)) == "low"
 
 

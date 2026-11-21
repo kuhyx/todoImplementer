@@ -21,16 +21,16 @@ def test_t2218_a_run_offers_the_picker_with_its_pin_and_shows_the_model() -> Non
     assert picker is not None
     assert (picker["enabled"], picker["value"], picker["label"]) == (True, FABLE, "Model")
     assert picker["choices"] == modelpick.choices()
-    assert card["model"] == FABLE  # the pin wins over the latest turn's model
+    assert card["model"] == "Fable 5.2"  # the pin wins over the latest turn's model
     validate("board", {**board.build_board([Note()], {}, ctx(), "b"), "tasks": [card]})
 
 
-def test_t2218_without_a_pin_the_picker_says_default_and_the_card_its_latest_model() -> None:
+def test_t2218_without_a_pin_the_picker_presses_and_the_card_names_its_latest_model() -> None:
     card = build_card(Note(), run(extra={"last_model": "opus"}), ctx(live=("c59d2588-0",)))
     picker = _picker(card)
     assert picker is not None
-    assert (picker["enabled"], picker["value"]) == (True, modelpick.DEFAULT)
-    assert card["model"] == "opus"
+    assert (picker["enabled"], picker["value"]) == (True, modelpick.DEFAULT_MODEL)
+    assert card["model"] == "Opus 5.5"
     assert "model" not in build_card(Note(), run(), ctx())  # no turn ran yet
 
 

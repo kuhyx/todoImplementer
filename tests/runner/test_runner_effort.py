@@ -1,4 +1,4 @@
-"""Effort is set per turn: medium by default, high for a fix and for the cheap tier's second attempt."""
+"""Effort is set per turn: high by default (kuhy, 2026-11-21), low for the classifier."""
 
 from __future__ import annotations
 
@@ -36,12 +36,12 @@ def run_to_gate(world: Env, *turns: tuple[dict[str, Any], ...], **fields: Any) -
 
 
 def test_t1897_every_role_has_a_default_effort_and_the_argv_carries_it(tmp_path: Path) -> None:
-    assert claude.ROLE_EFFORT["implement"] == "medium"
+    assert claude.ROLE_EFFORT["implement"] == "high"
     assert claude.ROLE_EFFORT["classify"] == "low"
     inv = claude.build("implement", "go", tmp_path)
-    assert inv.argv[inv.argv.index("--effort") + 1] == "medium"
-    high = claude.build("implement", "go", tmp_path, effort="high")
-    assert high.argv[high.argv.index("--effort") + 1] == "high"
+    assert inv.argv[inv.argv.index("--effort") + 1] == "high"
+    low = claude.build("implement", "go", tmp_path, effort="medium")
+    assert low.argv[low.argv.index("--effort") + 1] == "medium"
 
 
 def test_t1897_no_role_is_left_without_an_effort() -> None:
@@ -56,15 +56,15 @@ def test_t1897_the_credit_spec_carries_the_effort_to_the_sdk(
     assert json.loads(inv.argv[-1])["effort"] == "high"
 
 
-def test_t1897_a_normal_run_is_medium_and_only_the_fix_turn_is_high(world: Env) -> None:
+def test_t2471_every_turn_of_a_normal_run_and_its_fix_is_high(world: Env) -> None:
     run_to_gate(world, PLAN, IMPL, LIVE_BAD, IMPL, LIVE_OK, done_check="true")
-    assert efforts(world) == ["medium", "medium", "medium", "high", "medium"]  # plan, impl, live, fix, live
+    assert efforts(world) == ["high", "high", "high", "high", "high"]  # plan, impl, live, fix, live
 
 
 def test_t1897_the_result_file_names_the_effort(world: Env) -> None:
     run_to_gate(world, PLAN, IMPL, LIVE_OK, done_check="true")
     results = sorted((world.root / CARD).glob("implement-*.result.json"))
-    assert json.loads(results[0].read_text())["effort"] == "medium"
+    assert json.loads(results[0].read_text())["effort"] == "high"
 
 
 def test_t1897_credit_turns_keep_their_effort(world: Env, monkeypatch: pytest.MonkeyPatch) -> None:

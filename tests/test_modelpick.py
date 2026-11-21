@@ -46,9 +46,11 @@ def test_t2215_any_other_note_is_no_model_command(note: str) -> None:
     assert modelpick.parse(note) is None
 
 
-def test_t2215_the_picker_offers_every_model_then_default() -> None:
+def test_t2215_the_picker_offers_every_model() -> None:
     rows = modelpick.choices()
-    assert [r["id"] for r in rows] == list(modelpick.IDS)
+    assert [r["id"] for r in rows] == list(
+        modelpick.IDS[:-1]
+    )  # `default` stays a note word, no button (T2470)
     assert rows[0] == {"id": FABLE, "label": "Fable 5.2"}
     assert modelpick.label(OPUS) == "Opus 5.5"
     assert modelpick.label("opus") == "opus"

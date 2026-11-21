@@ -182,13 +182,18 @@ def _session(run: RunState, status: Status, block: str | None) -> list[Action]:
     return out
 
 
+def current_model(run: RunState) -> str | None:
+    """Return the picker id of kuhy's pin, else of the model the latest turn ran on (None before any turn)."""
+    model = run.extra.get(modelpick.PIN) or run.extra.get("last_model")
+    return modelpick.resolve(model) if isinstance(model, str) and model else None
+
+
 def _model(run: RunState, status: Status) -> list[Action]:
-    """Return the model picker (modelswitch): the pin, or `default`; it reruns the stage on the pick."""
+    """Return the model picker (modelswitch): it presses the model the card runs on and reruns on a pick."""
     if run.stage in FINAL_STAGES or run.closing or status == Status.YOURS:
         return []
     why = "shipping is in progress" if status == Status.SHIPPING else None
-    pin = run.extra.get(modelpick.PIN)
-    value = pin if isinstance(pin, str) and pin else modelpick.DEFAULT
+    value = current_model(run) or modelpick.DEFAULT_MODEL
     return [Action("model", "Model", why is None, why, value=value, choices=tuple(modelpick.choices()))]
 
 

@@ -20,7 +20,7 @@ def test_done_check_note_runs_plan_implement_live_checks_to_gate_then_ships(worl
         assert st.live_check == {"report_md": LIVE_OK[0]["text"], "shots": []}
         assert st.cost_usd == 0.03
         calls = world.calls()
-        assert [c["model"] for c in calls] == ["sonnet", "opus", "sonnet"]
+        assert [c["model"] for c in calls] == ["opus", "opus", "opus"]  # T2471
         assert all(c["prompt"].startswith("override\n") for c in calls)
         assert calls[2]["resume"] is None  # the live check is a fresh session (T1896)
         assert st.sessions["live_check"]["session_id"] != st.sessions["implement"]["session_id"]
