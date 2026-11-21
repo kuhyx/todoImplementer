@@ -158,6 +158,8 @@ other stream lines and a touched file do not count, so nothing looks alive by pi
   `$(...)` and wrappers (`timeout`, `nice`, `capped.sh`, `systemd-run ... --wait`, `bash -c`) are skipped. A card's
   `scratch/` or `children/` script is `script`; only setup left is `shell`. There is no `stall-job-unknown`.
 - A running card quiet over 1 min is reported and filed by this watch on its own: a 10 s tick, one ticket per cause.
+- A session's own long command cannot cause one: every turn's `--settings` caps a Bash call at 50 s
+  (`policy.turn_settings`); claude then backgrounds it and hands the model a result.
   Not yet fixed by it: `stall-model` (claude writes no stream line while it generates one long message, so a
   60 s answer looks quiet) and `stall-buildlock` (a queued build); a closed ticket of either reopens when seen.
 - A `stall-job` on a repo's own gate or test step (`check_gate_stamp.sh step <id>`, `test_shard.sh <shard>`) is

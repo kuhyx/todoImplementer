@@ -62,7 +62,7 @@ class Options:
     resume: str | None
     allow: tuple[str, ...]
     deny: tuple[str, ...]
-    settings: str | None
+    settings: str
     env: dict[str, str]
     cwd: Path
     notes: tuple[str, ...]
@@ -113,7 +113,7 @@ def options(  # noqa: PLR0913, PLR0917 - one set of turn options, built in one p
         *map(str, (*extra_dirs, *images.session_dirs())),
         *pol.add_dirs,
     )  # images: the note's
-    hooks = policy.HOOKS_OFF if pol.disable_hooks else None
+    hooks = policy.turn_settings(hooks_off=pol.disable_hooks)
     notes = (pol.warning,) if pol.warning else ()
     return Options(
         prompt,
@@ -150,12 +150,11 @@ def build(  # noqa: PLR0913, PLR0917 - one argv, built in one place
     argv += ["--strict-mcp-config", "--mcp-config", json.dumps({"mcpServers": opt.mcp_servers})]
     if resume:
         argv += ["--resume", resume]
+    argv += ["--settings", opt.settings]
     if allow:
         argv += ["--allowedTools", *allow]
     if opt.deny:
         argv += ["--disallowedTools", *opt.deny]
-    if opt.settings:
-        argv += ["--settings", opt.settings]
     return Invocation(tuple(argv), opt.env, worktree, opt.notes)
 
 

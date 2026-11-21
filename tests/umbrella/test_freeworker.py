@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 import pytest
-from todoimpl.runner import freeworker
+from todoimpl.runner import freeworker, policy
 from todoimpl.umbrella import issues
 
 SHIM = """#!/bin/sh
@@ -60,7 +60,7 @@ def test_the_worker_gets_hooks_off_the_preamble_and_no_push(
     assert args[1].startswith(freeworker.PREAMBLE)
     assert "Do the thing in a.txt." in "\n".join(args)
     assert args[args.index("--permission-mode") + 1] == "bypassPermissions"
-    assert args[args.index("--settings") + 1] == '{"disableAllHooks":true}'
+    assert args[args.index("--settings") + 1] == policy.HOOKS_OFF
     assert "Bash(git push:*)" in args
     assert "Bash(git push *)" in args
 

@@ -26,7 +26,7 @@ def test_t1640_no_policy_file_keeps_todays_behaviour(world: Env, tmp_path: Path)
     argv = claude.build("implement", "p", tmp_path).argv
     assert argv[argv.index("--permission-mode") + 1] == "acceptEdits"
     assert argv[-2:] == ("Bash(git push:*)", "Bash(git push *)")
-    assert "--settings" not in argv
+    assert argv[argv.index("--settings") + 1] == policy.turn_settings(hooks_off=False)  # T2444: the Bash cap
 
 
 def test_t1641_a_valid_policy_loosens_the_session(world: Env, tmp_path: Path) -> None:
@@ -49,7 +49,7 @@ def test_t1641_a_valid_policy_loosens_the_session(world: Env, tmp_path: Path) ->
     )
     assert argv[argv.index("--allowedTools") + 1] == "Bash(ls:*)"
     assert "--disallowedTools" not in argv
-    assert argv[argv.index("--settings") + 1] == '{"disableAllHooks":true}'
+    assert argv[argv.index("--settings") + 1] == policy.HOOKS_OFF
     assert inv.notes == ()
     assert policy.load().present
 

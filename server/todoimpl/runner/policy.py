@@ -15,7 +15,19 @@ from dataclasses import dataclass
 from pathlib import Path
 
 KEYS = frozenset({"permission_mode", "add_dirs", "disable_hooks", "deny"})
-HOOKS_OFF = '{"disableAllHooks":true}'
+# One Bash call ends at 50 s (claude moves it to the background), so the model gets a result before the
+# board's 60 s stall line (T2444). kuhy's settings.json sets an hour, and settings env beats the process env.
+BASH_CAP_MS = "50000"
+BASH_CAP = {"BASH_DEFAULT_TIMEOUT_MS": BASH_CAP_MS, "BASH_MAX_TIMEOUT_MS": BASH_CAP_MS}
+
+
+def turn_settings(*, hooks_off: bool) -> str:
+    """Return a board session's `--settings` JSON: the Bash cap, and hooks off when the policy says so."""
+    settings: dict[str, object] = {"disableAllHooks": True} if hooks_off else {}
+    return json.dumps({**settings, "env": BASH_CAP}, separators=(",", ":"))
+
+
+HOOKS_OFF = turn_settings(hooks_off=True)
 
 
 @dataclass(frozen=True)

@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 from runnerfakes import Env, executable
-from todoimpl.runner import claude
+from todoimpl.runner import claude, policy
 
 
 def test_build_has_the_agreed_argv_and_env(world: Env, tmp_path: Path) -> None:
@@ -28,6 +28,8 @@ def test_build_has_the_agreed_argv_and_env(world: Env, tmp_path: Path) -> None:
         '{"mcpServers": {}}',
         "--resume",
         "s1",
+        "--settings",
+        policy.turn_settings(hooks_off=False),
         "--disallowedTools",
         "Bash(git push:*)",
         "Bash(git push *)",

@@ -9,6 +9,7 @@ from creditfakes import FAKE_KEY, enable_credits, key_file
 from runnerfakes import Env
 from todoimpl.runner import claude, credit, launch
 from todoimpl.runner.files import NeedsYouError
+from todoimpl.runner.policy import HOOKS_OFF
 
 
 def test_t1851_plan_env_never_carries_the_api_key(world: Env, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -43,7 +44,7 @@ def test_credit_invocation_mirrors_the_plan_options_and_carries_the_key(
     assert spec["add_dirs"] == [str(wt), str(run_dir), "/x"]
     assert spec["allowed_tools"] == ["Bash(ls:*)"]
     assert spec["disallowed_tools"] == list(claude.DENY_ALWAYS)
-    assert spec["settings"] == '{"disableAllHooks":true}'
+    assert spec["settings"] == HOOKS_OFF
     assert spec["setting_sources"] == ["user", "project", "local"]
     assert spec["prompt"] == "go"
     assert cred.env["ANTHROPIC_API_KEY"] == FAKE_KEY
