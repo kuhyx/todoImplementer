@@ -59,6 +59,6 @@ def addendum(item: Item, run_dir: Path) -> str:
         "step. Never end the implement stage with `D:` while a part is unticked: finish it, or say with `A:` "
         "what stops you. Only ticked parts are closed in the todo app when kuhy ships."
     )
-    if files.keyed(item):  # Ship closes a part only on a passed live row naming it (T2452)
+    if files.keyed(item):  # Ship closes a part only on a passed live row naming it (T2460)
         lines.append(KEYED)
     return "\n".join(lines)

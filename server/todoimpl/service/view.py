@@ -108,7 +108,7 @@ class ItemView:
             raise TodoError(msg)
         for part in done:  # close_item re-reads the note and fails closed on a section that moved
             item = Item(part.note_id, part.index, part.title, part.body, task.repo, "todo", part.done_check)
-            self._client.close_item(item, for_part(evidence, part.key))  # its own live rows only (T2452)
+            self._client.close_item(item, for_part(evidence, part.key))  # its own live rows only (T2460)
 
     def tick_child(self, card: str, cid: str, mark: str = "x") -> None:
         """Tick child `cid`'s checkbox in the umbrella note behind `card` (`mark` `-` drops it)."""

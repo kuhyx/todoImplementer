@@ -133,7 +133,7 @@ def ticked(run_dir: Path, item: Item) -> list[Part]:
 
 
 def keyed(item: Item) -> bool:
-    """Return True when the run works on several parts: then every criterion names its part (T2452)."""
+    """Return True when the run works on several parts: then every criterion names its part (T2460)."""
     return sum(part.actionable for part in item.parts) > 1
 
 

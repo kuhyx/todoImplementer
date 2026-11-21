@@ -11,7 +11,7 @@ QUESTION = re.compile(
 )
 RECOMMENDATION = re.compile(r"^\s*➡️?\s*(.*?)\s*$")
 CRITERIA_HEADING = re.compile(r"^#+\s*acceptance criteria\b", re.IGNORECASE)
-BULLET = re.compile(r"^\s*(?:[-*]|\d+[.)]|C\d+(?:\s*\[[\w-]+\])?[.:)])\s+(.*\S)")  # `C1 [part key]:` (T2452)
+BULLET = re.compile(r"^\s*(?:[-*]|\d+[.)]|C\d+(?:\s*\[[\w-]+\])?[.:)])\s+(.*\S)")  # `C1 [part key]:` (T2460)
 SELF_CHECK = re.compile(
     r"^\s*(?:[-*]\s*)?`?(C\d+|.{2,}?)`?:\s*`?(done|not done)\b`?[\s:,.;()-]*(.*?)\)?`?\s*$", re.IGNORECASE
 )
@@ -66,7 +66,7 @@ def parse_live(text: str) -> list[dict[str, object]]:
     """`- [x] C1: what I did -> what I saw` rows of live_check.md.
 
     `[ ]` failed or not tried; `[~]` deferred (after ship, needs phone); no dash, `**C1**`, no colon all pass.
-    `C1 [<part key>]:` names the part of a repo card the row checks (`part`, None when absent; T2452).
+    `C1 [<part key>]:` names the part of a repo card the row checks (`part`, None when absent; T2460).
     """
     rows: list[dict[str, object]] = []
     for line in text.splitlines():
@@ -79,6 +79,6 @@ def parse_live(text: str) -> list[dict[str, object]]:
 
 
 def for_part(evidence: str, key: str) -> str:
-    """Drop the `live Cn [<other part>]:` lines from close evidence, so a note gets its own rows (T2452)."""
+    """Drop the `live Cn [<other part>]:` lines from close evidence, so a note gets its own rows (T2460)."""
     lines = evidence.split("\n")
     return "\n".join(ln for ln in lines if not (row := KEYED_ROW.match(ln)) or row.group(1) == key)
