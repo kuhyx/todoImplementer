@@ -1,0 +1,3 @@
+# Three test isolates fit the 2 GiB capped.sh scope; the default (one per two cores)
+# was OOM-killed mid-run (4 is too: 24 s, then a crash) and held a build slot 62 s.
+concurrency: 3
