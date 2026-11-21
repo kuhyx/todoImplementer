@@ -55,8 +55,15 @@ The card waits in Needs you. A `change` or a Send note goes back to the same ses
 asks again. `approve` resumes it to do the outward step, such as sending the mail, if the session has the means. Board
 sessions have no mail or Gmail tool: they run with `--strict-mcp-config`. Until asks.json holds kuhy's own approve for `c<n>`
 (an option starting with `approve`, or a screenshot `c<n>` he approved; for a sole `(kuhy)` criterion, an approve on any
-choice; never an auto-adopted answer or one older than this cycle's `plan.md`), `live.settle` sends the session back
+choice; never an auto-adopted answer or one from an earlier cycle), `live.settle` sends the session back
 once and then raises Needs you. If he answered `c<n>` with no approve, Needs you says so at once (T2376). The run never reaches Checks, never ships partly with a follow-up, and never defers the criterion.
+
+The approve is keyed to the criterion's text, not to `plan.md`'s mtime (T2462): on kuhy's click the server stores
+`crit`, a hash of the criterion (`runner/crithash.py`: no `Cn` prefix, part tag or `(kuhy)` marker, whitespace
+collapsed), and the approve counts while its cycle matches and the criterion still hashes the same. A session that
+rewrites the rest of the plan keeps it, and so does a re-wrap. A changed criterion drops the record, so the ask shows
+as a button again, and Needs you says `approved before the plan changed; re-approve`. A record with no `crit` (clicked
+before T2462, or the plan was unreadable) counts when it is of this cycle and newer than `plan.md`.
 
 Ids: `[a-z][a-z0-9_-]{0,15}`; a hyphen reads as an underscore (`logo-pick` is `logo_pick`, T2134). A block that still
 fails makes the form note above quote the line that broke it and why (`parse.diagnose`).

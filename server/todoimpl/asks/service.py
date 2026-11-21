@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 
 from todoimpl.board.state import load, run_dir
 from todoimpl.http.backend import BackendError
+from todoimpl.runner import crithash
 
 from . import allow, carry, cmdrun, store
 from .parse import Ask
@@ -92,7 +93,10 @@ class AskService:
 
     def _set(self, directory: Path, ask: Ask, record: dict[str, Any], card: list[Ask]) -> None:
         data = store.load(directory, card)  # stamps the round of every ask, kept answers included
-        data["items"][ask.id] = {**record, "at": self._clock(), "cycle": carry.cycle(directory)}
+        stamp = {**record, "at": self._clock(), "cycle": carry.cycle(directory)}
+        if (crit := crithash.from_file(directory / "plan.md", ask.id)) is not None:
+            stamp["crit"] = crit  # what kuhy saw: his approve holds while it reads the same (T2462)
+        data["items"][ask.id] = stamp
         store.save(directory, data)
         self.cache.poke()  # the last answer may hand a MANUAL part to Claude: rebuild the cards now (T1994)
 

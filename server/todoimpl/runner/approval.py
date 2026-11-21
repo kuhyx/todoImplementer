@@ -15,9 +15,10 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, Any
 
-from todoimpl.asks import store
+from todoimpl.asks import carry, store
 from todoimpl.asks.carry import is_approve
 
+from . import crithash
 from .files import NeedsYouError
 
 if TYPE_CHECKING:
@@ -50,19 +51,38 @@ def _planned(run_dir: Path) -> float:
 
 
 def _his(run_dir: Path) -> dict[str, dict[str, Any]]:
-    """Return kuhy's own records of this cycle by ask id: clicked (never auto-adopted), newer than the plan.
+    """Return kuhy's own records of this cycle by ask id: clicked (never auto-adopted), this cycle's.
 
     asks.json outlives the cycles of a repo card (it holds his manual-part answers too) and criterion ids come
-    back, so an answer older than the plan belongs to an earlier deliverable.
+    back, so a record of an earlier cycle belongs to an earlier deliverable. A record with no cycle is
+    judged by `_fresh` alone.
     """
-    planned = _planned(run_dir)
-    items = store.load(run_dir)["items"]
+    items, now = store.load(run_dir)["items"], carry.cycle(run_dir)
     return {
         ask_id: record
         for ask_id, record in items.items()
-        if record.get("state") in ("answered", "approved", "rejected")
-        and float(record.get("at") or 0) >= planned
+        if record.get("state") in ("answered", "approved", "rejected") and record.get("cycle", now) == now
     }
+
+
+def _fresh(run_dir: Path, record: dict[str, Any], crit: str | None) -> bool:
+    """Return True when the record answers the criterion as it reads now (T2462).
+
+    A record with a hash counts while the criterion still hashes the same, however often the plan was
+    rewritten around it. A record clicked before hashes were stamped falls back to: newer than the plan.
+    """
+    if "crit" in record:
+        return record["crit"] is not None and record["crit"] == crit
+    return float(record.get("at") or 0) >= _planned(run_dir)
+
+
+def _stale(run_dir: Path, cid: str) -> dict[str, Any] | None:
+    """Return kuhy's approve of this cycle on the criterion's ask when the criterion changed since."""
+    record = _his(run_dir).get(cid.lower())
+    crit = crithash.from_file(run_dir / "plan.md", cid.lower())
+    if record is None or not _approves(record) or "crit" not in record or _fresh(run_dir, record, crit):
+        return None
+    return record
 
 
 def _approves(record: dict[str, Any]) -> bool:
@@ -76,18 +96,31 @@ def approved(run_dir: Path, cid: str, *, sole: bool = False) -> bool:
 
     The ask named after it (`c<n>`): a choice answered with an option that starts with `approve`
     (`approve once the gaps are filled` too) or a screenshot he approved. When it is the plan's only `(kuhy)`
-    criterion, his approve on a choice of any id counts too: the review ask the session showed him.
+    criterion, his approve on a choice of any id counts too: the review ask the session showed him. Either
+    counts only while the criterion reads as it did at his click (T2462).
     """
-    his = _his(run_dir)
+    his, crit = _his(run_dir), crithash.from_file(run_dir / "plan.md", cid.lower())
     if (own := his.get(cid.lower())) is not None:
-        return _approves(own)
-    return sole and any(r.get("state") == "answered" and _approves(r) for r in his.values())
+        return _approves(own) and _fresh(run_dir, own, crit)
+    return sole and any(
+        r.get("state") == "answered" and _approves(r) and _fresh(run_dir, r, crit) for r in his.values()
+    )
 
 
 def _said(run_dir: Path, cid: str) -> str | None:
-    """Return kuhy's own answer on the criterion's ask this cycle, if he gave one."""
+    """Return kuhy's own answer on the criterion's ask this cycle, if it still answers the criterion."""
     record = _his(run_dir).get(cid.lower())
-    return None if record is None else str(record.get("answer") or record.get("state"))
+    if record is None or not _fresh(run_dir, record, crithash.from_file(run_dir / "plan.md", cid.lower())):
+        return None
+    return str(record.get("answer") or record.get("state"))
+
+
+def _reopen(run_dir: Path, ids: list[str]) -> None:
+    """Drop the stale approves so their asks show as buttons again."""
+    data = store.load(run_dir)
+    for cid in ids:
+        data["items"].pop(cid.lower(), None)
+    store.save(run_dir, data)
 
 
 def owed(d: Driver, criteria: list[str]) -> str | None:
@@ -101,6 +134,10 @@ def owed(d: Driver, criteria: list[str]) -> str | None:
     if not missing:
         extra.pop("approval_nudges", None)
         return None
+    if stale := [cid for cid in missing if _stale(d.ctx.run_dir, cid) is not None]:
+        _reopen(d.ctx.run_dir, stale)
+        msg = f"{', '.join(stale)}: approved before the plan changed; re-approve"
+        raise NeedsYouError(msg, "claude_action")
     if said := [f"{cid.lower()}: {a}" for cid in missing if (a := _said(d.ctx.run_dir, cid)) is not None]:
         msg = (
             f"{', '.join(missing)} is not approved: you answered {'; '.join(said)}, and no approve came after"

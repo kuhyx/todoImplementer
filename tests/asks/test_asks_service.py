@@ -179,3 +179,15 @@ def test_start_runs_the_tick_in_a_daemon_thread(rig: Rig, monkeypatch: pytest.Mo
     monkeypatch.setattr(rig.svc, "adopt_due", fake_adopt)
     rig.svc.start()
     assert done.wait(5)
+
+
+def test_t2462_a_click_stamps_the_criterion_hash(rig: Rig) -> None:
+    from todoimpl.runner import crithash
+
+    with_run(rig)
+    plan = "## Acceptance criteria\nC1. (kuhy) the mail\n  is sent\n"
+    (rig.dir / "plan.md").write_text(plan, encoding="utf-8")
+    rig.svc.answer(ID, "c1", "red")
+    rig.svc.answer(ID, "c2", "yes")
+    items = json.loads((rig.dir / "asks.json").read_text())["items"]
+    assert items["c1"]["crit"] == crithash.digest("the mail is sent") and "crit" not in items["c2"]
