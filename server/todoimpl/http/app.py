@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlsplit
 
-from . import upload
+from . import peer, upload
 from .auth import DEFAULT_ORIGINS, new_token
 from .device_gate import Admission, Gate
 from .reply import Reply
@@ -95,7 +95,11 @@ class Handler(BaseHTTPRequestHandler):
             )
             self._send(reply)
             return
-        if urlsplit(self.path).path == upload.PATH:  # streamed to disk, never read into memory
+        if peer.owns(path := urlsplit(self.path).path):  # sessions on this PC, with their own token
+            hub = getattr(router.backend, "peer_hub", None)
+            self._send(peer.handle(hub, path, local=access.local, headers=self.headers, read=self.rfile.read))
+            return
+        if path == upload.PATH:  # streamed to disk, never read into memory
             self._send(upload.handle(router.token, router.origins, self.headers, self.rfile.read))
             return
         reply = router.post(
