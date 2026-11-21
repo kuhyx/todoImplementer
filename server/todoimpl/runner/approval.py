@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Any
 
 from todoimpl.asks import carry, store
 from todoimpl.asks.carry import is_approve
+from todoimpl.asks.parse import parse_asks
 
 from . import crithash
 from .files import NeedsYouError
@@ -34,6 +35,12 @@ NUDGE = (
     "say whether you can do the outward step (send, post) yourself, and end with `A:` and an `ask` "
     "block holding, per criterion, `choice {first}: <question> | *approve | change`. After `approve`, "
     "do the outward step and tick it."
+)
+
+STALE = (
+    "(runner) kuhy approved {ids} before its text in plan.md changed, so that approve no longer counts. Show "
+    "him the deliverable again and end with `A:` and an `ask` block holding, per criterion, "
+    "`choice {first}: <question> | *approve | change`."
 )
 
 
@@ -123,6 +130,30 @@ def _reopen(run_dir: Path, ids: list[str]) -> None:
     store.save(run_dir, data)
 
 
+def _restale(d: Driver, missing: list[str]) -> list[str]:
+    """Return the criteria whose approve went stale: just now (the record is dropped) or on an earlier pass."""
+    now = [cid for cid in missing if _stale(d.ctx.run_dir, cid) is not None]
+    _reopen(d.ctx.run_dir, now)
+    earlier = [
+        cid
+        for cid in d.state.extra.get("stale", [])
+        if cid in missing and cid not in now and _said(d.ctx.run_dir, cid) is None
+    ]
+    if stale := now + earlier:
+        d.state.extra["stale"] = stale
+    return stale
+
+
+def _reask(d: Driver, stale: list[str]) -> str:
+    """Show the stale asks as buttons again: the newest reply holds them, else the session asks once more."""
+    asked = {a.id for a in parse_asks(str(d.state.extra.get("last_reply", "")))}
+    if not d.state.extra.get("stale_nudged") and not all(cid.lower() in asked for cid in stale):
+        d.state.extra["stale_nudged"] = True
+        d.state.extra["nudge"] = STALE.format(ids=", ".join(stale), first=stale[0].lower())
+        return "live_check"
+    raise NeedsYouError(f"{', '.join(stale)}: approved before the plan changed; re-approve", "claude_action")
+
+
 def owed(d: Driver, criteria: list[str]) -> str | None:
     """Return None once every `(kuhy)` criterion is approved; else send the session back once, then raise.
 
@@ -132,12 +163,11 @@ def owed(d: Driver, criteria: list[str]) -> str | None:
     extra, ids = d.state.extra, kuhy_ids(criteria)
     missing = [cid for cid in ids if not approved(d.ctx.run_dir, cid, sole=len(ids) == 1)]
     if not missing:
-        extra.pop("approval_nudges", None)
+        for key in ("approval_nudges", "stale", "stale_nudged"):
+            extra.pop(key, None)
         return None
-    if stale := [cid for cid in missing if _stale(d.ctx.run_dir, cid) is not None]:
-        _reopen(d.ctx.run_dir, stale)
-        msg = f"{', '.join(stale)}: approved before the plan changed; re-approve"
-        raise NeedsYouError(msg, "claude_action")
+    if stale := _restale(d, missing):
+        return _reask(d, stale)
     if said := [f"{cid.lower()}: {a}" for cid in missing if (a := _said(d.ctx.run_dir, cid)) is not None]:
         msg = (
             f"{', '.join(missing)} is not approved: you answered {'; '.join(said)}, and no approve came after"

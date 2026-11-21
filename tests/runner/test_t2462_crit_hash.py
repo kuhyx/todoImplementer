@@ -7,12 +7,14 @@ from pathlib import Path
 
 import pytest
 from test_runner_approval import ALL_TICKED, PLAN, stub
+from todoimpl.asks import view
 from todoimpl.board.state import RunState, save
 from todoimpl.runner import crithash
 from todoimpl.runner.approval import approved
 from todoimpl.runner.files import NeedsYouError
 from todoimpl.runner.live import settle
 
+ASK = "A: approve?\n```ask\nchoice c2: Send the mail? | *approve | change\n```\n"
 C2 = "(kuhy) kuhy approves the mail in the board ask, then it is sent"
 
 
@@ -41,9 +43,29 @@ def test_t2462_rewrap_only_keeps_the_approve(tmp_path: Path) -> None:
 
 def test_t2462_changed_criterion_says_reapprove_and_reopens(tmp_path: Path) -> None:
     write(tmp_path, PLAN.replace("then it is sent", "then it is posted"), c2=ok())
-    with pytest.raises(NeedsYouError, match="approved before the plan changed; re-approve"):
-        settle(stub(tmp_path), ALL_TICKED)
+    d = stub(tmp_path)
+    d.state.extra["last_reply"] = ASK
+    with pytest.raises(NeedsYouError, match="C2: approved before the plan changed; re-approve"):
+        settle(d, ALL_TICKED)
     assert "c2" not in json.loads((tmp_path / "asks.json").read_text())["items"]
+    run = RunState(task_id="x", stage="live_check", extra={"last_reply": ASK})
+    assert [(i["id"], i["state"]) for i in view.items("", run, tmp_path)] == [("c2", "open")]  # a button again
+
+
+def test_t2462_stale_approve_with_no_ask_shown_sends_the_session_back_once(tmp_path: Path) -> None:
+    write(tmp_path, PLAN.replace("then it is sent", "then it is posted"), c2=ok())
+    d = stub(tmp_path)
+    assert settle(d, ALL_TICKED) == "live_check"
+    assert "before its text in plan.md changed" in str(d.state.extra["nudge"])
+    with pytest.raises(NeedsYouError, match="C2: approved before the plan changed; re-approve"):
+        settle(d, ALL_TICKED)  # the record is gone, the stale mark is kept
+    answer = {"state": "answered", "answer": "change", "cycle": 1}
+    (tmp_path / "asks.json").write_text(json.dumps({"items": {"c2": {**answer, "at": 9e12}}}), encoding="utf-8")
+    with pytest.raises(NeedsYouError, match="you answered c2: change"):
+        settle(d, ALL_TICKED)
+    write(tmp_path, PLAN.replace("then it is sent", "then it is posted"), c2={**ok(C2.replace("sent", "posted"))})
+    assert settle(d, ALL_TICKED) == "checks"
+    assert "stale" not in d.state.extra
 
 
 def test_t2462_stale_change_answer_is_not_said(tmp_path: Path) -> None:
