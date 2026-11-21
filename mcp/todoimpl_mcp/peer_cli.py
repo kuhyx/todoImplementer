@@ -22,7 +22,9 @@ def _cache(label: str) -> Path:
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="peer", description="Message board task sessions.")
-    parser.add_argument("--label", default=None, help="who you are (default: $TODOIMPL_PEER_LABEL or cwd name)")
+    parser.add_argument(
+        "--label", default=None, help="who you are (default: $TODOIMPL_PEER_LABEL or cwd name)"
+    )
     sub = parser.add_subparsers(dest="command", required=True)
     send = sub.add_parser("send")
     send.add_argument("to")

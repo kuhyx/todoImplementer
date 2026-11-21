@@ -7,7 +7,7 @@ set -euo pipefail
 readonly ROOT="${ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 readonly JOBS="${TYPES_JOBS:-4}"
 readonly MYPY="${MYPY:-mypy}"  # `uv run` puts the venv first on PATH
-readonly BASE_PATH="server:scripts:tests/shims:tests/runner:tests/umbrella:tests/service:tests/http:deploy:mcp"
+readonly BASE_PATH="server:scripts:tests/shims:tests/runner:tests/umbrella:tests/service:tests/http:tests/peer:deploy:mcp"
 out="$(mktemp -d "${TMPDIR:-/tmp}/types.XXXXXX")"
 readonly out
 trap 'rm -rf "$out"' EXIT

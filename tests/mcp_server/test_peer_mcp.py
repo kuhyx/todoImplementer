@@ -12,13 +12,14 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 from mcp.server.mcpserver import MCPServer
+from mcp.types import CallToolResult, TextContent
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "peer"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "http"))
-from httpfakes import FakeBackend  # noqa: E402
-from peerfakes import CARD, make_world  # noqa: E402
-from todoimpl.http.app import make_server  # noqa: E402
-from todoimpl_mcp import peer_cli, peer_client, peer_server  # noqa: E402
+from httpfakes import FakeBackend
+from peerfakes import CARD, make_world
+from todoimpl.http.app import make_server
+from todoimpl_mcp import peer_cli, peer_client, peer_server
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -54,7 +55,9 @@ def _as_task(world: World, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> p
     return peer_client.Peer()
 
 
-def test_client_send_then_task_replies_then_await(board: World, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_client_send_then_task_replies_then_await(
+    board: World, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     me = peer_client.Peer("leetcode-guard")
     sent = me.send(CARD, "which port?")
     board.hub.tick()
@@ -64,7 +67,9 @@ def test_client_send_then_task_replies_then_await(board: World, monkeypatch: pyt
     assert (got["state"], got["reply"]) == ("answered", "8790")
 
 
-def test_await_loops_slices_and_gives_up_at_its_timeout(board: World, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_await_loops_slices_and_gives_up_at_its_timeout(
+    board: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setattr(peer_client, "SLICE", 0.05)
     me = peer_client.Peer("a")
     sent = me.send(CARD, "q")
@@ -78,7 +83,9 @@ def test_board_session_waits_at_most_its_cap(board: World, monkeypatch: pytest.M
     assert me.await_reply(sent["id"], 600)["state"] == "queued"
 
 
-def test_task_sends_to_my_label_and_i_answer(board: World, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_task_sends_to_my_label_and_i_answer(
+    board: World, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     me = peer_client.Peer("desk")
     assert me.inbox() == []
     task = _as_task(board, monkeypatch, tmp_path)
@@ -136,7 +143,9 @@ def _cli(capsys: pytest.CaptureFixture[str], *argv: str) -> tuple[int, Any]:
     return code, json.loads(out.out) if out.out.strip() else out.err
 
 
-def test_cli_round_trip_keeps_its_sender(board: World, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_cli_round_trip_keeps_its_sender(
+    board: World, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     code, inbox = _cli(capsys, "--label", "desk", "inbox")
     assert (code, inbox) == (0, [])
     code, sent = _cli(capsys, "--label", "desk", "send", CARD, "hi there")
@@ -154,7 +163,9 @@ def test_cli_round_trip_keeps_its_sender(board: World, capsys: pytest.CaptureFix
     assert (code, done["state"]) == (0, "answered")
 
 
-def test_cli_reads_text_from_stdin_and_reports_refusals(board: World, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch) -> None:
+def test_cli_reads_text_from_stdin_and_reports_refusals(
+    board: World, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.setattr(sys, "stdin", __import__("io").StringIO("from stdin"))
     code, sent = _cli(capsys, "--label", "a", "send", CARD, "-")
     assert (code, sent["text"]) == (0, "from stdin")
@@ -177,7 +188,10 @@ def test_mcp_tools(board: World, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 
     def call(name: str, **args: Any) -> str:
         result = asyncio.run(peer_server.mcp.call_tool(name, args))
-        return str(result.content[0].text)
+        assert isinstance(result, CallToolResult)
+        block = result.content[0]
+        assert isinstance(block, TextContent)
+        return block.text
 
     peer_server.reset()
     assert json.loads(call("inbox")) == []
@@ -195,7 +209,7 @@ def test_mcp_tools(board: World, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 @pytest.mark.filterwarnings("ignore::RuntimeWarning")
 def test_mcp_server_main(monkeypatch: pytest.MonkeyPatch) -> None:
     seen: list[str] = []
-    monkeypatch.setattr(MCPServer, "run", lambda *a, **k: seen.append("run"))
+    monkeypatch.setattr(MCPServer, "run", lambda *_a, **_k: seen.append("run"))
     monkeypatch.setattr(sys, "argv", ["peer_server"])
     runpy.run_module("todoimpl_mcp.peer_server", run_name="__main__")
     assert seen == ["run"]

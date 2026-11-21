@@ -13,15 +13,15 @@ import pytest
 from peerfakes import CARD, make_world
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "http"))
-from httpfakes import FakeBackend  # noqa: E402
-from todoimpl.http.app import make_server  # noqa: E402
+from httpfakes import FakeBackend
+from todoimpl.http.app import make_server
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from peerfakes import World
 
-TOKEN = "secret-token"
+TOKEN = "secret-token"  # noqa: S105 - the fake hub's token
 
 
 @pytest.fixture
@@ -63,7 +63,9 @@ def test_send_await_reply_round_trip(served: tuple[World, int]) -> None:
     key = world.hub.card_key(CARD)
     status, got = call(port, "reply", {"card": CARD, "card_key": key, "id": msg_id, "text": "8790"})
     assert status == 200, got
-    status, waited = call(port, "await", {"label": "leetcode-guard", "sender": sender, "id": msg_id, "timeout": 1})
+    status, waited = call(
+        port, "await", {"label": "leetcode-guard", "sender": sender, "id": msg_id, "timeout": 1}
+    )
     assert (status, waited["message"]["reply"]) == (200, "8790")
     status, empty = call(port, "inbox", {"label": "leetcode-guard", "sender": sender, "wait": 0})
     assert (status, empty["messages"]) == (200, [])
@@ -144,7 +146,11 @@ def test_answers_and_the_card_thread_match_the_contract(served: tuple[World, int
     _, sent = call(port, "send", {"label": "desk", "to": CARD, "text": "q"})
     validate("peer", sent)
     world.hub.tick()
-    _, answered = call(port, "reply", {"card": CARD, "card_key": world.hub.card_key(CARD), "id": sent["message"]["id"], "text": "a"})
+    _, answered = call(
+        port,
+        "reply",
+        {"card": CARD, "card_key": world.hub.card_key(CARD), "id": sent["message"]["id"], "text": "a"},
+    )
     validate("peer", answered)
     _, box = call(port, "inbox", {"label": "desk", "sender": sent["sender"]})
     validate("peer", box)

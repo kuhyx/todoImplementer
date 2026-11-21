@@ -21,12 +21,12 @@ OPEN = "queued"
 
 
 def view(msg: dict[str, Any]) -> dict[str, Any]:
-    """The message as the card and the API show it."""
+    """Return the message as the card and the API show it."""
     return {k: v for k, v in msg.items() if k not in PRIVATE}
 
 
 def thread_of(directory: Path) -> list[dict[str, Any]]:
-    """A run dir's Peer thread as the card shows it, straight from its file (the task drawer reads this)."""
+    """Return a run dir's Peer thread as the card shows it, read from its file (the task drawer)."""
     rows = read_json(directory / FILE)
     return [view(r) for r in rows if isinstance(r, dict)] if isinstance(rows, list) else []
 
@@ -54,12 +54,12 @@ class Book:
         write_json(self._root / card / FILE, self._cards.get(card, []))
 
     def get(self, msg_id: str) -> dict[str, Any] | None:
-        """The message with this id, None when there is none (or it was trimmed)."""
+        """Return the message with this id, None when there is none (or it was trimmed)."""
         card = msg_id.rpartition(".")[0]
         return next((m for m in self._cards.get(card, []) if m["id"] == msg_id), None)
 
     def thread(self, card: str) -> list[dict[str, Any]]:
-        """A card's messages, oldest first."""
+        """Return a card's messages, oldest first."""
         return list(self._cards.get(card, []))
 
     def queued(self) -> Iterator[dict[str, Any]]:

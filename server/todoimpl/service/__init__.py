@@ -10,8 +10,8 @@ from typing import TYPE_CHECKING
 from todoimpl.board.state import run_dir, run_root
 from todoimpl.credits import ledger
 from todoimpl.errors.loop import ErrorLoop
-from todoimpl.peer import service as peer
 from todoimpl.http.main import REPO, git_build_id
+from todoimpl.peer import service as peer
 from todoimpl.repotask import foldasks, legacy
 from todoimpl.runner.autocheck import AutoCloser
 from todoimpl.todo_mcp.client import TodoClient
@@ -139,9 +139,10 @@ def build_backend(
         auto_merge.start()  # Haiku groups similar notes, the board merges them itself (DOCS-merge.md)
         backend.triage_service.watch()  # labels notes without a repo (DOCS-triage.md)
         NoteDoneWatcher(cache, client, scheduler, root).start()  # a note done in the todo app (T2065)
-        monitor.start()  # first check runs on its own thread: a slow network never delays startup
-        probe.start()
-        gateway.start()  # a dead gateway only makes its reading `down`
+        # Each first check runs on its own thread: a slow network never delays startup; a dead gateway
+        # only makes its reading `down`.
+        for watcher in (monitor, probe, gateway):
+            watcher.start()
         Ceiling(scheduler).start()  # an idle build-lock holder gives the lock on after 2 min (T2166)
         # Auto close: polls trusted done_checks every 5 min (first tick now); off until settings.json says so.
         # A repo task ships its ticked parts; a closing run belongs to one section's card: no repo cards here.

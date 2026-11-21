@@ -35,7 +35,7 @@ def derive(token: str, purpose: str) -> str:
 
 
 def card_key(token: str, card: str) -> str:
-    """The key that lets a session speak as `task:<card>`."""
+    """Return the key that lets a session speak as `task:<card>`."""
     return derive(token, f"card:{card}")
 
 

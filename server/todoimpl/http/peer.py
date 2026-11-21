@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from todoimpl.peer.senders import Sender
 
 PREFIX = "/api/peer/"
-TOKEN_HEADER = "X-Todoimpl-Peer-Token"
+TOKEN_HEADER = "X-Todoimpl-Peer-Token"  # noqa: S105 - a header name, not a secret
 MAX_BODY = 64 * 1024  # an 8 KB text, escaped, plus the fields
 
 
@@ -33,7 +33,11 @@ class Headers(Protocol):  # noqa: D101 - the slice of http.client.HTTPMessage us
 class PeerHub(Protocol):  # noqa: D101 - what the endpoint needs of todoimpl.peer.hub.Hub
     def token_ok(self, given: str | None) -> bool: ...  # noqa: D102
     def identify(  # noqa: D102
-        self, label: str | None = None, sender: str | None = None, card: str | None = None, card_key: str | None = None
+        self,
+        label: str | None = None,
+        sender: str | None = None,
+        card: str | None = None,
+        card_key: str | None = None,
     ) -> Sender: ...
     def send(self, who: Sender, to: str, text: str, reply_to: str | None = None) -> dict[str, Any]: ...  # noqa: D102
     def reply(self, who: Sender, msg_id: str, text: str) -> dict[str, Any]: ...  # noqa: D102
@@ -82,7 +86,8 @@ def _dispatch(hub: PeerHub, route: str, body: dict[str, Any]) -> dict[str, Any]:
         "send": lambda: {"message": hub.send(
             who, str(_text(body, "to")), str(_text(body, "text")), _text(body, "reply_to", optional=True))},
         "reply": lambda: {"message": hub.reply(who, str(_text(body, "id")), str(_text(body, "text")))},
-        "await": lambda: {"message": hub.wait(str(_text(body, "id")), _seconds(body, "timeout", limits.AWAIT_SLICE))},
+        "await": lambda: {
+            "message": hub.wait(str(_text(body, "id")), _seconds(body, "timeout", limits.AWAIT_SLICE))},
         "inbox": lambda: {"messages": hub.inbox(who, _seconds(body, "wait", 0.0))},
     }  # fmt: skip
     return {"ok": True, "sender": who.id, "as": who.display, **actions[route]()}

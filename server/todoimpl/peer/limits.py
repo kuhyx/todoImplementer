@@ -18,7 +18,7 @@ PENDING_RETRY = 5.0  # a full queue frees up when the session reads: try again s
 
 
 class Refusal(Exception):  # noqa: N818 - the hub's one refusal, not an error of the hub itself
-    """A send, reply or wait the hub will not do: `message` says why, `retry_after` when trying again helps."""
+    """A send, reply or wait the hub will not do: `message` says why, `retry_after` when a retry helps."""
 
     def __init__(self, message: str, retry_after: float | None = None, code: str = "bad_request") -> None:
         """Keep the reason, the retry time (seconds) and the HTTP error code."""

@@ -74,7 +74,7 @@ def _finish(  # noqa: PLR0913 - the exit record's fields
     return 0
 
 
-def _wait(  # noqa: PLR0913 - the turn's process, limits and per-tick hooks
+def _wait(  # noqa: PLR0913, PLR0917 - the turn's process, limits and per-tick hooks
     proc: subprocess.Popen[bytes],
     stop: Stop,
     limit: float | None,
@@ -103,7 +103,7 @@ def _wait(  # noqa: PLR0913 - the turn's process, limits and per-tick hooks
 
 
 def _peer_pipe(run_dir: Path, argv: list[str]) -> tuple[peerpipe.HostPipe | None, list[str]]:
-    """The turn's peer FIFO and its stdin argv (DOCS-peer.md); none when argv has no `-p <prompt>`."""
+    """Return the turn's peer FIFO and its stdin argv (DOCS-peer.md); none without `-p <prompt>`."""
     moved = peerpipe.stdin_argv(argv)
     if moved is None:
         return None, argv

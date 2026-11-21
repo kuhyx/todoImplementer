@@ -69,7 +69,7 @@ def tee(base: type, seen: Seen) -> type:
 
 
 def _append(spec: dict[str, Any]) -> dict[str, str]:
-    """The peer line (mcpconf.PEER_LINE) added to the preset, as `--append-system-prompt` adds it."""
+    """Return the peer line (mcpconf.PEER_LINE) for the preset, as `--append-system-prompt` adds it."""
     line = spec.get("system_append")
     return {"append": line} if isinstance(line, str) and line else {}
 

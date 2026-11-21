@@ -18,7 +18,7 @@ from typing import Any
 from urllib.parse import urlsplit
 
 URL_ENV = "TODOIMPL_PEER_URL"
-TOKEN_ENV = "TODOIMPL_PEER_TOKEN_FILE"
+TOKEN_ENV = "TODOIMPL_PEER_TOKEN_FILE"  # noqa: S105 - a variable name, not a secret
 CARD_ENV = "TODOIMPL_PEER_CARD"
 KEY_ENV = "TODOIMPL_PEER_KEY_FILE"
 WAIT_ENV = "TODOIMPL_PEER_MAX_WAIT"  # board sessions: one tool call stays under the board's 60 s line
@@ -97,7 +97,7 @@ class Peer:
         if not reply.get("ok"):
             raise PeerError(str(reply.get("error", {}).get("message", reply)), reply.get("retry_after"))
         self.sender, self.display = reply.get("sender", self.sender), reply.get("as", self.display)
-        return reply
+        return dict(reply)
 
     def send(self, to: str, text: str, reply_to: str | None = None) -> dict[str, Any]:
         """Send `text` to a task id, short id or label; return the message (its id is for await_reply)."""

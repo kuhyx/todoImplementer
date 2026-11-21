@@ -27,7 +27,14 @@ def test_message_sent_mid_turn_is_read_by_that_turn_and_marked_delivered(world: 
     _invoke(run_dir, inv)
     host = threading.Thread(target=turnhost.run, args=(run_dir, STEM, turnhost.Stop()))
     host.start()
-    hub = Hub(tmp_path, "t", clock=time.time, live=lambda _c: "live", pipe=RunPipe(tmp_path), publish=lambda *_: None)
+    hub = Hub(
+        tmp_path,
+        "t",
+        clock=time.time,
+        live=lambda _c: "live",
+        pipe=RunPipe(tmp_path),
+        publish=lambda *_: None,
+    )
     sent = hub.send(hub.identify(label="desk"), "abcd1234-0", "[peer message from kuhy] push it")
     deadline = time.monotonic() + 10
     while hub.get(sent["id"])["state"] != "delivered" and time.monotonic() < deadline:

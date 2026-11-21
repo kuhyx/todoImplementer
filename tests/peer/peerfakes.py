@@ -1,4 +1,4 @@
-"""Fakes for the peer hub: a clock, a liveness table and a pipe that records what a task session would read."""
+"""Fakes for the peer hub: a clock, a liveness table, a pipe that records what a task session reads."""
 
 from __future__ import annotations
 
@@ -62,6 +62,11 @@ def make_world(root: Path, *, live: dict[str, str] | None = None) -> World:
         (root / card).mkdir(parents=True, exist_ok=True)
     events: list[tuple[str, dict[str, Any]]] = []
     hub = Hub(
-        root, "secret-token", clock=clock, live=table.get, pipe=pipe, publish=lambda c, e: events.append((c, e))
+        root,
+        "secret-token",
+        clock=clock,
+        live=table.get,
+        pipe=pipe,
+        publish=lambda c, e: events.append((c, e)),
     )
     return World(hub, clock, pipe, table, events)

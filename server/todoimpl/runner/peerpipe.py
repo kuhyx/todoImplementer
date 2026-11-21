@@ -82,7 +82,7 @@ class HostPipe:
             return
         with self._lock:
             if not self._closed:
-                os.replace(self._run / NEW, self._run / FIFO)
+                (self._run / NEW).replace(self._run / FIFO)
                 self.ready.set()
 
     def watch(self, stream: Path) -> None:

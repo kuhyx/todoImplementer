@@ -60,11 +60,15 @@ class Senders:
         write_json(self._path, {s.id: {"label": s.label, "polled": s.polled} for s in self._known.values()})
 
     def task(self, card: str) -> Sender:
-        """The sender a board session of `card` speaks as."""
+        """Return the sender a board session of `card` speaks as."""
         return Sender(tokens.derive(self._token, f"id:{card}")[:4], f"{TASK_PREFIX}{card}", polled=True)
 
     def identify(
-        self, label: str | None, sender: str | None = None, card: str | None = None, card_key: str | None = None
+        self,
+        label: str | None,
+        sender: str | None = None,
+        card: str | None = None,
+        card_key: str | None = None,
     ) -> Sender:
         """Resolve a caller; a new label (or a stale id) registers a fresh sender."""
         if card is not None:
@@ -72,8 +76,11 @@ class Senders:
                 msg = "the card key does not match"
                 raise Refusal(msg, code="forbidden")
             return self.task(card)
-        if not label or (problem := label_problem(label)) is not None:
-            raise Refusal(problem if label else "a label is required")
+        if not label:
+            msg = "a label is required"
+            raise Refusal(msg)
+        if (problem := label_problem(label)) is not None:
+            raise Refusal(problem)
         found = self._known.get(sender or "")
         if found is not None and found.label == label:
             return found
@@ -91,8 +98,9 @@ class Senders:
             self._save()
 
     def find(self, to: str) -> Sender | None:
-        """A label recipient by id, `<label>#<id>` or a bare label that is unique; None when unknown."""
+        """Return a label recipient by id, `<label>#<id>` or a unique bare label; None when unknown."""
         label, _, wanted = to.rpartition("#")
+        hit: Sender | None
         if wanted in self._known and (not label or self._known[wanted].label == label):
             hit = self._known[wanted]
         else:

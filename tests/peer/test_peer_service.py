@@ -50,10 +50,14 @@ def test_liveness(tmp_path: Path) -> None:
 def test_start_wires_a_hub_and_pumps(tmp_path: Path, monkeypatch: Any) -> None:
     ticked = threading.Event()
     monkeypatch.setattr(service, "TICK", 0.01)
-    sched = Sched(set())
-    hub = service.start(tmp_path, sched)
-    original = hub.tick
-    monkeypatch.setattr(hub, "tick", lambda: (original(), ticked.set()))
+    original = service.Hub.tick
+
+    def tick(self: service.Hub) -> None:
+        original(self)
+        ticked.set()
+
+    monkeypatch.setattr(service.Hub, "tick", tick)
+    hub = service.start(tmp_path, Sched(set()))
     assert ticked.wait(5)
     assert (tmp_path / "peer.token").stat().st_mode & 0o777 == 0o600
     assert hub.token_ok((tmp_path / "peer.token").read_text().strip())

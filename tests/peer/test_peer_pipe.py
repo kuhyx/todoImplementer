@@ -18,7 +18,9 @@ READER = "import sys\nfor line in sys.stdin:\n    print(line.strip(), flush=True
 
 
 def test_argv_moves_the_prompt_to_stdin() -> None:
-    argv, prompt = peerpipe.stdin_argv(["claude", "-p", "do it", "--model", "opus"])
+    moved = peerpipe.stdin_argv(["claude", "-p", "do it", "--model", "opus"])
+    assert moved is not None
+    argv, prompt = moved
     assert prompt == "do it"
     assert argv == ["claude", "-p", "--model", "opus", *peerpipe.FLAGS]
     assert peerpipe.stdin_argv(["claude", "--model", "opus"]) is None
@@ -82,7 +84,9 @@ def test_child_that_dies_early_does_not_hang_the_writer(tmp_path: Path) -> None:
     assert not (run / peerpipe.NEW).exists()
 
 
-@pytest.mark.parametrize("line", [b"", b'not json "type":"result"\n', b'["type":"result"]\n', b'{"type":"assistant"}\n'])
+@pytest.mark.parametrize(
+    "line", [b"", b'not json "type":"result"\n', b'["type":"result"]\n', b'{"type":"assistant"}\n']
+)
 def test_watch_ignores_other_lines(tmp_path: Path, line: bytes) -> None:
     run = tmp_path / CARD
     run.mkdir()

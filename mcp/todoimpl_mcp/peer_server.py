@@ -42,19 +42,27 @@ def _answer(call: Callable[[], Any]) -> str:
         return str(exc)
 
 
-@mcp.tool(description="Send text to a running board task (id or short id) or a session label.", structured_output=False)
+@mcp.tool(
+    description="Send text to a running board task (id or short id) or a session label.",
+    structured_output=False,
+)
 def send_peer(to: str, text: str, reply_to: str = "") -> str:
     """Send a peer message; reply_to links it to a thread."""
     return _answer(lambda: _me().send(to, text, reply_to or None))
 
 
-@mcp.tool(description="Wait for the answer to a sent message id (seconds; retry to keep waiting).", structured_output=False)
+@mcp.tool(
+    description="Wait for the answer to a sent message id (seconds; retry to keep waiting).",
+    structured_output=False,
+)
 def await_reply(id: str, timeout: float = 600.0) -> str:  # noqa: A002 - the tool's argument name
     """Wait for a reply."""
     return _answer(lambda: _me().await_reply(id, timeout))
 
 
-@mcp.tool(description="Peer messages sent to you; wait up to `wait` s for the first.", structured_output=False)
+@mcp.tool(
+    description="Peer messages sent to you; wait up to `wait` s for the first.", structured_output=False
+)
 def inbox(wait: float = 0.0) -> str:
     """Fetch the inbox."""
     return _answer(lambda: _me().inbox(wait))

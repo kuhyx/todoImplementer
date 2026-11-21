@@ -11,7 +11,8 @@ import threading
 import time
 from typing import TYPE_CHECKING, Any, Protocol
 
-from todoimpl.board.state import StateError, load, run_dir
+from todoimpl.board.parse import StateError
+from todoimpl.board.state import load, run_dir
 
 from . import token
 from .hub import Hub
@@ -65,5 +66,5 @@ def start(root: Path, scheduler: Running) -> Hub:
         root, token.ensure(root), clock=time.time, live=liveness(root, scheduler.running), pipe=RunPipe(root),
         publish=publish,
     )  # fmt: skip
-    threading.Thread(target=lambda: pump(lambda: hub.tick(), threading.Event(), TICK), daemon=True).start()
+    threading.Thread(target=lambda: pump(hub.tick, threading.Event(), TICK), daemon=True).start()
     return hub

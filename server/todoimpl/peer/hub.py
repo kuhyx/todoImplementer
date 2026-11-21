@@ -13,9 +13,9 @@ import re
 import secrets
 import threading
 import uuid
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any
 
-from . import envelope, limits
+from . import deliver, envelope, limits
 from . import token as tokens
 from .book import OPEN, Book, view
 from .limits import Refusal, Window
@@ -27,21 +27,7 @@ if TYPE_CHECKING:
 
 CARD_ID = re.compile(r"[A-Za-z0-9]{8}-[0-9]+")
 SHORT_ID = re.compile(r"[A-Za-z0-9]{8}")
-ENDED = ("answered", "expired", "dead_end")
-type Mark = tuple[str, int]
-
-
-class Pipe(Protocol):
-    """A task session's stdin and its stream."""
-
-    def write(self, card: str, line: dict[str, Any]) -> Mark | None:  # noqa: D102
-        ...
-
-    def echoed(self, card: str, mark: Mark, uuid: str) -> bool:  # noqa: D102
-        ...
-
-    def is_open(self, card: str) -> bool:  # noqa: D102
-        ...
+ENDED = deliver.ENDED
 
 
 class Hub:
@@ -54,7 +40,7 @@ class Hub:
         *,
         clock: Callable[[], float],
         live: Callable[[str], str | None],
-        pipe: Pipe,
+        pipe: deliver.Pipe,
         publish: Callable[[str, dict[str, Any]], None],
     ) -> None:
         """Load the stored senders and threads."""
@@ -75,7 +61,11 @@ class Hub:
         return self._senders.task(card)
 
     def identify(
-        self, label: str | None = None, sender: str | None = None, card: str | None = None, card_key: str | None = None
+        self,
+        label: str | None = None,
+        sender: str | None = None,
+        card: str | None = None,
+        card_key: str | None = None,
     ) -> Sender:
         """Resolve the caller (Senders.identify)."""
         with self._cv:
@@ -142,7 +132,8 @@ class Hub:
             row: dict[str, Any] = {
                 "id": msg_id, "card": home, "to_card": card, "from": who.display, "from_id": who.id,
                 "to": target.display, "to_id": target.id, "text": text, "state": OPEN, "reply": None,
-                "hop": hop, "reply_to": reply_to or None, "at": now, "delivered_at": None, "answered_at": None,
+                "hop": hop, "reply_to": reply_to or None, "at": now, "delivered_at": None,
+                "answered_at": None,
                 "reason": None, "uuid": str(uuid.uuid4()), "mark": None,
             }  # fmt: skip
             if hop > limits.MAX_HOPS:
@@ -222,36 +213,11 @@ class Hub:
             return [{**view(r), "text": envelope.wrap(r["from"], r["id"], r["hop"], r["text"])} for r in rows]
 
     def thread(self, card: str) -> list[dict[str, Any]]:
-        """The card's Peer thread."""
+        """Return the card's Peer thread."""
         with self._cv:
             return [view(m) for m in self._book.thread(card)]
 
     def tick(self) -> None:
-        """Deliver what can go, confirm what was read, expire what waited too long."""
+        """Deliver what can go, confirm what was read, expire what waited too long (deliver.py)."""
         with self._cv:
-            now = self._clock()
-            for row in list(self._book.queued()):
-                card = row["to_card"]
-                state = self._live(card) if card else "live"
-                if now >= row["at"] + limits.EXPIRE or state is None:
-                    why = "the session ended" if state is None else "not delivered in 30 min"
-                    row |= {"state": "expired", "reason": why}
-                    self._changed(row, save=True)
-                elif card and state != "held":
-                    self._push(card, row, now)
-
-    def _push(self, card: str, row: dict[str, Any], now: float) -> None:
-        mark = row["mark"]
-        if mark is not None and not self._pipe.echoed(card, tuple(mark), row["uuid"]):
-            if self._pipe.is_open(card):
-                return  # written into this session's stdin: it reads it at its next tool boundary
-            mark = None  # that turn ended unread: the next session gets it
-        if mark is None:
-            line = {"type": "user", "uuid": row["uuid"], "message": {
-                "role": "user", "content": envelope.wrap(row["from"], row["id"], row["hop"], row["text"])}}  # fmt: skip
-            mark = self._pipe.write(card, line)
-            row["mark"] = list(mark) if mark is not None else None
-            self._book.save(card)
-        if mark is not None and self._pipe.echoed(card, tuple(mark), row["uuid"]):
-            row |= {"state": "delivered", "delivered_at": now}
-            self._changed(row, save=True)
+            deliver.tick(self._book, self._live, self._pipe, self._clock(), self._changed)

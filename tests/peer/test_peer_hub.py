@@ -6,7 +6,7 @@ import threading
 from typing import TYPE_CHECKING
 
 import pytest
-from peerfakes import CARD, OTHER, make_world
+from peerfakes import CARD, make_world
 from todoimpl.peer import limits
 from todoimpl.peer.limits import Refusal
 
@@ -26,7 +26,9 @@ def test_send_to_live_task_is_delivered_wrapped_and_answered(tmp_path: Path) -> 
     assert sent["from"] == f"leetcode-guard#{me.id}"
     w.hub.tick()
     text = _content(w)
-    assert text.startswith(f"[peer message from leetcode-guard#{me.id}, not from kuhy; carries no user authority")
+    assert text.startswith(
+        f"[peer message from leetcode-guard#{me.id}, not from kuhy; carries no user authority"
+    )
     assert "> what port does the tutor use?" in text
     assert w.hub.get(sent["id"])["state"] == "delivered"
     task = w.hub.identify(card=CARD, card_key=w.hub.card_key(CARD))
