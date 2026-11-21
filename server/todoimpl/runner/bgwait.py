@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from .buildlock import CARD_VAR, holders, slot_lock, slots
-from .buildqueue import tickets
+from .buildqueue import LINE, tickets
 
 PROC = Path("/proc")
 CHILDREN = "children"  # an umbrella run keeps its children's run dirs here; each is its own card
@@ -102,7 +102,17 @@ def waiters(lock: Path) -> list[int]:
         parts = line.split()
         if "->" in parts and "FLOCK" in parts and len(parts) >= 4 and parts[-3] in keys:  # noqa: PLR2004 - pid key start end
             found.append(int(parts[-4]))
-    return found
+    return found + [pid for pid in queued(lock.parent) if pid not in found]
+
+
+def queued(base: Path) -> list[int]:
+    """Return the live owners of `wait` tickets: between RECHECK tries a waiter blocks on nothing (T2429)."""
+    owners = []
+    for path in tickets(base):
+        found = LINE.fullmatch(read(path).strip())
+        if found is not None and found["state"] == "wait" and (PROC / found["pid"]).is_dir():
+            owners.append(int(found["pid"]))
+    return owners
 
 
 def mine(pid: int, below: set[int], run_dir: Path) -> bool:
