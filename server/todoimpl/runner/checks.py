@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 DEFAULT_TIMEOUT = 600.0
 TAIL_LINES = 40
 MAKE_TEST = re.compile(r"^test\s*:", re.MULTILINE)
+DEPLOY_DIR = "deploy"  # the run-dir child a deploy writes to (deployhost): it is not a run of its own
 ASSIGNMENT = re.compile(r"^[A-Za-z_]\w*=")
 SENTENCE_NOTE = "a sentence, not a command: the board does not run it, so cover it with a plan criterion"
 
@@ -112,7 +113,8 @@ def pool_env(run_dir: Path) -> dict[str, str]:
     build filling it got this run's astro build OOM-killed mid pre-commit (exit -15, 2026-11-11).
     The machine-wide capped.slice backstop still bounds all runs together.
     """
-    return {"CLAUDE_CODE_SESSION_ID": "todoimpl" + re.sub(r"[^A-Za-z0-9]", "", run_dir.name)}
+    name = run_dir.parent.name if run_dir.name == DEPLOY_DIR else run_dir.name  # T2466: a deploy is the run's
+    return {"CLAUDE_CODE_SESSION_ID": "todoimpl" + re.sub(r"[^A-Za-z0-9]", "", name)}
 
 
 def run_capped(  # noqa: PLR0913 - guard and timing are keyword-only

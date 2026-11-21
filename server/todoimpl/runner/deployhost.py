@@ -14,7 +14,7 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from . import stepwatch
+from . import checks, stepwatch
 from .checks import run_check, timing_row
 from .files import root_of, write_json
 from .gatehost import LOCK_NAME, exclusive
@@ -22,7 +22,7 @@ from .gatehost import LOCK_NAME, exclusive
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-DEPLOY_DIR = "deploy"
+DEPLOY_DIR = checks.DEPLOY_DIR
 EXIT_FILE = "exit.json"
 TIMEOUT = 1800.0  # an APK build and install; the unit's RuntimeMaxSec (deploy.UNIT_MAX) must stay above it
 ENV = {"CAP_MEM": "4G", "CAP_CPU_PCT": "20"}  # a build may need more than capped.sh's 2 GiB default
