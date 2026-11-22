@@ -4,8 +4,8 @@ Ship removed only `<run>/wt`; the `<run>/wt-<name>` worktrees sessions add for o
 tells them to) and their venvs stayed for ever (the run root reached 112 GB). `clean` removes each `<run>/wt*`
 worktree through the repo that owns it (`git worktree remove --force`, then `prune`), deletes its branch only
 when every commit is on a remote or landed by content (`git cherry`), else keeps the branch (Retry and Restart
-re-add the worktree from it), and deletes top-level venvs and `node_modules`. state.json, events, logs, shots
-and turn files stay: the board reads them.
+re-add the worktree from it), and deletes top-level venvs, `node_modules` and the turns' python user base.
+state.json, events, logs, shots and turn files stay: the board reads them.
 
 Never touched: a run whose stage is not resting, a run with a live turn record, a pending inbox, handoff or
 Done-manually file, a run any live process has its cwd in, and a worktree with uncommitted changes. User units
@@ -24,7 +24,7 @@ from typing import TYPE_CHECKING
 from todoimpl.board import state as store
 from todoimpl.board.status import MANUAL_STAGE
 
-from . import orphans, units
+from . import orphans, units, userbase
 from .worktree import GitError, git
 
 if TYPE_CHECKING:
@@ -119,7 +119,8 @@ def clean(
 
 
 def _regenerable(path: Path) -> bool:
-    return path.name == "node_modules" or (path / "pyvenv.cfg").is_file()
+    # A turn's python user base (T2495, T2503) holds the worker's pip installs; the next turn rebuilds it.
+    return path.name in {"node_modules", userbase.DIR} or (path / "pyvenv.cfg").is_file()
 
 
 def _worktree(wt: Path, rep: Report, *, apply: bool) -> None:

@@ -178,3 +178,13 @@ def test_t2433_a_git_failure_skips_that_worktree(world: Env, monkeypatch: pytest
     rep = reap.clean(run, apply=True)
     assert rep.skipped == [f"{wt}: git status timed out"]
     assert wt.is_dir()
+
+
+def test_t2503_a_resting_run_loses_its_python_user_base(world: Env) -> None:
+    run = run_dir(world)
+    site = run / "userbase" / "lib" / "python3.14" / "site-packages"
+    site.mkdir(parents=True)
+    (site / "todoimpl-userbase.pth").write_text("import site\n", encoding="utf-8")
+    rep = reap.clean(run, apply=True)
+    assert not (run / "userbase").exists()
+    assert rep.payload == [str(run / "userbase")]
