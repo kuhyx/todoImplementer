@@ -46,10 +46,7 @@ void main() {
   testWidgets('[T2472] card sheet: a failed upload sends no note', (
     tester,
   ) async {
-    final relay = await _board(
-      tester,
-      card('c1', actions: [action('send')]),
-    );
+    final relay = await _board(tester, card('c1', actions: [action('send')]));
     await tester.tap(find.byKey(const ValueKey('card-c1')));
     await settle(tester);
     await tester.enterText(_key('send-text'), 'see');

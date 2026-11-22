@@ -11,6 +11,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:todo_implementer/sync/board_relay.dart';
 import 'package:todo_implementer/ui/board/board_page.dart';
+import 'package:todo_implementer/ui/board/draft_images.dart';
 import 'package:todo_implementer/ui/board/image_strip.dart';
 import 'package:todo_implementer/ui/board/new_task_draft.dart';
 import 'package:todo_implementer/ui/board/repo_chooser.dart';
@@ -100,48 +101,52 @@ void main() {
     expect(_text(tester), 'Mine');
   });
 
-  test('[T2493] the prefs store keeps text, picks and images apart', () async {
-    SharedPreferences.setMockInitialValues({});
-    final store = PrefsNewTaskDrafts();
-    expect(await store.load(), isNull);
-    const draft = NewTaskDraft(
-      text: 'Fix',
-      scope: RepoScope.some,
-      picked: ['kuhyx/demo'],
-      open: true,
-    );
-    await store.saveState(draft);
-    await store.saveImages([
-      Uint8List.fromList([1, 2]),
-    ]);
-    final back = await store.load();
-    expect(back?.text, 'Fix');
-    expect(back?.scope, RepoScope.some);
-    expect(back?.picked, ['kuhyx/demo']);
-    expect(back?.open, isTrue);
-    expect(back?.images.single, [1, 2]);
-    await store.clear();
-    expect(await store.load(), isNull);
-  });
+  test(
+    '[T2493] the prefs store keeps text and picks, the images apart',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final store = PrefsNewTaskDrafts(images: PrefsDraftImages());
+      expect(await store.load(), isNull);
+      const draft = NewTaskDraft(
+        text: 'Fix',
+        scope: RepoScope.some,
+        picked: ['kuhyx/demo'],
+        open: true,
+      );
+      await store.saveState(draft);
+      await store.saveImages([
+        Uint8List.fromList([1, 2]),
+      ]);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('newtask.draft'), isNot(contains('AQI')));
+      final back = await store.load();
+      expect(back?.text, 'Fix');
+      expect(back?.scope, RepoScope.some);
+      expect(back?.picked, ['kuhyx/demo']);
+      expect(back?.open, isTrue);
+      expect(back?.images.single, [1, 2]);
+      await store.clear();
+      expect(await store.load(), isNull);
+      expect(prefs.getKeys(), isEmpty);
+    },
+  );
 
   test(
     '[T2493] bad stored data and a failing store read as no draft',
     () async {
-      SharedPreferences.setMockInitialValues({
-        'newtask.draft': '{"text": 1}',
-        'newtask.draft.images': 'not json',
-      });
+      SharedPreferences.setMockInitialValues({'newtask.draft': '{"text": 1}'});
       expect(await PrefsNewTaskDrafts().load(), isNull);
       SharedPreferences.setMockInitialValues({
         'newtask.draft': '{"text": "T", "scope": "odd", "picked": [3]}',
-        'newtask.draft.images': '["%%"]',
       });
       final odd = await PrefsNewTaskDrafts().load();
       expect((odd?.text, odd?.scope), ('T', null));
       expect(odd?.picked, isEmpty);
-      expect(odd?.images, isEmpty);
+      expect(odd?.images, isEmpty); // no support directory in a test
+      Future<SharedPreferences> fail() => Future.error(StateError('no prefs'));
       final broken = PrefsNewTaskDrafts(
-        prefs: () => Future.error(StateError('no prefs')),
+        prefs: fail,
+        images: PrefsDraftImages(prefs: fail),
       );
       expect(await broken.load(), isNull);
       await broken.saveState(const NewTaskDraft(text: 'x', picked: []));

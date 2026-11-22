@@ -42,6 +42,8 @@ dependencies:
   image_picker: 1.2.4
   # Its MaterialLocalizations for crdt_sync_flutter's material_ui dialogs.
   material_ui: 1.11.1
+  # The add-task draft's images as files (T2493).
+  path_provider: 2.1.6
   # The relay client: RTDB REST/SSE, e2e sealing, request hub, rev watcher,
   # passphrase gate, session (shared with the tutor app).
   rtdb_relay:
@@ -49,7 +51,7 @@ dependencies:
       url: https://github.com/kuhyx/utils
       ref: rtdb-relay-v0.2.1
       path: rtdb_relay/dart
-  # This install's device id.
+  # This install's device id; the add-task draft's text.
   shared_preferences: 2.5.6
   uuid: 4.6.0
 

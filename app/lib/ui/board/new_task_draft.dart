@@ -1,9 +1,9 @@
 /// The add-task page's draft (T2493): a refused send ("bad token"), a
 /// closed page or a killed app must not lose a task being written. The text
 /// and the repo picks are saved on every change, the images whenever the list
-/// changes (apart, so a keystroke never rewrites megabytes). Only a task that
-/// went out clears it; an empty box with no images is no draft. A store that
-/// fails only means no draft: the page never fails over it.
+/// changes, as files ([DraftImages]: a keystroke never rewrites them). Only a
+/// task that went out clears it; an empty box with no images is no draft. A
+/// store that fails only means no draft: the page never fails over it.
 library;
 
 import 'dart:async';
@@ -12,6 +12,7 @@ import 'dart:typed_data';
 
 import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:todo_implementer/ui/board/draft_images.dart';
 import 'package:todo_implementer/ui/board/image_attach.dart';
 import 'package:todo_implementer/ui/board/repo_chooser.dart';
 
@@ -87,27 +88,18 @@ class MemoryNewTaskDrafts implements NewTaskDrafts {
   }
 }
 
-/// The draft in the app's preferences: one key for the text and the picks,
-/// one for the images (base64).
+/// The draft in the app's preferences (the text and the picks) and its
+/// images in [DraftImages].
 class PrefsNewTaskDrafts implements NewTaskDrafts {
-  /// The store; [prefs] opens the preferences (tests pass a failing one).
-  new({Future<SharedPreferences> Function()? prefs})
-    : _prefs = prefs ?? SharedPreferences.getInstance;
+  /// The store; [prefs] opens the preferences, [images] keeps the images
+  /// (tests pass failing or temporary ones).
+  new({Future<SharedPreferences> Function()? prefs, DraftImages? images})
+    : _prefs = prefs ?? SharedPreferences.getInstance,
+      _images = images ?? platformDraftImages();
 
   final Future<SharedPreferences> Function() _prefs;
+  final DraftImages _images;
   static const _state = 'newtask.draft';
-  static const _images = 'newtask.draft.images';
-
-  static List<Uint8List> _decode(String? raw) {
-    try {
-      return [
-        for (final b in jsonDecode(raw ?? '[]') as List<Object?>)
-          base64Decode(b! as String),
-      ];
-    } on Object {
-      return const [];
-    }
-  }
 
   @override
   Future<NewTaskDraft?> load() async {
@@ -126,7 +118,7 @@ class PrefsNewTaskDrafts implements NewTaskDrafts {
               if (p is String) p,
         ],
         open: raw['open'] == true,
-        images: _decode(prefs.getString(_images)),
+        images: await _images.load(),
       );
     } on Object {
       return null;
@@ -155,15 +147,13 @@ class PrefsNewTaskDrafts implements NewTaskDrafts {
   );
 
   @override
-  Future<void> saveImages(List<Uint8List> images) => _write(
-    (p) => p.setString(_images, jsonEncode(images.map(base64Encode).toList())),
-  );
+  Future<void> saveImages(List<Uint8List> images) => _images.save(images);
 
   @override
-  Future<void> clear() => _write((p) async {
-    await p.remove(_state);
-    await p.remove(_images);
-  });
+  Future<void> clear() async {
+    await _write((p) => p.remove(_state));
+    await _images.save(const []);
+  }
 }
 
 /// The store the page uses (tests swap in a [MemoryNewTaskDrafts]).
