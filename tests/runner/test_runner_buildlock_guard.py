@@ -56,8 +56,9 @@ def _bash(script: str, env: dict[str, str], cwd: Path) -> subprocess.CompletedPr
     )
 
 
-def _blocked() -> int:
-    return len(bgwait.waiters(buildlock.root() / buildlock.LOCK))
+def _queued(proc: subprocess.Popen[bytes]) -> bool:
+    """Say whether `proc` holds its `wait` ticket: one pid per waiter, never its flock child too (T2498)."""
+    return proc.pid in bgwait.queued(buildlock.root())
 
 
 def test_t2167_the_standing_prompt_forbids_touching_the_lock_by_hand() -> None:
@@ -70,9 +71,8 @@ def test_t2167_a_lock_held_by_hand_waits_its_turn_in_the_queue(env: dict[str, st
     go = tmp_path / "go"
     holder = subprocess.Popen(["cargo", "H"], env={**env, "GO_FILE": str(go)})
     _until(lambda: _starts(env) == ["start H"], "start H")
-    before = _blocked()
     waiter = subprocess.Popen(["cargo", "W"], env=env)
-    _until(lambda: _blocked() > before, "W queueing")
+    _until(lambda: _queued(waiter), "W queueing")
     busy = _bash('exec 9>>"$ROOT/build.lock"; flock -n 9', env, tmp_path)
     assert busy.returncode == 1  # a poll never jumps the queue
     hand = subprocess.Popen(["bash", "-c", BY_HAND], env=env)

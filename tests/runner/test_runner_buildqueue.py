@@ -49,9 +49,12 @@ def _until(check: object, what: str) -> None:
         time.sleep(0.02)
 
 
-def _blocked() -> int:
-    """Count the flock requests blocked on the build lock or on any ticket of the temp lock root."""
-    return len(bgwait.waiters(buildlock.root() / buildlock.LOCK))
+def _waiting() -> list[int]:
+    """Return the owners of the live `wait` tickets: one pid per waiter, its ticket number already taken (T2498).
+
+    Not `bgwait.waiters`: it also lists a waiter's blocked flock child, so one waiter can count twice.
+    """
+    return bgwait.queued(buildlock.root())
 
 
 def _start(env: dict[str, str], name: str, tmp_path: Path, **extra: str) -> subprocess.Popen[bytes]:
@@ -65,9 +68,9 @@ def _queue_up(env: dict[str, str], tmp_path: Path, names: list[str]) -> list[sub
     """Start each waiter only once the one before it blocks, so the arrival order is certain."""
     procs = []
     for name in names:
-        before = _blocked()
-        procs.append(_start(env, name, tmp_path))
-        _until(lambda b=before: _blocked() > b, f"{name} blocking")
+        proc = _start(env, name, tmp_path)
+        procs.append(proc)
+        _until(lambda p=proc.pid: p in _waiting(), f"{name} queueing")
     return procs
 
 
@@ -145,7 +148,6 @@ def test_t2164_the_board_and_the_shims_share_one_queue(world: dict[str, str], tm
     holder = _start({**world, "GO_FILE": str(go)}, "H", tmp_path)
     _until(lambda: "start H" in _log(world), "start H")
     (first,) = _queue_up(world, tmp_path, ["A"])
-    before = _blocked()
     order: list[str] = []
 
     def board() -> None:
@@ -156,7 +158,7 @@ def test_t2164_the_board_and_the_shims_share_one_queue(world: dict[str, str], tm
 
     thread = threading.Thread(target=board)
     thread.start()
-    _until(lambda: _blocked() > before, "the board blocking")
+    _until(lambda: os.getpid() in _waiting(), "the board queueing")
     (last,) = _queue_up(world, tmp_path, ["C"])
     go.touch()
     thread.join(30)
@@ -214,3 +216,19 @@ def test_t2164_a_waiter_on_a_ticket_counts_as_a_build_lock_waiter(tmp_path: Path
         waiter = subprocess.Popen(["flock", str(base / buildqueue.QUEUE / "000000000001"), "true"])
         _until(lambda: waiter.pid in bgwait.waiters(base / buildlock.LOCK), "the waiter in /proc/locks")
     assert waiter.wait(timeout=5) == 0
+
+
+def test_t2498_a_waiter_counts_once_however_many_of_its_processes_block(
+    world: dict[str, str], tmp_path: Path
+) -> None:
+    # A waiter's bash (its `wait` ticket) and its blocked flock child counted as two, so `_queue_up` could start C
+    # before B had its ticket: B, killed, then left ticket 5 behind C, which nobody settles.
+    go = tmp_path / "go"
+    holder = _start({**world, "GO_FILE": str(go)}, "H", tmp_path)
+    _until(lambda: "start H" in _log(world), "start H")
+    (first,) = _queue_up(world, tmp_path, ["A"])
+    lock = buildlock.root() / buildlock.LOCK
+    _until(lambda: any(pid != first.pid for pid in bgwait.waiters(lock)), "A's flock blocking")
+    assert _waiting() == [first.pid]
+    go.touch()
+    assert (holder.wait(timeout=30), first.wait(timeout=30)) == (0, 0)

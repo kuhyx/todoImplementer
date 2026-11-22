@@ -47,8 +47,9 @@ def _until(check: object, what: str) -> None:
         time.sleep(0.02)
 
 
-def _blocked() -> int:
-    return len(bgwait.waiters(buildlock.root() / buildlock.LOCK))
+def _queued(proc: subprocess.Popen[bytes]) -> bool:
+    """Say whether `proc` holds its `wait` ticket: one pid per waiter, never its flock child too (T2498)."""
+    return proc.pid in bgwait.queued(buildlock.root())
 
 
 def _board(env: dict[str, str], card: str = "c1-0", command: str = "cmake test") -> subprocess.Popen[bytes]:
@@ -67,12 +68,10 @@ def test_t2168_a_check_killed_by_a_restart_comes_back_to_its_place(
     go = tmp_path / "go"
     holder = _make(env, "H", GO_FILE=str(go))
     _until(lambda: _starts(env) == ["start H"], "start H")
-    before = _blocked()
     old = _board(env)
-    _until(lambda: _blocked() > before, "the check queueing")
-    before = _blocked()
+    _until(lambda: _queued(old), "the check queueing")
     later = _make(env, "W")
-    _until(lambda: _blocked() > before, "W queueing")
+    _until(lambda: _queued(later), "W queueing")
     old.send_signal(signal.SIGKILL)  # the server restarts (deploy): its waiting check dies
     old.wait(timeout=5)
     time.sleep(0.3)  # W wakes on the dead ticket and must not take its place
