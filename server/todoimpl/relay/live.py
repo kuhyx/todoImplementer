@@ -6,7 +6,9 @@ Events land at live/{card}/s<9-digit n>; only the newest KEEP are kept. A new mi
 watch) continues above the highest stored key, so new events never sort below old ones (T2312), and skips
 the activity the feed already holds: the source replays events.jsonl from the start on every open (T2345).
 Events land in one PATCH per GATHER_S, the trim riding along (T2346). A repo card's next cycle starts its
-feed afresh: a mirror whose stored lines all sit at or below the cycle's floor deletes them (T2479).
+feed afresh (T2479): when a mirror starts on a card with a cycle floor, or sees the floor rise while it runs
+(a mirror running across the reopen, T2484), it deletes every stored key up to the newest line of an earlier
+cycle; the newest key number stays counted, so new keys sort above them.
 """
 
 from __future__ import annotations
@@ -46,6 +48,7 @@ class Live:
     def __init__(self, rtdb: Rtdb, router: Router, now: Callable[[], float] = time.time) -> None:
         """Mirror through `rtdb`; feeds come from `router`."""
         self._rtdb, self._router, self._now = rtdb, router, now
+        self._cycle_floor: Callable[[str], int] = router.backend.floor
         self.watches: dict[str, tuple[str, float]] = {}
         self.mirrors: dict[str, asyncio.Task[None]] = {}
         self.floors: dict[str, int] = {}  # newest activity seq mirrored per card
@@ -107,13 +110,22 @@ class Live:
         return out[-KEEP:]
 
     async def _drop(self, card: str, kept: deque[int], floor: int) -> None:
-        """Delete an earlier cycle's lines; the newest key stays counted, so new keys sort above them."""
-        if kept:
-            await self._rtdb.patch(f"live/{card}", {f"s{n:09d}": None for n in kept})
+        """Delete every stored key up to the newest one holding an earlier cycle's line (seq <= `floor`).
+
+        One full read of live/{card} (at most KEEP lines), only when a cycle floor is new to this mirror.
+        """
+        node = await self._rtdb.get(f"live/{card}")
+        items = node if isinstance(node, dict) else {}
+        old = [int(m[1]) for k, v in items.items() if (m := _KEY.fullmatch(k)) and _seq(v) <= floor]
+        cut = max(old, default=0)
+        if gone := [n for n in kept if n <= cut]:
+            await self._rtdb.patch(f"live/{card}", {f"s{n:09d}": None for n in gone})
             last = kept[-1]
-            kept.clear()
-            kept.append(last)
-        self.floors[card] = floor
+            while kept and kept[0] <= cut:
+                kept.popleft()
+            if not kept:
+                kept.append(last)
+        self.floors[card] = max(self.floors.get(card, 0), floor)
 
     async def _write(self, card: str, items: list[dict[str, Any]], kept: deque[int]) -> None:
         """Land `items` and trim to KEEP in one PATCH (T2346: a burst cost one PUT per event)."""
@@ -135,10 +147,13 @@ class Live:
         try:
             kept = await self._stored(card)
             self.floors[card] = await self._floor(card, kept)
-            if self.floors[card] < reply.floor:
-                await self._drop(card, kept, reply.floor)
+            if applied := reply.floor:
+                await self._drop(card, kept, applied)
             batch, ended = [reply.snapshot], False
             while self.watched(card):
+                if batch and (now := await asyncio.to_thread(self._cycle_floor, card)) > applied:
+                    applied = now
+                    await self._drop(card, kept, applied)
                 if items := self._fresh(card, batch):
                     await self._write(card, items, kept)
                 if ended:
@@ -149,6 +164,12 @@ class Live:
         finally:
             stop.set()
             self.mirrors.pop(card, None)
+
+
+def _seq(item: object) -> float:
+    """Return an activity line's seq; any other stored item never counts as an earlier cycle's line."""
+    seq = item.get("seq") if isinstance(item, dict) else None
+    return seq if isinstance(seq, int) else float("inf")
 
 
 async def _drain(
