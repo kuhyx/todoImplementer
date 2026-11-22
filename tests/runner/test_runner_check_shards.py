@@ -87,7 +87,7 @@ def test_t2487_a_failed_step_ends_the_check(
     assert len(admitted) == 2
 
 
-def test_t2488_queue_waits_do_not_eat_a_sharded_checks_budget(
+def test_t2492_queue_waits_do_not_eat_a_sharded_checks_budget(
     world: Env, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # The lock wait is outside a check's timeout (run_capped); a shared deadline let each step's queue wait
