@@ -4,7 +4,7 @@ A card runs while its turn's claude is alive (`turn.pid`). Real activity is the 
 (tool calls, text, results) in `events.jsonl`, and the newest tool result or assistant message
 line of the turn's stream file (thinking included, T2418), at that line's own time (T2447); the
 board's `system` lines, claude's other stream lines or a touched file are not, so nothing can look alive by
-pinging. An advisor call waiting on its answer is work for a while (T2448).
+pinging. An advisor call waiting on its answer, on any thread, is work for a while (T2448, T2486).
 A fresh turn counts from its start (the time in its stem),
 not from the last cycle's events.
 """
@@ -15,11 +15,13 @@ import json
 import os
 import re
 from dataclasses import dataclass
-from datetime import datetime
 from pathlib import Path
 
 from todoimpl.runner import freeworker, orphans
 from todoimpl.runner.workerwait import EXIT, PID
+
+from .advisor import ADVISOR, pending_until
+from .advisor import stamp as _stamp
 
 EVENTS = "events.jsonl"
 CARD = re.compile(r"^[0-9a-f]{8}-\d+$")
@@ -28,9 +30,7 @@ PARTIAL = "stream_event"  # a chunk of the message the model writes now (`--incl
 THINKING = "thinking_tokens"  # claude's estimate of the thinking so far, written while the model thinks
 OUTPUT = frozenset({"assistant", "user"})  # stream lines that are real work: a message, or a tool's result
 BOARD_TAIL = 64 * 1024  # the board polls every running card, so it reads less than the watch does
-ADVISOR = (
-    240.0  # s an unanswered advisor call counts as work: it answers in 60-140 s, nothing streams meanwhile
-)
+__all__ = ["ADVISOR", "Running", "last_activity", "last_output", "running"]
 
 
 @dataclass(frozen=True)
@@ -63,14 +63,6 @@ def last_activity(path: Path, tail: int = TAIL) -> float | None:
         if isinstance(at, int | float) and not isinstance(at, bool):
             return float(at)
     return None
-
-
-def _stamp(row: dict[str, object]) -> float | None:
-    """Return the epoch time of a stream line's ISO `timestamp`, None when it has none."""
-    try:
-        return datetime.fromisoformat(str(row["timestamp"])).timestamp()
-    except KeyError, ValueError:
-        return None
 
 
 def _pending_advisor(row: dict[str, object]) -> bool:
@@ -173,6 +165,7 @@ def running(root: Path) -> list[Running]:
             last_activity(run_dir / EVENTS),
             _stem_time(rec.stem),
             last_output(run_dir, rec.stem),
+            pending_until(run_dir / f"{rec.stem}.stream.jsonl"),
             workers(run_dir),
         )
         times = [t for t in own if t is not None]

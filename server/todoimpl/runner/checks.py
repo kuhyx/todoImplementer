@@ -7,12 +7,13 @@ import re
 import shlex
 import subprocess
 import sys
+import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import IO, TYPE_CHECKING, Any
+from typing import IO, TYPE_CHECKING, Any, cast
 
-from . import buildlock, checks_guard, lanes, stepwatch
+from . import buildlock, checks_guard, checksteps, lanes, stepwatch
 from .claude import kill_tree
 
 if TYPE_CHECKING:
@@ -170,10 +171,18 @@ def run_check(  # noqa: PLR0913, PLR0917 - one knob (env) more than the lint all
     log = run_dir / "evidence" / f"check-{name}-{time.time():.3f}.log"
     log.parent.mkdir(parents=True, exist_ok=True)
     checks_guard.stop_stale(run_dir)  # a dead server's run of this check would clash with this one (T1889)
-    timing = lanes.Timing()
-    with log.open("w", encoding="utf-8") as out:
-        env_all = {**pool_env(run_dir), **(env or {})}
-        code = run_capped(command, cwd, timeout, out, env_all, guard=run_dir, timing=timing)
+    timing, end, code = lanes.Timing(), time.monotonic() + timeout, cast("int | None", 0)
+    with log.open("w", encoding="utf-8") as out, tempfile.TemporaryDirectory(prefix="todoimpl-check.") as cov:
+        env_all: dict[str, str] = {**pool_env(run_dir), **(env or {})}
+        parts = checksteps.steps(command, cwd, Path(cov))  # a sharded suite: one ticket per step (T2487)
+        for n, part in enumerate(parts, 1):
+            step, left = lanes.Timing(), max(end - time.monotonic(), 1.0)
+            code = run_capped(part, cwd, left, out, env_all, guard=run_dir, timing=step)
+            done = CheckResult(f"{name} {n}/{len(parts)}", part, code, "", "", *checksteps.add(timing, step))
+            if len(parts) > 1:
+                report(done)
+            if code != 0:
+                break
         if code is None:
             out.write(f"\n[timed out after {timeout:g} s]\n")
     lines = log.read_text(encoding="utf-8", errors="replace").splitlines()

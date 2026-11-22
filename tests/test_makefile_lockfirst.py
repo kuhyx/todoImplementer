@@ -24,7 +24,7 @@ def test_t2417_the_lock_taking_tool_runs_before_the_capped_scope(var: str, tool:
     assert line.index(tool) < line.index("CAPPED")
 
 
-@pytest.mark.parametrize("target", ["test", "test-shard", "web-lint", "web-test"])
+@pytest.mark.parametrize("target", ["test-shard", "web-lint", "web-test"])
 def test_t2417_the_heavy_steps_use_the_lock_first_wrappers(target: str) -> None:
     recipe = (ROOT / "Makefile").read_text().split(f"\n{target}:\n", 1)[1].split("\n\n", 1)[0]
     assert "$(TESTCAP)" in recipe or "$(WEBCAP)" in recipe

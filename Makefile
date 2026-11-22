@@ -48,12 +48,14 @@ lint:
 types:
 	@$(KEY); $(UV) mypy --version >/dev/null && MYPY="$(CURDIR)/.venv/bin/mypy" $(CAP) bash scripts/check_types.sh; $(MARK)
 
-# `make test` is ONE pytest run on TEST_JOBS xdist workers inside a single capped scope at the 20 % CPU / 4 GiB
-# ceiling (most tests wait on processes and sockets, so more workers than cores pay off). Its coverage data
-# lives in its own temp dir (COV_DIR): two runs in one worktree (a board restart re-runs the checks while the old
-# run goes on) used to delete each other's files (T1920); it also holds pytest's basetemp (--basetemp), which the
-# trap removes even when the run fails (T2412: a leftover basetemp once filled /tmp's
-# inodes). `coverage` enforces fail_under = 100 over server/, scripts/, deploy/ and mcp/. One dir alone and serial: `make test-board`.
+# `make test` runs the SHARDS shards one after another, each ONE pytest run on TEST_JOBS xdist workers in its own
+# capped scope at the 20 % CPU / 4 GiB ceiling (most tests wait on processes and sockets, so more workers than
+# cores pay off), so each takes a build ticket of its own and none holds a slot for the whole suite (T2487: one
+# run held it 58-79 s). Shards run in sequence: every capped job of one session shares one CPU pool. The coverage
+# data lives in its own temp dir (COV_DIR): two runs in one worktree (a board restart re-runs the checks while the
+# old run goes on) used to delete each other's files (T1920). Each shard's pytest basetemp is a temp dir its trap
+# removes even when the run fails (T2412: a leftover basetemp once filled /tmp's inodes). `coverage` enforces
+# fail_under = 100 over server/, scripts/, deploy/ and mcp/.
 JOBS ?= 4  # `make fast` steps side by side (T2410)
 TEST_JOBS ?= 6
 # Lock first, scope second (T2417): the uv or pnpm shim queues on the build lock outside capped.sh's 60 s scope,
@@ -64,8 +66,8 @@ COV_DIR ?= .
 
 test:
 	@$(KEY); d=$$(mktemp -d "$${TMPDIR:-/tmp}/todoimpl-cov.XXXXXX"); trap 'rm -rf "$$d"' EXIT; \
-	$(TESTCAP) env COVERAGE_FILE="$$d/.coverage" pytest -n $(TEST_JOBS) --dist worksteal --basetemp="$$d/tmp" --cov --cov-fail-under=0 --cov-report= -q; \
-	$(MAKE) --no-print-directory coverage COV_DIR="$$d"; $(MARK)
+	for s in $$(seq 1 $(SHARDS)); do $(MAKE) --no-print-directory test-shard SHARD="$$s" COV_DIR="$$d"; done; \
+	$(MAKE) --no-print-directory test-cov COV_DIR="$$d"; $(MARK)
 
 # A board session runs the suite as SHARDS calls, each under 60 s (T2416): `make test-shard SHARD=k` for k in
 # 1..SHARDS into one new COV_DIR, then `make test-cov` combines exactly those SHARDS files (missing one fails) and

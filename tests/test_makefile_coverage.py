@@ -11,13 +11,20 @@ FAKES = REPO / "tests" / "fixtures" / "fakecov"
 
 def make_env() -> dict[str, str]:
     """Fake pytest/coverage first on PATH; a board build-lock shim on PATH runs `make` at once (T2003)."""
-    env = {**os.environ, "PATH": f"{FAKES}:{os.environ['PATH']}", "FAKECOV_CHUNKS": "1", "MAKEFLAGS": ""}
+    env = {**os.environ, "PATH": f"{FAKES}:{os.environ['PATH']}", "FAKECOV_CHUNKS": "6", "MAKEFLAGS": ""}
     return {**env, "TODOIMPL_BUILD_LOCK_HELD": "1"}
+
+
+def copy_make(cwd: Path) -> None:
+    """Copy the Makefile (its sub-makes read ./Makefile) and the shard lister its `test-shard` runs."""
+    shutil.copy(REPO / "Makefile", cwd / "Makefile")
+    (cwd / "scripts").mkdir(exist_ok=True)
+    shutil.copy(REPO / "scripts" / "test_shard.py", cwd / "scripts" / "test_shard.py")
 
 
 def make_test(cwd: Path) -> subprocess.Popen[str]:
     """Start the real `test` recipe in cwd with fake pytest/coverage and no capped.sh (UV is plain `env`)."""
-    shutil.copy(REPO / "Makefile", cwd / "Makefile")  # its sub-makes read ./Makefile
+    copy_make(cwd)
     env = make_env()
     argv = ["make", "-s", "-C", str(cwd), "test", "TESTCAP=env", "UV=env"]
     return subprocess.Popen(argv, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
@@ -29,14 +36,14 @@ def test_t1920_two_overlapping_make_test_runs_both_see_all_their_chunks(tmp_path
     second = make_test(tmp_path)
     outs = [p.communicate(timeout=30)[0] for p in (first, second)]
     assert [first.returncode, second.returncode] == [0, 0], outs
-    assert all("chunks 1 of 1" in out for out in outs), outs
+    assert all("chunks 6 of 6" in out for out in outs), outs
 
 
 def test_a_run_leaves_no_coverage_data_in_the_worktree(tmp_path: Path) -> None:
     run = make_test(tmp_path)
     out = run.communicate(timeout=30)[0]
     assert run.returncode == 0, out
-    assert sorted(p.name for p in tmp_path.iterdir()) == ["Makefile"]
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["Makefile", "scripts"]
 
 
 def test_t2003_the_fake_make_runs_never_wait_on_the_board_build_lock() -> None:

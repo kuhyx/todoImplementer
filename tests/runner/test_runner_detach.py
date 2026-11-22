@@ -33,12 +33,12 @@ def _record(world: Env) -> orphans.Record:
     """Wait until the implement turn has started writing its stream."""
     run_dir = world.root / CARD
 
-    def ready() -> bool:
+    def ready() -> bool:  # the record is written before the launch, its pid and the stream after it
         rec = orphans.read(run_dir)
-        stream = run_dir / f"{rec.stem}.stream.jsonl" if rec else None
-        return (
-            rec is not None and rec.role == "implement" and stream is not None and stream.stat().st_size > 0
-        )
+        if rec is None or rec.role != "implement" or rec.pid is None:
+            return False
+        stream = run_dir / f"{rec.stem}.stream.jsonl"
+        return stream.is_file() and stream.stat().st_size > 0
 
     wait(ready)
     rec = orphans.read(run_dir)
