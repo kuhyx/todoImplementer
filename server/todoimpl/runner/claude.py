@@ -14,7 +14,7 @@ from typing import Any
 
 from todoimpl.newtask import images
 
-from . import buildlock, mcpconf, policy
+from . import buildlock, mcpconf, policy, userbase
 
 # Every card role runs Opus 5.5 at high effort unpinned (kuhy, 2026-11-21: "default should be opus 5.5 with
 # high effort"; before: Sonnet for spec, plan, closing and the live check, medium effort). T2471.
@@ -111,6 +111,7 @@ def options(  # noqa: PLR0913, PLR0917 - one set of turn options, built in one p
         BG_WAIT_VAR: "0",
         "PHONE_LEASE_OWNER": f"todoimpl:{worktree.parent.name}",
         **buildlock.turn_env(worktree.parent.name),
+        **userbase.turn_env(worktree.parent, env),  # pip never writes to kuhy's user site (T2495)
     }
     dirs = (
         str(worktree),

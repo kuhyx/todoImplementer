@@ -204,3 +204,15 @@ never grows past `$TODOIMPL_CTX_CAP` tokens (default 300000, `0` = off). Code: `
   banner, no notification; the journal has one `context cap:` line per cut.
 - Loop guard: a role cut `MAX_STREAK` (8) times in a row without a finished turn is left alone until one finishes
   (a cap below a fresh session's own start would otherwise respawn for ever).
+
+## A python user site of its own (T2495)
+
+Every turn gets `PYTHONUSERBASE=<run dir>/userbase` (`runner/userbase.py`, set in `claude.options`, so the plan
+route, the credit route and the free workers all inherit it). A worker's `pip install -e .` or `pip install --user`
+lands there, never in kuhy's `~/.local/lib/python3.X/site-packages`, which the live lock services run from.
+The run's cleanup deletes it with the run. For each `pythonX.Y` kuhy's base has a site for, the turn's site dir holds
+`todoimpl-userbase.pth` (`site.addsitedir(<real site>)`): the real packages stay importable and the real
+editable installs still resolve (`.pth` files work only from a site dir, not from PYTHONPATH), and a package the
+worker installs shadows the real one inside that turn only. A `PYTHONUSERBASE` the server already has is taken as kuhy's.
+Not covered: the gate and deploy commands (`clean_env`; a repo's deploy script installs into the real site on purpose),
+`--target`/`--prefix`, `pipx`. Live turns keep the env they started with; new code applies from the next turn.
