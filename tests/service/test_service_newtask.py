@@ -86,7 +86,7 @@ def test_the_todo_app_failing_is_upstream_unavailable(
     def down(*_a: object, **_k: object) -> None:
         raise TodoError("connection refused")
 
-    monkeypatch.setattr(service(rig)._client, "list_tasks", down)
+    monkeypatch.setattr(service(rig)._client, "add_task", down)
     with pytest.raises(BackendError) as caught:
         service(rig).create(NewTask("kuhyx/demo", "x", "", ()))
     assert caught.value.code == "upstream_unavailable"
