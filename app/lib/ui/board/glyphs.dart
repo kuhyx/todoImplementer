@@ -37,6 +37,37 @@ IconData columnIcon(String id) => switch (id) {
   _ => Icons.view_column_outlined,
 };
 
+/// One-word tooltip for each column icon.
+String columnTooltip(String id) => switch (id) {
+  'backlog' => 'backlog',
+  'running' => 'running',
+  'needs_you' => 'needs',
+  'done' => 'done',
+  _ => 'column',
+};
+
+/// One-word tooltip for each action icon.
+String actionTooltip(String id) => switch (id) {
+  'start' => 'start',
+  'spec-answers' => 'spec',
+  'spec-ok' => 'ok',
+  'send' => 'send',
+  'ship' => 'ship',
+  'close' => 'close',
+  'cancel' => 'cancel',
+  'lesson-approve' => 'lesson',
+  'copy-resume' => 'copy',
+  'go' => 'go',
+  'copy-fix' => 'fix',
+  'rerun' => 'rerun',
+  'wont' => 'wont',
+  'done-manually' => 'manual',
+  'model' => 'model',
+  'merge' => 'merge',
+  'dismiss' => 'dismiss',
+  _ => 'action',
+};
+
 /// Glyph of a sort order.
 IconData sortIcon(BoardSort s) => switch (s) {
   BoardSort.effort => Icons.low_priority,

@@ -206,6 +206,7 @@ class _SessionsPageState extends State<SessionsPage> {
           excludeSemantics: true,
           child: IconButton(
             key: const Key('sessions-copy-errors'),
+            tooltip: 'errors',
             onPressed: () => Clipboard.setData(
               ClipboardData(text: _errors.map((e) => e.summary).join('\n')),
             ),

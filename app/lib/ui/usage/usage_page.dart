@@ -18,6 +18,23 @@ import 'package:todo_implementer/ui/usage/glyphs.dart';
 import 'package:todo_implementer/ui/usage/pager.dart';
 import 'package:todo_implementer/ui/usage/views/load.dart';
 
+/// One-word tooltip for each tab icon.
+String tabTooltip(UsageView v) => switch (v) {
+  UsageView.overview => 'spend',
+  UsageView.sessions => 'sessions',
+  UsageView.items => 'items',
+  UsageView.efficiency => 'efficiency',
+  UsageView.autonomy => 'autonomy',
+  UsageView.levers => 'levers',
+  UsageView.context => 'context',
+  UsageView.anomalies => 'anomalies',
+  UsageView.ab => 'abtest',
+  UsageView.more => 'more',
+  UsageView.session => 'session',
+  UsageView.file => 'file',
+  UsageView.panel => 'panel',
+};
+
 /// Usage page fed by [relay].
 class UsagePage extends StatefulWidget {
   /// Creates the page.
@@ -88,6 +105,7 @@ class _UsagePageState extends State<UsagePage> {
         if (_stack.length > 1)
           IconButton(
             key: const ValueKey('usage-back'),
+            tooltip: 'back',
             icon: const Icon(Icons.arrow_back, semanticLabel: 'Back'),
             onPressed: _back,
           ),
@@ -101,6 +119,7 @@ class _UsagePageState extends State<UsagePage> {
                     key: ValueKey('usage-tab-${v.name}'),
                     isSelected: _route.tab == v,
                     color: _route.tab == v ? AppPalette.accent : null,
+                    tooltip: tabTooltip(v),
                     icon: Icon(
                       viewGlyphs[v]!.$1,
                       semanticLabel: viewGlyphs[v]!.$2,
@@ -113,6 +132,7 @@ class _UsagePageState extends State<UsagePage> {
         ),
         IconButton(
           key: const ValueKey('usage-filters'),
+          tooltip: 'filters',
           icon: Badge(
             isLabelVisible: _filters.active,
             smallSize: 8,
@@ -196,11 +216,13 @@ class UsageError extends StatelessWidget {
             children: [
               IconButton(
                 key: const ValueKey('usage-retry'),
+                tooltip: 'retry',
                 icon: const Icon(Icons.refresh, semanticLabel: 'Retry'),
                 onPressed: retry,
               ),
               IconButton(
                 key: const ValueKey('usage-copy-error'),
+                tooltip: 'copy',
                 icon: const Icon(Icons.copy, semanticLabel: 'Copy error'),
                 onPressed: () =>
                     unawaited(Clipboard.setData(ClipboardData(text: '$error'))),

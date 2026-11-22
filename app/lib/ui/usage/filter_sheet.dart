@@ -97,6 +97,7 @@ class _FilterSheetState extends State<FilterSheet> {
         if (now.isNotEmpty)
           IconButton(
             key: ValueKey('clear-$key'),
+            tooltip: 'clear',
             icon: const Icon(Icons.close, semanticLabel: 'Clear'),
             onPressed: () => _set(key, ''),
           ),
@@ -149,6 +150,7 @@ class _FilterSheetState extends State<FilterSheet> {
             children: [
               IconButton(
                 key: const ValueKey('filters-clear'),
+                tooltip: 'clear',
                 icon: const Icon(
                   Icons.filter_alt_off_outlined,
                   semanticLabel: 'Clear filters',
@@ -157,6 +159,7 @@ class _FilterSheetState extends State<FilterSheet> {
               ),
               IconButton.filled(
                 key: const ValueKey('filters-apply'),
+                tooltip: 'apply',
                 icon: const Icon(Icons.check, semanticLabel: 'Apply'),
                 onPressed: () => Navigator.pop(context, _draft),
               ),

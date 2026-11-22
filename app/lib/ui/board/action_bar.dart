@@ -81,6 +81,7 @@ class _ActionButton extends StatelessWidget {
         : Icon(actionIcon(a.id));
     final button = IconButton.filledTonal(
       key: ValueKey('action-${a.id}'),
+      tooltip: actionTooltip(a.id),
       onPressed: live ? (a.confirm ? HapticFeedback.heavyImpact : onRun) : null,
       onLongPress: live && a.confirm ? onRun : null,
       icon: icon,

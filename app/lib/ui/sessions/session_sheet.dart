@@ -39,6 +39,7 @@ Widget sessionButton(
     color: color,
     onPressed: onPressed,
     onLongPress: onLongPress,
+    tooltip: sessionTooltip(id),
     icon: Icon(icon),
   ),
 );

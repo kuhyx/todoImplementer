@@ -163,6 +163,7 @@ class _CardSheetState extends State<CardSheet> {
                 if (widget.onDetail case final open?)
                   IconButton(
                     key: const Key('open-detail'),
+                    tooltip: 'detail',
                     icon: const Icon(Icons.open_in_full, semanticLabel: 'Open'),
                     onPressed: open,
                   ),

@@ -10,9 +10,8 @@ import 'package:design_system/design_system.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:todo_implementer/model/detail.dart';
+import 'package:todo_implementer/ui/board/ask_shot.dart';
 import 'package:todo_implementer/ui/board/shot_image.dart';
-
-export 'package:todo_implementer/ui/board/shot_image.dart';
 
 /// Sends one ask request (`ask_*` kind and its args).
 typedef AskSend = Future<void> Function(String kind, Map<String, dynamic> args);
@@ -49,6 +48,7 @@ class AsksView extends StatelessWidget {
             alignment: Alignment.centerRight,
             child: IconButton(
               key: const Key('ask-take-recommended'),
+              tooltip: 'recommended',
               icon: const Icon(
                 Icons.auto_awesome,
                 semanticLabel: 'Recommended',
@@ -69,7 +69,7 @@ class AsksView extends StatelessWidget {
                   const SizedBox(height: AppSpacing.xs),
                   switch (a.type) {
                     'command' => _Command(ask: a, onSend: onSend),
-                    'screenshot' => _Shot(
+                    'screenshot' => AskShot(
                       ask: a,
                       onSend: onSend,
                       load: loadShot,
@@ -117,6 +117,7 @@ class _Choice extends StatelessWidget {
           if (ask.state == 'auto')
             IconButton(
               key: ValueKey('ask-undo-${ask.id}'),
+              tooltip: 'undo',
               icon: const Icon(Icons.undo, semanticLabel: 'Undo'),
               onPressed: () => onSend('ask_undo', {'ask': ask.id}),
             ),
@@ -170,21 +171,25 @@ class _Command extends StatelessWidget {
           children: [
             IconButton(
               key: ValueKey('ask-copy-${ask.id}'),
+              tooltip: 'copy',
               icon: const Icon(Icons.content_copy, semanticLabel: 'Copy'),
               onPressed: () => Clipboard.setData(ClipboardData(text: command)),
             ),
             if (ask.open && ask.mode != 'terminal')
-              _fire(
-                risky: ask.risky,
-                onFire: () => onSend(kind, args),
-                child: Padding(
-                  key: ValueKey('ask-run-${ask.id}'),
-                  padding: const EdgeInsets.all(AppSpacing.sm),
-                  child: Icon(
-                    ask.mode == 'add_run'
-                        ? Icons.playlist_add
-                        : Icons.play_arrow,
-                    semanticLabel: 'Run',
+              Tooltip(
+                message: 'run',
+                child: _fire(
+                  risky: ask.risky,
+                  onFire: () => onSend(kind, args),
+                  child: Padding(
+                    key: ValueKey('ask-run-${ask.id}'),
+                    padding: const EdgeInsets.all(AppSpacing.sm),
+                    child: Icon(
+                      ask.mode == 'add_run'
+                          ? Icons.playlist_add
+                          : Icons.play_arrow,
+                      semanticLabel: 'Run',
+                    ),
                   ),
                 ),
               ),
@@ -201,50 +206,4 @@ class _Command extends StatelessWidget {
       ],
     );
   }
-}
-
-class _Shot extends StatelessWidget {
-  const new({required this.ask, required this.onSend, required this.load});
-
-  final AskItem ask;
-
-  final AskSend onSend;
-
-  final ShotLoad load;
-
-  @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      if (ask.shot case final shot?) ShotImage(name: shot, load: load),
-      if (ask.open)
-        Row(
-          children: [
-            IconButton(
-              key: ValueKey('ask-approve-${ask.id}'),
-              icon: const Icon(
-                Icons.thumb_up_alt_outlined,
-                semanticLabel: 'Approve',
-              ),
-              onPressed: () => onSend('ask_approve', {'ask': ask.id}),
-            ),
-            IconButton(
-              key: ValueKey('ask-reject-${ask.id}'),
-              icon: const Icon(
-                Icons.thumb_down_alt_outlined,
-                semanticLabel: 'Reject',
-              ),
-              onPressed: () => onSend('ask_reject', {'ask': ask.id}),
-            ),
-          ],
-        )
-      else
-        Icon(
-          ask.state == 'approved' ? Icons.thumb_up_alt : Icons.thumb_down_alt,
-          color: ask.state == 'approved'
-              ? AppPalette.success
-              : AppPalette.danger,
-        ),
-    ],
-  );
 }

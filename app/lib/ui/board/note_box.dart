@@ -73,6 +73,7 @@ class _NoteBoxState extends State<NoteBox> {
         ),
         trailing: IconButton(
           key: const Key('detail-send'),
+          tooltip: 'send',
           icon: _busy
               ? const SizedBox.square(
                   dimension: AppSpacing.md,

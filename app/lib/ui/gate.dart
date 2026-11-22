@@ -119,6 +119,7 @@ class _AppGateState extends State<AppGate> {
             key: const Key('sign-in'),
             iconSize: AppSpacing.xl,
             onPressed: _busy ? null : _signIn,
+            tooltip: 'signin',
             icon: const Icon(Icons.login),
           ),
           if (_signInError case final e?)
@@ -144,6 +145,7 @@ class _AppGateState extends State<AppGate> {
             const SizedBox(width: AppSpacing.md),
             IconButton(
               key: const Key('unlock-retry'),
+              tooltip: 'retry',
               icon: const Icon(Icons.refresh),
               onPressed: _retryKey,
             ),

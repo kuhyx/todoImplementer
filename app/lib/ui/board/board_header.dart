@@ -69,6 +69,7 @@ class StatusStrip extends StatelessWidget {
         if (errors > 0)
           IconButton(
             key: const Key('copy-errors'),
+            tooltip: 'errors',
             onPressed: onCopyErrors,
             icon: Badge.count(
               count: errors,
@@ -83,6 +84,7 @@ class StatusStrip extends StatelessWidget {
         ),
         IconButton(
           key: const Key('refresh'),
+          tooltip: 'refresh',
           onPressed: onRefresh,
           icon: const Icon(Icons.refresh),
         ),
@@ -129,6 +131,7 @@ class Toolbar extends StatelessWidget {
       ),
       PopupMenuButton<String>(
         key: const Key('repo'),
+        tooltip: 'repo',
         icon: Icon(
           Icons.filter_list,
           color: state.repo.isEmpty ? null : AppPalette.accent,
@@ -144,6 +147,7 @@ class Toolbar extends StatelessWidget {
       ),
       PopupMenuButton<BoardSort>(
         key: const Key('sort'),
+        tooltip: 'sort',
         icon: Icon(sortIcon(state.sort)),
         onSelected: (s) => onChanged(state.copyWith(sort: s)),
         itemBuilder: (_) => [
@@ -154,6 +158,7 @@ class Toolbar extends StatelessWidget {
       if (onNewTask case final add?)
         IconButton(
           key: const Key('new-task'),
+          tooltip: 'new',
           icon: const Icon(Icons.add_task, semanticLabel: 'Add'),
           onPressed: add,
         ),
@@ -213,6 +218,7 @@ class ColumnTabs extends StatelessWidget {
             child: IconButton(
               key: ValueKey('col-${v.column.id}'),
               isSelected: v.column.id == active,
+              tooltip: columnTooltip(v.column.id),
               onPressed: () => onPick(v.column.id),
               icon: Badge.count(
                 count: v.cards.length,

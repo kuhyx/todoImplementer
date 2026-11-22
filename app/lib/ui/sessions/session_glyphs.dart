@@ -79,6 +79,18 @@ const spoken = <String, String>{
   'errors': 'copy the errors',
 };
 
+/// One-word tooltip for each session button.
+String sessionTooltip(String id) => switch (id) {
+  'resume' => 'terminal',
+  'copy' => 'copy',
+  'handoff' => 'board',
+  'copy-all' => 'copyall',
+  'mark' => 'done',
+  'unmark' => 'undo',
+  'delete' => 'delete',
+  _ => id,
+};
+
 /// Glyph of a sort key.
 IconData sortIcon(SessionSort s) => switch (s) {
   SessionSort.group => Icons.circle_outlined,

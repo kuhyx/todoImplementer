@@ -19,6 +19,7 @@ import 'package:todo_implementer/ui/board/live_feed.dart';
 import 'package:todo_implementer/ui/board/needs_line.dart';
 import 'package:todo_implementer/ui/board/needs_links.dart';
 import 'package:todo_implementer/ui/board/note_box.dart';
+import 'package:todo_implementer/ui/board/shot_image.dart';
 import 'package:todo_implementer/ui/board/umbrella_view.dart';
 
 /// How long the page waits for the PC worker's `task_detail` answer.
@@ -180,6 +181,7 @@ class _DetailPageState extends State<DetailPage> {
   Widget _retry(RelayFailed f) => Center(
     child: IconButton(
       key: const Key('detail-retry'),
+      tooltip: 'retry',
       iconSize: AppSpacing.xxl * 2,
       color: AppPalette.danger,
       icon: Icon(codeIcon(f.code), semanticLabel: 'Retry: ${f.error}'),
@@ -218,6 +220,7 @@ class _DetailPageState extends State<DetailPage> {
               ),
             IconButton(
               key: const Key('detail-reload'),
+              tooltip: 'reload',
               icon: const Icon(Icons.refresh, semanticLabel: 'Reload'),
               onPressed: _load,
             ),
