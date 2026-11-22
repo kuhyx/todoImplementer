@@ -106,7 +106,7 @@ web-lint:
 web-test:
 	@$(KEY); if [[ -f web/package.json ]]; then $(WEBCAP) test; else echo "web: no web/package.json yet"; fi; $(MARK)
 
-# Release APK for a live check (T2483): the Pixel is arm64 and the emulator x64, so no 32-bit arm AOT. A cold
-# build stays under the 60 s build-slot limit. CI (app.yml) still builds every ABI for the published APK.
+# Release APK for a live check (T2483/T2506): the Pixel is arm64 and the emulator x64, so no 32-bit arm AOT.
+# Lint disabled keeps warm at ~13 s and cold at ~24 s (was 67 s). CI still builds every ABI for the published APK.
 apk:
 	@cd app && flutter build apk --release --target-platform android-arm64,android-x64 $(APK_ARGS)
