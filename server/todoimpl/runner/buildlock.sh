@@ -23,7 +23,7 @@ REAL=""
 BIN=""
 ARGS=()
 # A build is batch work: it yields CPU to claude and the desktop (idle IO class where ionice exists).
-# `nice -n` adds to the shim's own niceness, which ananicy-cpp sets to -4 for every bash (T2496): 39 lands on
+# `nice -n` adds to the shim's own niceness, which ananicy-cpp sets to -4 for every bash (T2497): 39 lands on
 # 19 from any start, since the kernel clamps at 19.
 LOW=(nice -n 39)
 command -v ionice >/dev/null && LOW+=(ionice -c 3)

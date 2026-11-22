@@ -48,7 +48,7 @@ def _until(check: object, what: str) -> None:
 
 
 def _queued(proc: subprocess.Popen[bytes]) -> bool:
-    """Say whether `proc` holds its `wait` ticket: one pid per waiter, never its flock child too (T2498)."""
+    """Say whether `proc` holds its `wait` ticket: one pid per waiter, never its flock child too (T2499)."""
     return proc.pid in bgwait.queued(buildlock.root())
 
 

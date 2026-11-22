@@ -2,6 +2,6 @@
 # Fake pytest for tests/test_makefile_coverage.py: one chunk's "coverage data" is a line naming the chunk,
 # written to $COVERAGE_FILE (as pytest-cov would), slowly enough for two make runs to overlap.
 set -euo pipefail
-[[ -z "${FAKECOV_FAIL:-}" ]] || { echo "FAILED fake" >&2; exit 1; }  # a failing shard (T2495)
+[[ -z "${FAKECOV_FAIL:-}" ]] || { echo "FAILED fake" >&2; exit 1; }  # a failing shard (T2496)
 sleep "${FAKECOV_SLEEP:-0.4}"
 echo "chunk $*" >>"${COVERAGE_FILE:?}"  # append: a data file shared by two runs would count two

@@ -23,7 +23,7 @@ def test_t2487_make_test_runs_one_capped_pytest_per_shard(tmp_path: Path) -> Non
     assert log.read_text().count("x") == 6  # six capped pytest runs: six tickets
 
 
-def test_t2495_a_failing_shard_exits_non_zero_and_is_not_stamped(tmp_path: Path) -> None:
+def test_t2496_a_failing_shard_exits_non_zero_and_is_not_stamped(tmp_path: Path) -> None:
     # A failed shard ran `&& [[ -z k ]] || fast_stamp.py mark`: the mark branch exited 0 and stamped it green.
     subprocess.run(["git", "init", "-q", str(tmp_path)], check=True, timeout=30)
     copy_make(tmp_path)

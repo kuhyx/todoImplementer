@@ -50,7 +50,7 @@ def _until(check: object, what: str) -> None:
 
 
 def _waiting() -> list[int]:
-    """Return the owners of the live `wait` tickets: one pid per waiter, its ticket number already taken (T2498).
+    """Return the owners of the live `wait` tickets: one pid per waiter, its ticket number already taken (T2499).
 
     Not `bgwait.waiters`: it also lists a waiter's blocked flock child, so one waiter can count twice.
     """
@@ -218,7 +218,7 @@ def test_t2164_a_waiter_on_a_ticket_counts_as_a_build_lock_waiter(tmp_path: Path
     assert waiter.wait(timeout=5) == 0
 
 
-def test_t2498_a_waiter_counts_once_however_many_of_its_processes_block(
+def test_t2499_a_waiter_counts_once_however_many_of_its_processes_block(
     world: dict[str, str], tmp_path: Path
 ) -> None:
     # A waiter's bash (its `wait` ticket) and its blocked flock child counted as two, so `_queue_up` could start C

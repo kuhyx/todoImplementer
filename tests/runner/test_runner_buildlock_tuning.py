@@ -69,7 +69,7 @@ def test_t2490_a_build_runs_at_the_lowest_priority(probe: tuple[Path, Path]) -> 
     assert _run(probe, "cargo", "build").endswith("|nice=19")
 
 
-def test_t2496_a_build_lands_on_nice_19_from_a_negative_shim_niceness(probe: tuple[Path, Path]) -> None:
+def test_t2497_a_build_lands_on_nice_19_from_a_negative_shim_niceness(probe: tuple[Path, Path]) -> None:
     # ananicy-cpp renices every bash, the shim too, to -4, and `nice -n 19` then started the build at 15.
     log = probe[1]
     logger = '#!/bin/bash\nprintf "nice-args=%s\\n" "$*" >> "$PROBE_LOG"\nexec /usr/bin/nice "$@"\n'
@@ -79,7 +79,7 @@ def test_t2496_a_build_lands_on_nice_19_from_a_negative_shim_niceness(probe: tup
     assert -20 + step >= 19  # the lowest niceness a shim can have still ends at 19
 
 
-def test_t2497_a_suite_run_under_the_lock_still_probes_unlocked(
+def test_t2498_a_suite_run_under_the_lock_still_probes_unlocked(
     probe: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # `make test-shard` runs pytest under the uv shim, which exports the held flag: the probe drops it.
