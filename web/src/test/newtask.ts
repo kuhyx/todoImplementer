@@ -66,6 +66,7 @@ export function setUp(define: () => void): void {
     return `blob:${String(made)}`;
   });
   URL.revokeObjectURL = vi.fn();
+  localStorage.clear(); // a draft of the last test must not come back (T2493)
   document.head.innerHTML = '<meta name="todoimpl-csrf" content="tok">';
   document.body.replaceChildren();
   define();

@@ -7,50 +7,19 @@
 /// in `images`.
 library;
 
+import 'dart:async';
+
 import 'package:design_system/design_system.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:todo_implementer/sync/board_relay.dart';
 import 'package:todo_implementer/ui/board/glyphs.dart';
 import 'package:todo_implementer/ui/board/image_attach.dart';
 import 'package:todo_implementer/ui/board/image_strip.dart';
+import 'package:todo_implementer/ui/board/new_task_draft.dart';
+import 'package:todo_implementer/ui/board/new_task_text.dart';
 import 'package:todo_implementer/ui/board/repo_chooser.dart';
 
-/// The schema's title cap.
-const kMaxTitle = 200;
-
-final _imageRef = RegExp(r'\[Image #\d+\]');
-
-/// The line's text with its `[Image #N]` refs out, spaces folded.
-String _cleanLine(String line) => _imageRef.hasMatch(line)
-    ? line
-          .replaceAll(_imageRef, ' ')
-          .split(RegExp(r'\s+'))
-          .where((w) => w.isNotEmpty)
-          .join(' ')
-    : line.trim();
-
-/// (title, body), the server's `newtask/titles.py` rule (T2481): the first
-/// line of real text with its image refs out, cut to [kMaxTitle]; a note with
-/// no text keeps its first line. A skipped or cleaned ref line, or a cut,
-/// keeps the whole text as the body, so no ref is lost.
-(String, String) splitNote(String text) {
-  final all = text.trim();
-  final lines = all.split('\n');
-  final found = lines.indexWhere((line) => _cleanLine(line).isNotEmpty);
-  final at = found < 0 ? 0 : found;
-  final title = found < 0 ? lines.first.trim() : _cleanLine(lines[at]);
-  final lossy =
-      found >= 0 &&
-      (title != lines[at].trim() ||
-          lines.take(at).any((line) => line.trim().isNotEmpty));
-  if (title.length > kMaxTitle) {
-    return (title.substring(0, kMaxTitle).trim(), all);
-  }
-  return (title, lossy ? all : lines.skip(at + 1).join('\n').trim());
-}
-
-/// True when [text] gives a title `new_task` accepts.
-bool newTaskValid(String text) => splitNote(text).$1.isNotEmpty;
+export 'package:todo_implementer/ui/board/new_task_text.dart';
 
 /// The page body.
 class NewTaskSheet extends StatefulWidget {
@@ -87,9 +56,44 @@ class _NewTaskSheetState extends State<NewTaskSheet> {
   late bool _open = widget.repo == null;
   bool _busy = false;
   RelayFailed? _failure;
+  late final _draft = DraftKeeper(
+    _body,
+    _images,
+    () => NewTaskDraft(
+      text: _body.text,
+      scope: _scope,
+      picked: [..._picked],
+      open: _open,
+    ),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    // A refused send, a close or a killed app left this draft (T2493).
+    unawaited(
+      _draft.start(
+        (d) => setState(() {
+          _body.text = d.text;
+          _scope = d.scope;
+          _picked
+            ..clear()
+            ..addAll(d.picked);
+          _open = d.open;
+        }),
+      ),
+    );
+  }
+
+  /// Picks changed: [change] runs, then the draft keeps them.
+  void _pick(VoidCallback change) {
+    setState(change);
+    _draft.keep();
+  }
 
   @override
   void dispose() {
+    _draft.dispose();
     _images.dispose();
     _body.dispose();
     super.dispose();
@@ -132,9 +136,7 @@ class _NewTaskSheetState extends State<NewTaskSheet> {
         return;
       }
       // Sent: a retry after a later refusal must not send it twice.
-      if (repo != null) {
-        setState(() => _picked.remove(repo));
-      }
+      if (repo != null) _pick(() => _picked.remove(repo));
     }
     if (failed != null) {
       if (!mounted) return;
@@ -144,6 +146,8 @@ class _NewTaskSheetState extends State<NewTaskSheet> {
         _failure = failed;
       });
     }
+    await _draft.finish();
+    if (!mounted) return;
     await Navigator.of(context).maybePop();
   }
 
@@ -193,17 +197,17 @@ class _NewTaskSheetState extends State<NewTaskSheet> {
               open: _open,
               scope: _scope,
               picked: _picked,
-              onScope: (s) => setState(() {
+              onScope: (s) => _pick(() {
                 _scope = s;
                 _open = false;
               }),
-              onToggle: (r) => setState(() {
+              onToggle: (r) => _pick(() {
                 if (_scope != RepoScope.some) _picked.clear();
                 _scope = RepoScope.some;
                 if (!_picked.remove(r)) _picked.add(r);
               }),
-              onFold: () => setState(() => _open = false),
-              onOpen: () => setState(() => _open = true),
+              onFold: () => _pick(() => _open = false),
+              onOpen: () => _pick(() => _open = true),
             ),
             const SizedBox(height: AppSpacing.sm),
             Expanded(
@@ -214,7 +218,7 @@ class _NewTaskSheetState extends State<NewTaskSheet> {
                 onChanged: (_) => setState(() {}),
                 onTap: () {
                   if (_open && _targets().isNotEmpty) {
-                    setState(() => _open = false);
+                    _pick(() => _open = false);
                   }
                 },
                 expands: true,

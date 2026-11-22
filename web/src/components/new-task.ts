@@ -13,11 +13,12 @@ import { trapTab } from "@/components/drawer-shell";
 import { loader, showToast, SLOW_MS } from "@/components/feedback";
 import { iconButton } from "@/components/icons";
 import { RepoChooser } from "@/components/new-task-chooser";
-import { type Attached, buildForm, type Form, renderThumbs } from "@/components/new-task-form";
+import { attach, type Attached, block, buildForm, type Form, refused, renderThumbs } from "@/components/new-task-form";
 import { csrfToken } from "@/lib/boot";
 import { errorText } from "@/lib/http";
 import { dropTag, imageProblem, insertTag } from "@/lib/image-tags";
 import { MAX_FILE, MAX_TOTAL, postNewTask, splitNote, uploadFile } from "@/lib/newtask-api";
+import { DraftKeeper, type DraftState, loadState } from "@/lib/newtask-draft";
 import { routes } from "@/lib/routes";
 
 const BUSY = "Creating the task…";
@@ -25,20 +26,10 @@ const NEEDS_TEXT = "Needs a description";
 const NEEDS_PICK = "Pick the typed repo or clear it";
 const MB = 1024 * 1024;
 
-function block(button: HTMLButtonElement, reason: null | string, label: string): void {
-  button.setAttribute("aria-disabled", String(reason !== null));
-  button.title = reason ?? label;
-}
-
-/** The field a server refusal names: its request checks open with "repo must", "title must" or "body must" (http/newtask.py). */
-function refused(message: string): "body" | "repo" | null {
-  const [, name] = /^(repo|title|body) must/v.exec(message) ?? [];
-  if (name === undefined) return null;
-  return name === "repo" ? "repo" : "body";
-}
-
 export class TiNewTask extends HTMLElement {
   #busy = false;
+  readonly #draft = new DraftKeeper();
+  #restored = false;
   readonly #chooser: RepoChooser;
   readonly #form: Form;
   #files: Attached[] = [];
@@ -68,7 +59,7 @@ export class TiNewTask extends HTMLElement {
   #open(): void {
     if (this.#busy) return;
     const form = this.#form;
-    if (this.#chooser.scope === null) this.#chooser.reset(this.defaultRepo);
+    if (this.#chooser.scope === null && this.#chooser.typed.value === "") this.#chooser.reset(this.defaultRepo);
     form.panel.hidden = false;
     globalThis.visualViewport?.addEventListener("resize", this.#onViewport);
     this.#fit();
@@ -84,6 +75,7 @@ export class TiNewTask extends HTMLElement {
   #hide(): void {
     this.#form.panel.hidden = true;
     globalThis.visualViewport?.removeEventListener("resize", this.#onViewport);
+    this.#paint();
   }
 
   /** The dialog's height and top follow the part of the page the keyboard leaves visible (CSS uses them at ≤640 px). */
@@ -117,7 +109,7 @@ export class TiNewTask extends HTMLElement {
       }
       total += file.size;
       const isImage = imageProblem(file, this.#images()) === null; // else a plain file: a big or ninth image too
-      this.#files.push({ file, image: isImage, url: file.type.startsWith("image/") ? URL.createObjectURL(file) : null });
+      this.#files.push(attach(file, isImage));
       if (isImage) insertTag(this.#form.body, this.#images());
     }
     this.#paint();
@@ -173,6 +165,21 @@ export class TiNewTask extends HTMLElement {
     renderThumbs(form, this.#files, (index) => { this.#remove(index); });
     const text = this.#waiting === routes.ownTask ? `Waiting for ${routes.ownTask}: the todo app adds the task, then its card starts…` : `Uploading ${this.#waiting}…`;
     form.slot.replaceChildren(...(this.#busy && this.#slow ? [loader(text)] : []));
+    this.#draft.keep({ body: form.body.value, chooser: this.#chooser.snapshot(), open: !form.panel.hidden }, this.#files);
+  }
+
+  /** The draft a reload, a refusal or a killed browser left (T2493); the files follow, unless some are attached by then. */
+  #restore(state: DraftState | null): void {
+    this.#restored = true;
+    if (state !== null) {
+      this.#form.body.value = state.body;
+      this.#chooser.restore(state.chooser);
+    }
+    void this.#draft.files().then((found) => {
+      if (this.#files.length === 0) this.#files = found.map(({ file, image }) => attach(file, image));
+      this.#paint();
+    });
+    if (state?.open === true) this.#open();
   }
 
   /** Posts one task per target (uploads once, T2399); resolves with the last card id the server answered. */
@@ -233,6 +240,7 @@ export class TiNewTask extends HTMLElement {
 
   connectedCallback(): void {
     if (!this.contains(this.#opener)) this.append(this.#opener, this.#form.panel);
+    if (!this.#restored) this.#restore(loadState());
     this.#paint();
   }
 }

@@ -183,6 +183,13 @@ class ImageAttach extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Puts back a draft's [saved] images (T2493); their tags are in the text.
+  void restore(List<Uint8List> saved) {
+    _images.addAll(saved);
+    _ids.addAll(List.filled(saved.length, null));
+    notifyListeners();
+  }
+
   /// No images, no reason shown (after a send went out).
   void clear() {
     _images.clear();

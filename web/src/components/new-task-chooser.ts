@@ -4,6 +4,8 @@
  * picks the one match or adds a repo that is not on the board. Once picked the chooser folds to one row of the
  * picks; a click on that row opens it again. None and all are one repo-less note that triage routes (DOCS-triage.md).
  */
+import type { ChooserState } from "@/lib/newtask-draft";
+
 import { icon, iconButton } from "@/components/icons";
 import { h } from "@/lib/dom";
 import { REPO } from "@/lib/newtask-api";
@@ -140,6 +142,19 @@ export class RepoChooser {
     this.typed.value = "";
     this.#filter();
     this.#fold(repo !== "");
+  }
+
+  /** What the draft keeps (T2493): the scope, the picks, the typed text and whether the row is folded. */
+  snapshot(): ChooserState {
+    return { folded: this.#chips.hidden === true, picked: [...this.#picked], scope: this.#scope, typed: this.typed.value };
+  }
+
+  restore(state: ChooserState): void {
+    this.#picked.clear();
+    for (const repo of state.picked) this.#picked.add(repo);
+    this.#scope = state.scope;
+    this.typed.value = state.typed;
+    this.#fold(state.folded);
   }
 
   set repos(list: readonly string[]) {

@@ -33,6 +33,21 @@ export interface Attached {
   url: null | string;
 }
 
+export function block(button: HTMLButtonElement, reason: null | string, label: string): void {
+  button.setAttribute("aria-disabled", String(reason !== null));
+  button.title = reason ?? label;
+}
+
+/** The field a server refusal names: its request checks open with "repo must", "title must" or "body must" (http/newtask.py). */
+export function refused(message: string): "body" | "repo" | null {
+  const [, name] = /^(repo|title|body) must/v.exec(message) ?? [];
+  if (name === undefined) return null;
+  return name === "repo" ? "repo" : "body";
+}
+
+/** A file as the dialog holds it: an image file gets its thumbnail URL. */
+export const attach = (file: File, isImage: boolean): Attached => ({ file, image: isImage, url: file.type.startsWith("image/") ? URL.createObjectURL(file) : null });
+
 function row(glyph: IconName, control: HTMLElement): HTMLElement {
   return h("div", { class: "nt-row" }, h("span", { attrs: { "aria-hidden": "true" }, class: "nt-glyph" }, icon(glyph)), control);
 }
