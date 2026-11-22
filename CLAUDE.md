@@ -26,6 +26,7 @@ Sessions message each other without kuhy (loopback `/api/peer`, `peer` MCP tools
 - lint: `make lint`
 - coverage: `make test`
 - coverage-gaps: `coverage-gaps coverage.xml`
+- apk: `make apk` (release APK for the Pixel and the emulator, arm64 + x64, under 60 s cold; CI builds every ABI)
 - gate: `make fast` (in a board session one step per call, each under 60 s: `make lines private md regressions lint`, `make types`, `make web-lint`, `make web-test`, `make test-shard SHARD=1 COV_DIR=<dir>` for SHARD 1..6 into a new dir, then `make test-cov COV_DIR=<dir>`)
 
 ## Rules

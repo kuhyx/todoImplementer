@@ -6,7 +6,7 @@ CAP ?= $(HOME)/.claude/scripts/capped.sh
 UV := $(CAP) uv run --frozen
 MESSAGE ?=
 
-.PHONY: fast fast-steps lines private md regressions lint types test test-shard test-cov cov-clean coverage web web-lint web-test
+.PHONY: fast fast-steps lines private md regressions lint types test test-shard test-cov cov-clean coverage web web-lint web-test apk
 
 # The tree's key is taken before the steps run and stored once they pass; pre-commit skips the gate for a
 # tree that already passed (scripts/fast_stamp.py, T2410).
@@ -93,3 +93,8 @@ web-lint:
 
 web-test:
 	@if [[ -f web/package.json ]]; then $(WEBCAP) test; else echo "web: no web/package.json yet"; fi
+
+# Release APK for a live check (T2483): the Pixel is arm64 and the emulator x64, so no 32-bit arm AOT. A cold
+# build stays under the 60 s build-slot limit. CI (app.yml) still builds every ABI for the published APK.
+apk:
+	@cd app && flutter build apk --release --target-platform android-arm64,android-x64 $(APK_ARGS)
