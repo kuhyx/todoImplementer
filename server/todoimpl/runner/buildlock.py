@@ -40,10 +40,11 @@ WRAPPER = "buildlock.sh"
 QUEUE_LIB = "buildlock_queue.sh"  # the wrapper sources it; written first: a new wrapper never sees an old one
 SHIM_DIR = "shims"
 ENV_DIR = "shims-env"
-# Real build tools only. Never node, npx, uvx, git, python or claude: MCP servers and claude itself use them.
+# Real build tools only (`fvm` runs its pinned flutter by path: unshimmed it dodged the lock, T2488).
+# Never node, npx, uvx, git, python or claude: MCP servers and claude itself use them.
 TOOLS = (
     "flutter", "dart", "gradle", "java", "pnpm", "npm", "yarn", "vite", "vitest", "cargo", "go", "cmake",
-    "ninja", "godot", "pytest", "uv", "pre-commit",
+    "ninja", "godot", "pytest", "uv", "pre-commit", "fvm",
 )  # fmt: skip
 # `make` is no shim (T2415): a gate step like `make lint` did 0.04 s of work but queued minutes behind other
 # cards' builds; each heavy tool its recipes run (uv, pnpm, cargo) locks itself. A plain make+gcc build runs

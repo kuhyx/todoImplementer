@@ -18,8 +18,13 @@ readonly QLOCK="$HERE/build.queue.lock"
 readonly SHELLS=" bash sh zsh dash ksh fish node "
 readonly LINTERS=" @LINTERS@ " # filled in by buildlock.py from LINTERS (lanes.py shares it)
 readonly PREFIXES=" env nice nohup timeout ionice stdbuf time setsid capped.sh "
+readonly TEST_JOBS="${TODOIMPL_TEST_JOBS:-4}" # `flutter test` width when the caller names none (its default is half the cores)
 REAL=""
 BIN=""
+ARGS=()
+# A build is batch work: it yields CPU to claude and the desktop (idle IO class where ionice exists).
+LOW=(nice -n 19)
+command -v ionice >/dev/null && LOW+=(ionice -c 3)
 FLOCK=""
 TICKET=""
 TFD=""
@@ -62,6 +67,7 @@ needs_lock() {
 # reads the tree (T2415).
 is_light() {
 	[[ "${1##*/}" == flutter || "${1##*/}" == dart ]] && [[ "${2:-}" == analyze ]] && return 0
+	[[ "${1##*/}" == fvm && "${2:-}" =~ ^(flutter|dart)$ && "${3:-}" == analyze ]] && return 0
 	[[ "${1##*/}" == uv && "${2:-}" == run ]] || return 1
 	shift 2
 	while (($#)); do
@@ -105,6 +111,24 @@ is_script() {
 	return 0
 }
 
+# tune TOOL ARGS...: set ARGS to the whole command line, with `--concurrency=$TEST_JOBS` after `flutter test`
+# (also `fvm flutter test`) unless the caller already set a width (-j, --concurrency): an unbounded run starts
+# one flutter_tester per half the cores, about 12 on this PC, for every card at once.
+tune() {
+	local -a words=("$@")
+	local at=0 i
+	ARGS=("$@")
+	case "${words[0]##*/}" in
+	flutter) at=1 ;;
+	fvm) [[ "${words[1]:-}" == flutter ]] && at=2 ;;
+	esac
+	((at)) && [[ "${words[at]:-}" == test ]] || return 0
+	for ((i = at + 1; i < ${#words[@]}; i++)); do
+		[[ "${words[i]}" == -j* || "${words[i]}" == --concurrency* ]] && return 0
+	done
+	ARGS=("${words[@]:0:at+1}" "--concurrency=$TEST_JOBS" "${words[@]:at+1}")
+}
+
 # release: hand the lock on (holder line, build.lock, then the ticket); once only.
 release() {
 	((RELEASED)) && return 0
@@ -133,9 +157,9 @@ run_locked() {
 	trap cut USR1
 	trap '[[ -n "$CHILD" ]] && kill -TERM "$CHILD" 2>/dev/null' TERM INT
 	trap '[[ -n "$CHILD" ]] && kill -HUP "$CHILD" 2>/dev/null' HUP
-	shift
+	tune "$@"
 	{ exec 6<&0; } 2>/dev/null || exec 6</dev/null
-	"$BIN" "$@" <&6 6<&- {TFD}>&- 9>&- &
+	"${LOW[@]}" "$BIN" "${ARGS[@]:1}" <&6 6<&- {TFD}>&- 9>&- &
 	CHILD=$!
 	exec 6<&-
 	local rc again
@@ -183,8 +207,8 @@ main() {
 		exit 127
 	}
 	if [[ "${TODOIMPL_BUILD_LOCK_HELD:-}" == 1 || "$UNLOCKED" == 1 ]] || ! needs_lock "${@:2}" || is_light "$@"; then
-		shift
-		exec "$REAL" "$@"
+		tune "$@"
+		exec "$REAL" "${ARGS[@]:1}"
 	fi
 	BIN="$REAL"
 	run_locked "$@"

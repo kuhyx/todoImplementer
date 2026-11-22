@@ -101,11 +101,14 @@ def test_t2401_a_sessions_board_slice_job_joins_its_cards_slice(shim: tuple[Path
     ]
 
 
-def test_t2401_other_units_pass_through_untouched(shim: tuple[Path, Path]) -> None:
+LOW = ["-p", "CPUWeight=20", "-p", "IOWeight=20", "-p", "Nice=10"]
+
+
+def test_t2401_other_units_stay_out_of_the_card_slice(shim: tuple[Path, Path]) -> None:
     # No slice: a session deploying a real service must not put it in its card (a Cancel would stop it).
-    assert _run(shim, "--user", "--unit=web", "node", "s.js") == ["--user", "--unit=web", "node", "s.js"]
     assert _run(shim, "--user", "--slice=app.slice", "x") == ["--user", "--slice=app.slice", "x"]
     assert _run(shim, "--user", "--", "x", "--slice=todoimpl.slice") == [
+        *LOW,
         "--user",
         "--",
         "x",
@@ -116,6 +119,14 @@ def test_t2401_other_units_pass_through_untouched(shim: tuple[Path, Path]) -> No
         "--slice=todoimpl.slice",
         "x",
     ]
+
+
+def test_t2491_a_sessions_slice_less_unit_runs_at_low_weight(shim: tuple[Path, Path]) -> None:
+    # An emulator unit lands in app.slice at the desktop's weight: 5 GB of qemu rendering in software
+    # competed evenly with the desktop. The caller's own -p, later on the line, still wins.
+    assert _run(shim, "--user", "--unit=emu", "qemu") == [*LOW, "--user", "--unit=emu", "qemu"]
+    assert _run(shim, "--user", "-p", "CPUWeight=1", "x") == [*LOW, "--user", "-p", "CPUWeight=1", "x"]
+    assert _run(shim, "--user", "--unit=emu", "qemu", slice_=None) == ["--user", "--unit=emu", "qemu"]
 
 
 def test_t2401_cancel_stops_the_cards_whole_slice(monkeypatch: pytest.MonkeyPatch) -> None:

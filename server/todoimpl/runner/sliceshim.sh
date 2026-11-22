@@ -29,6 +29,7 @@ slice="${TODOIMPL_SLICE:-}"
 args=()
 prev=""
 opts=1
+placed=0 # a --slice was named: the caller chose where the unit runs
 for arg in "$@"; do
 	if [[ -n "$slice" && "$opts" == 1 ]]; then
 		if [[ "$arg" == "--slice=$PARENT" ]]; then
@@ -36,9 +37,14 @@ for arg in "$@"; do
 		elif [[ "$prev" == --slice && "$arg" == "$PARENT" ]]; then
 			arg="$slice"
 		fi
+		[[ "$arg" == --slice=* || "$prev" == --slice ]] && placed=1
 		[[ "$arg" == -- ]] && opts=0
 	fi
 	args+=("$arg")
 	prev="$arg"
 done
-exec "$real" "${args[@]}"
+# A session's unit with no slice (an emulator, a dev server) would run in app.slice at the desktop's weight:
+# it starts at the board's own low weight and nice 10. A caller's own -p comes later on the line and wins.
+low=()
+[[ -n "$slice" && "$placed" == 0 ]] && low=(-p CPUWeight=20 -p IOWeight=20 -p Nice=10)
+exec "$real" "${low[@]}" "${args[@]}"
