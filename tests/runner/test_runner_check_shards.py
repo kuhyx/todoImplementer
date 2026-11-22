@@ -85,3 +85,23 @@ def test_t2487_a_failed_step_ends_the_check(
     result = checks.run_check("tests", "make test", tmp_path, tmp_path / "run", 30)
     assert not result.passed
     assert len(admitted) == 2
+
+
+def test_t2488_queue_waits_do_not_eat_a_sharded_checks_budget(
+    world: Env, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The lock wait is outside a check's timeout (run_capped); a shared deadline let each step's queue wait
+    # cut the next step's budget, so a busy board killed a late shard after about 1 s (4913964).
+    (tmp_path / "Makefile").write_text(SHARDED, encoding="utf-8")
+    budgets: list[float] = []
+
+    def fake(command: str, cwd: Path, timeout: float, *_: object, timing: lanes.Timing, **__: object) -> int:
+        del command, cwd
+        budgets.append(round(timeout))
+        timing.queue_s, timing.run_s = 500.0, 10.0
+        return 0
+
+    monkeypatch.setattr(checks, "run_capped", fake)
+    monkeypatch.setattr(checks, "report", lambda _: None)
+    assert checks.run_check("tests", "make test", tmp_path, tmp_path / "run", 600).passed
+    assert budgets == [600, 590, 580, 570]
