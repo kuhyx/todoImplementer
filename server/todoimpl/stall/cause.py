@@ -12,10 +12,10 @@ import os
 import re
 from pathlib import Path
 
-from todoimpl.runner import bgwait, buildlock, cardslice
+from todoimpl.runner import bgwait, buildlock, cardslice, orphans
 
 from . import program
-from .scan import Running
+from .scan import Running, turn_over
 
 CGROUP = Path(f"/sys/fs/cgroup/user.slice/user-{os.getuid()}.slice/user@{os.getuid()}.service")
 PRESSURE = 10.0  # % of the last 10 s in which every task of the slice waited on memory
@@ -53,9 +53,17 @@ def diagnose(run: Running) -> tuple[str, str]:
             return "stall-memory", f"{group.name} memory pressure full avg10={full:.0f}%{hog}"
     wait = bgwait.scan(run.pid, run.run_dir, buildlock.root() / buildlock.LOCK)
     young = bgwait.newest(run.pid)
-    if wait is None or (not wait["lock"] and young is not None and young < run.since - GRACE):
-        # T2449: every job is older than the last activity, so its (capped) result already reached the model
+    if wait is None:
         return "stall-model", "no command runs: waiting on the model"
+    if not wait["lock"] and young is not None and young < run.since - GRACE:
+        # T2449: every job is older than the last activity, so its (capped) result already reached the model
+        # T2505: but only while the turn is still open. If the stream has a 'result' after the last
+        # OUTPUT line, the turn ended; the quiet belongs to the background job, not the model.
+        rec = orphans.read(run.run_dir)
+        # If no orphans record, we can't check the stream; assume turn still open (conservative).
+        # If record exists but turn_over is False (no result after last output), turn still open.
+        if rec is None or not turn_over(run.run_dir, rec.stem):
+            return "stall-model", "no command runs: waiting on the model"
     if wait["lock"]:
         return "stall-buildlock", f"waits on the build lock held by {wait['who']}"
     pid = bgwait.job(run.pid)  # the signature reads the whole script, the card only its first 60 chars

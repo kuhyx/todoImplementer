@@ -30,7 +30,7 @@ PARTIAL = "stream_event"  # a chunk of the message the model writes now (`--incl
 THINKING = "thinking_tokens"  # claude's estimate of the thinking so far, written while the model thinks
 OUTPUT = frozenset({"assistant", "user"})  # stream lines that are real work: a message, or a tool's result
 BOARD_TAIL = 64 * 1024  # the board polls every running card, so it reads less than the watch does
-__all__ = ["ADVISOR", "Running", "last_activity", "last_output", "running"]
+__all__ = ["ADVISOR", "Running", "last_activity", "last_output", "running", "turn_over"]
 
 
 @dataclass(frozen=True)
@@ -115,6 +115,37 @@ def last_output(run_dir: Path, stem: str | None) -> float | None:
             return mtime if back == 0 else None
         return at + ADVISOR if _pending_advisor(row) else at
     return None
+
+
+def turn_over(run_dir: Path, stem: str | None) -> bool:
+    """Return True when the turn has ended: a 'result' line appears after the last OUTPUT line.
+
+    Reads the last BOARD_TAIL bytes of the stream file, walks lines from the end, skips non-JSON
+    lines, and returns True when a row with type == 'result' is met before any row whose type is
+    in OUTPUT (assistant, user). Returns False when an OUTPUT row comes first, when nothing
+    matches, or the file cannot be read (OSError).
+    """
+    path = run_dir / f"{stem}.stream.jsonl"
+    try:
+        with path.open("rb") as fh:
+            fh.seek(0, os.SEEK_END)
+            fh.seek(max(0, fh.tell() - BOARD_TAIL))
+            lines = fh.read().splitlines()
+    except OSError:
+        return False
+    for line in reversed(lines):
+        try:
+            row = json.loads(line)
+        except ValueError:
+            continue
+        if not isinstance(row, dict):
+            continue
+        row_type = row.get("type")
+        if row_type == "result":
+            return True
+        if row_type in OUTPUT:
+            return False
+    return False
 
 
 def workers(run_dir: Path) -> float | None:

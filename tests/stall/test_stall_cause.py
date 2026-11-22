@@ -6,9 +6,9 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from todoimpl.runner import bgwait
+from todoimpl.runner import bgwait, orphans
 from todoimpl.stall import cause
-from todoimpl.stall.scan import Running
+from todoimpl.stall.scan import Running, card_activity, turn_over
 
 CARD = "587cf325-0"
 
@@ -108,3 +108,102 @@ def test_t2449_a_job_older_than_the_last_activity_is_the_models_wait(
     assert cause.diagnose(run)[0] == "stall-job-script"
     monkeypatch.setattr(bgwait, "newest", lambda _pid: None)  # its start cannot be read: still a job
     assert cause.diagnose(run)[0] == "stall-job-script"
+
+
+def test_turn_over_missing_file(tmp_path: Path) -> None:
+    """Missing stream file -> turn not over."""
+    assert turn_over(tmp_path / "nope", "implement-1.0") is False
+
+
+def test_turn_over_torn_line(tmp_path: Path) -> None:
+    """Torn line is skipped."""
+    stream = tmp_path / "implement-1.0.stream.jsonl"
+    stream.write_text('{"type":"assistant"}\n{"type":', "utf-8")
+    assert turn_over(tmp_path, "implement-1.0") is False
+
+
+def test_turn_over_output_last(tmp_path: Path) -> None:
+    """Last OUTPUT line comes after result -> turn not over."""
+    stream = tmp_path / "implement-1.0.stream.jsonl"
+    stream.write_text(
+        '{"type":"result"}\n{"type":"assistant","timestamp":"2026-11-21T00:17:11.271Z"}\n',
+        "utf-8",
+    )
+    assert turn_over(tmp_path, "implement-1.0") is False
+
+
+def test_turn_over_result_last(tmp_path: Path) -> None:
+    """Result line comes after last OUTPUT -> turn over."""
+    stream = tmp_path / "implement-1.0.stream.jsonl"
+    stream.write_text(
+        '{"type":"assistant","timestamp":"2026-11-21T00:17:11.271Z"}\n{"type":"result"}\n',
+        "utf-8",
+    )
+    assert turn_over(tmp_path, "implement-1.0") is True
+
+
+def test_turn_over_neither(tmp_path: Path) -> None:
+    """No result or OUTPUT lines -> turn not over."""
+    stream = tmp_path / "implement-1.0.stream.jsonl"
+    stream.write_text('{"type":"system","subtype":"init"}\n', "utf-8")
+    assert turn_over(tmp_path, "implement-1.0") is False
+
+
+@pytest.mark.usefixtures("cgroup")
+def test_t2505_ended_turn_waits_on_job(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Card ba5c3ff1-0 filed stall-model while its ended turn waited on a background job (T2505)."""
+    run_dir = tmp_path / "ba5c3ff1-0"
+    run_dir.mkdir()
+    orphans.write(run_dir, stem="implement-1.0")
+    stream = run_dir / "implement-1.0.stream.jsonl"
+    line1 = (
+        '{"type":"user","timestamp":"2026-11-21T00:17:09.828Z",'
+        '"message":{"content":[{"type":"tool_result","tool_use_id":"t1",'
+        '"content":"Command running in background with ID: b1"}]}}\n'
+    )
+    line2 = (
+        '{"type":"assistant","timestamp":"2026-11-21T00:17:11.271Z",'
+        '"message":{"content":[{"type":"text","text":"Waiting on the itch publish."}]}}\n'
+    )
+    line3 = '{"type":"result","subtype":"success"}\n'
+    stream.write_text(line1 + line2 + line3, "utf-8")
+
+    def _scan_test(monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(
+            bgwait,
+            "scan",
+            lambda *_a: {"lock": False, "who": "scratch/shs.sh", "since": 100.0},
+        )
+        monkeypatch.setattr(bgwait, "newest", lambda _pid: 100.0)
+        monkeypatch.setattr(bgwait, "job", lambda _pid: 7)
+        monkeypatch.setattr(bgwait, "script", lambda pid: "scratch/shs.sh" if pid == 7 else "")
+
+    _scan_test(monkeypatch)
+    run = Running("ba5c3ff1-0", run_dir, 200.0, 1)
+    assert cause.diagnose(run)[0] == "stall-job-script"
+
+    # Also assert the existing T2449 case (no result line after the last output) still gives stall-model
+    stream.write_text(line2, "utf-8")
+    run2 = Running("ba5c3ff1-0", run_dir, 200.0, 1)
+    assert cause.diagnose(run2) == ("stall-model", "no command runs: waiting on the model")
+
+
+def test_turn_over_non_dict_line_skipped(tmp_path: Path) -> None:
+    """Non-dict JSON line (array) is skipped; result before it still means turn over."""
+    stream = tmp_path / "implement-1.0.stream.jsonl"
+    # Top to bottom: result line, then a JSON array as the last line
+    stream.write_text('{"type":"result","subtype":"success"}\n[1, 2]\n', "utf-8")
+    assert turn_over(tmp_path, "implement-1.0") is True
+
+
+def test_card_activity(tmp_path: Path) -> None:
+    """card_activity delegates to last_activity with BOARD_TAIL."""
+    root = tmp_path / "root"
+    card_dir = root / "587cf325-0"
+    card_dir.mkdir(parents=True)
+    events = card_dir / "events.jsonl"
+    events.write_text('{"type":"activity","kind":"tool","at":123.0}\n', "utf-8")
+    assert card_activity(root, "587cf325-0") == 123.0
+    # Missing events file -> None
+    events.unlink()
+    assert card_activity(root, "587cf325-0") is None
