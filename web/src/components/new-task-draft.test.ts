@@ -7,7 +7,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { defineNewTask, type TiNewTask } from "@/components/new-task";
-import { dropState, keepFiles, loadFiles, loadState } from "@/lib/newtask-draft";
+import { dropState, keepFiles, loadKept, loadState } from "@/lib/newtask-draft";
 import { routes } from "@/lib/routes";
 import { fakeIdb, installFakeIdb } from "@/test/fake-idb";
 import { settle, stubFetch } from "@/test/net";
@@ -16,6 +16,11 @@ import { choose, filesEvent, fill, ids, image, mount, OK, panel, pdf, q, setUp, 
 const BAD_TOKEN = { [`POST ${routes.ownTask}`]: () => Response.json({ error: { code: "forbidden", message: "bad token" }, ok: false }, { status: 403 }), [`POST ${routes.upload}`]: () => UP(ids[0] ?? "") };
 
 const TEXT = "Fix it\nsee pic [Image #1] ";
+
+async function loadFiles(): Promise<{ file: File; image: boolean }[]> {
+  const kept = await loadKept();
+  return kept.files;
+}
 
 beforeEach(() => {
   setUp(defineNewTask);
@@ -57,6 +62,29 @@ describe("ti-new-task draft", () => {
     expect(element.querySelectorAll(".nt-thumbs img")).toHaveLength(1);
     expect(q(element, "[data-new-task=scope]").getAttribute("aria-label")).toBe("Repos: kuhyx/demo");
     expect(submit(element).getAttribute("aria-disabled")).toBe("false");
+  });
+
+  it("[T2493] a browser killed before localStorage committed (Chromium writes it seconds late) gets the text from IndexedDB", async () => {
+    const first = await draft();
+    await settle(0);
+    localStorage.clear();
+    const element = await reload(first);
+    expect(panel(element).hidden).toBe(false);
+    expect(body(element).value).toBe(TEXT);
+    expect(names(element)).toEqual(["shot.png", "spec.pdf"]);
+    expect(q(element, "[data-new-task=scope]").getAttribute("aria-label")).toBe("Repos: kuhyx/demo");
+  });
+
+  it("[T2493] an older IndexedDB copy (its write failed) loses to the fresher localStorage one", async () => {
+    const first = await draft();
+    await settle(0);
+    fakeIdb.fail = "tx";
+    fill(first, "Newer text", []);
+    await settle(0);
+    const element = await reload(first);
+    expect(body(element).value).toBe("Newer text");
+    const kept = await loadKept();
+    expect(kept.state?.body).toBe("Newer text"); // the next save after the failure caught up
   });
 
   it("[T2493] a closed dialog keeps its draft; a reload restores it closed and Open shows it", async () => {

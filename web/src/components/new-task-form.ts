@@ -45,6 +45,21 @@ export function refused(message: string): "body" | "repo" | null {
   return name === "repo" ? "repo" : "body";
 }
 
+/** The dialog's height and top follow the part of the page the keyboard leaves visible (CSS uses them at ≤640 px). */
+export function fit(dialog: HTMLElement): void {
+  const viewport: undefined | VisualViewport = globalThis.visualViewport ?? undefined; // jsdom has none
+  if (viewport === undefined) return;
+  dialog.style.setProperty("--nt-vh", `${String(viewport.height)}px`);
+  dialog.style.setProperty("--nt-top", `${String(viewport.offsetTop)}px`);
+}
+
+/** The details field grows with its text; the caret line stays in view above the pinned actions. */
+export function grow(body: HTMLTextAreaElement): void {
+  body.style.height = "auto";
+  body.style.height = `${String(body.scrollHeight)}px`;
+  body.scrollIntoView({ block: "nearest" });
+}
+
 /** A file as the dialog holds it: an image file gets its thumbnail URL. */
 export const attach = (file: File, isImage: boolean): Attached => ({ file, image: isImage, url: file.type.startsWith("image/") ? URL.createObjectURL(file) : null });
 

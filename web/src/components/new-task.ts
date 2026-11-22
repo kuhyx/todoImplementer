@@ -13,7 +13,7 @@ import { trapTab } from "@/components/drawer-shell";
 import { loader, showToast, SLOW_MS } from "@/components/feedback";
 import { iconButton } from "@/components/icons";
 import { RepoChooser } from "@/components/new-task-chooser";
-import { attach, type Attached, block, buildForm, type Form, refused, renderThumbs } from "@/components/new-task-form";
+import { attach, type Attached, block, buildForm, fit, type Form, grow, refused, renderThumbs } from "@/components/new-task-form";
 import { csrfToken } from "@/lib/boot";
 import { errorText } from "@/lib/http";
 import { dropTag, imageProblem, insertTag } from "@/lib/image-tags";
@@ -36,7 +36,7 @@ export class TiNewTask extends HTMLElement {
   readonly #opener: HTMLButtonElement;
   #slow = false;
   #waiting: string = routes.ownTask;
-  readonly #onViewport = (): void => { this.#fit(); };
+  readonly #onViewport = (): void => { fit(this.#form.dialog); };
   defaultRepo = "";
 
   constructor() {
@@ -49,7 +49,7 @@ export class TiNewTask extends HTMLElement {
     this.#form = buildForm({
       onClose: () => { this.#close(); },
       onFiles: (files) => { this.#add(files); },
-      onGrow: () => { this.#grow(); },
+      onGrow: () => { grow(this.#form.body); },
       onInput: () => { this.#form.body.removeAttribute("aria-invalid"); this.#paint(); },
       onKey: (event) => { this.#onKey(event); },
       onSubmit: () => void this.#submit(),
@@ -62,7 +62,7 @@ export class TiNewTask extends HTMLElement {
     if (this.#chooser.scope === null && this.#chooser.typed.value === "") this.#chooser.reset(this.defaultRepo);
     form.panel.hidden = false;
     globalThis.visualViewport?.addEventListener("resize", this.#onViewport);
-    this.#fit();
+    fit(this.#form.dialog);
     this.#paint();
     (this.#chooser.scope === null ? this.#chooser.typed : form.body).focus();
   }
@@ -76,22 +76,6 @@ export class TiNewTask extends HTMLElement {
     this.#form.panel.hidden = true;
     globalThis.visualViewport?.removeEventListener("resize", this.#onViewport);
     this.#paint();
-  }
-
-  /** The dialog's height and top follow the part of the page the keyboard leaves visible (CSS uses them at ≤640 px). */
-  #fit(): void {
-    const viewport: undefined | VisualViewport = globalThis.visualViewport ?? undefined; // jsdom has none
-    if (viewport === undefined) return;
-    this.#form.dialog.style.setProperty("--nt-vh", `${String(viewport.height)}px`);
-    this.#form.dialog.style.setProperty("--nt-top", `${String(viewport.offsetTop)}px`);
-  }
-
-  /** The details field grows with its text; the caret line stays in view above the pinned actions. */
-  #grow(): void {
-    const { body } = this.#form;
-    body.style.height = "auto";
-    body.style.height = `${String(body.scrollHeight)}px`;
-    body.scrollIntoView({ block: "nearest" });
   }
 
   #onKey(event: KeyboardEvent): void {
@@ -168,18 +152,26 @@ export class TiNewTask extends HTMLElement {
     this.#draft.keep({ body: form.body.value, chooser: this.#chooser.snapshot(), open: !form.panel.hidden }, this.#files);
   }
 
-  /** The draft a reload, a refusal or a killed browser left (T2493); the files follow, unless some are attached by then. */
+  /**
+   * The draft a reload, a refusal or a killed browser left (T2493): localStorage's at once, then IndexedDB's (its
+   * text is the fresher one after a kill) and the files, unless the dialog was changed in between.
+   */
   #restore(state: DraftState | null): void {
     this.#restored = true;
-    if (state !== null) {
-      this.#form.body.value = state.body;
-      this.#chooser.restore(state.chooser);
-    }
-    void this.#draft.files().then((found) => {
-      if (this.#files.length === 0) this.#files = found.map(({ file, image }) => attach(file, image));
+    if (state !== null) this.#apply(state);
+    const seen = this.#form.body.value;
+    void this.#draft.load().then((kept) => {
+      const isUntouched = this.#files.length === 0 && this.#form.body.value === seen;
+      if (isUntouched && kept.state !== null && (kept.state.at ?? 0) > (state?.at ?? -1)) this.#apply(kept.state);
+      if (isUntouched) this.#files = kept.files.map(({ file, image }) => attach(file, image));
       this.#paint();
     });
-    if (state?.open === true) this.#open();
+  }
+
+  #apply(state: DraftState): void {
+    this.#form.body.value = state.body;
+    this.#chooser.restore(state.chooser);
+    if (state.open) this.#open();
   }
 
   /** Posts one task per target (uploads once, T2399); resolves with the last card id the server answered. */

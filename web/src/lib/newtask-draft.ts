@@ -12,6 +12,7 @@ const KEY = "todoimpl.newtask.draft";
 const DB = "todoimpl-newtask";
 const STORE = "draft";
 const FILES = "files";
+const STATE = "state";
 
 const chooserState = z.object({
   folded: z.boolean(),
@@ -19,7 +20,8 @@ const chooserState = z.object({
   scope: z.enum(["all", "none", "some"]).nullable(),
   typed: z.string(),
 });
-const stored = z.object({ body: z.string(), chooser: chooserState, open: z.boolean() });
+/** `at` (ms) stamps each save, so the fresher of localStorage's and IndexedDB's copy wins. */
+const stored = z.object({ at: z.number().optional(), body: z.string(), chooser: chooserState, open: z.boolean() });
 export type ChooserState = z.infer<typeof chooserState>;
 export type DraftState = z.infer<typeof stored>;
 
@@ -78,45 +80,61 @@ async function run<T>(mode: IDBTransactionMode, act: (store: IDBObjectStore) => 
 const isFile = (value: unknown): value is DraftFile =>
   typeof value === "object" && value !== null && (value as DraftFile).file instanceof Blob && typeof (value as DraftFile).image === "boolean";
 
-/** The saved files, [] when there are none or storage fails. */
-export async function loadFiles(): Promise<DraftFile[]> {
+/** The saved draft: its text state (null when none) and its files, both empty when storage fails. */
+export async function loadKept(): Promise<{ files: DraftFile[]; state: DraftState | null }> {
   try {
-    const found: unknown = await run("readonly", (store) => store.get(FILES));
-    return Array.isArray(found) ? found.filter(isFile) : [];
+    const files: unknown = await run("readonly", (store) => store.get(FILES));
+    const state: unknown = await run("readonly", (store) => store.get(STATE));
+    const parsed = stored.safeParse(state);
+    return { files: Array.isArray(files) ? files.filter(isFile) : [], state: parsed.success ? parsed.data : null };
   } catch {
-    return [];
+    return { files: [], state: null };
   }
 }
 
-/** Saves `files` as the draft's files; [] removes them. A failure leaves the text draft standing. */
-export async function keepFiles(files: readonly DraftFile[]): Promise<void> {
+/** Stores `value` under `key`; null removes it. A failure leaves the rest of the draft standing. */
+async function put(key: string, value: unknown): Promise<void> {
   try {
-    const list = files.map(({ file, image }) => ({ file, image }));
-    if (list.length > 0) await run("readwrite", (store) => store.put(list, FILES));
-    else await run("readwrite", (store) => store.delete(FILES));
+    if (value === null) await run("readwrite", (store) => store.delete(key));
+    else await run("readwrite", (store) => store.put(value, key));
   } catch {
-    // Blocked, missing or full: the files live only in the open page.
+    // Blocked, missing or full: this part lives only in the open page (and localStorage).
   }
 }
 
-/** The dialog's link to its draft: `keep` on every change, `files` once (no file write before that read is in). */
+/** Saves `files` as the draft's files; [] removes them. */
+export const keepFiles = async (files: readonly DraftFile[]): Promise<void> => put(FILES, files.length > 0 ? files.map(({ file, image }) => ({ file, image })) : null);
+
+/**
+ * The dialog's link to its draft: `keep` on every change, `load` once. IndexedDB gets the text state too:
+ * Chromium commits localStorage seconds late, so a browser killed right after typing kept only the files.
+ * Nothing is written there before `load` has read it.
+ */
 export class DraftKeeper {
   #ready = false;
   #saved: readonly DraftFile[] = [];
+  #state = "";
 
   keep(state: DraftState, files: readonly DraftFile[]): void {
-    if (state.body.trim() === "" && files.length === 0) dropState();
-    else saveState(state);
+    const isEmpty = state.body.trim() === "" && files.length === 0;
+    const stamped = { ...state, at: Date.now() };
+    if (isEmpty) dropState();
+    else saveState(stamped);
+    if (!this.#ready) return;
+    const text = isEmpty ? "" : JSON.stringify(state);
+    if (text !== this.#state) void put(STATE, isEmpty ? null : stamped);
+    this.#state = text;
     const isSame = files.length === this.#saved.length && files.every((f, index) => f.file === this.#saved[index]?.file && f.image === this.#saved[index].image);
-    if (isSame || !this.#ready) return;
+    if (isSame) return;
     this.#saved = files.map(({ file, image }) => ({ file, image }));
     void keepFiles(files);
   }
 
-  async files(): Promise<DraftFile[]> {
-    const found = await loadFiles();
-    this.#saved = found;
+  async load(): Promise<{ files: DraftFile[]; state: DraftState | null }> {
+    const kept = await loadKept();
+    this.#saved = kept.files;
+    this.#state = kept.state === null ? "" : JSON.stringify({ ...kept.state, at: undefined });
     this.#ready = true;
-    return found;
+    return kept;
   }
 }
