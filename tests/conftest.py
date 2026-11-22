@@ -56,6 +56,7 @@ def _no_real_credits_inputs(_scratch: Path, monkeypatch: pytest.MonkeyPatch) -> 
     monkeypatch.setenv("TODOIMPL_SDK_VENV", str(empty / "sdk-venv"))
     monkeypatch.delenv("TODOIMPL_SDK_PYTHON", raising=False)
     monkeypatch.delenv("TODOIMPL_CLAUDE", raising=False)  # a board session sets it to the real claude (T2055)
+    monkeypatch.delenv("PYTHONUSERBASE", raising=False)  # a board turn sets it to its own base (T2501)
     monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(empty / "claude"))  # no real OAuth token, no usage probe
     cache.put(None)
 

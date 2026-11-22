@@ -14,7 +14,7 @@ from typing import Any
 
 from todoimpl.newtask import images
 
-from . import buildlock, mcpconf, policy, userbase
+from . import buildlock, mcpconf, policy, userbase, venvless
 
 # Every card role runs Opus 5.5 at high effort unpinned (kuhy, 2026-11-21: "default should be opus 5.5 with
 # high effort"; before: Sonnet for spec, plan, closing and the live check, medium effort). T2471.
@@ -105,7 +105,8 @@ def options(  # noqa: PLR0913, PLR0917 - one set of turn options, built in one p
     # Each turn is a new process: one owner per card keeps its phone test slot across turns. The plan route
     # never carries the API key (it would take precedence over the plan's login); the credit route adds it.
     # Builds queue on one machine-wide lock (buildlock.py); a turn never starts out holding it.
-    env = {k: v for k, v in os.environ.items() if k not in {KEY_VAR, buildlock.HELD_VAR}}
+    # A worker's `python3` is the system one, never the server's venv (T2500).
+    env = {k: v for k, v in venvless.strip(os.environ).items() if k not in {KEY_VAR, buildlock.HELD_VAR}}
     env |= {
         "CLAUDE_AUTO_CONTINUE": "0",
         BG_WAIT_VAR: "0",

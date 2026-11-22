@@ -72,7 +72,13 @@ def test_the_base_mirrors_each_real_site_with_a_pth_that_adds_it(world: Env) -> 
     lib = run_dir / "userbase" / "lib"
     assert sorted(p.name for p in lib.iterdir()) == ["python3.98", "python3.99"]
     pth = lib / "python3.99" / "site-packages" / userbase.PTH
-    assert pth.read_text(encoding="utf-8") == f"import site; site.addsitedir({str(real)!r})\n"
+    assert (
+        pth.read_text(encoding="utf-8")
+        == f"import _todoimpl_userbase; _todoimpl_userbase.add({str(real)!r})\n"
+    )
+    assert (pth.parent / "_todoimpl_userbase.py").read_text(encoding="utf-8") == userbase.HELPER.read_text(
+        encoding="utf-8"
+    )
 
 
 def test_a_second_turn_of_the_card_rewrites_nothing(world: Env) -> None:

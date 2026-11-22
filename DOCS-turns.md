@@ -211,8 +211,11 @@ Every turn gets `PYTHONUSERBASE=<run dir>/userbase` (`runner/userbase.py`, set i
 route, the credit route and the free workers all inherit it). A worker's `pip install -e .` or `pip install --user`
 lands there, never in kuhy's `~/.local/lib/python3.X/site-packages`, which the live lock services run from.
 The run's cleanup deletes it with the run. For each `pythonX.Y` kuhy's base has a site for, the turn's site dir holds
-`todoimpl-userbase.pth` (`site.addsitedir(<real site>)`): the real packages stay importable and the real
+`todoimpl-userbase.pth` (`_todoimpl_userbase.add(<real site>)`, `runner/userbase_site.py`; it also moves the turn's
+editable finders before `PathFinder`, T2502): the real packages stay importable and the real
 editable installs still resolve (`.pth` files work only from a site dir, not from PYTHONPATH), and a package the
 worker installs shadows the real one inside that turn only. A `PYTHONUSERBASE` the server already has is taken as kuhy's.
+A turn also drops the server's venv (`VIRTUAL_ENV` and its `bin` on `PATH`, `runner/venvless.py`, T2500), so a
+worker's `python3` is the system one that reads this base, and `uv pip` never writes into the live server's venv.
 Not covered: the gate and deploy commands (`clean_env`; a repo's deploy script installs into the real site on purpose),
 `--target`/`--prefix`, `pipx`. Live turns keep the env they started with; new code applies from the next turn.

@@ -6,14 +6,13 @@ import os
 import re
 import shlex
 import subprocess
-import sys
 import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import IO, TYPE_CHECKING, Any, cast
 
-from . import buildlock, checks_guard, checksteps, lanes, stepwatch
+from . import buildlock, checks_guard, checksteps, lanes, stepwatch, venvless
 from .claude import kill_tree
 
 if TYPE_CHECKING:
@@ -51,15 +50,7 @@ def clean_env(extra: Mapping[str, str] | None = None) -> dict[str, str]:
 
     A target repo's pre-commit and tools must pick their own python, not the server's (T1836).
     """
-    env = dict(os.environ)
-    venvs = {env.pop("VIRTUAL_ENV", "")}
-    if sys.prefix != sys.base_prefix:
-        venvs.add(sys.prefix)
-    drop = {f"{v}/bin" for v in venvs if v}
-    env["PATH"] = os.pathsep.join(
-        p for p in env.get("PATH", "").split(os.pathsep) if p.rstrip("/") not in drop
-    )
-    return {**env, **(extra or {})}
+    return {**venvless.strip(os.environ), **(extra or {})}
 
 
 def capped() -> str:  # noqa: D103
