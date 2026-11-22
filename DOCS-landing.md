@@ -219,7 +219,9 @@ repo that owns it (`git worktree remove --force`, `prune`), deletes its `todo/*`
 remote or landed by content (`git cherry`), keeps it otherwise (Retry and Restart re-add the worktree from it), and
 deletes top-level venvs and `node_modules`. It never touches a worktree with uncommitted changes, a run with a live
 turn, a pending inbox, handoff or Done-manually file, a dir some process has as cwd, or a run a Start took back
-(asked again before each worktree). state.json, events, logs, shots and turn files stay: the board reads them.
+(asked again before each worktree). First it stops every active user service whose WorkingDirectory is in a
+`<run>/wt*` dir (`runner/units.py`, T2494: a session's dev server outlived its worktree). state.json, events, logs,
+shots and turn files stay: the board reads them.
 Older runs: `python -m todoimpl.runner.sweep [--apply] [--exclude <run id>] [--budget 20]` (dry run by default,
 failed runs included; the budget is checked before each worktree, exit 3 = spent, run it again). A Done
 manually click that a restart settled (`stopping.recover`) waits for the next sweep.

@@ -102,6 +102,12 @@ def _no_real_desktop_notifications(_notify_shim_dir: Path, monkeypatch: pytest.M
 
 
 @pytest.fixture(autouse=True)
+def _no_real_systemctl(_scratch: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Point the run cleanup's systemctl at a missing file: no test lists or stops real user units (T2494)."""
+    monkeypatch.setenv("TODOIMPL_SYSTEMCTL", str(_scratch / "no-systemctl"))
+
+
+@pytest.fixture(autouse=True)
 def _no_real_free_gateway(monkeypatch: pytest.MonkeyPatch) -> None:
     """Keep the cheap tier away from kuhy's real OmniRoute gateway (port 1 refuses)."""
     monkeypatch.setenv("TODOIMPL_FREE_GATEWAY", "http://127.0.0.1:1")

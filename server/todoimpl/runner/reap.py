@@ -8,7 +8,8 @@ re-add the worktree from it), and deletes top-level venvs and `node_modules`. st
 and turn files stay: the board reads them.
 
 Never touched: a run whose stage is not resting, a run with a live turn record, a pending inbox, handoff or
-Done-manually file, a run any live process has its cwd in, and a worktree with uncommitted changes.
+Done-manually file, a run any live process has its cwd in, and a worktree with uncommitted changes. User units
+that run from the run's worktrees are stopped first (T2494, `units`).
 """
 
 from __future__ import annotations
@@ -23,7 +24,7 @@ from typing import TYPE_CHECKING
 from todoimpl.board import state as store
 from todoimpl.board.status import MANUAL_STAGE
 
-from . import orphans
+from . import orphans, units
 from .worktree import GitError, git
 
 if TYPE_CHECKING:
@@ -50,6 +51,7 @@ class Report:
     kept: list[str] = field(default_factory=list)  # branches with commits no remote has
     skipped: list[str] = field(default_factory=list)  # "<path>: why"
     payload: list[str] = field(default_factory=list)  # venvs and node_modules
+    units: list[str] = field(default_factory=list)  # user units that ran from a worktree (T2494): stopped
 
 
 def live_cwds() -> list[Path]:
@@ -69,8 +71,8 @@ def live_cwds() -> list[Path]:
     return found
 
 
-def refusal(run: Path, stages: Iterable[str]) -> str:
-    """Return why `run` must not be cleaned now, "" when it may."""
+def refusal(run: Path, stages: Iterable[str], *, cwds: bool = True) -> str:
+    """Return why `run` must not be cleaned now, "" when it may; `cwds=False` skips the live-cwd check."""
     st = store.load(run)
     if st is None:
         return "no state"
@@ -81,7 +83,7 @@ def refusal(run: Path, stages: Iterable[str]) -> str:
         return "a turn is live"
     if waiting := next((name for name in PENDING if (run / name).exists()), None):
         return f"{waiting} waits"
-    if any(cwd == run or run in cwd.parents for cwd in live_cwds()):
+    if cwds and any(cwd == run or run in cwd.parents for cwd in live_cwds()):
         return "a live process works in it"
     return ""
 
@@ -91,7 +93,14 @@ def clean(
 ) -> Report:
     """Clean one run dir; `ok` is asked again before each worktree (a Start may take the run meanwhile)."""
     stages = tuple(stages)
-    rep = Report(run, refused=refusal(run, stages))
+    rep = Report(run, refused=refusal(run, stages, cwds=False))
+    if rep.refused:
+        return rep
+    # A unit a session left running from its worktree (a dev server) would hold the run for ever (T2494).
+    rep.units = units.in_worktrees(run)
+    if apply and rep.units:
+        units.stop(rep.units)
+    rep.refused = refusal(run, stages)
     if rep.refused:
         return rep
     for wt in sorted(
