@@ -10,7 +10,8 @@ from typing import TYPE_CHECKING, Any
 from todoimpl import modelpick
 from todoimpl.errors.marks import signatures
 
-from .actions import actions, current_model
+from . import cyclefloor
+from .actions import actions
 from .badges import tier_badges
 from .needs import needs
 from .norepo import is_yours
@@ -41,6 +42,7 @@ class Context:
     checks: Mapping[str, Mapping[str, Any]] = field(default_factory=dict)  # autocheck.json, by item id
     waits: Mapping[str, str] = field(default_factory=dict)  # queued run -> the run of its repo it waits on
     activity: Callable[[str], float | None] = lambda _id: None  # a card's last real activity (T2404)
+    pin: Callable[[str], str | None] = lambda _id: None  # the model picked before Start (T2478)
 
 
 def current_line(  # noqa: PLR0911 - one return per status
@@ -135,12 +137,23 @@ def _updated(run: RunState | None, status: Status, tid: str, ctx: Context) -> fl
     return max(run.updated, ctx.activity(tid) or 0.0)
 
 
+def cycle_end(task: TaskLike, run: RunState | None) -> bool:
+    """Tell whether a repo card's last cycle ended with parts left: it rests in Backlog with nothing shown."""
+    return run is not None and run.stage in CYCLE_ENDS and is_repo_task(task)
+
+
+def pinned(run: RunState | None) -> str | None:
+    """Return the model kuhy pinned the run to, None when there is none."""
+    pin = run.extra.get(modelpick.PIN) if run is not None else None
+    return pin if isinstance(pin, str) and pin else None
+
+
 def build_card(task: TaskLike, run: RunState | None, ctx: Context) -> dict[str, Any]:
     """Return the task_card object for one note."""
     tid = task.id
-    spent = 0.0
-    if run is not None and run.stage in CYCLE_ENDS and is_repo_task(task):  # parts are left: the next cycle
-        spent, run = run.cost_usd, None
+    pin = ctx.pin(tid)
+    if cycle_end(task, run):  # parts are left: the next cycle; its pin is the one Start runs on
+        pin, run = pinned(run) or pin, None
     live = tid in ctx.live
     limit_until = ctx.limit.until if ctx.limit.active else None
     status = compute(task, run, live, limit_until if ctx.limit.holds else None)
@@ -156,6 +169,7 @@ def build_card(task: TaskLike, run: RunState | None, ctx: Context) -> dict[str, 
         repo_missing=repo_missing,
         now=ctx.now,
         check=ctx.checks.get(tid),
+        pin=pin,
     )
     entry = ctx.checks.get(tid) if ctx.auto_close and status == Status.BACKLOG else None
     card = {
@@ -172,7 +186,7 @@ def build_card(task: TaskLike, run: RunState | None, ctx: Context) -> dict[str, 
         ),
         "needs": needs(run).to_dict() if status == Status.NEEDS_YOU and run is not None else None,
         "partial": partial_of(run),
-        "cost_usd": run.cost_usd if run is not None else spent,
+        "cost_usd": cyclefloor.spent(run) if run is not None else 0.0,  # this cycle's (T2480)
         "route": run.extra.get("route") if run is not None else None,
         "tier": tier_badges(task, run),
         "resumes_at": resumes_at,
@@ -191,8 +205,6 @@ def build_card(task: TaskLike, run: RunState | None, ctx: Context) -> dict[str, 
         card["umbrella"] = umbrella
     if (parts := parts_of(task, run, working=status == Status.WORKING)) is not None:
         card["parts"] = parts
-    if run is not None and (model := current_model(run)) is not None:
-        card["model"] = modelpick.label(model)  # kuhy's pin, else the latest turn's model: the pressed button
     if (waits := ctx.waits.get(tid)) is not None and status == Status.QUEUED:
         card["waits_on"] = waits
         card["current"] = ""  # the lock badge names the run it waits on; no stage line (T1925)

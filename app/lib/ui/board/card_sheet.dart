@@ -169,8 +169,6 @@ class _CardSheetState extends State<CardSheet> {
               ],
             ),
             if (card.repo case final repo?) Text(repo, style: muted),
-            if (card.model case final model?)
-              Text(model, key: const Key('card-model'), style: muted),
             if (card.current.isNotEmpty) Text(card.current),
             if (needs != null)
               Row(

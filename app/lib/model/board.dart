@@ -33,7 +33,6 @@ class TaskCard {
     this.cheap = false,
     this.free = false,
     this.escalated = false,
-    this.model,
   });
 
   /// Parses a card.
@@ -57,7 +56,6 @@ class TaskCard {
       cheap: flag(tier, 'cheap'),
       free: flag(tier, 'free'),
       escalated: flag(tier, 'escalated'),
-      model: strOr(j, 'model'),
     );
   }
 
@@ -108,9 +106,6 @@ class TaskCard {
 
   /// Opus took over.
   final bool escalated;
-
-  /// The model its turns run on: kuhy's pin, else the latest turn's.
-  final String? model;
 }
 
 /// A column header: id, the server's label (spoken) and its card count.

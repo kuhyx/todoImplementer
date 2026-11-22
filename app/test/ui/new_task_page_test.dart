@@ -62,6 +62,26 @@ void main() {
     expect(newTaskValid(' \n '), isFalse);
   });
 
+  test('[T2481] the title is the first line of real text, never an image', () {
+    const fix = 'fix the new task from repo resurrects old tasks';
+    expect(splitNote('[Image #1]\n$fix\n1. details'), (
+      fix,
+      '[Image #1]\n$fix\n1. details',
+    ));
+    expect(splitNote('[Image #1] \n\n[Image #2]\n$fix'), (
+      fix,
+      '[Image #1] \n\n[Image #2]\n$fix',
+    ));
+    expect(splitNote('see [Image #1]  crash\nmore'), (
+      'see crash',
+      'see [Image #1]  crash\nmore',
+    ));
+    expect(splitNote('[Image #1]'), ('[Image #1]', ''));
+    expect(splitNote('[Image #1]\n[Image #2]'), ('[Image #1]', '[Image #2]'));
+    final long = '[Image #1]\n${'x' * 300}\nmore';
+    expect(splitNote(long), ('x' * 200, long));
+  });
+
   testWidgets('[T2349] add task covers the whole screen, the box fills it', (
     tester,
   ) async {

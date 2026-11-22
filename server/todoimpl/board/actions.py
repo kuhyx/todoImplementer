@@ -26,6 +26,7 @@ FINAL_STAGES = ("shipped", "closed", "cancelled", MANUAL_STAGE)
 NO_NOTES = "closing runs take no notes; Start again or Cancel"
 ABANDONED = "the note is abandoned: auto close no longer polls its done_check"
 DONE = (Status.DONE, Status.DONE_MANUALLY)
+PRESTART = (Status.BACKLOG, Status.CANCELLED, Status.YOURS)  # Start or Restart: a pick waits for it (T2478)
 WONT = (Status.BACKLOG, Status.CANCELLED, Status.YOURS, Status.NEEDS_YOU)  # no turn runs: Won't do drops it
 
 
@@ -74,10 +75,12 @@ def actions(  # noqa: PLR0913 - the signature of the interface plus keyword-only
     repo_missing: str | None = None,
     now: float | None = None,
     check: Mapping[str, Any] | None = None,
+    pin: str | None = None,
 ) -> list[Action]:
     """Return the buttons of a card in display order, each enabled only if it can succeed now.
 
-    `check` is the card's latest auto-close poll entry; it gates restarting a closing run.
+    `check` is the card's latest auto-close poll entry; it gates restarting a closing run. `pin` is the
+    model kuhy picked before Start (`runner/prepin.py`).
     """
     clock = time.time() if now is None else now
     block = launch_block(limit, clock) or check_block(run, check, task.status)
@@ -89,6 +92,7 @@ def actions(  # noqa: PLR0913 - the signature of the interface plus keyword-only
         out.append(Action("done-manually", "Done manually", why is None, why, confirm=True))
     if run is not None and status not in DONE:
         out += _session(run, status, block) + _model(run, status)
+    out += _prestart(out, run, status, pin)
     if run is not None and run.lesson and run.lesson.get("state") == "drafted":
         out.append(Action("lesson-approve", "Approve lesson"))
     return out
@@ -195,6 +199,16 @@ def _model(run: RunState, status: Status) -> list[Action]:
     why = "shipping is in progress" if status == Status.SHIPPING else None
     value = current_model(run) or modelpick.DEFAULT_MODEL
     return [Action("model", "Model", why is None, why, value=value, choices=tuple(modelpick.choices()))]
+
+
+def _prestart(out: list[Action], run: RunState | None, status: Status, pin: str | None) -> list[Action]:
+    """Return the picker beside an enabled Start or Restart: a pick only saves the model Start runs on."""
+    start = next((a for a in out if a.id == "start"), None)
+    if status not in PRESTART or start is None or not start.enabled or any(a.id == "model" for a in out):
+        return []
+    saved = run.extra.get(modelpick.PIN) if run is not None else None
+    value = saved if isinstance(saved, str) and saved else pin or modelpick.DEFAULT_MODEL
+    return [Action("model", "Model", value=modelpick.resolve(value), choices=tuple(modelpick.choices()))]
 
 
 def _resume(run: RunState) -> Action:

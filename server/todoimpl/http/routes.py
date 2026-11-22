@@ -45,6 +45,7 @@ class SseReply:
     snapshot: dict[str, Any]
     events: Iterator[dict[str, Any]]
     last_seq: int
+    floor: int = 0  # the newest activity seq of an earlier cycle: a mirror drops what it holds (T2479)
 
 
 def _guard[R: Reply | SseReply](call: Callable[[], R]) -> R | Reply:
@@ -153,9 +154,8 @@ class Router:
         detail = self.backend.task(ids[0])
         if detail is None:
             return error_reply("not_found", "unknown task")
-        card = detail["card"]
-        snapshot = {"type": "stage", **{key: card[key] for key in SNAPSHOT_KEYS}}
-        return SseReply(snapshot, self.backend.subscribe(ids[0]), last_seq)
+        snapshot = {"type": "stage", **{key: detail["card"][key] for key in SNAPSHOT_KEYS}}
+        return SseReply(snapshot, self.backend.subscribe(ids[0]), last_seq, self.backend.floor(ids[0]))
 
     def post(
         self,

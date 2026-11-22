@@ -45,5 +45,5 @@ class SchedulerLike(Protocol):
     def running(self) -> set[str]:  # noqa: D102
         ...
 
-    def subscribe(self, id8: str) -> Iterator[dict[str, Any]]:  # noqa: D102
+    def subscribe(self, id8: str, after: int = 0) -> Iterator[dict[str, Any]]:  # noqa: D102
         ...

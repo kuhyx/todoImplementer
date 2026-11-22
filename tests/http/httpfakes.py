@@ -49,6 +49,7 @@ class FakeBackend:
         self.task_data["card"]["actions"] = all_actions()
         self.usage_data = load("usage")
         self.events: list[dict[str, Any]] = []
+        self.floor_seq = 0  # the newest activity seq of an earlier cycle (T2479)
         self.calls: list[tuple[Any, ...]] = []
         self.failure: Exception | None = None
         self.hang = False
@@ -101,6 +102,9 @@ class FakeBackend:
     def subscribe(self, id8: str) -> Iterator[dict[str, Any]]:
         self.calls.append(("subscribe", id8))
         yield from self.events
+
+    def floor(self, id8: str) -> int:
+        return self.floor_seq if id8 == self.task_id else 0
 
     def _record(self, *call: Any) -> None:
         self._maybe_fail()

@@ -10,6 +10,8 @@ the plan (`--model`) and on the credits (the SDK's `model`), over the role, tier
   `Scheduler.after_drive`), the stage is put back and the card queued. The role's session is kept, so the next
   turn resumes it with `--resume <id> --model <pin>` (claude 2.1.328 switches the model of a resumed session).
 - Server start settles a `model.json` a restart left (`recover`).
+- A card that has not started (Backlog, Cancelled, a repo card between cycles) only saves the pick; its next
+  Start runs on it (`prepin`, T2478).
 """
 
 from __future__ import annotations
@@ -20,7 +22,7 @@ from typing import TYPE_CHECKING, Any
 from todoimpl import modelpick
 from todoimpl.board import state as store
 
-from . import adopt
+from . import adopt, prepin
 from .files import read_json, write_json
 
 if TYPE_CHECKING:
@@ -65,7 +67,11 @@ def pick(sched: Scheduler, card: str, model: str, note: str = "") -> None:
     if model not in modelpick.IDS:
         msg = f"unknown model {model}"
         raise RunnerError(msg, "bad_request")
+    if not note and prepin.resting(store.load(sched.root / card)):
+        prepin.check(sched, card)  # the note's read stays outside the lock, as in Scheduler.start
     with sched._cv:  # noqa: SLF001 - the Scheduler's own lock, as in stopping.done_manually
+        if not note and _saved(sched, card, model):
+            return
         st = sched._load(card)  # noqa: SLF001
         if st.stage in NO_PICK or st.closing:
             msg = f"The run is {'closing' if st.closing else st.stage}: no turn to switch"
@@ -84,6 +90,19 @@ def pick(sched: Scheduler, card: str, model: str, note: str = "") -> None:
             _nudge(st, model, REDO)
             sched.enqueue(card)
         sched.save(card, st)
+
+
+def _saved(sched: Scheduler, card: str, model: str) -> bool:
+    """Save a pick on a card that has not started, with nothing queued or run; True when it was one."""
+    st = store.load(sched.root / card)
+    if not prepin.resting(st) or sched.busy(card):
+        return False
+    if st is None:
+        prepin.save(sched.root / card, model)
+    else:
+        _pin(st, model)
+        sched.save(card, st)
+    return True
 
 
 def settle(sched: Scheduler, card: str) -> bool:

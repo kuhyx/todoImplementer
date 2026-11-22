@@ -47,11 +47,11 @@ class TaskMaker(Protocol):
     """The part of `NewTaskService` a handoff drives."""
 
     def adopt(self, task: NewTask, key: str) -> tuple[str, str] | None:
-        """Return (note id8, card) of the task's own open section, else None; conflict on a twin."""
+        """Return (note id8, card) of the task's own open section (its key in the body), else None."""
         ...
 
-    def add(self, task: NewTask, *, checked: bool = False) -> str:
-        """Add the task (`checked`: adopt already refused a twin); return its note id8."""
+    def add(self, task: NewTask) -> str:
+        """Add the task; return its note id8."""
         ...
 
     def card_of(self, note8: str, task: NewTask) -> str | None:
@@ -80,7 +80,7 @@ class _Board:
         return self._tasks.adopt(task, key)
 
     def add(self, task: NewTask) -> str:
-        return self._tasks.add(task, checked=True)  # adopt listed the repo already
+        return self._tasks.add(task)
 
     def card_of(self, note8: str, task: NewTask) -> str | None:
         return self._tasks.card_of(note8, task)

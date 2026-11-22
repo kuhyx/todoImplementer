@@ -36,12 +36,29 @@ export const uploadResponse = z.union([
   z.strictObject({ error: apiError, ok: z.literal(false) }),
 ]);
 
-/** The one description box as (title, body): its first non-blank line, cut to MAX_TITLE, and the lines after it; a cut line keeps the whole text as the body (the app's `splitNote`). */
+const IMAGE_REF = /\[Image #\d+\]/v;
+const IMAGE_REFS = /\[Image #\d+\]/gv;
+
+/** A line's text with its `[Image #N]` refs taken out (spaces folded); a line with none is only trimmed. */
+function cleanLine(line: string): string {
+  return IMAGE_REF.test(line) ? line.replaceAll(IMAGE_REFS, " ").split(/\s+/v).filter(Boolean).join(" ") : line.trim();
+}
+
+/**
+ * The one description box as (title, body), the same rule as the server's `newtask/titles.py` and the app's
+ * `splitNote` (T2481): the title is the first line of real text with its image refs out, cut to MAX_TITLE; a
+ * note with no text keeps its first line (`[Image #1]`). A skipped or cleaned ref line, or a cut, keeps the
+ * whole text as the body, so no ref is lost.
+ */
 export function splitNote(text: string): { body: string; title: string } {
   const all = text.trim();
-  const [first = "", ...rest] = all.split(/\r?\n/v);
-  const head = first.trim();
-  return head.length > MAX_TITLE ? { body: all, title: head.slice(0, MAX_TITLE).trim() } : { body: rest.join("\n").trim(), title: head };
+  const lines = all.split(/\r?\n/v);
+  const found = lines.findIndex((line) => cleanLine(line) !== "");
+  const at = Math.max(found, 0);
+  const title = found === -1 ? (lines[0] ?? "").trim() : cleanLine(lines[at] ?? "");
+  const isLossy = found !== -1 && (title !== (lines[at] ?? "").trim() || lines.slice(0, at).some((line) => line.trim() !== ""));
+  if (title.length > MAX_TITLE) return { body: all, title: title.slice(0, MAX_TITLE).trim() };
+  return { body: isLossy ? all : lines.slice(at + 1).join("\n").trim(), title };
 }
 
 export type OwnTaskRequest = z.infer<typeof ownTaskRequest>;

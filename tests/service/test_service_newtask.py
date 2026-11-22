@@ -70,12 +70,14 @@ def test_a_manual_title_answers_the_one_repo_card(rig: Rig, images: Path) -> Non
     assert card == repo_card_id("kuhyx/demo")  # T2114: no card of its own
 
 
-def test_an_open_part_with_the_same_title_is_a_conflict_and_writes_nothing(rig: Rig, images: Path) -> None:
-    rig.note(title="Fix the header", repo="kuhyx/demo")
-    with pytest.raises(BackendError) as caught:
-        service(rig).create(NewTask("kuhyx/demo", "Fix the header", "", (JPEG,)))
-    assert caught.value.code == "conflict"
-    assert not images.exists()
+def test_t2482_two_parts_may_share_a_title(rig: Rig, images: Path) -> None:
+    make = service(rig)
+    first = make.create(NewTask("kuhyx/demo", "[Image #1]", "the header", ()))
+    second = make.create(NewTask("kuhyx/demo", "[Image #1]", "the footer", ()))
+    assert first == second == (first[0], repo_card_id("kuhyx/demo"))  # one note, one repo card, two parts
+    rig.backend.cache.refresh()
+    card = rig.card(repo_card_id("kuhyx/demo"))
+    assert [p["title"] for p in card["parts"]] == ["[Image #1]", "[Image #1]"]
 
 
 def test_the_todo_app_failing_is_upstream_unavailable(
@@ -90,15 +92,12 @@ def test_the_todo_app_failing_is_upstream_unavailable(
     assert caught.value.code == "upstream_unavailable"
 
 
-def test_adopt_refuses_someone_elses_twin_before_anything_is_written(rig: Rig, images: Path) -> None:
+def test_t2482_adopt_finds_its_own_part_by_the_key_alone(rig: Rig, images: Path) -> None:
     rig.note(title="Fix the header", repo="kuhyx/demo")
     make = service(rig)
-    assert make.adopt(NewTask("kuhyx/demo", "Another title", "", ()), "session s") is None
-    with pytest.raises(BackendError) as twin:
-        make.adopt(NewTask("kuhyx/demo", "Fix the header", "", ()), "session s")
-    assert twin.value.code == "conflict"
-    note8 = make.add(NewTask("kuhyx/demo", "Fix the header", "", ()), checked=True)  # adopt checked it
-    assert note8
+    assert make.adopt(NewTask("kuhyx/demo", "Fix the header", "", ()), "session s") is None  # not its own
+    note8, card = make.create(NewTask("kuhyx/demo", "Renamed by kuhy", "finish session s", ()))
+    assert make.adopt(NewTask("kuhyx/demo", "Fix the header", "", ()), "session s") == (note8, card)
 
 
 def test_a_done_card_never_holds_the_new_section() -> None:

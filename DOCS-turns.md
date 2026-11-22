@@ -47,10 +47,14 @@ Code: `server/todoimpl/modelpick.py` (names, plain regex, no LLM), `runner/model
   `credits_model` on the credit route, until kuhy names another model or `default`; effort stays the role's.
 - The card's current stage runs again on the pick. A live turn is cut and its session resumed with
   `--resume <id> --model <pin>` (claude 2.1.328 switches a resumed session's model; probed 2026-11-19).
-- The card shows `model`: the label of the pin, else of the model the latest turn ran on (`state.extra.last_model`),
-  else nothing. The picker presses the same model (else the default, Opus 5.5) and has no Default button: the
-  default model's button carries an inline `default` note (choice `note`, T2470). The note word `default` still
-  drops the pin.
+- The picker is the one place a card shows its model (T2477: no label in the drawer, card sheet or detail page).
+  It presses the pin, else the model the latest turn ran on (`state.extra.last_model`), else the default, Opus 5.5,
+  and has no Default button: the default model's button carries an inline `default` note (choice `note`, T2470).
+  The note word `default` still drops the pin.
+- Before Start (T2478): every card with an enabled Start or Restart (Backlog, Cancelled, a startable Yours card,
+  a repo card between cycles) offers the picker, never a manual card. A pick only saves: a card with no run keeps it
+  in `<run dir>/pin.json` (`runner/prepin.py`), a resting run in its pin. The next Start, from any source (click,
+  errors loop, merge, handoff, triage), takes it and runs every turn on it; with no pick the roles run unpinned.
 
 ## Three builds at a time
 

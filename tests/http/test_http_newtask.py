@@ -165,3 +165,13 @@ def test_bad_file_ids_are_400(live: Live, made: FakeNewTasks, files: Any) -> Non
     assert r.status == 400
     assert "files" in r.json()["error"]["message"]
     assert made.calls == []
+
+
+def test_t2481_an_image_placeholder_title_takes_the_first_line_of_text(
+    live: Live, made: FakeNewTasks
+) -> None:
+    fix = "fix the new task from repo resurrects old tasks"
+    assert post(live, good(title="[Image #1]", body=f"{fix}\n1. details")).status == 200
+    assert (made.calls[0].title, made.calls[0].body) == (fix, f"[Image #1]\n{fix}\n1. details")
+    assert post(live, good(title="[Image #1]", body="")).status == 200
+    assert (made.calls[1].title, made.calls[1].body) == ("[Image #1]", "")

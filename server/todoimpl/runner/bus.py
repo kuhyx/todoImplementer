@@ -12,7 +12,26 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 EVENTS_FILE = "events.jsonl"
+TAIL = 64 * 1024  # bytes read from the end for the newest seq: far more than one activity line
 _CLOSE: dict[str, Any] = {"type": "_close"}
+
+
+def last_seq(directory: Path) -> int:
+    """Return the newest activity seq in a run dir's events.jsonl (read from its tail), 0 when it has none."""
+    try:
+        with (directory / EVENTS_FILE).open("rb") as source:
+            source.seek(max(0, source.seek(0, 2) - TAIL))
+            tail = source.read().decode("utf-8", "replace")
+    except OSError:
+        return 0
+    for line in reversed(tail.splitlines()):
+        try:
+            event = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(event, dict) and isinstance(found := event.get("seq"), int):
+            return found
+    return 0
 
 
 class Bus:

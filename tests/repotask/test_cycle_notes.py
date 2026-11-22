@@ -42,4 +42,6 @@ def test_t2432_a_new_cycle_does_not_resend_the_last_cycles_notes(rig: Rig) -> No
     assert cycle_two
     assert not [p for p in cycle_two if OLD in p]
     assert again.extra["cycle"] == 2
+    assert again.extra["cycle_seq"] >= 0
+    assert again.extra["cycle_at"] > 0  # the Scheduler's clock marks where cycle 2 starts (T2479)
     assert OLD not in again.extra.get("notes", [])

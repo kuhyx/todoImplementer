@@ -64,7 +64,12 @@ def test_exhausted_credits_block_start_and_say_why() -> None:
 
 
 def test_yours_offers_start_wont_and_done_nothing() -> None:
-    assert list(acts(S.YOURS, None, note=Note(repo=None))) == ["start", "wont", "done-manually"]  # T2092
+    assert list(acts(S.YOURS, None, note=Note(repo=None))) == [
+        "start",
+        "wont",
+        "done-manually",
+        "model",
+    ]  # T2478
     assert acts(S.DONE, run(stage="shipped", session_id="s", worktree="/w")) == {}
 
 

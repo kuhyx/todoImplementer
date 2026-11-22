@@ -115,9 +115,6 @@ def test_t2216_cancel_after_a_live_pick_keeps_the_card_cancelled(world: Env) -> 
 def test_t2216_default_drops_the_pin_and_a_paused_card_only_keeps_it(world: Env) -> None:
     sched, _ = boot(world)
     try:
-        with pytest.raises(RunnerError) as missing:
-            sched.set_model(CARD, FABLE)
-        assert missing.value.code == "not_found"
         run = world.root / CARD
         store.save(run, RunState(task_id=CARD, stage="paused_limit", extra={modelpick.PIN: FABLE}))
         sched.set_model(CARD, modelpick.DEFAULT)

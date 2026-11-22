@@ -60,7 +60,11 @@ class Backend(Protocol):
         ...
 
     def subscribe(self, id8: str) -> Iterator[dict[str, Any]]:
-        """Live events (activity|stage|cost|done) for one task; blocks between events."""
+        """Live events (activity|stage|cost|done) of one task's current cycle; blocks between events."""
+        ...
+
+    def floor(self, id8: str) -> int:
+        """Return the newest activity seq of the earlier cycles (0 when none): no feed shows it (T2479)."""
         ...
 
     def start(self, id8: str, *, auto_ship: bool | None = None) -> None:

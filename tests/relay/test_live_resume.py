@@ -87,3 +87,41 @@ def test_t2346_a_long_history_lands_in_one_write_and_keeps_the_cap(
     assert len(feed) == 50
     assert activities(feed)[-1] == 500
     assert writes.count("put") + writes.count("patch") + writes.count("delete") <= 5
+
+
+@pytest.mark.parametrize("restart", [False, True])
+def test_t2479_a_new_cycle_drops_the_earlier_cycles_feed(
+    fake: FakeRtdb, router: Router, backend: FakeBackend, restart: bool
+) -> None:
+    """A reopened repo card's phone feed held the shipped cycle's lines: they go, and new keys sort above."""
+    backend.events = [activity(n) for n in range(1, 31)]
+    card = backend.task_id
+
+    async def go() -> None:
+        db = fake.rtdb()
+        lv = Live(db, router)
+        await open_once(db, lv, card)
+        backend.floor_seq, backend.events = 40, [activity(41), activity(42)]  # the next cycle starts above 40
+        lv = Live(db, router) if restart else lv
+        await open_once(db, lv, card)
+        await db.aclose()
+
+    asyncio.run(go())
+    feed = fake.get(f"{ROOT}/live/{card}")
+    assert activities(feed) == [41, 42]
+    assert min(feed) > "s000000031"  # the first open wrote 31 keys: the new ones never sort below them
+
+
+def test_t2479_a_card_never_mirrored_starts_at_its_floor(
+    fake: FakeRtdb, router: Router, backend: FakeBackend
+) -> None:
+    backend.floor_seq, backend.events = 40, [activity(41)]
+    card = backend.task_id
+
+    async def go() -> None:
+        db = fake.rtdb()
+        await open_once(db, Live(db, router), card)
+        await db.aclose()
+
+    asyncio.run(go())
+    assert activities(fake.get(f"{ROOT}/live/{card}")) == [41]

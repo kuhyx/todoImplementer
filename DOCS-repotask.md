@@ -72,8 +72,12 @@ state, a number for steps, names in `aria-label` and `title`).
   commit has one `Todo: <note id8>` trailer per note that has a ticked part (not per part: a note is the unit in
   the todo app); its subject is the first ticked part's title.
 - **Cycles.** A run that shipped while parts remain (unticked, new, or added by the live-check follow-up) is a
-  finished cycle: the card is Backlog again (cost kept), Start begins cycle N+1 (`repotask/cycle.py` clears worktree,
-  session, plan, ticks, checks and kuhy's notes, T2432; cost and history stay). It never starts by itself, with
+  finished cycle: the card is Backlog again, Start begins cycle N+1 (`repotask/cycle.py` clears worktree, session,
+  plan, ticks, checks and kuhy's notes, T2432; cost and history stay on disk). The card shows only the current
+  cycle (T2479, `board/cyclefloor.py`): Start records the floor (`cycle_at`, `cycle_seq`, `cycle_cost`), the feed,
+  peer thread and stages start above it, the phone mirror drops the earlier lines and the cost is this cycle's
+  (T2480; the usage page keeps the total). Between cycles the card shows nothing of the shipped one: no plan, diff,
+  checks, stages, peer or activity. The card id stays the same. It never starts by itself, with
   one exception below. When no open part is left the notes are closed and the card is Done (from the shipped run
   dir, `ClosedNotes`). A note sent after the Ship waits in the inbox and reaches cycle N+1.
 - **A handoff waits on an event, not a click** (kuhy, 2026-11-18; `runner/whenfree.py`). When a session moved to
@@ -172,7 +176,9 @@ The relay's JSON `images: [{data_b64}]` (JPEG, 8 x 6 MB, 40 MB per request) stil
 fills the visible viewport (`visualViewport`), the description grows with its text and the button row stays pinned.
 Code: `http/newtask.py`, `newtask/service.py`, `newtask/images.py`.
 
-1. A title an open section of that repo already has is refused (`conflict`): two parts nobody could tell apart.
+1. The title is the first line of real text, `[Image #N]` refs taken out (T2481, `newtask/titles.py`, the same
+   rule in the page and the app); the body then keeps the whole text so every ref keeps its link. A note with no
+   text keeps `[Image #1]`. Two parts may share a title (T2482): a handoff rerun finds its own part by its key.
 2. The files go to a fresh uuid4 folder: relay pictures as `<n>.jpg`, uploads hard-linked (else copied) byte-identical to
    `<uuid4>.<ext>` (ext lower-cased, `bin` when unusable, the todo app's own rule) (root `$TODOIMPL_IMAGES_ROOT`, default
    `~/data/cloud/todo-images`, which dufs serves as `https://kuhy-cloud.duckdns.org/todo-images/`), written atomically.

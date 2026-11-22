@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from todoimpl.service.cards import CardTask
     from todoimpl.todo_mcp.client import TodoClient
 
-UPSTREAM, NOT_FOUND, CONFLICT, BAD = "upstream_unavailable", "not_found", "conflict", "bad_request"
+UPSTREAM, NOT_FOUND, BAD = "upstream_unavailable", "not_found", "bad_request"
 
 # The lookup forces a fetch that starts after the add (T2046); a few more tries cover a todo app that lists
 # the new section a moment late.
@@ -101,12 +101,10 @@ class NewTaskService:
         links += images.attach(staged, images.root(), folder)
         return "\n\n".join([task.body, *links]).strip()
 
-    def add(self, task: NewTask, *, checked: bool = False) -> str:
-        """Add the section (refusing a twin unless `checked` by adopt) and return its note id8."""
+    def add(self, task: NewTask) -> str:
+        """Add the section and return its note id8; two parts may share a title (T2482)."""
         task = _real(task)
         try:
-            if not checked:
-                self._refuse_twin(task)
             note = self._client.add_task(task.repo, task.title, self._linked(task))
         except TodoError as exc:
             raise BackendError(UPSTREAM, upstream_text(str(exc))) from exc
@@ -133,29 +131,22 @@ class NewTaskService:
         return None
 
     def adopt(self, task: NewTask, key: str) -> tuple[str, str] | None:
-        """Return (note id8, card) of the open section this very task became before (title, `key` in body).
+        """Return (note id8, card) of the open section this very task became before (`key` in its body).
 
-        A handoff rerun after a half-finished one finds its own task here (T2047). An open section with the
-        title that is not its own is a twin: BackendError conflict. None when the title is new (or its card
-        never shows). One repo listing, so a batch does not pay one per check.
+        A handoff rerun after a half-finished one finds its own task here (T2047), by the key alone: titles
+        may repeat (T2482). None when there is none (or its card never shows). One repo listing, so a batch
+        does not pay one per check.
         """
         task = _real(task)
         try:
             notes = self._client.list_tasks(repo=task.repo, full=True)
         except TodoError as exc:
             raise BackendError(UPSTREAM, upstream_text(str(exc))) from exc
-        open_ = [(n, c) for n in notes for c in card_tasks(n) if c.title == task.title and c.status != "done"]
-        own = next((n for n, c in open_ if key in c.body), None)
-        if own is not None:
-            card = self.card_of(own.id[:8], task)
-            return None if card is None else (own.id[:8], card)
-        if open_:
-            raise BackendError(CONFLICT, f"{task.repo} already has an open part titled {task.title!r}")
-        return None
-
-    def _refuse_twin(self, task: NewTask) -> None:
-        """Refuse a title an open section has already: two parts nobody could tell apart."""
-        for note in self._client.list_tasks(repo=task.repo, full=True):
-            if any(c.title == task.title and c.status != "done" for c in card_tasks(note)):
-                msg = f"{task.repo} already has an open part titled {task.title!r}"
-                raise BackendError(CONFLICT, msg)
+        own = next(
+            ((n, c) for n in notes for c in card_tasks(n) if c.status != "done" and key in c.body), None
+        )
+        if own is None:
+            return None
+        note8 = own[0].id[:8]
+        card = self.card_of(note8, replace(task, title=own[1].title))
+        return None if card is None else (note8, card)

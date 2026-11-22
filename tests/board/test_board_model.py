@@ -15,27 +15,25 @@ def _picker(card: dict[str, object]) -> dict[str, object] | None:
     return next((a for a in actions if a["id"] == "model"), None)
 
 
-def test_t2218_a_run_offers_the_picker_with_its_pin_and_shows_the_model() -> None:
+def test_t2218_a_run_offers_the_picker_with_its_pin() -> None:
     card = build_card(Note(), run(stage="failed", extra={modelpick.PIN: FABLE, "last_model": "opus"}), ctx())
     picker = _picker(card)
     assert picker is not None
     assert (picker["enabled"], picker["value"], picker["label"]) == (True, FABLE, "Model")
     assert picker["choices"] == modelpick.choices()
-    assert card["model"] == "Fable 5.2"  # the pin wins over the latest turn's model
+    assert "model" not in card  # the pressed button is the one place the model shows (T2477)
     validate("board", {**board.build_board([Note()], {}, ctx(), "b"), "tasks": [card]})
 
 
-def test_t2218_without_a_pin_the_picker_presses_and_the_card_names_its_latest_model() -> None:
+def test_t2218_without_a_pin_the_picker_presses_the_latest_model() -> None:
     card = build_card(Note(), run(extra={"last_model": "opus"}), ctx(live=("c59d2588-0",)))
     picker = _picker(card)
     assert picker is not None
     assert (picker["enabled"], picker["value"]) == (True, modelpick.DEFAULT_MODEL)
-    assert card["model"] == "Opus 5.5"
-    assert "model" not in build_card(Note(), run(), ctx())  # no turn ran yet
 
 
 def test_t2218_no_picker_once_the_run_ended_or_while_it_ships() -> None:
-    assert _picker(build_card(Note(), None, ctx())) is None
+    assert _picker(build_card(Note(status="done"), None, ctx())) is None
     assert _picker(build_card(Note(), run(stage="shipped"), ctx())) is None
     closing = run(stage="checks", auto_start={"reason": "done_check", "passed_at": 1.0})
     assert _picker(build_card(Note(), closing, ctx())) is None

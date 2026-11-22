@@ -12,7 +12,7 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 from todoimpl.board.types import is_manual
-from todoimpl.newtask import noteimages
+from todoimpl.newtask import noteimages, titles
 
 from .bodies import MAX_TEXT, parse
 from .reply import Reply, error_reply, json_reply
@@ -99,7 +99,8 @@ def check(raw: bytes) -> NewTask | str:
     if not isinstance(text, str) or len(text) > MAX_TEXT:
         return f"body must be text of at most {MAX_TEXT} characters"
     attached = _attachments(body)
-    return attached if isinstance(attached, str) else NewTask(repo, title, text.strip(), *attached)
+    title, text = titles.retitle(title, text.strip(), MAX_TITLE)  # never an `[Image #1]` title (T2481)
+    return attached if isinstance(attached, str) else NewTask(repo, title, text, *attached)
 
 
 def handle(backend: Backend, raw: bytes, start: Callable[[str], Reply]) -> Reply:

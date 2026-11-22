@@ -151,7 +151,7 @@ def test_a_new_cycle_clears_what_the_shipped_one_left(tmp_path: Path) -> None:
     )
     st.sessions, st.ship, st.checks = {"implement": "s"}, {"commit": "abc"}, {"passed": True}
     st.extra.update(spec_ok=True, partial={"done": []}, followup_id="f")
-    new_cycle(st, tmp_path)
+    new_cycle(st, tmp_path, 1.0)
     cleared = vars(st)
     assert [cleared[k] for k in ("worktree", "branch", "session_id", "ship", "checks")] == [None] * 5
     assert st.sessions == {}
@@ -159,16 +159,16 @@ def test_a_new_cycle_clears_what_the_shipped_one_left(tmp_path: Path) -> None:
     assert not {"spec_ok", "partial", "followup_id"} & st.extra.keys()
     assert files.read(tmp_path) == files.Ticks()
     assert not [p for p in tmp_path.iterdir() if p.name in ("plan.md", "live_check.md", "questions.json")]
-    new_cycle(st, tmp_path)
+    new_cycle(st, tmp_path, 1.0)
     assert st.extra["cycle"] == 3
 
 
 def test_start_marks_the_run_and_begins_the_next_cycle_after_a_shipped_one(tmp_path: Path) -> None:
     st = RunState(task_id="x-0", stage="spec")
-    prepare(st, ITEM, tmp_path)
+    prepare(st, ITEM, tmp_path, 1.0)
     assert (st.extra["repotask"], st.extra["repotask_title"], "cycle" in st.extra) == (True, "demo", False)
     shipped = RunState(task_id="x-0", stage="shipped")
-    prepare(shipped, ITEM, tmp_path)
+    prepare(shipped, ITEM, tmp_path, 1.0)
     assert shipped.extra["cycle"] == 2
 
 

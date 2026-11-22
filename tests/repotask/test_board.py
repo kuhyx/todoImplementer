@@ -80,11 +80,11 @@ def test_a_section_card_has_no_parts_key() -> None:
     assert "parts" not in build_card(section, None, Context())
 
 
-def test_a_shipped_cycle_with_parts_left_is_backlog_again_and_keeps_its_cost() -> None:
+def test_a_shipped_cycle_with_parts_left_is_backlog_again_with_no_cost_yet() -> None:
     card = build_card(card_of(part("aaaa1111-0")), run("shipped"), Context(now=1.0))
     validate("common", card, "task_card")
-    assert (card["status"], card["stage"], card["cost_usd"]) == ("backlog", None, 2.0)
-    assert [a["id"] for a in card["actions"]] == ["start", "wont", "done-manually"]
+    assert (card["status"], card["stage"], card["cost_usd"]) == ("backlog", None, 0.0)  # T2480: this cycle's
+    assert [a["id"] for a in card["actions"]] == ["start", "wont", "done-manually", "model"]
     assert card["actions"][0]["enabled"] is True
 
 

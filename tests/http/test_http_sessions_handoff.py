@@ -44,7 +44,7 @@ class Tasks:
             raise BackendError("conflict", f"{task.repo} already has an open part titled {task.title!r}")
         return None
 
-    def add(self, task: NewTask, *, checked: bool = False) -> str:
+    def add(self, task: NewTask) -> str:
         self.created.append(task)
         return self.card[:8]
 

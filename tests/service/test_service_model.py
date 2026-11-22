@@ -40,7 +40,6 @@ def test_t2218_a_pick_the_cut_drive_has_not_settled_shows_at_once(rig: Rig) -> N
     write_json(run_dir(rig.root, tid) / modelswitch.FILE, {"model": FABLE, "stage": "implement"})
     card = rig.card(tid)
     assert card["status"] != "cancelled"
-    assert card["model"] == "Fable 5.2"  # the chip shows the label (T2470)
     assert next(a for a in card["actions"] if a["id"] == "model")["value"] == FABLE
 
 

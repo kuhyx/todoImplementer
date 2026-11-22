@@ -65,8 +65,8 @@ class FakeScheduler:
     def running(self) -> set[str]:
         return set(self.live)
 
-    def subscribe(self, id8: str) -> Iterator[dict[str, Any]]:
-        return iter(self.events)
+    def subscribe(self, id8: str, after: int = 0) -> Iterator[dict[str, Any]]:
+        return iter([e for e in self.events if e.get("type") != "activity" or int(e.get("seq", 0)) > after])
 
 
 @dataclass

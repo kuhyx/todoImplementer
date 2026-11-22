@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { MAX_IMAGES, ownTaskRequest, ownTaskResponse, postNewTask, uploadFile, uploadResponse } from "@/lib/newtask-api";
+import { MAX_IMAGES, ownTaskRequest, ownTaskResponse, postNewTask, splitNote, uploadFile, uploadResponse } from "@/lib/newtask-api";
 import { routes } from "@/lib/routes";
 import { contractValidator } from "@/test/contract-ajv";
 import { makeCards } from "@/test/fixtures";
@@ -81,5 +81,19 @@ describe("uploadFile", () => {
     await expect(uploadFile(new File(["x"], "big.mov"), "tok")).rejects.toMatchObject({ message: "big.mov is over 100 MB" });
     stubFetch({ [`POST ${routes.upload}`]: { ok: true } });
     await expect(uploadFile(new File(["x"], "a"), "tok")).rejects.toMatchObject({ code: "shape" });
+  });
+});
+
+describe("splitNote", () => {
+  const FIX = "fix the new task from repo resurrects old tasks";
+  it("[T2481] the title is the first line of real text, never an image placeholder", () => {
+    expect(splitNote("  Fix it \nmore\n\nlines ")).toEqual({ body: "more\n\nlines", title: "Fix it" });
+    expect(splitNote(`[Image #1]\n${FIX}\n1. details`)).toEqual({ body: `[Image #1]\n${FIX}\n1. details`, title: FIX });
+    expect(splitNote(`[Image #1] \n\n[Image #2]\n${FIX}`)).toEqual({ body: `[Image #1] \n\n[Image #2]\n${FIX}`, title: FIX });
+    expect(splitNote("see [Image #1]  crash\nmore")).toEqual({ body: "see [Image #1]  crash\nmore", title: "see crash" });
+    expect(splitNote("[Image #1]")).toEqual({ body: "", title: "[Image #1]" });
+    expect(splitNote("[Image #1]\n[Image #2]")).toEqual({ body: "[Image #2]", title: "[Image #1]" });
+    const long = `[Image #1]\n${"x".repeat(300)}\nmore`;
+    expect(splitNote(long)).toEqual({ body: long, title: "x".repeat(200) });
   });
 });

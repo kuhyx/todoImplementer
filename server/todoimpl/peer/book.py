@@ -25,10 +25,15 @@ def view(msg: dict[str, Any]) -> dict[str, Any]:
     return {k: v for k, v in msg.items() if k not in PRIVATE}
 
 
-def thread_of(directory: Path) -> list[dict[str, Any]]:
-    """Return a run dir's Peer thread as the card shows it, read from its file (the task drawer)."""
+def thread_of(directory: Path, since: float = 0.0) -> list[dict[str, Any]]:
+    """Return a run dir's Peer thread as the card shows it, read from its file (the task drawer).
+
+    `since` is when the card's current cycle started: older rows stay on disk, unseen (T2479).
+    """
     rows = read_json(directory / FILE)
-    return [view(r) for r in rows if isinstance(r, dict)] if isinstance(rows, list) else []
+    if not isinstance(rows, list):
+        return []
+    return [view(r) for r in rows if isinstance(r, dict) and float(r.get("at") or 0) >= since]
 
 
 class Book:

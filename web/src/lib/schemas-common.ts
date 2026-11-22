@@ -180,7 +180,6 @@ export const taskCard = z.strictObject({
   cost_usd: usd,
   current: z.string(),
   id: itemId,
-  model: z.string().min(1).optional(),
   needs,
   partial,
   parts: z.array(repoPart).optional(),

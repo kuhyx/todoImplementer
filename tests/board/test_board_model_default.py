@@ -1,4 +1,4 @@
-"""The picker presses the model the card runs on; the chip names it the same way (T2470).
+"""The picker presses the model the card runs on, the one place it shows (T2470, T2477).
 
 The default model's button carries the default note (kuhy 2026-11-21: "sonnet" chip, "Default" pressed).
 """
@@ -26,23 +26,19 @@ def test_t2470_the_picker_has_no_default_row_and_the_default_model_carries_the_n
     assert modelpick.DEFAULT_MODEL == OPUS
 
 
-@pytest.mark.parametrize(
-    ("last", "pressed", "chip"), [("sonnet", SONNET, "Sonnet 5.5"), (SONNET, SONNET, "Sonnet 5.5")]
-)
-def test_t2470_without_a_pin_the_pressed_button_and_the_chip_name_the_model_that_ran(
-    last: str, pressed: str, chip: str
-) -> None:
+@pytest.mark.parametrize("last", ["sonnet", SONNET])
+def test_t2470_without_a_pin_the_pressed_button_names_the_model_that_ran(last: str) -> None:
     card = build_card(Note(), run(extra={"last_model": last}), ctx(live=("c59d2588-0",)))
-    assert (_picker(card)["value"], card["model"]) == (pressed, chip)
+    assert (_picker(card)["value"], "model" in card) == (SONNET, False)
 
 
 def test_t2470_a_card_that_ran_no_turn_presses_the_default_model() -> None:
     assert _picker(build_card(Note(), run(), ctx()))["value"] == OPUS
 
 
-def test_t2470_a_pin_wins_and_the_chip_shows_its_label() -> None:
+def test_t2470_a_pin_wins() -> None:
     card = build_card(Note(), run(extra={modelpick.PIN: SONNET, "last_model": "opus"}), ctx())
-    assert (_picker(card)["value"], card["model"]) == (SONNET, "Sonnet 5.5")
+    assert _picker(card)["value"] == SONNET
 
 
 def test_t2471_card_turns_default_to_opus_at_high_effort() -> None:

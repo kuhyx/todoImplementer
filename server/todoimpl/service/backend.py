@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 
 from todoimpl.apikey.keystatus import board_field
 from todoimpl.board.board import build_board, build_task, repo_checker
-from todoimpl.board.card import Context, build_card
+from todoimpl.board.card import Context
 from todoimpl.board.diff import worktree_diff
 from todoimpl.board.state import load, load_runs, run_dir
 from todoimpl.board.types import Credits, Limit
@@ -20,7 +20,7 @@ from todoimpl.credits import marks, route
 from todoimpl.http.backend import ERROR_CODES, BackendError
 from todoimpl.lessons import LessonError, approve, draft_lesson, latest_lesson, run_skills
 from todoimpl.repotask.files import overlay as ticks_overlay
-from todoimpl.runner import autocheck, modelswitch
+from todoimpl.runner import autocheck, modelswitch, prepin
 from todoimpl.runner.scheduler import RunnerError
 from todoimpl.stall.scan import card_activity
 from todoimpl.todo_mcp.model import TodoError, upstream_text
@@ -28,11 +28,11 @@ from todoimpl.umbrella.view import overlay_for
 from todoimpl.usage import limit_state
 from todoimpl.usage.interventions import record
 
-from . import dropping, notes, permission, shots, tracking
+from . import dropping, livefeed, notes, permission, shots, tracking
 from .settings import credits_fallback as _credits_fallback
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Iterator
+    from collections.abc import Callable
 
     from todoimpl.apikey.monitor import KeyMonitor
     from todoimpl.asks.service import AskService
@@ -48,7 +48,6 @@ if TYPE_CHECKING:
 
 log = logging.getLogger("todoimpl.service")
 UPSTREAM, CONFLICT = "upstream_unavailable", "conflict"
-CARD_FIELDS = ("status", "column", "current", "needs", "actions")  # what live.schema.json adds to a stage
 
 
 def _spawn(job: Callable[[], None]) -> None:
@@ -108,6 +107,7 @@ class ServiceBackend:
             checks=autocheck.load_cache(self.root),
             waits=dict(getattr(self.scheduler, "lock_waits", dict)()),
             activity=partial(card_activity, self.root),
+            pin=partial(prepin.read_card, self.root),
         )
 
     def _with_extras(self, run: RunState | None) -> RunState | None:
@@ -163,25 +163,8 @@ class ServiceBackend:
     done_manually = dropping.done_manually  # Done manually click (T2064)
     set_credits_fallback = _credits_fallback  # POST /api/settings/credits-fallback
 
-    def subscribe(self, id8: str) -> Iterator[dict[str, Any]]:
-        """Live events of one task; stage/done carry the freshly computed card fields (live.schema.json)."""
-        for event in self.scheduler.subscribe(id8):
-            if event.get("type") not in ("stage", "done"):
-                yield event
-                continue
-            card = self._card(id8)
-            if card is None:  # the note vanished: a half-empty event would break the contract
-                continue
-            if event["type"] == "done":
-                yield {"type": "done", "status": card["status"]}
-            else:
-                yield {"type": "stage", "stage": event["stage"], **{k: card[k] for k in CARD_FIELDS}}
-
-    def _card(self, id8: str) -> dict[str, Any] | None:
-        found = next((t for t in self.cache.snapshot().tasks if t.id == id8), None)
-        if found is None:
-            return None
-        return build_card(found, self._with_extras(load(run_dir(self.root, id8))), self._context())
+    subscribe = livefeed.subscribe  # GET /api/live: this cycle's activity, then the live events
+    floor = livefeed.floor  # the newest activity seq of an earlier cycle: the phone feed drops it (T2479)
 
     def _act(self, call: Callable[[], object]) -> None:
         try:

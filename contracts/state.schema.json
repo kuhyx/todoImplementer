@@ -66,6 +66,9 @@
     "repotask": {"type": "boolean", "description": "The run is a repo task's (DOCS-repotask.md): its id is the repo's, its parts are the repo's open sections."},
     "repotask_title": {"type": "string", "description": "The repo task's card title, kept for its Done card."},
     "cycle": {"type": "integer", "minimum": 1, "description": "Repo task only: which cycle the run is in; a shipped cycle that left parts open is followed by the next on Start."},
+    "cycle_at": {"type": "number", "description": "Repo task only: when the current cycle started; the card shows only its stages and peer rows (T2479)."},
+    "cycle_seq": {"type": "integer", "minimum": 0, "description": "Repo task only: the newest activity seq of the earlier cycles; no feed shows it or anything older."},
+    "cycle_cost": {"type": "number", "minimum": 0, "description": "Repo task only: what the earlier cycles cost; the card shows cost_usd minus it."},
     "sessions": {
       "type": "object",
       "description": "Per role (spec, plan, implement, live_check, manager): session id and when its last turn ended (fresh session after 1 h idle).",

@@ -4,6 +4,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from todoimpl.board import cyclefloor
+from todoimpl.runner.bus import last_seq
+
 from . import files
 
 if TYPE_CHECKING:
@@ -14,9 +17,14 @@ if TYPE_CHECKING:
 FILES = ("plan.md", "live_check.md", "questions.json")
 
 
-def new_cycle(st: RunState, run_dir: Path) -> None:
-    """Clear everything the shipped cycle left (worktree, session, plan, ticks); cost and history stay."""
+def new_cycle(st: RunState, run_dir: Path, now: float) -> None:
+    """Clear everything the shipped cycle left (worktree, session, plan, ticks); cost and history stay.
+
+    The floor (`board/cyclefloor.py`) marks where this cycle starts, so the card shows only its rows (T2479).
+    """
     st.extra["cycle"] = int(st.extra.get("cycle", 1)) + 1
+    st.extra[cyclefloor.AT], st.extra[cyclefloor.SEQ] = now, last_seq(run_dir)
+    st.extra[cyclefloor.COST] = st.cost_usd
     st.worktree = st.branch = st.base_sha = st.head_sha = st.session_id = None
     st.ship = st.checks = st.live_check = st.lesson = None
     st.sessions, st.self_check, st.spec_questions = {}, [], []

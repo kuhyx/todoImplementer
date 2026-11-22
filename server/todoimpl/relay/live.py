@@ -5,7 +5,8 @@ card null on close). The feed is the Router's own SSE source, so the relay sees 
 Events land at live/{card}/s<9-digit n>; only the newest KEEP are kept. A new mirror (server restart, lapsed
 watch) continues above the highest stored key, so new events never sort below old ones (T2312), and skips
 the activity the feed already holds: the source replays events.jsonl from the start on every open (T2345).
-Events land in one PATCH per GATHER_S, the trim riding along (T2346).
+Events land in one PATCH per GATHER_S, the trim riding along (T2346). A repo card's next cycle starts its
+feed afresh: a mirror whose stored lines all sit at or below the cycle's floor deletes them (T2479).
 """
 
 from __future__ import annotations
@@ -105,6 +106,15 @@ class Live:
         self.floors[card] = floor
         return out[-KEEP:]
 
+    async def _drop(self, card: str, kept: deque[int], floor: int) -> None:
+        """Delete an earlier cycle's lines; the newest key stays counted, so new keys sort above them."""
+        if kept:
+            await self._rtdb.patch(f"live/{card}", {f"s{n:09d}": None for n in kept})
+            last = kept[-1]
+            kept.clear()
+            kept.append(last)
+        self.floors[card] = floor
+
     async def _write(self, card: str, items: list[dict[str, Any]], kept: deque[int]) -> None:
         """Land `items` and trim to KEEP in one PATCH (T2346: a burst cost one PUT per event)."""
         n = kept[-1] if kept else 0
@@ -125,6 +135,8 @@ class Live:
         try:
             kept = await self._stored(card)
             self.floors[card] = await self._floor(card, kept)
+            if self.floors[card] < reply.floor:
+                await self._drop(card, kept, reply.floor)
             batch, ended = [reply.snapshot], False
             while self.watched(card):
                 if items := self._fresh(card, batch):

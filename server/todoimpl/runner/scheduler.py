@@ -13,7 +13,7 @@ from todoimpl.board.types import MANUAL_REASON
 from todoimpl.repotask.start import prepare
 from todoimpl.todo_mcp.model import TodoError
 
-from . import appfix, closing, modelswitch, phone, retry, stopping, whenfree
+from . import appfix, closing, modelswitch, phone, prepin, retry, stopping, whenfree
 from .engine import Client, default_clock
 from .files import read_json
 from .phone_sched import PhoneEngine
@@ -130,13 +130,14 @@ class Scheduler(PhoneEngine):
                 appfix.forget(st)
                 whenfree.clear(self.root / card)  # this Start is the one a pending handoff waited for
             if item.parts:
-                prepare(st, item, self.root / card)
+                prepare(st, item, self.root / card, self.clock())
             st.stage = restart_stage(st, item)
             st.error, st.last_tag, st.assignee = None, None, "claude"
             st.note_body = clip_body(item.body)
             for key in COUNTERS:
                 st.extra.pop(key, None)
             st.extra.update(extra or {})
+            prepin.adopt(st, self.root / card)  # a model kuhy picked before this Start (T2478)
             self.save(card, st)
             if st.stage != "gate":
                 self.enqueue(card)
@@ -187,10 +188,7 @@ class Scheduler(PhoneEngine):
         st.error, st.last_tag, st.assignee = None, None, "claude"
         for key in RESET:
             st.extra.pop(key, None)
-        if st.stage in (
-            "implement",
-            "live_check",
-        ):  # "it is connected": the Pixel in adb is tested on (T2084)
+        if st.stage in ("implement", "live_check"):  # "it is connected": the Pixel in adb is tested (T2084)
             phone.attach_if_present(st, self.root / st.task_id)
 
     def send(self, card: str, text: str) -> None:  # noqa: D102

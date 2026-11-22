@@ -54,7 +54,7 @@ def test_t2360_a_running_card_still_asks_from_its_reply(rig: Rig) -> None:
 
 def test_t2360_a_new_cycle_drops_the_last_cycles_reply(rig: Rig) -> None:
     run = _run(rig, "shipped")
-    new_cycle(run, rig.dir)
+    new_cycle(run, rig.dir, 1.0)
     run.stage = "spec"
     save(rig.dir, run)
     again = load(rig.dir)

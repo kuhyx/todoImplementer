@@ -62,7 +62,7 @@ def test_t1912_ship_closes_only_the_ticked_parts_and_names_their_notes(rig: Rig)
         ["beta"],
         None,
     )
-    assert again["cost_usd"] > 0
+    assert again["cost_usd"] == 0  # the next cycle has spent nothing yet (T2480)
 
 
 def test_start_after_a_shipped_cycle_begins_the_next_one(rig: Rig) -> None:

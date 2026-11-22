@@ -11,7 +11,8 @@ from todoimpl.asks.view import items as ask_items
 from todoimpl.peer.book import thread_of
 from todoimpl.runner.parsing import parse_questions
 
-from .card import Context, build_card
+from . import cyclefloor
+from .card import Context, build_card, cycle_end
 from .umbrella import detail
 
 if TYPE_CHECKING:
@@ -97,11 +98,12 @@ def resume_command(run: RunState | None) -> str | None:
 
 
 def _stages(run: RunState | None) -> list[dict[str, Any]]:
-    """Return the stage history; a run that recorded none gets its current stage."""
+    """Return the stage history of the current cycle; a run that recorded none gets its current stage."""
     if run is None:
         return []
     if run.stages:
-        return run.stages
+        since = cyclefloor.since(run)
+        return [s for s in run.stages if float(s.get("started") or 0) >= since]
     return [{"stage": run.stage, "started": run.started_at or run.updated, "ended": None}]
 
 
@@ -116,14 +118,20 @@ def _asks(card: dict[str, Any], run: RunState | None) -> list[dict[str, Any]]:
 def build_task(
     task: TaskLike, run: RunState | None, directory: Path, ctx: Context, diff: dict[str, Any] | None = None
 ) -> dict[str, Any]:
-    """Return the /api/task/<item-id> object: card, plan, questions, live check, checks, diff, session."""
+    """Return the /api/task/<item-id> object: card, plan, questions, live check, checks, diff, session.
+
+    A repo card between cycles shows nothing of the shipped one: no plan, stages, diff or peer rows (T2479).
+    """
     card = build_card(task, run, ctx)
     umbrella = detail(task, run)
+    since = cyclefloor.since(run)
+    if rests := cycle_end(task, run):
+        run, diff, since = None, None, float("inf")
     return {
         "card": card,
         "body": task.body or (run.note_body if run is not None and run.note_body is not None else ""),
         "done_check": task.done_check,
-        "plan_md": _read(directory / "plan.md"),
+        "plan_md": None if rests else _read(directory / "plan.md"),
         "questions": [vars(q).copy() for q in run.spec_questions] if run is not None else [],
         "asks": _asks(card, run),
         "ask_items": ask_items(task.body, run, directory, getattr(task, "parts", ())),
@@ -139,5 +147,5 @@ def build_task(
         "lesson": run.lesson if run is not None else None,
         "error": run.error if run is not None else None,
         **({"umbrella": umbrella} if umbrella is not None else {}),
-        **({"peer": peer} if (peer := thread_of(directory)) else {}),
+        **({"peer": peer} if (peer := thread_of(directory, since)) else {}),
     }

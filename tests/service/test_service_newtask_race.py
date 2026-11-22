@@ -73,8 +73,7 @@ def test_adopt_finds_the_open_part_this_very_task_became(rig: Rig, images: Path)
     assert service(rig).adopt(task, "session abc-123") is None
     note8, card = service(rig).create(task)
     assert service(rig).adopt(task, "session abc-123") == (note8, card)
-    with pytest.raises(BackendError, match="already has an open part"):  # same title, someone else's
-        service(rig).adopt(task, "session other")
+    assert service(rig).adopt(task, "session other") is None  # same title, someone else's: a new part (T2482)
 
 
 def test_adopt_skips_a_done_part(rig: Rig, images: Path) -> None:
