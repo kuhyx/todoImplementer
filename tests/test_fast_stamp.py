@@ -31,7 +31,7 @@ def test_t2410_staging_does_not_change_the_key(tmp_path: Path) -> None:
     before = fast_stamp.key(repo)
     subprocess.run(["git", "-C", str(repo), "add", "-A"], check=True)
     assert fast_stamp.key(repo) == before
-    assert not (repo / ".git" / "fast-key-index").exists()
+    assert not list((repo / ".git").glob("fast-key-index*"))
 
 
 def test_t2410_a_tree_changed_during_the_run_is_not_fresh(tmp_path: Path) -> None:

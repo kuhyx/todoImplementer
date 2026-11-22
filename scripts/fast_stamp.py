@@ -6,17 +6,26 @@ the tree object of the whole working tree (tracked and untracked, minus ignored 
 index so the real index is never touched. `make fast` records the key it computed before it started, so an
 edit made while the gate ran leaves the stamp stale. The tests are hermetic, so the same tree gives the same
 result.
+
+A board session runs the gate one step per call instead (T2485): `make lines`, `make types`, six test shards
+and `make test-cov`. Each step marks the tree it passed on (`mark`: one file per step in `fast-steps/`), and
+a tree that every step marked is as fresh as one `make fast` passed on: the BASE steps plus either one whole
+`test` run or all N shards of one sharding together with `cov-of-<N>` (their combined 100 % coverage).
 """
 
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
 
 STAMP = "fast-green"
 SCRATCH = "fast-key-index"
+STEPS = "fast-steps"
+BASE = ("lines", "private", "md", "regressions", "lint", "types", "web-lint", "web-test")
+COV = re.compile(r"cov-of-([1-9]\d*)")
 
 
 def _git(repo: Path, *args: str, env: dict[str, str] | None = None) -> str:
@@ -37,7 +46,7 @@ def _git_path(repo: Path, name: str) -> Path:
 
 def key(repo: Path) -> str:
     """Return the tree hash of the working tree as it is on disk."""
-    scratch = _git_path(repo, SCRATCH)
+    scratch = _git_path(repo, f"{SCRATCH}.{os.getpid()}")  # steps run side by side: one scratch index each
     env = {**os.environ, "GIT_INDEX_FILE": str(scratch)}
     try:
         _git(repo, "add", "-A", env=env)
@@ -51,10 +60,38 @@ def record(repo: Path, tree: str) -> None:
     _git_path(repo, STAMP).write_text(tree + "\n")
 
 
+def mark(repo: Path, step: str, tree: str) -> None:
+    """Remember that one gate step passed on `tree`."""
+    folder = _git_path(repo, STEPS)
+    folder.mkdir(exist_ok=True)
+    (folder / step).write_text(tree + "\n")
+
+
+def _marked(repo: Path, tree: str) -> set[str]:
+    """Return the steps whose last pass was on `tree`."""
+    folder = _git_path(repo, STEPS)
+    files = folder.iterdir() if folder.is_dir() else iter(())
+    return {f.name for f in files if f.read_text().strip() == tree}
+
+
+def _tested(done: set[str]) -> bool:
+    """Tell whether the marked steps hold one whole test run: `test`, or N shards plus `cov-of-<N>`."""
+    if "test" in done:
+        return True
+    shardings = (int(m[1]) for step in done if (m := COV.fullmatch(step)))
+    return any(all(f"shard{k}of{n}" in done for k in range(1, n + 1)) for n in shardings)
+
+
+def _steps_cover(done: set[str]) -> bool:
+    """Tell whether the marked steps add up to a whole `make fast`."""
+    return done.issuperset(BASE) and _tested(done)
+
+
 def fresh(repo: Path) -> bool:
-    """Tell whether the working tree is the one `make fast` last passed on."""
+    """Tell whether the working tree is one `make fast`, or every one of its steps, last passed on."""
     stamp = _git_path(repo, STAMP)
-    return stamp.is_file() and stamp.read_text().strip() == key(repo)
+    tree = key(repo)
+    return (stamp.is_file() and stamp.read_text().strip() == tree) or _steps_cover(_marked(repo, tree))
 
 
 def main(argv: list[str]) -> int:
@@ -66,10 +103,16 @@ def main(argv: list[str]) -> int:
         case ["record", repo, tree]:
             record(Path(repo), tree)
             return 0
+        case ["mark", repo, step, tree]:
+            mark(Path(repo), step, tree)
+            return 0
+        case ["tested", repo, tree]:
+            return 0 if _tested(_marked(Path(repo), tree)) else 1
         case ["check", *rest]:
             return 0 if fresh(Path(rest[0] if rest else ".")) else 1
         case _:
-            print("usage: fast_stamp.py key [repo] | record <repo> <key> | check [repo]", file=sys.stderr)
+            usage = "key [repo] | record <repo> <key> | mark <repo> <step> <key> | tested <repo> <key>"
+            print(f"usage: fast_stamp.py {usage} | check [repo]", file=sys.stderr)
             return 2
 
 
