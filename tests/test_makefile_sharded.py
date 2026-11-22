@@ -4,10 +4,11 @@
 pre-commit fallback to `make test` did the same.
 """
 
+import shutil
 import subprocess
 from pathlib import Path
 
-from test_makefile_coverage import copy_make, make_env
+from test_makefile_coverage import REPO, copy_make, make_env
 
 
 def test_t2487_make_test_runs_one_capped_pytest_per_shard(tmp_path: Path) -> None:
@@ -20,3 +21,16 @@ def test_t2487_make_test_runs_one_capped_pytest_per_shard(tmp_path: Path) -> Non
     assert run.returncode == 0, run.stdout + run.stderr
     assert "chunks 6 of 6" in run.stdout
     assert log.read_text().count("x") == 6  # six capped pytest runs: six tickets
+
+
+def test_t2495_a_failing_shard_exits_non_zero_and_is_not_stamped(tmp_path: Path) -> None:
+    # A failed shard ran `&& [[ -z k ]] || fast_stamp.py mark`: the mark branch exited 0 and stamped it green.
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True, timeout=30)
+    copy_make(tmp_path)
+    shutil.copy(REPO / "scripts" / "fast_stamp.py", tmp_path / "scripts" / "fast_stamp.py")
+    argv = ["make", "-s", "-C", str(tmp_path), "test-shard", "SHARD=1", f"COV_DIR={tmp_path / 'cov'}"]
+    env = {**make_env(), "FAKECOV_SLEEP": "0", "FAKECOV_FAIL": "1"}
+    run = subprocess.run(
+        [*argv, "TESTCAP=env", "UV=env"], env=env, capture_output=True, text=True, check=False, timeout=30
+    )
+    assert run.returncode != 0, run.stdout + run.stderr

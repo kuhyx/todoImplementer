@@ -34,7 +34,8 @@ def probe(tmp_path: Path) -> tuple[Path, Path]:
 def _run(probe: tuple[Path, Path], *argv: str) -> str:
     shims, log = probe
     path = f"{shims}:{log.parent / 'fakebin'}:{os.environ['PATH']}"
-    env = {**os.environ, "PATH": path, buildlock.CARD_VAR: "c", "PROBE_LOG": str(log)}
+    base = {k: v for k, v in os.environ.items() if k != "TODOIMPL_BUILD_LOCK_HELD"}
+    env = {**base, "PATH": path, buildlock.CARD_VAR: "c", "PROBE_LOG": str(log)}
     subprocess.run(argv, env=env, check=True, capture_output=True, timeout=30)
     return log.read_text().strip()
 
@@ -65,4 +66,22 @@ def test_t2489_other_flutter_commands_are_untouched(probe: tuple[Path, Path]) ->
 
 
 def test_t2490_a_build_runs_at_the_lowest_priority(probe: tuple[Path, Path]) -> None:
+    assert _run(probe, "cargo", "build").endswith("|nice=19")
+
+
+def test_t2496_a_build_lands_on_nice_19_from_a_negative_shim_niceness(probe: tuple[Path, Path]) -> None:
+    # ananicy-cpp renices every bash, the shim too, to -4, and `nice -n 19` then started the build at 15.
+    log = probe[1]
+    logger = '#!/bin/bash\nprintf "nice-args=%s\\n" "$*" >> "$PROBE_LOG"\nexec /usr/bin/nice "$@"\n'
+    executable(log.parent / "fakebin" / "nice", logger)
+    _run(probe, "cargo", "build")
+    step = int(log.read_text().split("nice-args=-n ", 1)[1].split()[0])
+    assert -20 + step >= 19  # the lowest niceness a shim can have still ends at 19
+
+
+def test_t2497_a_suite_run_under_the_lock_still_probes_unlocked(
+    probe: tuple[Path, Path], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # `make test-shard` runs pytest under the uv shim, which exports the held flag: the probe drops it.
+    monkeypatch.setenv("TODOIMPL_BUILD_LOCK_HELD", "1")
     assert _run(probe, "cargo", "build").endswith("|nice=19")

@@ -79,13 +79,13 @@ test-shard:
 	t=$$(mktemp -d "$${TMPDIR:-/tmp}/todoimpl-shard.XXXXXX") && trap 'rm -rf "$$t"' EXIT && \
 	$(TESTCAP) env COVERAGE_FILE="$(COV_DIR)/.coverage.shard$(SHARD)of$(SHARDS)" TODOIMPL_TEST_SHARD=$(SHARD)/$(SHARDS) \
 	pytest -n $(TEST_JOBS) --dist worksteal --basetemp="$$t/tmp" --cov --cov-fail-under=0 --cov-report= -q && \
-	$(STAMP_MARK) shard$(SHARD)of$(SHARDS) "$$k"
+	{ $(STAMP_MARK) shard$(SHARD)of$(SHARDS) "$$k"; }
 
 test-cov:
 	@$(KEY); for f in $(SHARD_FILES); do [[ -f "$$f" ]] || { echo "test-cov: missing $$f" >&2; exit 1; }; done; \
 	COVERAGE_FILE="$(COV_DIR)/.coverage" $(UV) coverage combine -q --keep $(SHARD_FILES) && \
 	$(MAKE) --no-print-directory coverage COV_DIR="$(COV_DIR)" && \
-	$(STAMP_MARK) cov-of-$(SHARDS) "$$k"
+	{ $(STAMP_MARK) cov-of-$(SHARDS) "$$k"; }
 
 cov-clean:
 	@rm -f .coverage .coverage.*
