@@ -52,6 +52,9 @@ def test_t2515_a_loose_board_session_still_cannot_write_in_kuhys_checkouts(
     assert _denied(inv.argv) == tuple(f"{tool}(/{src}/**)" for tool in WRITERS)
     closing = claude.build("closing", "p", src / "app")  # reads kuhy's checkout itself; Edit is denied anyway
     assert not any(rule.endswith(f"/{src}/**)") for rule in _denied(closing.argv))
+    assert (
+        "--disallowedTools" not in claude.build("implement", "p", src / "app").argv
+    )  # loose and in-checkout: no deny
     monkeypatch.delenv("TODOIMPL_POLICY")
     assert f"Edit(/{src}/**)" in _denied(claude.build("implement", "p", tmp_path / "wt").argv)
 
