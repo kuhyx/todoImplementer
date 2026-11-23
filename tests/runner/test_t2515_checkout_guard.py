@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 from runnerfakes import Env
-from todoimpl.runner import claude, freeworker, srcguard
+from todoimpl.runner import claude, freeworker, srcguard, srcwall
 
 WRITERS = ("Edit", "Write", "MultiEdit", "NotebookEdit")
 LOOSE = {"permission_mode": "bypassPermissions", "add_dirs": ["~"], "disable_hooks": True, "deny": []}
@@ -76,10 +76,7 @@ def test_t2515_a_turn_that_edits_the_cards_checkout_is_attributed_to_the_card(
     (repo / "c.txt").write_text("new\n", encoding="utf-8")
     (repo / "d.txt").unlink()
     assert srcguard.end(run, "implement-1", "kuhyx/app", 5.0, said.append) == [
-        "a.txt",
-        "b.txt",
-        "c.txt",
-        "d.txt",
+        str(repo / name) for name in ("a.txt", "b.txt", "c.txt", "d.txt")
     ]
     assert said == [f"this turn left edits in kuhy's checkout {repo}: a.txt b.txt c.txt d.txt"]
     rows = [json.loads(line) for line in (run / srcguard.LOG).read_text(encoding="utf-8").splitlines()]
@@ -136,6 +133,7 @@ def test_t2515_a_free_worker_that_writes_in_its_repos_checkout_is_logged(
     shim.chmod(0o755)
     monkeypatch.setenv("PATH", f"{shim.parent}:/usr/bin:/bin")
     monkeypatch.setenv("STRAY", str(repo / "a.txt"))
+    monkeypatch.setattr(srcwall, "BWRAP", "no-such-bwrap")  # unwalled, as before T2519: the write lands
     (tmp_path / "task.md").write_text("Do the thing.", encoding="utf-8")
     argv = [str(wt), str(tmp_path / "task.md"), str(wt.parent / "w.log"), "--issues", str(run)]
     assert freeworker.main([*argv, "--child", "kuhyx/app"]) == 0

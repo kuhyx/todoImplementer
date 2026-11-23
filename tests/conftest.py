@@ -109,6 +109,12 @@ def _no_real_systemctl(_scratch: Path, monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 @pytest.fixture(autouse=True)
+def _no_real_src(_scratch: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Point the src root at a missing temp dir: no turn scans or walls off kuhy's real ~/src (T2519)."""
+    monkeypatch.setenv("TODOIMPL_SRC", str(_scratch / "src"))
+
+
+@pytest.fixture(autouse=True)
 def _no_real_free_gateway(monkeypatch: pytest.MonkeyPatch) -> None:
     """Keep the cheap tier away from kuhy's real OmniRoute gateway (port 1 refuses)."""
     monkeypatch.setenv("TODOIMPL_FREE_GATEWAY", "http://127.0.0.1:1")

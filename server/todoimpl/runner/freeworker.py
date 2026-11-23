@@ -2,7 +2,8 @@
 
 Raw `claude-free -p <task>` loads kuhy's whole ~/.claude, whose spec gate answers a fully specified task
 with a grilling round (the `\u2753` question card) and no edit (smoke test 2026-11-10). This wrapper runs it
-with the board's hooks-off settings and a fixed no-questions preamble, writes stdout and stderr to the log,
+with the board's hooks-off settings and a fixed no-questions preamble, under `srcwall` (kuhy's checkouts
+read-only, T2519), writes stdout and stderr to the log,
 and judges success by the worktree diff, never by the turn's `subtype: success`. A turn that ends with no
 diff and a grilling round is written to the issue log (`--issues <run dir>`, umbrella/issues.py).
 Exit 0 = the worktree changed; 3 = no work; 4 = no `claude-free`; 5 = killed by a signal on every attempt.
@@ -22,7 +23,7 @@ from pathlib import Path
 from todoimpl.board.clone import src_root
 from todoimpl.umbrella import issues, workers
 
-from . import srcguard, workerwait
+from . import srcguard, srcwall, workerwait
 from .policy import HOOKS_OFF, src_deny
 
 PREAMBLE = (
@@ -97,15 +98,18 @@ def run(worktree: Path, prompt_file: Path, log: Path, *, run_dir: Path | None = 
     src = src_root()
     scope = SCOPE.format(worktree=worktree, src=src)
     task = prompt_file.read_text(encoding="utf-8")
-    argv = [tool, "-p", f"{PREAMBLE} {scope}\n\n{task}", "--permission-mode"]
+    wall, unguarded = srcwall.wrap(worktree, src)  # T2519: the shell cannot write kuhy's checkouts either
+    argv = [*wall, tool, "-p", f"{PREAMBLE} {scope}\n\n{task}", "--permission-mode"]
     argv += ["bypassPermissions", "--disallowedTools", *DENY, *src_deny(src), "--settings", HOOKS_OFF]
     log.parent.mkdir(parents=True, exist_ok=True)
     card, stray = worktree.parent, functools.partial(_issue, run_dir, child, "checkout")  # T2515
+    if unguarded:
+        stray(f"{src} stays writable ({unguarded}): edits there are only logged")
     attempt = 0
     while True:
         attempt += 1
         began = time.time()
-        srcguard.begin(card, log.stem, child or None)
+        srcguard.begin(card, log.stem, child or None, everywhere=not wall)
         code = _attempt(argv, worktree, log)
         srcguard.end(card, log.stem, child or None, time.time(), stray)
         killed = _killed(code)

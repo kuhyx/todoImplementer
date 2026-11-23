@@ -1,7 +1,7 @@
 # Cheap tier and card order
 
-Two board rules that sit beside `DOCS-spec.md`. Code: `server/todoimpl/runner/{tier,tiering,freegate}.py`,
-`prompts/tier.py`, `board/badges.py`, `board/board.py` (`build_board`).
+Three board rules that sit beside `DOCS-spec.md`. Code: `server/todoimpl/runner/{tier,tiering,freegate}.py`,
+`prompts/tier.py`, `board/badges.py`, `board/board.py` (`build_board`), `runner/{srcwall,srcguard}.py`.
 
 ## Human-made notes first
 
@@ -62,3 +62,32 @@ aria-label only): a coin (cheap), a gift (free models allowed and not escalated)
 `escalate_reason`.
 
 Not covered: a red Checks run (`check_fixes`) does not escalate; only a failed or `ESCALATE:` implement turn does.
+
+## kuhy's checkouts stay his (T2464, T2515, T2519)
+
+Sessions work in worktrees; kuhy's checkouts under `~/src` (`$TODOIMPL_SRC`) are his. Free models are the
+untrusted tier, so their workers get a wall; board turns stay unrestricted (they deploy from `~/src/<repo>`) and
+are watched instead. Umbrella 7808ee0a-0 is why: its workers wrote a logo into nine other repos' checkouts, by
+`Edit` first (T2464) and later by shell (child -49, repo todoImplementer, into book-guard, dufs-cloud and signal-bot).
+
+- **Writer deny, every turn.** `Edit`/`Write`/`MultiEdit`/`NotebookEdit` are denied under the src root for free
+  workers (T2464) and every board turn (T2515, `policy.src_deny_for`), whatever kuhy's policy says: his
+  `add_dirs: ["~"]` covers `~/src` and `--add-dir` cannot leave it out. A turn whose cwd is there (closing) skips it.
+  The worker's task file names its repo ("everywhere" means that repo) and its prompt names the worktree.
+- **The wall, free workers only** (`runner/srcwall.py`). `freeworker` runs `claude-free` under bubblewrap: the
+  whole filesystem as it is, the src root mounted read-only, then the worktree and its shared git dir
+  (`git rev-parse --git-common-dir`, inside `~/src/<repo>/.git`) writable again, so the worker still commits. No
+  network or pid namespace; `--die-with-parent`; a signal still shows as exit 128 + N. No `bwrap`, or one that
+  cannot make a namespace (probed once with `bwrap --dev-bind / / -- true`), runs the worker unwalled and logs
+  `<src> stays writable (...)` to `free-issues.jsonl`, phase `checkout`.
+- **Detection, every turn** (`runner/srcguard.py`). Each board turn and each unwalled worker attempt snapshots
+  `git --no-optional-locks status --porcelain -z --untracked-files=all` of every `<src>/*/.git` checkout plus the
+  card's own (16 side by side, 10 s cap per repo; a stuck repo is left out) into `<stem>.checkout.json`, with a
+  sha256 per dirty file cached by inode, size and mtime. At the end, files dirty afterwards that were clean or held
+  other content go to `<run>/checkout-edits.jsonl` (`at`, `stem`, `card`, `checkout`, `files`) and a feed line (a
+  worker's to `free-issues.jsonl`): "left edits" for the card's own checkout, "changed while this turn ran" for
+  another (it may be kuhy's or a parallel card's edit). A walled worker scans its own checkout only: it cannot write the others. Measured
+  2026-11-23 on 98 checkouts under the 10 % CPU cap: 0.34 s cold, 0.11-0.19 s warm, off the request path (the
+  card's own thread). A snapshot from before T2519 (one checkout) still counts.
+- **Attribution.** `srcguard.attributed` / `owner` tell the stray stash (T2512, T2514) whether edits still sitting
+  in a checkout are exactly one card's. Cards run side by side, so an edit two cards both saw land has no owner.

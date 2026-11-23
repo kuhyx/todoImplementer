@@ -2,7 +2,8 @@
 
 Board that plans, implements, reviews, verifies and ships (by itself once green) todo-app notes with headless Claude Code
 sessions. Spec and decisions: `DOCS-spec.md`. Lessons carried over from the predecessor: `DOCS-lessons.md`. Claude API key lifecycle: `DOCS-apikey.md`. Free API credits, routes, overage guard: `DOCS-credits.md`. Sessions land their own work (grant, backstop, rebase, ship, deploy): `DOCS-landing.md`. Model, effort, live-check role, turn limit, retries: `DOCS-turns.md`. Umbrella notes (many per-repo tasks, one card, the exponential ramp, free-worker command, issue log): `DOCS-umbrella.md`.
-Cheap tier (Sonnet manager, free models, Opus escalation) and human-made-first order: `DOCS-tiers.md`.
+Cheap tier (Sonnet manager, free models, Opus escalation), human-made-first order and kuhy's `~/src` checkouts
+(free-worker wall, per-turn edit log): `DOCS-tiers.md`.
 Multi-day survival (kills, reboot, power cut, no internet, gateway down, durable writes, backoff ladder): `DOCS-resilience.md`.
 Umbrella tracking view and the free-token strip (gateway quotas, cooldowns, ETA): `DOCS-tracking.md`.
 Merging similar tasks (Haiku groups, merged by the board itself with no click, umbrella notes, CLI): `DOCS-merge.md`.
