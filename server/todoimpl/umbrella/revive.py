@@ -5,7 +5,8 @@ error text: a killed or red gate step, a missing `- deploy:` line, a red or kill
 deploy's own record for its log tail) rebuilds the failure, and `shipfix.heal` decides as it would have live:
 a plain rerun enters `shipping` at once (the restart was the wait), a fix turn enters `implement` with its
 brief. The bound is counted and saved before any drive, so restarts never revive a child without end. A
-child whose failure needs kuhy, or whose bound is spent, stays as it is.
+child whose failure needs kuhy, or whose bound is spent, stays as it is. `ship_again` (a text the board heals
+itself: a cut Ship, a dirty deploy) serves server start's top-level cards too, once per text (T2517).
 """
 
 from __future__ import annotations
@@ -36,7 +37,8 @@ DEPLOY = re.compile(rf"^{PREFIX}: deploy failed \((?:exit (-?\d+)|timed out)\)")
 NO_LINE = re.compile(rf"^{PREFIX}: .* declares no deploy: command in CLAUDE\.md$")
 DROPPED = ("failed_stage", "retry_reason", "ship_resumes")  # a revived Ship starts its resume count afresh
 LEGACY = "stops on uncommitted edits"  # the dirty text before T2507: its Ship now sets strays aside (T2512)
-REFUSALS = "refusal_revives"  # a red deploy that only refused a dirty checkout ships again once (T2511)
+REFUSALS = "refusal_revives"  # the T2511 server's mark: its refusal kind is spent
+KINDS = "ship_revives"  # the self-heal texts a card already shipped again for, each once: no loop (T2517)
 
 
 def _code(text: str | None) -> int | None:
@@ -64,52 +66,65 @@ def _checkout(st: RunState) -> Path | None:
         return None
 
 
-def _ship_again(st: RunState, run_dir: Path) -> bool:
-    """Say whether the Ship goes on as it is: no fix turn, no kuhy (T2510, T2511).
+def _kind(st: RunState, run_dir: Path) -> str | None:
+    """Name the self-heal text a failed Ship carries when it may ship again now, no fix turn, no kuhy (T2510).
 
     A Ship an older server parked after restarts; a deploy kuhy's edits blocked, once the files his step names
-    are clean again (the ladder starts afresh); a red deploy whose log only refused a dirty checkout, once.
+    are clean again; a red deploy whose log only refused a dirty checkout, or the dirty text before T2507.
     """
     text = st.error or ""
     if text.startswith(INTERRUPTED):
-        return True
+        return "interrupted"
     if deployheal.is_step(text):
         checkout = _checkout(st)
         try:
-            if checkout is None or deployheal.still_dirty(checkout, deployheal.files_of(text)):
-                return False
+            clean = checkout is not None and not deployheal.still_dirty(checkout, deployheal.files_of(text))
         except NeedsYouError:  # his own git holds a lock there: look again next time
-            return False
-        st.extra.pop("retries", None)
-        return True
+            clean = False
+        return "dirty" if clean else None
     record = read_json(run_dir / DEPLOY_DIR / EXIT_FILE)
     tail = str(record.get("tail") or "") if isinstance(record, dict) else ""
-    refused = (DEPLOY.match(text) and deployheal.blocked(tail)) or LEGACY in text
-    if not refused or int(st.extra.get(REFUSALS, 0)):
+    return "refused" if (DEPLOY.match(text) and deployheal.blocked(tail)) or LEGACY in text else None
+
+
+def _back_to(st: RunState, stage: str) -> None:
+    st.stage, st.error, st.last_tag, st.assignee = stage, None, None, "claude"
+    for key in DROPPED:
+        st.extra.pop(key, None)
+
+
+def ship_again(st: RunState, run_dir: Path) -> bool:
+    """Send a card or child a self-heal text parked back to `shipping`, at most once per text (T2517)."""
+    failed = st.extra.get("failed_stage")
+    if st.stage != "failed" or failed not in ("shipping", "gate"):  # "gate": a cut Ship's legacy form
         return False
-    st.extra[REFUSALS] = 1
+    kind = _kind(st, run_dir)
+    spent = [*st.extra.get(KINDS, []), *(["refused"] if st.extra.get(REFUSALS) else [])]
+    if kind is None or kind in spent or (failed == "gate" and kind != "interrupted"):
+        return False
+    st.extra[KINDS] = [*st.extra.get(KINDS, []), kind]
+    if kind == "dirty":
+        st.extra.pop("retries", None)  # the ladder starts afresh
+    _back_to(st, "shipping")
     return True
 
 
 def revive(st: RunState, run_dir: Path, now: float) -> bool:
     """Send a child that failed in Ship back to work when `shipfix.heal` would; True when it did."""
+    if ship_again(st, run_dir):
+        return True
     if st.stage != "failed" or st.extra.get("failed_stage") != "shipping":
         return False
-    if _ship_again(st, run_dir):
-        stage = "shipping"
-    elif (err := rebuilt(st, run_dir)) is None:
+    if (err := rebuilt(st, run_dir)) is None:
         return False
-    else:
-        try:
-            shipfix.heal(st, err, now)
-            stage = "implement"
-        except retry.RetryLaterError:
-            stage = "shipping"
-        except NeedsYouError:  # kuhy's, or the bound is spent: nothing was counted
-            return False
-    st.stage, st.error, st.last_tag, st.assignee = stage, None, None, "claude"
-    for key in DROPPED:
-        st.extra.pop(key, None)
+    try:
+        shipfix.heal(st, err, now)
+        stage = "implement"
+    except retry.RetryLaterError:
+        stage = "shipping"
+    except NeedsYouError:  # kuhy's, or the bound is spent: nothing was counted
+        return False
+    _back_to(st, stage)
     return True
 
 

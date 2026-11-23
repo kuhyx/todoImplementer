@@ -153,8 +153,9 @@ the "session already pushed" path) and before the note closes, Ship runs the rep
   closes (closing a closed note overwrites the evidence); a rebase the restart cut half way (`<run dir>/rebasing`) is
   aborted first. The first 2 resumes per click go on at once (`ship_resumes`, reset by Ship and Retry); each later one
   rests one retry-ladder step in `paused_retry` and goes on (T2510): a restart is never kuhy's. Deploys of
-  todoImplementer restarted the server 3 times in 80 s on 2026-11-22. A child an older server failed "Ship was
-  interrupted by a restart ..." revives into `shipping`; Retry on that text also goes straight back to `shipping`. An umbrella child is resumed the same way, and a child found in `shipping` takes
+  todoImplementer restarted the server 3 times in 80 s on 2026-11-22. A card or child an older server failed "Ship
+  was interrupted by a restart ..." (also with `failed_stage` `gate`) revives into `shipping` at server start
+  (T2517); Retry on that text also goes straight back to `shipping`. An umbrella child is resumed the same way, and a child found in `shipping` takes
   its repo's lock with `force` (it was already working): it never queues behind another run of the repo, so a restart
   cannot burn a resume while the Ship waits (T2463).
 - **Deploy into kuhy's checkout (T2007).** A deploy that starts with `git -C ~/src/<repo> pull --ff-only` fails when
@@ -218,6 +219,9 @@ capped scope after it had the build lock, not a timeout of the wait: the queue i
 `<child>/deploy/exit.json`) and asks `shipfix.heal`. A rerun puts the child in `shipping` at once (its
 `ship_resumes` start afresh), a fix turn in `implement`; the count is saved before any drive, so restarts never
 revive a child without end. When any child revived, the umbrella goes back to `implement` and is queued.
+`revive.ship_again` (a cut Ship, a dirty step whose files are clean, a deploy that only refused a dirty checkout,
+the dirty text before T2507) also revives failed top-level cards into `shipping` at server start (T2517). Each card
+or child revives at most once per text (`ship_revives`; T2511's `refusal_revives` counts), so none loops.
 
 ## A resting run frees its disk (`runner/reap.py`, T2433)
 

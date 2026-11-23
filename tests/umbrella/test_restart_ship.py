@@ -73,7 +73,7 @@ def test_t1905_a_child_cut_again_and_again_rests_on_the_ladder_and_ships_by_itse
     assert (done.stage, done.error) == ("shipped", None)
 
 
-def test_t1988_retry_sends_a_child_a_pre_fix_restart_failed_straight_to_ship(world: Env, free: Free) -> None:
+def test_t2517_a_child_a_pre_fix_restart_failed_ships_again_by_itself(world: Env, free: Free) -> None:
     sched, client = boot(world, 1)
     sched.close()
     cid = _seed(world, client, "failed")
@@ -84,9 +84,7 @@ def test_t1988_retry_sends_a_child_a_pre_fix_restart_failed_straight_to_ship(wor
     store.save(child_dir(world.root / CARD, cid), old)
     again = Scheduler(client, world.root, check_timeout=20)
     try:
-        at_rest(world, again, "failed")
-        again.start(CARD)
-        at_rest(world, again, "shipped")
+        at_rest(world, again, "shipped")  # server start revives it: no Retry click (T1988, T2517)
     finally:
         again.close()
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import time
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from todoimpl.board import state as store
 from todoimpl.board.parse import StateError
@@ -13,6 +14,9 @@ from . import hold, live, orphans, retry
 from .closing import CLOSE_ONLY
 from .pipeline import WORK_STAGES
 from .restart import resume_ship
+
+if TYPE_CHECKING:
+    from todoimpl.board.state import RunState
 
 
 def interrupted(root: Path) -> list[str]:
@@ -37,15 +41,7 @@ def interrupted(root: Path) -> list[str]:
             st.extra[CLOSE_ONLY] = st.closing
             store.save(path.parent, st)
             queue.append(st.task_id)
-        elif st.stage == "failed" and "umbrella" in st.extra and revive.children(path.parent, time.time()):
-            st.stage, st.error = "implement", None  # its children Claude can fix work again (T2344)
-            st.extra.pop("failed_stage", None)
-            store.save(path.parent, st)
-            queue.append(st.task_id)
-        elif live.rejudgeable(st):  # judged under older rules: judge the stored report again, no turn
-            st.stage, st.error, st.last_tag, st.assignee = "live_check", None, None, "claude"
-            st.extra.pop("failed_stage", None)
-            st.extra["resettle"] = True
+        elif _back_to_work(st, path.parent):
             store.save(path.parent, st)
             queue.append(st.task_id)
         elif st.stage in (*WORK_STAGES, "paused_limit", retry.PAUSED) and (
@@ -53,3 +49,19 @@ def interrupted(root: Path) -> list[str]:
         ):  # a turn still recorded means last_tag is stale: it is running or its result waits
             queue.append(st.task_id)
     return queue
+
+
+def _back_to_work(st: RunState, run_dir: Path) -> bool:
+    """Move a failed run the board can take on itself back to work; True when it did."""
+    if st.stage == "failed" and "umbrella" in st.extra and revive.children(run_dir, time.time()):
+        st.stage, st.error = "implement", None  # its children Claude can fix work again (T2344)
+        st.extra.pop("failed_stage", None)
+        return True
+    if "umbrella" not in st.extra and revive.ship_again(st, run_dir):  # a self-heal text (T2517)
+        return True
+    if live.rejudgeable(st):  # judged under older rules: judge the stored report again, no turn
+        st.stage, st.error, st.last_tag, st.assignee = "live_check", None, None, "claude"
+        st.extra.pop("failed_stage", None)
+        st.extra["resettle"] = True
+        return True
+    return False
