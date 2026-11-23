@@ -12,6 +12,7 @@ from todoimpl.peer.book import thread_of
 from todoimpl.runner.parsing import parse_questions
 
 from . import cyclefloor
+from .askfallback import fallback
 from .card import Context, build_card, cycle_end
 from .umbrella import detail
 
@@ -108,11 +109,15 @@ def _stages(run: RunState | None) -> list[dict[str, Any]]:
 
 
 def _asks(card: dict[str, Any], run: RunState | None) -> list[dict[str, Any]]:
-    """Return the cards of an open Claude question, so it reaches the spec questions' answer view (T1816)."""
+    """Return the cards of an open Claude question, so it reaches the spec questions' answer view (T1816).
+
+    A question no parser rule splits is one card of its full text (T2525).
+    """
     needs = card.get("needs")
     if run is None or needs is None or needs["kind"] != "claude_question":
         return []
-    return [vars(q) for q in parse_questions(str(run.extra.get("last_reply", "")))]
+    reply = str(run.extra.get("last_reply", ""))
+    return [vars(q) for q in parse_questions(reply)] or [card for card in [fallback(reply)] if card]
 
 
 def build_task(

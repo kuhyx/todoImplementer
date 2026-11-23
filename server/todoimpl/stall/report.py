@@ -49,15 +49,18 @@ def _iso(at: float) -> str:
     return datetime.fromtimestamp(at, UTC).isoformat(timespec="seconds")
 
 
-def file(signature: str, detail: str, now: float) -> None:
-    """Count one more episode of `signature` in the report (a new record for a new cause)."""
+def file(signature: str, detail: str, now: float, kind: str = KIND, message: str | None = None) -> None:
+    """Count one more episode of `signature` in the report (a new record for a new cause).
+
+    A stall gets the stall kind and message; another board error (`runner/parsemiss.py`) names its own.
+    """
     data = read_json(path())
     errors: list[dict[str, Any]] = data.get("errors", []) if isinstance(data, dict) else []
     record = next((e for e in errors if isinstance(e, dict) and e.get("signature") == signature), None)
     if record is None:
-        cause = signature.removeprefix("stall-")
-        record = {"app": APP, "repo": REPO, "signature": signature, "kind": KIND, "count": 0,
-                  "message": MESSAGE.format(cause=cause), "first_seen": _iso(now), "build": 0}  # fmt: skip
+        text = message or MESSAGE.format(cause=signature.removeprefix("stall-"))
+        record = {"app": APP, "repo": REPO, "signature": signature, "kind": kind, "count": 0,
+                  "message": text, "first_seen": _iso(now), "build": 0}  # fmt: skip
         errors.append(record)
     record.update(count=int(record.get("count", 0)) + 1, last_seen=_iso(now), detail=detail, open=True)
     path().parent.mkdir(parents=True, exist_ok=True)

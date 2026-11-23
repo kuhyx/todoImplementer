@@ -42,7 +42,8 @@ def test_t1816_a_later_claude_question_is_sent_as_cards(tmp_path: Path) -> None:
 
 def test_t1816_no_cards_without_an_open_claude_question(tmp_path: Path) -> None:
     plain = run(last_tag="Q", extra={"last_reply": "Q: which port?"})
-    assert board.build_task(Note(), plain, tmp_path, ctx())["asks"] == []
+    asks = board.build_task(Note(), plain, tmp_path, ctx())["asks"]
+    assert [a["body"] for a in asks] == ["which port?"]  # T2525: one full-text card
     done = run(last_tag="D", extra={"last_reply": REPLY})
     assert board.build_task(Note(), done, tmp_path, ctx())["asks"] == []
     assert board.build_task(Note(), None, tmp_path, ctx())["asks"] == []

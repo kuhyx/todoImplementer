@@ -12,16 +12,14 @@ from todoimpl.credits import route
 from todoimpl.prompts import PromptContext
 from todoimpl.repotask.prompt import addendum
 
-from . import answered, checks, deploy, phone, resume, retry, stepwatch, tags, tiering, turncheck, worktree
-from .askform import needs_form
+from . import checks, deploy, phone, resume, retry, stepwatch, tags, tiering, turncheck, worktree
 from .ctxcap import go_on, mark, seed
 from .files import KilledError, NeedsYouError
-from .grant import auto_grant
-from .linknudge import needs_link
-from .permit import gate, with_grant
+from .permit import with_grant
 from .prompting import Ask, prompt_for
 from .repolock import RepoLocks
 from .turn import TurnEnv, run_turn
+from .turnhooks import HOOKS
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -216,7 +214,7 @@ class Driver:
         if go_on(st, res, cut=cut):  # a cap stopped the turn: go on at once (credits: on the plan)
             return self.turn(role, stage, failure_tail=failure_tail, prompt=prompt)
         resume.rest(self, res, stage)  # a wait or resume line of Claude's own rests on the ladder (T2104)
-        if any(note(self, res, stage) for note in (gate, auto_grant, needs_form, answered.back, needs_link)):
+        if any(note(self, res, stage) for note in HOOKS):
             return self.turn(role, stage, failure_tail=failure_tail, prompt=prompt)
         return self._finished(res, role, stage)
 

@@ -11,11 +11,19 @@ interface State {
   root: HTMLElement;
 }
 
-/** Text with `code` spans turned into <code> nodes; also used by the question body. */
+/** Plain text with `**bold**` spans turned into <strong> nodes; a lone `**` or one next to a space stays as it is (T2525). */
+function bold(text: string): Child[] {
+  return text.split(/(\*\*[^*\s](?:[^*]*[^*\s])?\*\*)/v).flatMap((part, index): Child[] => {
+    if (part === "") return [];
+    return [index % 2 === 1 ? h("strong", { text: part.slice(2, -2) }) : part];
+  });
+}
+
+/** Text with `code` and `**bold**` spans turned into <code> and <strong> nodes; also used by the question body. */
 export function inline(text: string): Child[] {
   return text.split(/(`[^`]+`)/v).flatMap((part): Child[] => {
     if (part === "") return [];
-    return [part.startsWith("`") ? h("code", { text: part.slice(1, -1) }) : part];
+    return part.startsWith("`") ? [h("code", { text: part.slice(1, -1) })] : bold(part);
   });
 }
 

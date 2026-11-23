@@ -12,7 +12,7 @@ from todoimpl.board.status import Status, compute
 from todoimpl.todo_mcp.model import TodoError
 from todoimpl.umbrella import revive
 
-from . import hold, live, orphans, retry
+from . import hold, live, orphans, reparse, retry
 from .closing import CLOSE_ONLY
 from .pipeline import WORK_STAGES
 from .restart import resume_ship
@@ -38,6 +38,7 @@ def interrupted(root: Path, notes: Notes) -> list[str]:
             continue
         if st is None:  # pragma: no cover - the file was just globbed
             continue
+        reparse.questions(path.parent, st)
         if st.stage == "shipping":  # Ship is idempotent: it goes on by itself, no click, no Needs you (T1988)
             if "umbrella" not in st.extra:  # the umbrella's children count their own resumes
                 resume_ship(st, time.time())  # past the cap it waits on the ladder (T2510)
