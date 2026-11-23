@@ -14,13 +14,13 @@ dependencies:
   crdt_sync:
     git:
       url: https://github.com/kuhyx/utils
-      ref: crdt_sync_dart-v0.14.1
+      ref: crdt_sync_dart-v0.14.2
       path: crdt_sync_dart
   # The crdt-sync password in the OS keystore and the text-free lock button.
   crdt_sync_flutter:
     git:
       url: https://github.com/kuhyx/utils
-      ref: crdt_sync_flutter-v0.9.1
+      ref: crdt_sync_flutter-v0.9.2
       path: crdt_sync_flutter
   # The shared palette, spacing and type scale. No local theme to drift from.
   design_system:
@@ -49,7 +49,7 @@ dependencies:
   rtdb_relay:
     git:
       url: https://github.com/kuhyx/utils
-      ref: rtdb-relay-v0.2.1
+      ref: rtdb-relay-v0.2.2
       path: rtdb_relay/dart
   # This install's device id; the add-task draft's text.
   shared_preferences: 2.5.6

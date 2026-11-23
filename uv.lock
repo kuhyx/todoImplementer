@@ -953,8 +953,8 @@ wheels = [
 
 [[package]]
 name = "rtdb-relay"
-version = "0.2.1"
-source = { git = "https://github.com/kuhyx/utils?subdirectory=rtdb_relay&rev=rtdb-relay-v0.2.1#d36826e2b5f41f9aa2ec0459a3bd5e1d08563858" }
+version = "0.2.2"
+source = { git = "https://github.com/kuhyx/utils?subdirectory=rtdb_relay&rev=rtdb-relay-v0.2.2#e1b15a944918a386ef302e56ff4c75977b8b2c29" }
 dependencies = [
     { name = "crdt-sync" },
     { name = "httpx" },
@@ -1039,7 +1039,7 @@ requires-dist = [
     { name = "crdt-sync", git = "https://github.com/kuhyx/utils?subdirectory=crdt-sync&rev=crdt-sync-v0.11.1" },
     { name = "cryptography", specifier = "==50.0.2" },
     { name = "httpx", specifier = "==0.28.1" },
-    { name = "rtdb-relay", git = "https://github.com/kuhyx/utils?subdirectory=rtdb_relay&rev=rtdb-relay-v0.2.1" },
+    { name = "rtdb-relay", git = "https://github.com/kuhyx/utils?subdirectory=rtdb_relay&rev=rtdb-relay-v0.2.2" },
 ]
 
 [package.metadata.requires-dev]
