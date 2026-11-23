@@ -203,7 +203,8 @@ for is waited for, charged, its result dropped, then the asked turn runs. Cost a
 `extra.consumed_turn` is saved in the same write. The one window left is a crash after that save and before the
 stage saves: the stage then reruns its turn (cost not doubled). Cancel stops the unit (`systemctl --user stop`;
 direct launch: the recorded process group); `Engine.close` makes drives let go without signalling a turn.
-`scripts/deploy.sh` restarts the unit and checks `/version` reports `git rev-parse --short HEAD`.
+`scripts/deploy.sh` checks `/version` reports `git rev-parse --short HEAD`. It restarts the unit only when the board
+serves another build, is not active, the preview unit is, or a unit file changed; `--restart` forces it (T2513).
 
 ## Phone criteria test themselves (kuhy, 2026-11-08)
 

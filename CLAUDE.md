@@ -19,7 +19,7 @@ Sessions message each other without kuhy (loopback `/api/peer`, `peer` MCP tools
 
 ## Commands
 
-- run: `./run.sh` (`scripts/deploy.sh`: deps, build, restart, check `/version`; then opens the page)
+- run: `./run.sh` (`scripts/deploy.sh`: deps, build, restart unless HEAD is served, check `/version`; then opens the page)
 - deploy: `git -C ~/src/todoImplementer pull --ff-only && ~/src/todoImplementer/scripts/deploy.sh` (Ship runs it after the push; the live unit runs from `~/src/todoImplementer`; `DOCS-landing.md`)
 - test: `make test`
 - test-changed: `scripts/test_changed.sh`

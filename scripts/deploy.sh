@@ -3,7 +3,12 @@
 # Safe at any time: claude turns are their own systemd units and the new server adopts them (DOCS-spec.md,
 # "Turns outlive the server"), so running sessions are not touched. Never opens a browser (run.sh does).
 #
-#   scripts/deploy.sh
+#   scripts/deploy.sh [--restart]
+#
+# The board restarts only when something the running server holds changed (T2513): /version not on HEAD, the
+# board unit not active, the preview unit active, or an installed unit file that differs from deploy/. Otherwise
+# the tools, build and venvs still run and /version is still checked, but a resumed Ship that runs this again
+# no longer cuts itself off. `--restart` or DEPLOY_RESTART=1 forces the restart.
 #
 # Env: TODOIMPL_APP_PORT (default 8786), TODOIMPL_BUILD_ID (stamps the web build only),
 #      RUN_WAIT_TRIES (default 240) x RUN_WAIT_INTERVAL (default 0.5 s) bound the wait for /version: the
@@ -22,6 +27,8 @@ readonly PREVIEW_UNIT=todoimplementer-preview.service
 readonly SLICE=todoimpl.slice
 readonly WAIT_TRIES="${RUN_WAIT_TRIES:-240}"
 readonly WAIT_INTERVAL="${RUN_WAIT_INTERVAL:-0.5}"
+# The unit files restart_server installs (keep in step with it), relative to deploy/ and the unit dir.
+readonly UNIT_FILES=("$UNIT" "$SLICE" "todoimpl-.slice.d/50-card-cap.conf")
 
 step() {
 	echo "deploy.sh: $*"
@@ -120,6 +127,18 @@ served_build() {
 	curl -fsS --max-time 2 "http://127.0.0.1:${APP_PORT}/version" 2>/dev/null | jq -r '.build // empty' 2>/dev/null || true
 }
 
+# restart_needed <expected> <force>: succeed when the board must restart to serve <expected> (T2513).
+restart_needed() {
+	local expected="$1" force="$2" file
+	[[ "$force" == 1 ]] && return 0
+	systemctl --user is-active --quiet "$PREVIEW_UNIT" && return 0 # it holds the port, not the board
+	systemctl --user is-active --quiet "$UNIT" || return 0
+	for file in "${UNIT_FILES[@]}"; do
+		cmp -s "${DEPLOY_DIR}/${file}" "${UNIT_DIR}/${file}" || return 0
+	done
+	[[ "$(served_build)" != "$expected" ]]
+}
+
 # wait_for_build <expected>: poll /version until it reports that build; dump the journal and fail on timeout.
 wait_for_build() {
 	local expected="$1" served="" i
@@ -147,6 +166,12 @@ ensure_linger() {
 }
 
 main() {
+	local force="${DEPLOY_RESTART:-0}"
+	case "${1:-}" in
+	--restart) force=1 ;;
+	"") ;;
+	*) die "usage: scripts/deploy.sh [--restart]" ;;
+	esac
 	add_user_bin_dirs
 	ensure_tools uv pnpm jq
 	local expected
@@ -155,7 +180,12 @@ main() {
 	ensure_sdk_venv
 	ensure_peer_mcp
 	ensure_linger
-	restart_server
+	if restart_needed "$expected" "$force"; then
+		restart_server
+	else
+		step "${UNIT} already serves ${expected} with these unit files: no restart (--restart forces one)"
+		systemctl --user enable "$UNIT" # still started at boot (T1906)
+	fi
 	wait_for_build "$expected"
 	step "serving build ${expected}"
 }
