@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 from todoimpl.errors.marks import PHONE
 
 from .norepo import is_yours
-from .parts import kuhys
+from .parts import is_repo_task, kuhys
 
 if TYPE_CHECKING:
     from .state import RunState
@@ -79,7 +79,10 @@ def _closed(task: TaskLike, run: RunState | None) -> Status | None:
         return Status.DONE_MANUALLY
     if task.status == "done" or stage in DONE_STAGES:
         return Status.DONE
-    return Status.CANCELLED if task.status == "abandoned" or stage == "cancelled" else None
+    if task.status == "abandoned":
+        return Status.CANCELLED
+    # Cancel stops a repo card's run only; its notes stay open, so the card waits in Backlog (T2530).
+    return Status.CANCELLED if stage == "cancelled" and not is_repo_task(task) else None
 
 
 def compute(  # noqa: PLR0911 - one return per rule of the spec table
@@ -97,7 +100,7 @@ def compute(  # noqa: PLR0911 - one return per rule of the spec table
         return closed
     if kuhys(task.title, getattr(task, "parts", ())) or (run is None and is_yours(task)):
         return Status.YOURS
-    if run is None:
+    if run is None or run.stage == "cancelled":  # only a repo card's cancelled run gets here (T2530)
         return Status.BACKLOG
     if run.assignee == "human" and not run.error:
         return Status.YOURS

@@ -64,7 +64,7 @@ def test_wont_on_a_cancelled_repo_run_only_abandons_the_note(rig: Rig) -> None:
     card = repo_card_id(repo)
     save(rig.run_dir(card), RunState(task_id=card, stage="cancelled", repo=repo, extra={"repotask": True}))
     found = rig.card(repo)
-    assert found["status"] == "cancelled"
+    assert found["status"] == "backlog"  # its note is open: Backlog, not Done (T2530)
     assert _wont(found) is not None
     rig.backend.wont(card)
     assert rig.state(card).stage == "cancelled"

@@ -30,6 +30,9 @@ A `research` label on a note with no URL is asked again once with the mistake na
 
 ## New repo
 
+While the repo is made, or a pressed note is triaged, the card is in `TriageService.busy()`: the board shows it
+Working with "being created" and one disabled Start, never Backlog (T2529, `board/creating.py`).
+
 Start on a card labelled `new_repo` (`TriageService.start`, in place of `scheduler.start` for every Start click) runs
 `newrepo.provision` off the click. The model never sees a repo before it exists, so the **triage answer picks the
 name** (short kebab-case); the repo's own spec session does the real spec. Steps, each written to

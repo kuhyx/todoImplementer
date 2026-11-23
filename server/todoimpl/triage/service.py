@@ -163,6 +163,10 @@ class TriageService:
 
         threading.Thread(target=loop, name="triage", daemon=True).start()
 
+    def busy(self) -> frozenset[str]:
+        """Return the cards whose repo is being made or whose pressed note is being triaged (T2529)."""
+        return frozenset(self._busy)
+
     # ---- Start of a repo-less card ----
     def start(self, id8: str, *, auto_ship: bool | None = None) -> None:
         """Start a card off the click: `new_repo` gets its repo first, a note nothing can start is triaged."""

@@ -89,7 +89,8 @@ state, a number for steps, names in `aria-label` and `title`).
   restart a Ship's own deploy causes loses nothing. A Start that begins a run or a cycle drops the flag; a run
   that ends `failed` keeps it (kuhy's Retry, then its Ship, starts the handed-off work); Cancel leaves it unused
   (Restart drops it). A refused automatic Start drops it too, unless the todo app was only unreachable.
-- Cancel stops the run only; it never abandons notes (they hold other parts too).
+- Cancel stops the run only; it never abandons notes (they hold other parts too). The card goes back to Backlog
+  (current line "cancelled", Start resumes the run) while a note is open; only closed notes put it in Done (T2530).
 - **Won't do** (T2045) drops a card no turn works on (Backlog, Cancelled, Yours, Needs you; confirm first): it
   abandons every note behind the card, then cancels a run that has not ended. It refuses before any write when a
   note also holds work on another card (a held part), and names that card.

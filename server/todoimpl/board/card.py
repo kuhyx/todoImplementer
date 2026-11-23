@@ -13,6 +13,7 @@ from todoimpl.errors.marks import signatures
 from . import cyclefloor
 from .actions import actions
 from .badges import tier_badges
+from .creating import overlay as being_created
 from .needs import needs
 from .norepo import is_yours
 from .parts import is_repo_task, kuhys, manual_ask, parts_of
@@ -43,6 +44,7 @@ class Context:
     waits: Mapping[str, str] = field(default_factory=dict)  # queued run -> the run of its repo it waits on
     activity: Callable[[str], float | None] = lambda _id: None  # a card's last real activity (T2404)
     pin: Callable[[str], str | None] = lambda _id: None  # the model picked before Start (T2478)
+    creating: frozenset[str] = frozenset()  # cards the triage service is making a repo for (T2529)
 
 
 def current_line(  # noqa: PLR0911 - one return per status
@@ -68,7 +70,7 @@ def current_line(  # noqa: PLR0911 - one return per status
         queued = _wait_line(run)  # a check of the ship queued on the build lock (T2185)
         return f"shipping: {run.extra[SHIP_STEP]}" + (f" {queued}" if queued else "")  # the step (T2060)
     return {
-        Status.BACKLOG: "not started",
+        Status.BACKLOG: "cancelled" if run is not None and run.stage == "cancelled" else "not started",
         Status.YOURS: "yours: no repo on this note" if run is None else "assigned to you",
         Status.CANCELLED: "cancelled",
         Status.SHIPPING: "pushing and closing the note",
@@ -208,4 +210,6 @@ def build_card(task: TaskLike, run: RunState | None, ctx: Context) -> dict[str, 
     if (waits := ctx.waits.get(tid)) is not None and status == Status.QUEUED:
         card["waits_on"] = waits
         card["current"] = ""  # the lock badge names the run it waits on; no stage line (T1925)
+    if tid in ctx.creating:
+        being_created(card)
     return card

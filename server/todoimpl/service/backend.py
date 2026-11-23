@@ -108,6 +108,7 @@ class ServiceBackend:
             waits=dict(getattr(self.scheduler, "lock_waits", dict)()),
             activity=partial(card_activity, self.root),
             pin=partial(prepin.read_card, self.root),
+            creating=self.triage_service.busy() if self.triage_service is not None else frozenset(),
         )
 
     def _with_extras(self, run: RunState | None) -> RunState | None:
