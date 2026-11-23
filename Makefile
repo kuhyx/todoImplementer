@@ -97,11 +97,17 @@ coverage:
 	@COVERAGE_FILE=$(COV_DIR)/.coverage $(UV) coverage report
 
 # Web gates run once the Astro app exists (pnpm only).
-# Two steps, so a session can run each in its own call under 60 s (T2411).
-web: web-lint web-test
+# Two steps, so a session can run each in its own call under 60 s (T2411); `pnpm lint` is web/dev/lint.sh.
+# `web` runs them one after the other even under `make fast -j`: eslint (2.7-3.1 GB) beside vitest (1.5 GB)
+# and mypy could pass the session's 4 GiB pool (T2520).
+web:
+	@$(MAKE) --no-print-directory web-lint
+	@$(MAKE) --no-print-directory web-test
 
+# Both keep the default 10 % CPU. web-lint gets 4 GiB for eslint's two threads, each holding the TS program;
+# web-test stays at the 2 GiB default (vmThreads on 3 workers peaks at 1.25 GB) (T2520).
 web-lint:
-	@$(KEY); if [[ -f web/package.json ]]; then $(WEBCAP) lint; else echo "web: no web/package.json yet"; fi; $(MARK)
+	@$(KEY); if [[ -f web/package.json ]]; then CAP_MEM=4G $(WEBCAP) lint; else echo "web: no web/package.json yet"; fi; $(MARK)
 
 web-test:
 	@$(KEY); if [[ -f web/package.json ]]; then $(WEBCAP) test; else echo "web: no web/package.json yet"; fi; $(MARK)

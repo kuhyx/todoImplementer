@@ -13,7 +13,7 @@
     "build": "astro check && astro build",
     "preview": "astro preview",
     "mock": "node dev/mock-server.ts",
-    "lint": "astro sync && tsc --noEmit && eslint . && astro check",
+    "lint": "bash dev/lint.sh",
     "test": "vitest run",
     "coverage": "vitest run --coverage"
   },

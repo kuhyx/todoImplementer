@@ -17,6 +17,11 @@ export default getViteConfig({
     environment: "jsdom",
     globals: true,
     include: ["src/**/*.test.ts"],
+    // T2520: the default pool built jsdom for every file (90 times) on 23 workers fighting over the 2.4 cores
+    // capped.sh grants, 42 s+ on a loaded machine. vmThreads builds it once per worker and still gives each file
+    // its own module context; 3 workers measured fastest at the cap (2: 16 s, 3: 10 s, 4: 12 s).
+    maxWorkers: 3,
+    pool: "vmThreads",
     setupFiles: ["./src/test/setup.ts"],
   },
 });
