@@ -18,6 +18,11 @@ from todoimpl.asks.allow import NEVER_ADD, ROOT
 if TYPE_CHECKING:
     from todoimpl.asks.parse import Ask
 
+    from .pipeline import Driver
+
+KEY = "phone_asks"  # its own budget: the bare-`A:` note may be what made the session write this block
+MAX_RUN = 2  # per run, cleared by Start, Retry and Ship reruns (scheduler.RESET)
+
 ACTION = re.compile(
     r"\b(?:rat(?:e|es|ed|ing|ings)|taps?|tapp(?:ed|ing)|swip(?:e|es|ed|ing)|scroll(?:s|ed|ing)?"
     r"|press(?:es|ed|ing)?|typ(?:e|es|ed|ing)|launch(?:es|ed|ing)?|install(?:s|ed|ing)?|open(?:s|ed|ing)?"
@@ -64,3 +69,16 @@ def claude_work(asks: list[Ask]) -> bool:
     """Return True when the ask block holds phone work and nothing but more of it or runnable commands."""
     phone = [a for a in asks if a.type != "command" and is_phone_work(a.title)]
     return bool(phone) and all(a in phone or _runnable(a) for a in asks)
+
+
+def send_back(driver: Driver) -> bool:
+    """Resume the session with the phone note, twice per run; past that the ask shows to kuhy."""
+    extra = driver.state.extra
+    done = int(extra.get(KEY, 0))
+    if done >= MAX_RUN:
+        return False
+    extra[KEY] = done + 1
+    extra["granted_note"] = NOTE
+    driver.save()  # before the turn starts: a restart during it must not send the same note twice
+    driver.activity("the ask hands kuhy phone work, the session resumes to do it itself")
+    return True

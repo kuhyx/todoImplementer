@@ -4,8 +4,8 @@ A Needs-you card must be answerable at a glance (DOCS-asks.md): a decision is a 
 option, a step for kuhy a `command` or `screenshot`. A turn that ends on `A:` with no valid `ask` block
 resumes the session with a fixed note (no LLM), once per stage and twice per run, like `grant.py`. The note
 also hands every phone, device and E2E check back to Claude; a phone wait the phone stage tracks
-(`waiting_phone`) is left to it. An ask block of phone work and runnable commands only goes back the same way,
-with the phone note (`devicework.py`, T2522).
+(`waiting_phone`) is left to it. An ask block of phone work and runnable commands only goes back too, with
+the phone note and its own budget (`devicework.py`, T2522).
 """
 
 from __future__ import annotations
@@ -15,8 +15,7 @@ from typing import TYPE_CHECKING
 from todoimpl.asks.parse import diagnose, parse_asks
 from todoimpl.errors.marks import unattended
 
-from .devicework import NOTE as PHONE_NOTE
-from .devicework import claude_work
+from .devicework import claude_work, send_back
 from .grant import NOT_FOR
 from .phone import asks_for_hands
 
@@ -42,10 +41,6 @@ REJECTED = "(runner) Your ask block was rejected, so kuhy saw none of it. The li
 MAX_FORMS = 1  # per stage; the count clears when a turn ends on anything but `A:`
 MAX_FORMS_RUN = 2  # per run, cleared by Start, Retry and a note from kuhy
 RUN_KEY = "ask_form_total"
-WHY = (
-    "the A: has no ask block, the session resumes to write one",
-    "the ask hands kuhy phone work, the session resumes to do it itself",
-)
 
 
 def needs_form(driver: Driver, res: TurnResult, stage: str) -> bool:
@@ -58,7 +53,9 @@ def needs_form(driver: Driver, res: TurnResult, stage: str) -> bool:
     if stage in NOT_FOR or st.extra.get("waiting_phone") or res.is_error or res.denials:
         return False
     asks = parse_asks(reply)
-    if not reply.strip() or (asks and not claude_work(asks)) or unattended(st) or asks_for_hands(reply):
+    if asks and claude_work(asks):  # phone work kuhy cannot be handed, whatever the A: line says (T2522)
+        return not unattended(st) and send_back(driver)
+    if not reply.strip() or asks or unattended(st) or asks_for_hands(reply):
         return False  # a tap or plug-in ask has its own nudge (phone.py, T1827)
     given: dict[str, int] = st.extra.setdefault("ask_forms", {})
     total = int(st.extra.get(RUN_KEY, 0))
@@ -67,8 +64,7 @@ def needs_form(driver: Driver, res: TurnResult, stage: str) -> bool:
     given[stage] = given.get(stage, 0) + 1
     st.extra[RUN_KEY] = total + 1
     problem = diagnose(reply)
-    form = FORM if problem is None else f"{REJECTED}{problem}\n\n{FORM}"
-    st.extra["granted_note"] = PHONE_NOTE if asks else form  # asks here are phone work (T2522)
+    st.extra["granted_note"] = FORM if problem is None else f"{REJECTED}{problem}\n\n{FORM}"
     driver.save()  # before the turn starts: a restart during it must not send the same ask back twice
-    driver.activity(WHY[bool(asks)])
+    driver.activity("the A: has no ask block, the session resumes to write one")
     return True

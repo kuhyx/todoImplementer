@@ -49,9 +49,9 @@ MAIL = "C2. (kuhy) kuhy approves the mail in the board ask, then it is sent"
 LOGO = "C3. (kuhy) kuhy approves the logo in the board ask, then it is installed on the phone"
 
 
-def _driver(block: str) -> Any:
-    reply = f"All parts are ticked; C9 needs reviews rated on your phone.\n\n```ask\n{block}\n```\n\nA: rate"
-    st = SimpleNamespace(extra={"last_reply": reply})
+def _driver(block: str, line: str = "A: rate", **extra: Any) -> Any:
+    reply = f"All parts are ticked; C9 needs reviews rated on your phone.\n\n```ask\n{block}\n```\n\n{line}"
+    st = SimpleNamespace(extra={"last_reply": reply, **extra})
     return SimpleNamespace(state=st, activity=lambda _t: None, save=lambda: None)
 
 
@@ -66,6 +66,23 @@ def test_t2522_an_ask_for_phone_work_goes_back_to_the_session(block: str) -> Non
     note = driver.state.extra["granted_note"]
     assert "phone_vd.sh" in note
     assert "never kuhy's" in note
+
+
+def test_t2522_a_spent_bare_a_budget_still_sends_phone_work_back() -> None:
+    spent: dict[str, Any] = {"ask_forms": {"implement": 1}, askform.RUN_KEY: askform.MAX_FORMS_RUN}
+    driver = _driver(ASKS[2], "A: rate", **spent)  # the form note asked for a block, the session wrote this
+    assert askform.needs_form(driver, _res(), "implement")
+    assert driver.state.extra["phone_asks"] == 1
+
+
+def test_t2522_a_tap_line_with_a_phone_ask_block_goes_back_outside_the_live_check() -> None:
+    driver = _driver(ASKS[1], "A: tap three reviews on your phone")
+    assert askform.needs_form(driver, _res(), "implement")
+
+
+def test_t2522_phone_work_goes_back_twice_per_run_then_shows() -> None:
+    driver = _driver(ASKS[2], phone_asks=2)
+    assert not askform.needs_form(driver, _res(), "implement")
 
 
 @pytest.mark.parametrize("block", KUHYS)

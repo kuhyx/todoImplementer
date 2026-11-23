@@ -32,12 +32,12 @@ COUNTERS = (
     "resettle", "retries", "crash_retries", "r_continues", "r_continue", "tagless_retry", "fresh",
     "ship_fixes", "deploy_fixes", "reship", "hands_nudged", "ask_grants", "ask_grant_total", "ask_forms",
     "ask_form_total", "part_nudges", "ship_resumes", "phone_update", "self_resumes", "link_nudges",
-    "gate_kills", "gate_waits", "deploy_kills", "answered_backs", "proof_rounds", "proof_brief",
+    "gate_kills", "gate_waits", "deploy_kills", "answered_backs", "proof_rounds", "proof_brief", "phone_asks",
 )  # fmt: skip
 RESET = "live_fixes check_fixes nudges ship_fixes deploy_fixes reship hands_nudged".split()  # noqa: SIM905
 RESET += ["ask_grants", "ask_grant_total", "ask_forms", "ask_form_total"]  # Start and Retry reset these
 RESET += ["self_resumes", "link_nudges", "gate_kills", "gate_waits", "deploy_kills"]  # Ship reruns (T2340)
-RESET += ["answered_backs", "proof_rounds", "proof_brief"]  # T2376, T2467
+RESET += ["answered_backs", "proof_rounds", "proof_brief", "phone_asks"]  # T2376, T2467, T2522
 
 
 class RunnerError(Exception):

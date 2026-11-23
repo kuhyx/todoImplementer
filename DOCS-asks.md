@@ -63,8 +63,10 @@ screenshots, timing measured on the device) is never a `(kuhy)` criterion, even 
 (needs the phone)": the plan prompt forbids the mark, the implement, fix and live check prompts say to run it on the
 session's own phone slot, and `approval.kuhy_ids` drops a marked one unless it is an approval. An `A:` whose ask
 block holds such phone work and nothing else but commands the session may run itself (nothing root or in the
-never-add set) goes back to the session like a bare `A:` (`askform.needs_form`, same budget), with a note to drive
-the phone itself. A real decision, an approval of a deliverable or a root command still reaches kuhy.
+never-add set) goes back to the session (`askform.needs_form`) with a note to drive the phone itself, whatever its
+`A:` line says. It has its own budget, twice per run (`phone_asks`, cleared by Start, Retry and Ship reruns), so a
+block written after the bare-`A:` note still goes back; past it the ask shows to kuhy. A real decision, an approval
+of a deliverable or a root command still reaches kuhy.
 
 The approve is keyed to the criterion's text, not to `plan.md`'s mtime (T2462): on kuhy's click the server stores
 `crit`, a hash of the criterion (`runner/crithash.py`: no `Cn` prefix, part tag or `(kuhy)` marker, whitespace
