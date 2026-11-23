@@ -164,8 +164,9 @@ the "session already pushed" path) and before the note closes, Ship runs the rep
   his counts as his), it restores them (tracked: back to HEAD; untracked: removed) and deploys again at once. A git
   failure while healing (his own git holds a lock) waits the same way. Edits whose files all rested 30 min
   (`deployheal.QUIET`) are strays a board run left (free workers wrote into checkouts, 2026-11-21): the board writes
-  `<run>/deploy/stray-<ts>.patch`, stashes them (`git stash push -u -m todoimpl-stray-<card> -- <files>`, untracked
-  too), deploys, and names both in the close evidence (T2512). Fresher edits are touched by nothing: the run rests in
+  `<run>/deploy/stray-<ts>.patch`, stashes them (`git stash push -u -m todoimpl-stray-<card>-<ts> -- <files>`,
+  untracked too), deploys, and names both in the close evidence (T2512). Work origin lacks becomes a part of the
+  repo's card for Claude to land or drop (`DOCS-errors.md`, "Stray edits", T2514). Fresher edits are touched by nothing: the run rests in
   `paused_retry` ("deploy waits: edits in ~/src/<repo> block the pull (<file>)") on the ladder, 12 waits
   (`shipfix.MAX_DEPLOY_WAITS`, counter `retries`); the resumed Ship only redeploys (`pushed.json`) and sets them aside
   once they rest. Only a git failure past the ladder ends in Needs you, with one exact step: "run `git -C <checkout>

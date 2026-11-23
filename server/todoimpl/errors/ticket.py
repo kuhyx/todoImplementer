@@ -35,6 +35,16 @@ PERF = (  # kuhy, 2026-11-21: a step over 60 s is the session's to fix, never hi
     "work, parallelise, a faster tool); split it into calls under 60 s only when optimising ran out. Never "
     "hand it to kuhy. Proof: the live check runs it timed and writes the seconds."
 )
+STRAY = "work.stray"  # stray edits a deploy stashed in kuhy's checkout, origin lacking them (T2514)
+STRAY_GOAL = (
+    "Decide whether this stray work belongs in the repo: a board run left it uncommitted in kuhy's checkout, "
+    "a deploy stashed it, and origin does not hold it. Read it in your worktree (Detail names the stash and "
+    "the patch), land what is useful (apply it, test, ship) and drop the rest. Never pop or drop the stash "
+    "in kuhy's checkout. Do not ask kuhy anything; take recommended answers."
+)
+STRAY_DONE = (
+    "done: the useful part is shipped and deployed, or this part says why none of it is worth landing."
+)
 SEEN = re.compile(r"^[ \t]*Seen:")
 
 
@@ -74,7 +84,8 @@ def _regression(record: AppError, fixed_build: int) -> str:
 def body(record: AppError, *, regression: int | None = None) -> str:
     """Return the part's text: goal, done line, what is known of the error, the Seen and signature lines."""
     how = [PERF] if record.kind.startswith("perf.") else []
-    lines = [GOAL, DONE, *how, "", f"Error: {record.kind}: {_flat(record.message)}"]
+    goal = [STRAY_GOAL, STRAY_DONE] if record.kind == STRAY else [GOAL, DONE]
+    lines = [*goal, *how, "", f"Error: {record.kind}: {_flat(record.message)}"]
     for label, value in (("Top frame", record.top_frame), ("Detail", record.detail)):
         if value:
             lines.append(f"{label}: {_flat(value)}")

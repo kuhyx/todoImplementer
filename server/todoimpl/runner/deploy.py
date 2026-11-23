@@ -17,7 +17,7 @@ import time
 from dataclasses import asdict, replace
 from typing import TYPE_CHECKING, Any
 
-from . import cardslice, deployheal, launch, stepwatch
+from . import cardslice, deployheal, launch, stepwatch, stray
 from .checks import CheckResult, clean_env, from_row, report
 from .deployheal import DirtyCheckoutError
 from .deployhost import DEPLOY_DIR, EXIT_FILE
@@ -188,12 +188,10 @@ def _heal(repo: str | None, tail: str, run_dir: Path, notes: list[str], *, heale
         else:
             if not files:
                 return True
-            if patch := deployheal.set_aside(
+            if aside := deployheal.set_aside(
                 checkout, files, run_dir / DEPLOY_DIR, run_dir.name, time.time()
-            ):
-                notes.append(
-                    f"set aside stray edits in {checkout}: {patch} (git stash todoimpl-stray-{run_dir.name})"
-                )
+            ):  # work origin lacks becomes a ticket for Claude (T2514)
+                notes.append(stray.route(checkout, str(repo), aside, files, time.time()))
                 return True
     raise DirtyCheckoutError(PREFIX, checkout, files or deployheal.listed(tail), run_dir.name)
 

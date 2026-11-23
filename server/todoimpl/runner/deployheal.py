@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import re
 import shlex
+from dataclasses import dataclass
 from pathlib import Path
 
 from .files import NeedsYouError
@@ -87,7 +88,7 @@ def listed(text: str) -> list[str]:
     return files
 
 
-def _incoming(checkout: Path) -> str:
+def incoming_ref(checkout: Path) -> str:
     """Return what `git pull --ff-only` would merge: the branch's upstream, else origin's default branch."""
     up = git(checkout, "rev-parse", "--verify", "--quiet", "@{u}", check=False)
     return "@{u}" if up.returncode == 0 else base_ref(checkout)[0]
@@ -149,7 +150,7 @@ def heal(checkout: Path, *, every: bool = False) -> list[str]:
     is now free for the pull (restored, or nothing was in the way).
     """
     git(checkout, "fetch", "--quiet", "origin", check=False)
-    ref = _incoming(checkout)
+    ref = incoming_ref(checkout)
     incoming = set(git(checkout, "diff", "--name-only", "-z", "HEAD", ref, check=False).stdout.split("\0"))
     blocking = [(status, path) for status, path in _dirty(checkout) if every or path in incoming]
     differ = [path for _, path in blocking if not _only_incoming(checkout, ref, path)]
@@ -168,20 +169,35 @@ def _changed_at(path: Path) -> float:
         return 0.0
 
 
-def set_aside(checkout: Path, files: list[str], keep: Path, card: str, now: float) -> Path | None:
-    """Stash stray edits so the pull goes on, losing nothing; return the patch kept in `keep` (T2512).
+@dataclass(frozen=True)
+class Aside:
+    """Stray edits set aside: the stash commit that holds them and the patch copied from it."""
+
+    stash: str
+    patch: Path
+
+
+def _stash_of(checkout: Path, message: str) -> str | None:
+    """Return the commit of the stash entry `message` names: the stack is shared with other sessions."""
+    rows = git(checkout, "stash", "list", "--format=%H %gs", check=False).stdout.splitlines()
+    return next((row.split()[0] for row in rows if row.endswith(f": {message}")), None)
+
+
+def set_aside(checkout: Path, files: list[str], keep: Path, card: str, now: float) -> Aside | None:
+    """Stash stray edits so the pull goes on, losing nothing; return the stash and a patch in `keep` (T2512).
 
     Only when every file has rested `QUIET` s: a board run's leftovers (free workers wrote into kuhy's
-    checkouts), not an edit he is making now. The stash (`todoimpl-stray-<card>`, `git stash pop` undoes it)
-    holds everything, untracked files too; the patch copies the tracked part. None: nothing moved.
+    checkouts), not an edit he is making now. The stash (`todoimpl-stray-<card>-<ts>`, `git stash pop` undoes
+    it) and the patch both hold everything, untracked files too (T2514). None: nothing moved.
     """
     if any(_changed_at(checkout / name) > now - QUIET for name in files):
         return None
+    message = f"todoimpl-stray-{card}-{int(now)}"
+    git(checkout, "stash", "push", "--include-untracked", "-m", message, "--", *files, check=False)
+    if still_dirty(checkout, files) or (stash := _stash_of(checkout, message)) is None:
+        return None
     keep.mkdir(parents=True, exist_ok=True)
     patch = keep / f"stray-{int(now)}.patch"
-    patch.write_text(
-        git(checkout, "diff", "--binary", "HEAD", "--", *files, check=False).stdout, encoding="utf-8"
-    )
-    message = f"todoimpl-stray-{card}"
-    git(checkout, "stash", "push", "--include-untracked", "-m", message, "--", *files, check=False)
-    return None if still_dirty(checkout, files) else patch
+    shown = git(checkout, "stash", "show", "--patch", "--binary", "--include-untracked", stash)
+    patch.write_text(shown.stdout, encoding="utf-8")
+    return Aside(stash, patch)
