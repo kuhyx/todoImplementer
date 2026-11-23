@@ -11,6 +11,7 @@ Exit 0 = the worktree changed; 3 = no work; 4 = no `claude-free`; 5 = killed by 
 from __future__ import annotations
 
 import argparse
+import functools
 import re
 import shutil
 import subprocess
@@ -21,18 +22,18 @@ from pathlib import Path
 from todoimpl.board.clone import src_root
 from todoimpl.umbrella import issues, workers
 
-from . import workerwait
-from .policy import HOOKS_OFF
+from . import srcguard, workerwait
+from .policy import HOOKS_OFF, src_deny
 
 PREAMBLE = (
     "You are a non-interactive worker. The task is fully specified and approved by kuhy: never ask "
     "questions, never run a spec gate or grilling round; make the edits now."
 )
 DENY = ("Bash(git push:*)", "Bash(git push *)")  # only Ship pushes
-WRITERS = ("Edit", "Write", "MultiEdit", "NotebookEdit")
 SCOPE = (
-    "Your worktree is {worktree}. Edit files only under it: kuhy's own checkouts under {src} are off-limits "
-    "(other repos have their own parts; a task that says everywhere means this repo only)."
+    "Your worktree is {worktree}. Edit files only under it: kuhy's own checkouts under {src} are off-limits, "
+    "by shell too (no cd, cp, sed, git or pub get there; other repos have their own parts; a task that says "
+    "everywhere means this repo only)."
 )
 GRILL = "❓"
 GRILLING = "spec-gate grilling instead of work"
@@ -97,14 +98,16 @@ def run(worktree: Path, prompt_file: Path, log: Path, *, run_dir: Path | None = 
     scope = SCOPE.format(worktree=worktree, src=src)
     task = prompt_file.read_text(encoding="utf-8")
     argv = [tool, "-p", f"{PREAMBLE} {scope}\n\n{task}", "--permission-mode"]
-    deny = [*DENY, *(f"{tool_name}(/{src}/**)" for tool_name in WRITERS)]  # `//` = absolute path (T2464)
-    argv += ["bypassPermissions", "--disallowedTools", *deny, "--settings", HOOKS_OFF]
+    argv += ["bypassPermissions", "--disallowedTools", *DENY, *src_deny(src), "--settings", HOOKS_OFF]
     log.parent.mkdir(parents=True, exist_ok=True)
+    card, stray = worktree.parent, functools.partial(_issue, run_dir, child, "checkout")  # T2515
     attempt = 0
     while True:
         attempt += 1
         began = time.time()
+        srcguard.begin(card, log.stem, child or None)
         code = _attempt(argv, worktree, log)
+        srcguard.end(card, log.stem, child or None, time.time(), stray)
         killed = _killed(code)
         if run_dir is not None:
             workers.record(run_dir, {

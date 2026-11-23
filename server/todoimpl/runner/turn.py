@@ -20,6 +20,8 @@ from . import adopt, allowlist, claude, credit, creditguard, files, guard, launc
 from .ctxcap import brake, size
 from .files import KilledError
 from .modelswitch import pinned
+from .srcguard import begin as watch_checkout
+from .srcguard import end as checkout_edits
 from .stream import StreamParser, TurnResult, state_tag
 
 if TYPE_CHECKING:
@@ -92,6 +94,7 @@ def _launch(  # noqa: PLR0913, PLR0917 - the turn environment plus its route
     stem = files.new_stream(env.run_dir, role, env.now()).name.removesuffix(files.STREAM_SUFFIX)
     ask = {"wanted": wanted, "ran": ran, "effort": claude.effort_for(role, effort)}
     files.write_json(files.sibling(env.run_dir, stem, files.MODEL_SUFFIX), ask)
+    watch_checkout(env.run_dir, stem, state.repo)  # what the turn leaves in kuhy's checkout (T2515)
     return launch.start(env.run_dir, stem, role, inv)
 
 
@@ -202,6 +205,7 @@ def _consume(env: TurnEnv, state: RunState, rec: orphans.Record) -> TurnResult |
         orphans.clear(env.run_dir)
         return None
     res = parser.result
+    checkout_edits(env.run_dir, stem, state.repo, env.now(), lambda text: env.activity("error", text))
     if state.extra.get("consumed_turn") != stem:
         _apply(env, state, rec, res, code)
     state.last_tag = state_tag(res.tag)

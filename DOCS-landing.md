@@ -16,6 +16,15 @@ Every work-stage prompt (implement, fix, resume, fresh, live_check) carries it:
 - Free workers (T2464) get the same limit by force: their task file names the child's repo ("everywhere" means that repo
   only), their prompt names the worktree, and `Edit`/`Write`/`MultiEdit`/`NotebookEdit` are denied under `~/src`
   (`$TODOIMPL_SRC`). An umbrella note saying "every app" had sent workers into nine other repos' checkouts.
+- Board turns get the same writer deny (T2515, `runner/srcguard.py`), on top of whatever kuhy's policy says: his
+  `add_dirs: ["~"]` covers `~/src` and `--add-dir` cannot leave it out, so the deny is the limit. A turn whose cwd is
+  under `~/src` (closing reads the checkout; Edit is denied there anyway) skips it. Bash stays free: deploys pull
+  in `~/src/<repo>`. The grant also forbids stash, checkout, apply and reset there; a dirty checkout is the board's.
+- Each board turn and free worker attempt snapshots the card's own checkout (`<stem>.checkout.json`) and compares it
+  after: files dirty afterwards that were clean or held other content go to `<run>/checkout-edits.jsonl` and a
+  feed line (a worker's to `free-issues.jsonl`, phase `checkout`). `srcguard.attributed` / `owner` say whether edits
+  still sitting there are exactly a card's, for the stray stash (T2512). Bash writes into *other* repos' checkouts
+  are not watched.
 - Also granted: installers, confirm scripts and other repo scripts, marker files, approving its own drafts.
 - Heavy commands still go through `capped.sh`. Every tool call is one step that ends within 60 s (one gate step or
   test shard, push and deploy as calls of their own), because the stall watch files any quiet stretch over 60 s

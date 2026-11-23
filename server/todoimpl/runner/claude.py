@@ -102,6 +102,7 @@ def options(  # noqa: PLR0913, PLR0917 - one set of turn options, built in one p
     """Return what a turn is given; `allow` = learned allow rules, kuhy's session policy loosens the rest."""
     pol = policy.load()
     deny = (DENY_ALWAYS if pol.deny is None else pol.deny) + (DENY_READONLY if role in READONLY_ROLES else ())
+    deny += policy.src_deny_for(worktree)  # kuhy's checkouts, even with a loose policy (T2515)
     # Each turn is a new process: one owner per card keeps its phone test slot across turns. The plan route
     # never carries the API key (it would take precedence over the plan's login); the credit route adds it.
     # Builds queue on one machine-wide lock (buildlock.py); a turn never starts out holding it.

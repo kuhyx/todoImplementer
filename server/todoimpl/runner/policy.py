@@ -14,6 +14,8 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
+from todoimpl.board.clone import src_root
+
 KEYS = frozenset({"permission_mode", "add_dirs", "disable_hooks", "deny"})
 # One Bash call ends at 40 s (claude moves it to the background), so the model gets a result and 20 s to
 # answer it before the board's 60 s stall line (T2444, T2453). kuhy's settings.json sets an hour, and settings
@@ -29,6 +31,22 @@ def turn_settings(*, hooks_off: bool) -> str:
 
 
 HOOKS_OFF = turn_settings(hooks_off=True)
+WRITERS = ("Edit", "Write", "MultiEdit", "NotebookEdit")
+
+
+def src_deny(src: Path | None = None) -> tuple[str, ...]:
+    """Return the writer-tool deny rules for kuhy's checkouts under the src root (`//` = absolute, T2464)."""
+    root = src or src_root()
+    return tuple(f"{tool}(/{root}/**)" for tool in WRITERS)
+
+
+def src_deny_for(cwd: Path) -> tuple[str, ...]:
+    """Return `src_deny()` for every turn, whatever kuhy's policy says (T2515), unless its cwd is there.
+
+    A closing turn's cwd is kuhy's checkout under the src root; it has Edit denied anyway.
+    """
+    root = src_root()
+    return () if cwd.is_relative_to(root) else src_deny(root)
 
 
 @dataclass(frozen=True)

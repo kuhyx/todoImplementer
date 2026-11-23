@@ -34,6 +34,7 @@ def test_build_has_the_agreed_argv_and_env(world: Env, tmp_path: Path) -> None:
         "--disallowedTools",
         "Bash(git push:*)",
         "Bash(git push *)",
+        *policy.src_deny(),
     )
     assert inv.env["CLAUDE_AUTO_CONTINUE"] == "0"
     assert inv.cwd == tmp_path
@@ -45,7 +46,7 @@ def test_classify_is_read_only_and_models_follow_roles(
     inv = claude.build("classify", "p", tmp_path, extra_dirs=(tmp_path / "shots",))
     assert inv.argv[12:14] == (str(tmp_path), str(tmp_path / "shots"))
     assert "--resume" not in inv.argv
-    assert inv.argv[-5:] == ("Bash(git push:*)", "Bash(git push *)", "Edit", "Write", "NotebookEdit")
+    assert inv.argv[-9:-4] == ("Bash(git push:*)", "Bash(git push *)", "Edit", "Write", "NotebookEdit")
     assert [claude.model_for(r) for r in ("spec", "plan", "implement", "classify")] == [
         "opus",
         "opus",
