@@ -221,7 +221,9 @@ capped scope after it had the build lock, not a timeout of the wait: the queue i
 revive a child without end. When any child revived, the umbrella goes back to `implement` and is queued.
 `revive.ship_again` (a cut Ship, a dirty step whose files are clean, a deploy that only refused a dirty checkout,
 the dirty text before T2507) also revives failed top-level cards into `shipping` at server start (T2517). Each card
-or child revives at most once per text (`ship_revives`; T2511's `refusal_revives` counts), so none loops.
+or child revives at most once per text (`ship_revives`; T2511's `refusal_revives` counts), so none loops, and
+only while the board shows the card (an umbrella: itself) in Needs you: a note done or won't do, or a todo app
+that does not answer, revives nothing.
 
 ## A resting run frees its disk (`runner/reap.py`, T2433)
 

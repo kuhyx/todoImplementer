@@ -71,7 +71,7 @@ class Engine:
 
     def recover(self) -> None:
         """Re-queue runs a restart interrupted; a half-done ship is never redone on its own."""
-        self._queue.extend(recovery.interrupted(self.root))
+        self._queue.extend(recovery.interrupted(self.root, self.client))
 
     def close(self) -> None:
         """Stop the dispatcher and the drives (after their current turn) and end every subscription."""

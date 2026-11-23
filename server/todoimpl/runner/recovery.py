@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Protocol
 
 from todoimpl.board import state as store
 from todoimpl.board.parse import StateError
+from todoimpl.board.status import Status, compute
+from todoimpl.todo_mcp.model import TodoError
 from todoimpl.umbrella import revive
 
 from . import hold, live, orphans, retry
@@ -17,9 +19,16 @@ from .restart import resume_ship
 
 if TYPE_CHECKING:
     from todoimpl.board.state import RunState
+    from todoimpl.board.types import TaskLike
 
 
-def interrupted(root: Path) -> list[str]:
+class Notes(Protocol):
+    """The todo view: the note behind a card, fresh (the runner's client)."""
+
+    def get_task(self, card: str) -> TaskLike: ...  # noqa: D102
+
+
+def interrupted(root: Path, notes: Notes) -> list[str]:
     """Return the card ids to queue again; a run caught mid-ship ships again, at most `MAX_RESUMES` times."""
     queue: list[str] = []
     for path in sorted(root.glob("*/state.json")):
@@ -41,7 +50,7 @@ def interrupted(root: Path) -> list[str]:
             st.extra[CLOSE_ONLY] = st.closing
             store.save(path.parent, st)
             queue.append(st.task_id)
-        elif _back_to_work(st, path.parent):
+        elif _back_to_work(st, path.parent, notes):
             store.save(path.parent, st)
             queue.append(st.task_id)
         elif st.stage in (*WORK_STAGES, "paused_limit", retry.PAUSED) and (
@@ -51,13 +60,28 @@ def interrupted(root: Path) -> list[str]:
     return queue
 
 
-def _back_to_work(st: RunState, run_dir: Path) -> bool:
+def _parked(notes: Notes, st: RunState) -> bool:
+    """Say whether the board shows the card in Needs you; done, won't do or an unknown note stay (T2517)."""
+    try:
+        task = notes.get_task(st.task_id)
+    except TodoError:  # the todo app is down or the section is gone: look again next start
+        return False
+    return compute(task, st, live=False, limit_until=None) == Status.NEEDS_YOU
+
+
+def _back_to_work(st: RunState, run_dir: Path, notes: Notes) -> bool:
     """Move a failed run the board can take on itself back to work; True when it did."""
-    if st.stage == "failed" and "umbrella" in st.extra and revive.children(run_dir, time.time()):
-        st.stage, st.error = "implement", None  # its children Claude can fix work again (T2344)
-        st.extra.pop("failed_stage", None)
-        return True
-    if "umbrella" not in st.extra and revive.ship_again(st, run_dir):  # a self-heal text (T2517)
+    if st.stage != "failed":
+        return False
+    if "umbrella" in st.extra:  # its children Claude can fix work again (T2344), while kuhy has not closed it
+        if _parked(notes, st) and revive.children(run_dir, time.time()):
+            st.stage, st.error = "implement", None
+            st.extra.pop("failed_stage", None)
+            return True
+    elif (kind := revive.ship_kind(st, run_dir)) is not None and _parked(
+        notes, st
+    ):  # a self-heal text (T2517)
+        revive.ship_on(st, kind)
         return True
     if live.rejudgeable(st):  # judged under older rules: judge the stored report again, no turn
         st.stage, st.error, st.last_tag, st.assignee = "live_check", None, None, "claude"

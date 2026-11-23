@@ -4,7 +4,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
-from runnerfakes import Env, FakeClient, executable, sh
+from runnerfakes import Env, FakeClient, Notes, executable, sh
 from schedfakes import CARD, IMPL, LIVE_OK, PLAN, boot, state, wait_stage
 from todoimpl.board import state as store
 from todoimpl.runner import deploy, recovery
@@ -121,7 +121,11 @@ def test_t2510_a_ship_cut_more_than_twice_rests_on_the_ladder_and_never_needs_ku
         store.save(
             world.root / name, store.RunState(task_id=name, stage="shipping", extra={"ship_resumes": left})
         )
-    assert recovery.interrupted(world.root) == ["card0-0", f"card{MAX_RESUMES - 1}-0", f"card{MAX_RESUMES}-0"]
+    assert recovery.interrupted(world.root, Notes()) == [
+        "card0-0",
+        f"card{MAX_RESUMES - 1}-0",
+        f"card{MAX_RESUMES}-0",
+    ]
     resting_ship = store.load(world.root / f"card{MAX_RESUMES}-0")
     assert resting_ship is not None
     assert (resting_ship.stage, resting_ship.error) == ("paused_retry", None)

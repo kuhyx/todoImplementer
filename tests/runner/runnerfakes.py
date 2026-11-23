@@ -206,3 +206,31 @@ class FakeClient:
     def item(self, id8: str, index: int = 0) -> Item:
         """Return the note's item at index."""
         return self.get_task(f"{id8}-{index}").item
+
+
+@dataclass(frozen=True)
+class Note:
+    """A card's note as the board's status sees it (TaskLike)."""
+
+    id: str
+    title: str = "t"
+    body: str = ""
+    repo: str | None = "kuhyx/demo"
+    status: str = "todo"
+    priority: str = "high"
+    done_check: str | None = None
+    created_by: str = "kuhy"
+
+
+@dataclass(frozen=True)
+class Notes:
+    """The todo view server start asks (T2517): every note has `status`; None is an unreachable MCP."""
+
+    status: str | None = "todo"
+
+    def get_task(self, card: str) -> Note:
+        """Return the card's note, or raise TodoError like the real view when the MCP is down."""
+        if self.status is None:
+            msg = "cannot reach MCP server"
+            raise TodoError(msg)
+        return Note(card, status=self.status)

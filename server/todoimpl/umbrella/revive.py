@@ -5,8 +5,8 @@ error text: a killed or red gate step, a missing `- deploy:` line, a red or kill
 deploy's own record for its log tail) rebuilds the failure, and `shipfix.heal` decides as it would have live:
 a plain rerun enters `shipping` at once (the restart was the wait), a fix turn enters `implement` with its
 brief. The bound is counted and saved before any drive, so restarts never revive a child without end. A
-child whose failure needs kuhy, or whose bound is spent, stays as it is. `ship_again` (a text the board heals
-itself: a cut Ship, a dirty deploy) serves server start's top-level cards too, once per text (T2517).
+child whose failure needs kuhy, or whose bound is spent, stays as it is. `ship_kind`/`ship_on` (a text the
+board heals itself: a cut Ship, dirty deploys) serve server start's top-level cards too, once a text (T2517).
 """
 
 from __future__ import annotations
@@ -93,19 +93,31 @@ def _back_to(st: RunState, stage: str) -> None:
         st.extra.pop(key, None)
 
 
-def ship_again(st: RunState, run_dir: Path) -> bool:
-    """Send a card or child a self-heal text parked back to `shipping`, at most once per text (T2517)."""
+def ship_kind(st: RunState, run_dir: Path) -> str | None:
+    """Return the self-heal text a failed Ship may ship again for now, not yet spent; else None (T2517)."""
     failed = st.extra.get("failed_stage")
     if st.stage != "failed" or failed not in ("shipping", "gate"):  # "gate": a cut Ship's legacy form
-        return False
+        return None
     kind = _kind(st, run_dir)
     spent = [*st.extra.get(KINDS, []), *(["refused"] if st.extra.get(REFUSALS) else [])]
     if kind is None or kind in spent or (failed == "gate" and kind != "interrupted"):
-        return False
+        return None
+    return kind
+
+
+def ship_on(st: RunState, kind: str) -> None:
+    """Send a card or child back to `shipping` for `kind`, spending it: each text revives once, no loop."""
     st.extra[KINDS] = [*st.extra.get(KINDS, []), kind]
     if kind == "dirty":
         st.extra.pop("retries", None)  # the ladder starts afresh
     _back_to(st, "shipping")
+
+
+def ship_again(st: RunState, run_dir: Path) -> bool:
+    """Send a card or child a self-heal text parked back to `shipping`; True when it did."""
+    if (kind := ship_kind(st, run_dir)) is None:
+        return False
+    ship_on(st, kind)
     return True
 
 

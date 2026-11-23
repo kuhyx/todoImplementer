@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
+from runnerfakes import Notes
 from todoimpl.board import state as store
 from todoimpl.runner import recovery
 from todoimpl.umbrella.store import child_dir
@@ -59,7 +60,7 @@ def _load(root: Path, cid: str) -> store.RunState:
 
 def test_t2344_a_failed_umbrella_with_fixable_children_is_queued_again_on_start(tmp_path: Path) -> None:
     kids = _world(tmp_path)
-    assert recovery.interrupted(tmp_path) == [CARD]
+    assert recovery.interrupted(tmp_path, Notes()) == [CARD]
     um = store.load(tmp_path / CARD)
     assert um is not None
     assert (um.stage, um.error, "failed_stage" in um.extra) == ("implement", None, False)
@@ -88,11 +89,11 @@ def _fail_again(root: Path, cid: str, error: str) -> None:
 
 def test_t2344_the_counts_are_saved_so_restarts_never_revive_without_end(tmp_path: Path) -> None:
     kids = _world(tmp_path)
-    recovery.interrupted(tmp_path)
+    recovery.interrupted(tmp_path, Notes())
     assert _load(tmp_path, kids["killed"]).extra["gate_kills"] == 1
     _fail_again(tmp_path, kids["killed"], KILLED)
     _fail_again(tmp_path, kids["no_line"], NO_LINE)
-    assert recovery.interrupted(tmp_path) == [CARD]
+    assert recovery.interrupted(tmp_path, Notes()) == [CARD]
     killed = _load(tmp_path, kids["killed"])  # killed twice: the session makes the step fit
     assert (killed.stage, killed.extra["ship_fixes"]) == ("implement", 1)
     assert "shard it finer" in str(killed.extra["failure_tail"])
@@ -101,7 +102,7 @@ def test_t2344_the_counts_are_saved_so_restarts_never_revive_without_end(tmp_pat
     for cid in kids.values():
         if _load(tmp_path, cid).stage != "failed":
             _fail_again(tmp_path, cid, KUHY)
-    assert recovery.interrupted(tmp_path) == []  # every budget is spent or the step is kuhy's
+    assert recovery.interrupted(tmp_path, Notes()) == []  # every budget is spent or the step is kuhy's
     assert _load(tmp_path, kids["no_line"]).stage == "failed"
 
 
@@ -111,7 +112,7 @@ def test_t2344_a_failed_umbrella_with_nothing_fixable_stays_failed(tmp_path: Pat
     um.extra.update(failed_stage="implement", umbrella={"width": 1, "kids": [], "rounds": []})
     store.save(run_dir, um)
     _child(run_dir, 1, KUHY)
-    assert recovery.interrupted(tmp_path) == []
+    assert recovery.interrupted(tmp_path, Notes()) == []
     again = store.load(run_dir)
     assert again is not None
     assert again.stage == "failed"
@@ -122,6 +123,6 @@ def test_t2344_a_child_whose_state_does_not_parse_is_left_alone(tmp_path: Path) 
     broken = child_dir(tmp_path / CARD, "umbr0001-9")
     broken.mkdir(parents=True)
     (broken / "state.json").write_text("{not json", encoding="utf-8")
-    assert recovery.interrupted(tmp_path) == [CARD]
+    assert recovery.interrupted(tmp_path, Notes()) == [CARD]
     assert _load(tmp_path, kids["no_line"]).stage == "implement"
     assert (broken / "state.json").read_text(encoding="utf-8") == "{not json"
