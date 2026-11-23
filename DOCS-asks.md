@@ -58,6 +58,14 @@ sessions have no mail or Gmail tool: they run with `--strict-mcp-config`. Until 
 choice; never an auto-adopted answer or one from an earlier cycle), `live.settle` sends the session back
 once and then raises Needs you. If he answered `c<n>` with no approve, Needs you says so at once (T2376). The run never reaches Checks, never ships partly with a follow-up, and never defers the criterion.
 
+Phone work is Claude's (`runner/devicework.py`, T2522). A check that needs phone interaction (taps, ratings,
+screenshots, timing measured on the device) is never a `(kuhy)` criterion, even when the note says "Check: manual
+(needs the phone)": the plan prompt forbids the mark, the implement, fix and live check prompts say to run it on the
+session's own phone slot, and `approval.kuhy_ids` drops a marked one unless it is an approval. An `A:` whose ask
+block holds such phone work and nothing else but commands the session may run itself (nothing root or in the
+never-add set) goes back to the session like a bare `A:` (`askform.needs_form`, same budget), with a note to drive
+the phone itself. A real decision, an approval of a deliverable or a root command still reaches kuhy.
+
 The approve is keyed to the criterion's text, not to `plan.md`'s mtime (T2462): on kuhy's click the server stores
 `crit`, a hash of the criterion (`runner/crithash.py`: no `Cn` prefix, part tag or `(kuhy)` marker, whitespace
 collapsed), and the approve counts while its cycle matches and the criterion still hashes the same. A session that

@@ -20,6 +20,7 @@ from todoimpl.asks.carry import is_approve
 from todoimpl.asks.parse import parse_asks
 
 from . import crithash
+from .devicework import is_phone_check
 from .files import NeedsYouError
 
 if TYPE_CHECKING:
@@ -45,8 +46,8 @@ STALE = (
 
 
 def kuhy_ids(criteria: list[str]) -> list[str]:
-    """Return the ids of the plan criteria marked `(kuhy)`."""
-    return [f"C{n}" for n, text in enumerate(criteria, 1) if MARK.match(text)]
+    """Return the ids of the plan criteria marked `(kuhy)`; a phone check is Claude's despite it (T2522)."""
+    return [f"C{n}" for n, text in enumerate(criteria, 1) if MARK.match(text) and not is_phone_check(text)]
 
 
 def _planned(run_dir: Path) -> float:

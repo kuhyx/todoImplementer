@@ -17,6 +17,10 @@ continue resume it. A resumed session already holds plan.md: its prompt names th
 credits route runs a role on a lesser model than it wanted (every credit turn runs the `credits_model` setting, default Opus 5.5; a Sonnet role on Opus is no hold) the feed says so and
 `state.extra.credit_downgrade[role]` holds `{wanted, ran}`.
 
+The live check runs every phone check itself (T2522): taps, ratings, screenshots and timing measured on the
+device happen on its own Pixel slot or the emulator, never as an ask for kuhy, even for a criterion marked
+`(kuhy)` (`prompts/phone.py` `LIVE_WORK`, `DOCS-asks.md`).
+
 A turn has a wall-clock limit: `$TODOIMPL_TURN_TIMEOUT` seconds (default 4 h, above a manager round with coaching).
 The limit travels in `<stem>.invoke.json`, so the turn host enforces it across a server restart: SIGTERM, then
 SIGKILL, `timeout: true` in the exit record, the reason in the stderr log; the run then retries like a crash.

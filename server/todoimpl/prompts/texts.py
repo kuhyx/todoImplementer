@@ -110,7 +110,7 @@ def plan(ctx: PromptContext) -> str:
         f"Write {ctx.run_dir}/plan.md: `## Approach` (files to touch, short), `## Acceptance criteria`.",
         "Number criteria `C1.`, `C2.` ... Each is observable behaviour in the live app: `I do X, I see Y`.",
         "Never a test or code property. Cover the done_check if there is one.",
-        KUHY_PLAN,
+        f"{KUHY_PLAN} {phone.PLAN_WORK}",
         standing.NIGHT.rstrip(),
         "End with `D:`.",
     )
@@ -125,7 +125,7 @@ def implement(ctx: PromptContext) -> str:
         _rules(ctx),
         "Write the failing check first, see it red, implement, see it green.",
         SELF_CHECK,
-        KUHY_LIVE,
+        f"{KUHY_LIVE} {phone.LIVE_WORK}",
         standing.DEPLOY,
         phone.IMPLEMENT,
         "End with `D:`.",
@@ -147,8 +147,8 @@ def live_check(ctx: PromptContext) -> str:
         f"Write {ctx.run_dir}/live_check.md, one line per criterion:",
         "- [x] C1: what I did -> what I saw   (use `- [ ]` if it failed or could not be tried, and say why)",
         "A criterion that only passes once the work is on main (merged, deployed, restarted from main): land "
-        "the work yourself, then check it. One that needs kuhy's phone: `- [~] C7: needs phone: <why>`.",
-        KUHY_LIVE,
+        "the work yourself, then check it. One that needs the Pixel: `- [~] C7: needs phone: <why>`.",
+        f"{KUHY_LIVE} {phone.LIVE_WORK}",
         standing.grant(ctx),
         "Write the whole checklist yourself in this turn; no background agent, do not end with `R:`.",
         standing.WAITS,
@@ -179,7 +179,7 @@ def fix(ctx: PromptContext) -> str:
         _rules(ctx),
         "Find the root cause, add a failing check for it first, fix, rerun the failing command until green.",
         SELF_CHECK,
-        KUHY_LIVE,
+        f"{KUHY_LIVE} {phone.LIVE_WORK}",
         "End with `D:`.",
     )
 

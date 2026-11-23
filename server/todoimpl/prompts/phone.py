@@ -19,6 +19,15 @@ DEPLOY = (
     "PHONE_DEPLOY_ABI=android-arm64,android-x64 ~/.claude/scripts/phone_deploy.sh {app_dir} --release "
     "--slot --stage prep|dart|kotlin|assemble|install (one call each)"
 )
+WORK = (  # T2522: card c96b7ce5-0 asked kuhy to rate reviews on his phone for a `(kuhy)` criterion
+    "A check that needs phone interaction (taps, ratings, screenshots, timing on the device) is yours, even "
+    "when the note calls it manual or kuhy's:"
+)
+PLAN_WORK = f"{WORK} never mark it `(kuhy)`; the live check runs it on its own phone slot."
+LIVE_WORK = (
+    f"{WORK} a `(kuhy)` mark on it is wrong. Run it yourself on your own slot (`phone_slot.sh`, "
+    "`phone_vd.sh`, adb) and tick it; never ask kuhy to rate, tap or start a watcher for it."
+)
 NO_HANDS = (
     "Never ask kuhy to tap, open screens, look at the real screen, plug anything, pause his music or confirm "
     "data use: drive the virtual display yourself (slot data is sandboxed, so real-data concerns do not "
