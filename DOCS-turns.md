@@ -66,7 +66,9 @@ Code: `server/todoimpl/runner/buildlock.{py,sh}`; `buildlock.SLOTS` (`$TODOIMPL_
 - The lock is `SLOTS` flock files: `$TODOIMPL_HOME/build.lock` (slot 0, the one old wrappers take) and
   `build.lock.1`, `build.lock.2`; each slot's `<lock>.holder` says `<card> (<cmd>) since <t>`, and a waiter
   prints `waiting for build lock held by <holders, joined by +>; <n> ahead` to stderr once, then waits. Nothing
-  times the wait out.
+  times the wait out. With no `TODOIMPL_BUILD_CARD` (a `systemd-run` job) the card is the board run dir the build
+  runs in (an umbrella child's own); outside one the holder line names the git repo instead, `?` only when
+  neither is known (T2516). The ticket keeps a card id or `?`: the hold ceiling and heavy-build report read it.
 - Slots (T2419, T2420): a waiter goes once fewer than `SLOTS` live tickets are ahead of it, then takes the first
   free slot (all busy, from an old wrapper or a hand-held lock: it waits on slot 0). It blocks on the nearest live
   ticket for 2 s at a time (`buildqueue.RECHECK`) and counts again, so any build that ends lets it on.
@@ -107,7 +109,11 @@ Code: `server/todoimpl/runner/buildlock.{py,sh}`; `buildlock.SLOTS` (`$TODOIMPL_
   in front of any inherited PATH. MCP servers and hooks keep the plain PATH, so none of them can hold the lock.
 - Under a held lock `TODOIMPL_BUILD_LOCK_HELD=1` is set, so nested tools (flutter -> gradle -> java, uv ->
   pytest) run at once. A version or help probe (`--version`, `-version`, `version`, `--help`, `-h`, `-V`, `help` as
-  the only argument) and a dev server (`dev`, `serve`, `start`, `preview`, `watch`, also after `run`) skip it.
+  the only argument) and a long-running server skip it, since it would hold a slot for as long as it serves
+  (T2516): `dev`, `serve`, `start`, `preview`, `watch`, `mcp-server` (also after `run`), a package runner's
+  `[exec|dlx|x] <bin> dev` (`pnpm exec astro dev`; never after `add`, `install` and other package verbs), `vite`
+  unless `build` or `optimize`, `firebase emulators:start` and a Firebase emulator jar (`java -jar` a path under
+  `firebase/emulators/` or a `*-emulator-*.jar`).
 - Only the wrapper's bash holds the lock fds; the tool runs without them (in the background, so the wrapper hears
   SIGUSR1 and forwards TERM, INT as TERM, and HUP), so a daemon it leaves never keeps the lock.
 - The board's checks (`checks.run_capped`: done_check, `make test`, pre-commit, gate steps, autocheck) take

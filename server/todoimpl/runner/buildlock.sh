@@ -16,6 +16,7 @@ SLOT_HOLDER="$HOLDER"
 readonly QUEUE="$HERE/build.queue"
 readonly QLOCK="$HERE/build.queue.lock"
 readonly SHELLS=" bash sh zsh dash ksh fish node "
+readonly SERVES=" dev serve start preview watch mcp-server "
 readonly LINTERS=" @LINTERS@ " # filled in by buildlock.py from LINTERS (lanes.py shares it)
 readonly PREFIXES=" env nice nohup timeout ionice stdbuf time setsid capped.sh "
 readonly TEST_JOBS="${TODOIMPL_TEST_JOBS:-4}" # `flutter test` width when the caller names none (its default is half the cores)
@@ -31,6 +32,7 @@ FLOCK=""
 TICKET=""
 TFD=""
 WHAT=""
+CARD="?" OWNER="?" # the ticket's card, the holder line's owner: whose (buildlock_queue.sh) sets both
 CHILD=""
 RELEASED=0
 SAID=0
@@ -53,16 +55,44 @@ find_real() {
 	return 1
 }
 
-# needs_lock ARGS...: false for a version/help probe and for a dev or MCP server (`dart mcp-server`), which
-# would hold the lock for as long as it serves.
+# needs_lock TOOL ARGS...: false for a version/help probe and for a long-running server, which would hold the
+# lock for as long as it serves (T2516): `dev`, `serve`, `start`, `preview`, `watch`, `mcp-server` (also after
+# `run`), a package runner's `[exec|dlx|x] <bin> <one of those>`, `vite` but `vite build|optimize`, `firebase
+# emulators:start` and a Firebase emulator jar (`java -jar ~/.cache/firebase/emulators/...`).
 needs_lock() {
+	local tool="${1##*/}" sub word bin=""
+	shift
 	if (($# == 1)); then
 		case "$1" in --version | -version | version | --help | -h | -V | help) return 1 ;; esac
 	fi
-	local sub="${1:-}"
+	sub="${1:-}"
 	[[ "$sub" == run ]] && sub="${2:-}"
-	case "$sub" in dev | serve | start | preview | watch | mcp-server) return 1 ;; esac
-	return 0
+	[[ "$SERVES" == *" $sub "* ]] && return 1
+	case "$tool" in
+	java)
+		while (($#)) && [[ "$1" != -jar ]]; do shift; done
+		word="${2:-}"
+		[[ "$word" == */firebase/emulators/* || "${word##*/}" == *-emulator-*.jar ]] && return 1
+		return 0
+		;;
+	vite) bin=vite ;;
+	pnpm | npm | yarn)
+		[[ " run exec dlx x " == *" ${1:-} "* ]] && shift
+		while [[ "${1:-}" == -* ]]; do shift; done
+		[[ " add install i remove rm uninstall update up upgrade link why info view create init " == *" ${1:-} "* ]] &&
+			return 0
+		bin="${1:-}"
+		shift || true
+		;;
+	esac
+	[[ "$bin" == firebase && "${1:-}" == emulators:start ]] && return 1
+	for word in "$@"; do
+		[[ "$bin" == vite && ("$word" == build || "$word" == optimize) ]] && return 0
+		[[ "$word" == -* || "$bin" == vite ]] && continue
+		[[ "$SERVES" == *" $word "* ]] && return 1
+		return 0
+	done
+	[[ "$bin" != vite ]]
 }
 
 # is_light TOOL ARGS...: true for `uv run [options] <linter> ...` and `flutter|dart analyze`: a linter only
@@ -152,7 +182,7 @@ run_locked() {
 	take_slot
 	local now
 	printf -v now '%(%F %T)T' -1
-	printf '%s (%s) since %s\n' "${TODOIMPL_BUILD_CARD:-?}" "${WHAT:0:120}" "$now" >"$SLOT_HOLDER.$$"
+	printf '%s (%s) since %s\n' "$OWNER" "${WHAT:0:120}" "$now" >"$SLOT_HOLDER.$$"
 	mv -f "$SLOT_HOLDER.$$" "$SLOT_HOLDER"
 	write_ticket "$TICKET" held
 	export TODOIMPL_BUILD_LOCK_HELD=1
@@ -189,12 +219,13 @@ main() {
 		exit 127
 	}
 	FLOCK="$REAL"
+	whose
 	case "$1" in
 	--queue) show_queue && exit 0 ;;
 	--flock) shift && guard_flock "$@" ;;
 	esac
 	WHAT="$*"
-	if [[ "${TODOIMPL_BUILD_LOCK_HELD:-}" != 1 ]] && needs_lock "${@:2}" && is_script "$@"; then
+	if [[ "${TODOIMPL_BUILD_LOCK_HELD:-}" != 1 ]] && needs_lock "$@" && is_script "$@"; then
 		# Never fail a caller (a repo gate wraps itself this way): run it unlocked, shims first (T2165).
 		echo "buildlock: not holding the build lock for a whole script (${WHAT:0:120}): it runs unlocked and" \
 			"each heavy tool inside takes the lock itself; lock each heavy command on its own (buildlock.sh" \
@@ -208,7 +239,7 @@ main() {
 		echo "buildlock: $1 not found on PATH" >&2
 		exit 127
 	}
-	if [[ "${TODOIMPL_BUILD_LOCK_HELD:-}" == 1 || "$UNLOCKED" == 1 ]] || ! needs_lock "${@:2}" || is_light "$@"; then
+	if [[ "${TODOIMPL_BUILD_LOCK_HELD:-}" == 1 || "$UNLOCKED" == 1 ]] || ! needs_lock "$@" || is_light "$@"; then
 		tune "$@"
 		exec "$REAL" "${ARGS[@]:1}"
 	fi

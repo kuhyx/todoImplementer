@@ -5,8 +5,8 @@
 # slot lock (take_slot). A ticket whose flock
 # we get is dead (killed, rebooted) and is removed, except a board check's (` board`), kept for its restarted
 # server (T2168). The fds here are picked by bash ({var}), so a caller's fd 7 or 8 is never clobbered.
-# Needs from the wrapper: QUEUE QLOCK LOCK HOLDER SLOTS RECHECK FLOCK WHAT, and the globals TICKET TFD SAID
-# SLOT_HOLDER.
+# Needs from the wrapper: HERE QUEUE QLOCK LOCK HOLDER SLOTS RECHECK FLOCK WHAT, and the globals TICKET TFD SAID
+# SLOT_HOLDER CARD OWNER.
 
 # slot_lock N: print slot N's lock file (slot 0 is build.lock, which old wrappers take).
 slot_lock() {
@@ -55,12 +55,37 @@ take_slot() {
 	done
 }
 
+# whose: set CARD (the ticket's) and OWNER (the holder line's). With no TODOIMPL_BUILD_CARD (a systemd-run job,
+# a script that dropped the env) a board run dir under HERE names the card (an umbrella child its own), else
+# the git repo the command runs in (a `.claude/worktrees/*` one: its repo) names the holder line only, since the
+# hold ceiling and heavy-build report read the ticket's card as a card id (T2516); `?` when neither is known.
+whose() {
+	CARD="${TODOIMPL_BUILD_CARD:-}" OWNER=""
+	local dir root rel
+	dir="$(pwd -P 2>/dev/null)" || dir="$PWD"
+	root="$(cd -P -- "${HERE:?}" && pwd)"
+	if [[ -z "$CARD" && "$dir/" == "$root"/?*/* ]]; then
+		rel="${dir#"$root"/}"
+		[[ "$rel" == */children/?* ]] && rel="${rel#*/children/}"
+		CARD="${rel%%/*}"
+	fi
+	while [[ -z "$CARD" && "$dir" == /?* && "$dir" != "${HOME:-}" ]]; do
+		if [[ -e "$dir/.git" ]]; then
+			[[ "$dir" == */.claude/worktrees/* ]] && dir="${dir%%/.claude/worktrees/*}"
+			OWNER="${dir##*/}"
+			break
+		fi
+		dir="${dir%/*}"
+	done
+	CARD="${CARD:-?}" OWNER="${OWNER:-${CARD:-?}}"
+}
+
 # write_ticket PATH STATE: what `--queue` and the hold ceiling read; rewritten in place, never replaced,
-# because the owner's flock is on this inode.
+# because the owner's flock is on this inode. CARD may be unset: a wrapper older than this lib (T2516).
 write_ticket() {
 	local now
 	printf -v now '%(%F %T)T' -1
-	printf '%s %s %s (%s) since %s\n' "$$" "$2" "${TODOIMPL_BUILD_CARD:-?}" "${WHAT:0:120}" "$now" >"$1"
+	printf '%s %s %s (%s) since %s\n' "$$" "$2" "${CARD:-${TODOIMPL_BUILD_CARD:-?}}" "${WHAT:0:120}" "$now" >"$1"
 }
 
 # take_ticket: join the queue under the queue lock with the next number; stale temp files go first.
