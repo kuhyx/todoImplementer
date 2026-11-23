@@ -85,7 +85,7 @@ def test_t2519_with_no_bwrap_the_worker_runs_and_its_write_elsewhere_is_logged(
     assert "bwrap is not installed" in issues
     assert f"kuhy's checkout {other} changed while this turn ran: a.txt" in issues
     card = tmp_path / "umbrella" / "children" / "umbr0001-3"
-    assert srcguard.owner(card.parent, other, ["a.txt"]) == "umbr0001-3"
+    assert srcguard.owner(card.parent, other, ["a.txt"]) is None  # only seen changing: maybe kuhy's edit
 
 
 def test_t2519_a_turn_that_writes_another_checkout_by_shell_is_logged_for_its_card(
@@ -111,11 +111,12 @@ def test_t2519_a_turn_that_writes_another_checkout_by_shell_is_logged_for_its_ca
         f"this turn left edits in kuhy's checkout {app}: a.txt",
     ]
     rows = [json.loads(line) for line in (run / srcguard.LOG).read_text(encoding="utf-8").splitlines()]
-    assert sorted((r["checkout"], sorted(r["files"]), r["card"]) for r in rows) == [
-        (str(app), ["a.txt"], "card0001-0"),
-        (str(other), ["a.txt", "new.txt"], "card0001-0"),
+    assert sorted((r["checkout"], sorted(r["files"]), r["card"], r["own"]) for r in rows) == [
+        (str(app), ["a.txt"], "card0001-0", True),
+        (str(other), ["a.txt", "new.txt"], "card0001-0", False),
     ]
-    assert srcguard.owner(root, other, ["a.txt", "new.txt"]) == "card0001-0"
+    assert srcguard.owner(root, other, ["a.txt", "new.txt"]) is None  # another repo: seen, not owned
+    assert srcguard.owner(root, app, ["a.txt"]) == "card0001-0"
     assert srcguard.owner(root, other, ["e.txt"]) is None  # kuhy's
 
 
@@ -145,10 +146,10 @@ def test_t2519_an_edit_two_cards_saw_has_no_owner_and_old_snapshots_still_count(
     root = tmp_path / "root"
     for card in ("card0001-0", "card0002-0"):
         (root / card).mkdir(parents=True)
-        srcguard.begin(root / card, "implement-1", None)
+        srcguard.begin(root / card, "implement-1", "kuhyx/other")
     (other / "a.txt").write_text("someone\n", encoding="utf-8")
     for card in ("card0001-0", "card0002-0"):
-        srcguard.end(root / card, "implement-1", None, 5.0, print)
+        srcguard.end(root / card, "implement-1", "kuhyx/other", 5.0, print)
     assert srcguard.owner(root, other, ["a.txt"]) is None  # both ran while it landed
     run = root / "card0003-0"
     run.mkdir()

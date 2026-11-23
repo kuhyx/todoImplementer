@@ -90,4 +90,6 @@ are watched instead. Umbrella 7808ee0a-0 is why: its workers wrote a logo into n
   2026-11-23 on 98 checkouts under the 10 % CPU cap: 0.34 s cold, 0.11-0.19 s warm, off the request path (the
   card's own thread). A snapshot from before T2519 (one checkout) still counts.
 - **Attribution.** `srcguard.attributed` / `owner` tell the stray stash (T2512, T2514) whether edits still sitting
-  in a checkout are exactly one card's. Cards run side by side, so an edit two cards both saw land has no owner.
+  in a checkout are exactly one card's; an owned stray is set aside at once (T2518). Only rows of the card's own
+  repo count (`own: true`): a change a turn saw in another repo may be kuhy's live edit, so it is logged but owned
+  by nobody and keeps the 30 min quiet wait. An edit two cards both saw land has no owner either.

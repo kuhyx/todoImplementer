@@ -11,7 +11,8 @@ stream (`<stem>.checkout.json`, so an adopted turn finds it after a restart), `e
 `<run>/checkout-edits.jsonl` with the card (the run dir's name) and says them once. A sandboxed worker scans
 its own checkout only: it cannot write the others, so what changes there is someone else's. A file counts
 when it is dirty after the turn and was clean or held other content before. `attributed` and `owner` tell a
-deploy or a heal whether the edits still sitting there are exactly what one card left.
+deploy or a heal whether the edits still sitting there are exactly what one card left in its own repo's
+checkout; another repo's change is logged (`own: false`) but owned by nobody, so it keeps the quiet wait.
 """
 
 from __future__ import annotations
@@ -132,13 +133,14 @@ def end(run_dir: Path, stem: str, repo: str | None, now: float, say: Callable[[s
     for checkout, files in sorted(scan(Path(name) for name in was).items()):
         new = {name: digest for name, digest in files.items() if was[checkout].get(name) != digest}
         if new:
-            row = {"at": now, "stem": stem, "card": run_dir.name, "checkout": checkout, "files": new}
+            mine = checkout == own  # another repo's change may be kuhy's live edit or a parallel card's
+            row = {"at": now, "stem": stem, "card": run_dir.name, "own": mine, "checkout": checkout}
             with (run_dir / LOG).open("a", encoding="utf-8") as log:
-                log.write(json.dumps(row) + "\n")
-            names = " ".join(sorted(new))  # another repo's change may be kuhy's or a parallel card's
+                log.write(json.dumps({**row, "files": new}) + "\n")
+            names = " ".join(sorted(new))
             say(
                 f"this turn left edits in kuhy's checkout {checkout}: {names}"
-                if checkout == own
+                if mine
                 else f"kuhy's checkout {checkout} changed while this turn ran: {names}"
             )
             left += (str(Path(checkout) / name) for name in sorted(new))
@@ -146,7 +148,11 @@ def end(run_dir: Path, stem: str, repo: str | None, now: float, say: Callable[[s
 
 
 def _recorded(run_dir: Path, checkout: Path) -> dict[str, set[str]]:
-    """Return {path: digests} the card recorded for this checkout."""
+    """Return {path: digests} the card recorded for this checkout, its own repo's only (T2519).
+
+    A row of another repo (`own` false) is feed and evidence, never ownership: the turn only saw it change.
+    Rows before T2519 have no `own` and were always the card's own checkout.
+    """
     seen: dict[str, set[str]] = {}
     try:
         lines = (run_dir / LOG).read_text(encoding="utf-8").splitlines()
@@ -154,7 +160,7 @@ def _recorded(run_dir: Path, checkout: Path) -> dict[str, set[str]]:
         return seen
     for line in lines:
         row = json.loads(line)
-        if row["checkout"] == str(checkout):
+        if row["checkout"] == str(checkout) and row.get("own", True):
             for name, digest in row["files"].items():
                 seen.setdefault(name, set()).add(digest)
     return seen
