@@ -56,7 +56,9 @@ def _iso(at: float) -> str:
     return datetime.fromtimestamp(at, UTC).isoformat(timespec="seconds")
 
 
-def report(repo: str, patch: Path, stash: str, files: list[str], now: float, owner: str = "") -> str:  # noqa: PLR0913, PLR0917
+def report(  # noqa: PLR0913, PLR0917 - one record's parts
+    repo: str, patch: Path, stash: str, files: list[str], now: float, owner: str = "", tag: str = ""
+) -> str:
     """Count the patch in the stray-work report (one record per patch content); return its ticket key."""
     path = state_base() / "app-errors" / FILE
     data = read_json(path)
@@ -69,8 +71,9 @@ def report(repo: str, patch: Path, stash: str, files: list[str], now: float, own
         record = {"app": app, "repo": full, "signature": sig, "kind": KIND, "count": 0, "build": 0,
                   "message": MESSAGE, "first_seen": _iso(now)}  # fmt: skip
         errors.append(record)
+    listed = f", listed as {tag}" if tag and tag != stash else ""  # the stash list shows the tag (T2521)
     detail = (
-        f"stash {stash} (in your worktree: git stash show -p --include-untracked {stash}; "
+        f"stash {stash}{listed} (in your worktree: git stash show -p --include-untracked {stash}; "
         f"git stash apply {stash}); patch {patch}; files: {', '.join(files)}"
         + (f"; left by card {owner}" if owner else "")
     )
@@ -92,5 +95,5 @@ def route(checkout: Path, repo: str, aside: deployheal.Aside, files: list[str], 
         held = False
     if held:
         return f"{head}; origin already holds them"
-    key = report(repo, aside.patch, aside.stash, files, now, aside.owner)
+    key = report(repo, aside.patch, aside.stash, files, now, aside.owner, aside.tag)
     return f"{head}; origin lacks them: ticket {key} for Claude"

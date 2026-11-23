@@ -15,6 +15,7 @@ handling, with every dirty file counted, once the checkout really is dirty (T250
 
 from __future__ import annotations
 
+import contextlib
 import re
 import shlex
 from dataclasses import dataclass
@@ -173,11 +174,16 @@ def _changed_at(path: Path) -> float:
 
 @dataclass(frozen=True)
 class Aside:
-    """Stray edits set aside: the stash, the patch copied from it, the card that left them ("": unknown)."""
+    """Stray edits set aside: the stash, the patch copied from it, the card that left them ("": unknown).
+
+    `tag` is the stash entry's message (`git stash list` shows it); `stash` is the tag too when git could
+    not list the entry's commit (T2521).
+    """
 
     stash: str
     patch: Path
     owner: str = ""
+    tag: str = ""
 
 
 def _stash_of(checkout: Path, message: str) -> str | None:
@@ -200,8 +206,13 @@ def set_aside(  # noqa: PLR0913, PLR0917 - one set-aside's parts
     if not owner and any(_changed_at(checkout / name) > now - QUIET for name in files):
         return None
     message = f"todoimpl-stray-{card}-{int(now)}"
-    git(checkout, "stash", "push", "--include-untracked", "-m", message, "--", *files, check=False)
-    if still_dirty(checkout, files) or (stash := _stash_of(checkout, message)) is None:
+    with contextlib.suppress(GitError):  # a timed-out push may have made the entry all the same (T2521)
+        git(checkout, "stash", "push", "--include-untracked", "-m", message, "--", *files, check=False)
+    try:
+        stash = _stash_of(checkout, message)
+    except GitError:  # the entry may exist: the ticket names its tag, nothing is lost (T2521)
+        stash = message
+    if stash is None or _left(checkout, files):
         return None
     keep.mkdir(parents=True, exist_ok=True)
     patch = keep / f"stray-{int(now)}.patch"
@@ -210,4 +221,12 @@ def set_aside(  # noqa: PLR0913, PLR0917 - one set-aside's parts
     except GitError as exc:  # the work is in the stash all the same: the ticket names it (T2518)
         shown = f"# git stash show failed: {exc.text}\n# the stray work is in stash {stash}\n"
     patch.write_text(shown, encoding="utf-8")
-    return Aside(stash, patch, owner)
+    return Aside(stash, patch, owner, message)
+
+
+def _left(checkout: Path, files: list[str]) -> bool:
+    """Return True while any of `files` is dirty; a failed `git status` says no: the rerun tells (T2521)."""
+    try:
+        return still_dirty(checkout, files)
+    except GitError:
+        return False
