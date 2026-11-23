@@ -35,6 +35,7 @@ GATE = re.compile(r"^Pre-push gate step (\S+) is red \((?:exit (-?\d+)|timed out
 DEPLOY = re.compile(rf"^{PREFIX}: deploy failed \((?:exit (-?\d+)|timed out)\)")
 NO_LINE = re.compile(rf"^{PREFIX}: .* declares no deploy: command in CLAUDE\.md$")
 DROPPED = ("failed_stage", "retry_reason", "ship_resumes")  # a revived Ship starts its resume count afresh
+LEGACY = "stops on uncommitted edits"  # the dirty text before T2507: its Ship now sets strays aside (T2512)
 REFUSALS = "refusal_revives"  # a red deploy that only refused a dirty checkout ships again once (T2511)
 
 
@@ -83,7 +84,8 @@ def _ship_again(st: RunState, run_dir: Path) -> bool:
         return True
     record = read_json(run_dir / DEPLOY_DIR / EXIT_FILE)
     tail = str(record.get("tail") or "") if isinstance(record, dict) else ""
-    if not (DEPLOY.match(text) and deployheal.blocked(tail)) or int(st.extra.get(REFUSALS, 0)):
+    refused = (DEPLOY.match(text) and deployheal.blocked(tail)) or LEGACY in text
+    if not refused or int(st.extra.get(REFUSALS, 0)):
         return False
     st.extra[REFUSALS] = 1
     return True

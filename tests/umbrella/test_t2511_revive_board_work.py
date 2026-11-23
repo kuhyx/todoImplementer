@@ -56,6 +56,12 @@ def test_t2511_a_red_deploy_that_only_refused_a_dirty_checkout_goes_back_to_ship
     assert st.stage == "shipping"
 
 
+def test_t2511_a_child_parked_on_the_old_dirty_text_ships_again_once(tmp_path: Path) -> None:
+    st = _failed("pushed, not deployed: the deploy's pull into ~/src/demo stops on uncommitted edits to a")
+    assert revive.revive(st, tmp_path, 0.0)  # its Ship now sets the strays aside itself (T2512)
+    assert st.stage == "shipping"
+
+
 def test_t2511_a_dirty_child_with_no_checkout_stays(tmp_path: Path) -> None:
     st = _failed(DirtyCheckoutError("pushed, not deployed", tmp_path / "gone", ["a"]).text, repo="kuhyx/gone")
     assert not revive.revive(st, tmp_path, 0.0)
