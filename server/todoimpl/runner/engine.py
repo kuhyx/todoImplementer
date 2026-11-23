@@ -17,7 +17,7 @@ from todoimpl.umbrella.driver import driver_for
 from todoimpl.umbrella.note import is_umbrella
 from todoimpl.usage.limits import UNTIL_FILE
 
-from . import adopt, limits, orphans, reap, recovery, retry
+from . import adopt, latenote, limits, orphans, reap, recovery, retry
 from .bus import Bus
 from .files import INBOX, read_json, write_json
 from .pipeline import Ctx
@@ -107,12 +107,14 @@ class Engine:
         """Queue a Send-to-Claude note for the run's next turn; callers hold the lock."""
         path = self.root / card / INBOX
         write_json(path, [*(read_json(path) or []), text])
+        latenote.mark(path.parent)
 
     def _drain(self, card: str) -> list[str]:
         with self._cv:
             path = self.root / card / INBOX
             notes = [str(n) for n in read_json(path) or []]
             path.unlink(missing_ok=True)
+            latenote.clear(path.parent)
             return notes
 
     def _register(self, card: str, handle: Handle | None) -> None:

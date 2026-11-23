@@ -75,16 +75,16 @@ def test_yours_offers_start_wont_and_done_nothing() -> None:
 
 def test_queued_and_working_can_be_cancelled() -> None:
     assert list(acts(S.QUEUED, run())) == ["cancel", "done-manually", "send", "model"]
-    assert acts(S.QUEUED, run(session_id="s"))["send"].reason == "the run is waiting to start"
+    assert acts(S.QUEUED, run(session_id="s"))["send"].enabled  # T2528: the note waits for the turn
     working = acts(S.WORKING, run(session_id="s", worktree="/w"), limit=LIMITED)
     assert working["cancel"].enabled
     assert working["send"].enabled
     assert working["cancel"].confirm
 
 
-def test_send_without_a_session_is_disabled() -> None:
+def test_t2528_send_without_a_session_is_enabled() -> None:
     send = acts(S.WORKING, run())["send"]
-    assert (send.enabled, send.reason) == (False, "no Claude session yet")
+    assert (send.enabled, send.reason) == (True, None)
     assert "copy-resume" not in acts(S.WORKING, run())
 
 
@@ -95,9 +95,9 @@ def test_t2056_send_is_enabled_on_a_needs_you_card_with_no_session(run_state: Ru
     assert "copy-resume" not in got
 
 
-def test_t2056_send_stays_disabled_without_a_session_while_queued_or_shipping() -> None:
-    assert acts(S.QUEUED, run())["send"].reason == "no Claude session yet"
-    assert acts(S.SHIPPING, run(stage="shipping"))["send"].reason == "no Claude session yet"
+def test_t2528_send_is_enabled_without_a_session_while_queued_or_shipping() -> None:
+    assert acts(S.QUEUED, run())["send"].enabled
+    assert acts(S.SHIPPING, run(stage="shipping"))["send"].enabled
 
 
 def test_copy_resume_value_and_missing_worktree() -> None:
@@ -111,7 +111,7 @@ def test_copy_resume_value_and_missing_worktree() -> None:
 def test_shipping_cannot_be_cancelled() -> None:
     got = acts(S.SHIPPING, run(stage="shipping", session_id="s"))
     assert got["cancel"].reason == "shipping cannot be cancelled"
-    assert got["send"].reason == "shipping is in progress"
+    assert got["send"].enabled  # T2528: the note reopens the card once the ship is done
 
 
 def test_t1850_run_on_credits_action_is_gone() -> None:
@@ -119,7 +119,7 @@ def test_t1850_run_on_credits_action_is_gone() -> None:
     got = acts(S.PAUSED_LIMIT, paused, limit=LIMITED)
     assert "credits" not in got
     assert got["cancel"].enabled
-    assert got["send"].reason.startswith("usage limit until")  # type: ignore[union-attr]
+    assert got["send"].enabled  # T2528: the note waits in the inbox until the limit lifts
 
 
 def test_spec_questions_actions() -> None:

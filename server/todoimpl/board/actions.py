@@ -91,7 +91,7 @@ def actions(  # noqa: PLR0913 - the signature of the interface plus keyword-only
         why = "shipping cannot be stopped" if status == Status.SHIPPING else None
         out.append(Action("done-manually", "Done manually", why is None, why, confirm=True))
     if run is not None and status not in DONE:
-        out += _session(run, status, block) + _model(run, status)
+        out += _session(run, status) + _model(run, status)
     out += _prestart(out, run, status, pin)
     if run is not None and run.lesson and run.lesson.get("state") == "drafted":
         out.append(Action("lesson-approve", "Approve lesson"))
@@ -165,22 +165,15 @@ def _permission(run: RunState, block: str | None, cancel: Action) -> list[Action
     return [go, Action("copy-fix", "Copy", value=command), _gate("Done, rerun", "rerun", block), cancel]
 
 
-def _session(run: RunState, status: Status, block: str | None) -> list[Action]:
-    """Return Send to Claude and copy-resume, which depend on the session."""
+def _session(run: RunState, status: Status) -> list[Action]:
+    """Return Send to Claude and copy-resume, which depend on the session.
+
+    Send takes a note on every open card but a closing one, session or not (T2528): it waits in the inbox
+    for the next turn, a usage limit included; a note sent while the card ships reopens it (latenote.py).
+    """
     out: list[Action] = []
     if run.stage not in FINAL_STAGES and status != Status.YOURS:
-        if run.closing:
-            reason: str | None = NO_NOTES
-        elif not run.session_id:
-            # a card that rests on kuhy may take a note before its first session: the send restarts it (T2056)
-            reason = None if status == Status.NEEDS_YOU else "no Claude session yet"
-        elif status == Status.WORKING:
-            reason = None
-        elif status in (Status.QUEUED, Status.SHIPPING):
-            reason = "the run is waiting to start" if status == Status.QUEUED else "shipping is in progress"
-        else:
-            reason = block
-        out.append(_gate("Send to Claude", "send", reason))
+        out.append(_gate("Send to Claude", "send", NO_NOTES if run.closing else None))
     if run.session_id:
         out.append(_resume(run))
     return out

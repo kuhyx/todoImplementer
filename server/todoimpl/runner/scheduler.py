@@ -13,7 +13,7 @@ from todoimpl.board.types import MANUAL_REASON
 from todoimpl.repotask.start import prepare
 from todoimpl.todo_mcp.model import TodoError
 
-from . import appfix, closing, modelswitch, phone, prepin, retry, stopping, whenfree
+from . import appfix, closing, latenote, modelswitch, phone, prepin, retry, stopping, whenfree
 from .engine import Client, default_clock
 from .files import read_json
 from .phone_sched import PhoneEngine
@@ -100,6 +100,7 @@ class Scheduler(PhoneEngine):
         stopping.recover(self)
         modelswitch.recover(self)
         whenfree.recover(self)
+        latenote.recover(self)  # a note sent while the card shipped, the ship's deploy restart in between
         self.heal_phone_waits()
 
     def start(self, card: str, *, auto_ship: bool | None = None, extra: dict[str, Any] | None = None) -> None:
@@ -131,7 +132,7 @@ class Scheduler(PhoneEngine):
                 whenfree.clear(self.root / card)  # this Start is the one a pending handoff waited for
             if item.parts:
                 prepare(st, item, self.root / card, self.clock())
-            st.stage = restart_stage(st, item)
+            st.stage = latenote.retry_stage(self.root / card, restart_stage(st, item))
             st.error, st.last_tag, st.assignee = None, None, "claude"
             st.note_body = clip_body(item.body)
             for key in COUNTERS:
@@ -200,7 +201,7 @@ class Scheduler(PhoneEngine):
             if st.closing:
                 msg = "closing runs take no notes; Start again or Cancel"
                 raise RunnerError(msg, "disabled")
-            if st.stage in (*FINAL, "shipping"):
+            if st.stage in FINAL:  # a note while shipping reopens the card after the ship (latenote.py)
                 msg = f"The run is {st.stage}: nothing to send to"
                 raise RunnerError(msg, "disabled")
             self.push_note(card, text.strip())
@@ -212,7 +213,7 @@ class Scheduler(PhoneEngine):
                 "tool": None,
             }
             self.bus.publish(card, shown)
-            if card not in self._active:
+            if card not in self._active and st.stage != "shipping":
                 self._route(st)
                 self.save(card, st)
                 self.enqueue(card)
@@ -224,9 +225,10 @@ class Scheduler(PhoneEngine):
         st = store.load(self.root / card)
         if st is None:  # pragma: no cover - a drive always saves
             return
+        held = latenote.reopen(self, card, st) or latenote.for_retry(st)  # a note after or for a ship
         if st.stage in ("paused_limit", retry.PAUSED):
             self.enqueue(card, first=True)
-        elif read_json(self.root / card / "inbox.json") and st.stage not in (*FINAL, "shipping"):
+        elif read_json(self.root / card / "inbox.json") and st.stage not in (*FINAL, "shipping") and not held:
             self._route(st)
             self.save(card, st)
             self.enqueue(card)

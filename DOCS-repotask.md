@@ -207,3 +207,13 @@ and the line names the copy (`images.copy_into`). Every turn gets the images roo
 - Several distinct `done_check`s are chained with `&&`; one prose check makes the chain a "sentence" the board does
   not run (the plan criteria cover it).
 - The queue order of waiting runs is the queue's (first come, first served); no priority between repos.
+
+## A note after the ship (T2528)
+
+Send to Claude takes a note on every open card but a closing one, with or without a session; the note waits in
+`inbox.json` for the next turn (a usage limit keeps it until the limit lifts). A note sent while the card ships
+reopens it once the ship is done (`runner/latenote.py`): the note becomes a new part of the repo's note (the shipped
+parts stay closed), the run goes back to implement on the same session with the note, then gate and ship again by
+themselves. A failed ship keeps the note for the Retry turn (Retry enters implement, not ship). `inbox.fresh` marks
+notes sent under this rule, so a server start after the ship's deploy reopens only those. A card that is not a
+repo card keeps the note for its next Start.

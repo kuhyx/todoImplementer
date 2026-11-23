@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import threading
 from typing import TYPE_CHECKING
 
@@ -23,6 +24,7 @@ if TYPE_CHECKING:
     from .cache import TaskCache
 
 PASS_THROUGH = frozenset({"status", "priority", "repo"})
+log = logging.getLogger("todoimpl.service")
 
 
 class ItemView:
@@ -164,11 +166,16 @@ class ItemView:
     def add_task(self, repo: str, title: str, body: str = "") -> Task:
         """Add a section to the repo's open note (a follow-up) and refresh the cached cards.
 
-        Idempotent by title: a retry after a lost reply finds the section it already added.
+        Idempotent by title: a retry after a lost reply finds the section it already added. The repo's cards
+        are read again before the return, so a drive that starts next finds the new part (T2528).
         """
         for note in self._client.list_tasks(repo=repo, full=True):
             if any(card.title == title and card.status != "done" for card in card_tasks(note)):
                 return note
         task = self._client.add_task(repo, title, body)
         self._cache.poke()
+        try:
+            self._cache.refresh_repo(repo)
+        except TodoError:  # the poked refresh brings it in a moment
+            log.warning("repo %s not read again after a new part", repo)
         return task
