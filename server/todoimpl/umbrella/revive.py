@@ -15,12 +15,14 @@ from typing import TYPE_CHECKING
 
 from todoimpl.board import state as store
 from todoimpl.board.parse import StateError
-from todoimpl.runner import retry, shipfix
+from todoimpl.runner import deployheal, retry, shipfix
 from todoimpl.runner.deploy import DeployFailedError
 from todoimpl.runner.deployhost import DEPLOY_DIR, EXIT_FILE
 from todoimpl.runner.deployline import PREFIX, NoDeployLineError
 from todoimpl.runner.files import NeedsYouError, read_json
 from todoimpl.runner.gate import GateRedError
+from todoimpl.runner.restart import INTERRUPTED
+from todoimpl.runner.worktree import repo_dir
 
 from .store import children_root
 
@@ -33,6 +35,7 @@ GATE = re.compile(r"^Pre-push gate step (\S+) is red \((?:exit (-?\d+)|timed out
 DEPLOY = re.compile(rf"^{PREFIX}: deploy failed \((?:exit (-?\d+)|timed out)\)")
 NO_LINE = re.compile(rf"^{PREFIX}: .* declares no deploy: command in CLAUDE\.md$")
 DROPPED = ("failed_stage", "retry_reason", "ship_resumes")  # a revived Ship starts its resume count afresh
+REFUSALS = "refusal_revives"  # a red deploy that only refused a dirty checkout ships again once (T2511)
 
 
 def _code(text: str | None) -> int | None:
@@ -53,19 +56,55 @@ def rebuilt(st: RunState, run_dir: Path) -> GateRedError | NoDeployLineError | D
     return None
 
 
+def _checkout(st: RunState) -> Path | None:
+    try:
+        return repo_dir(st.repo)
+    except NeedsYouError:
+        return None
+
+
+def _ship_again(st: RunState, run_dir: Path) -> bool:
+    """Say whether the Ship goes on as it is: no fix turn, no kuhy (T2510, T2511).
+
+    A Ship an older server parked after restarts; a deploy kuhy's edits blocked, once the files his step names
+    are clean again (the ladder starts afresh); a red deploy whose log only refused a dirty checkout, once.
+    """
+    text = st.error or ""
+    if text.startswith(INTERRUPTED):
+        return True
+    if deployheal.is_step(text):
+        checkout = _checkout(st)
+        try:
+            if checkout is None or deployheal.still_dirty(checkout, deployheal.files_of(text)):
+                return False
+        except NeedsYouError:  # his own git holds a lock there: look again next time
+            return False
+        st.extra.pop("retries", None)
+        return True
+    record = read_json(run_dir / DEPLOY_DIR / EXIT_FILE)
+    tail = str(record.get("tail") or "") if isinstance(record, dict) else ""
+    if not (DEPLOY.match(text) and deployheal.blocked(tail)) or int(st.extra.get(REFUSALS, 0)):
+        return False
+    st.extra[REFUSALS] = 1
+    return True
+
+
 def revive(st: RunState, run_dir: Path, now: float) -> bool:
     """Send a child that failed in Ship back to work when `shipfix.heal` would; True when it did."""
     if st.stage != "failed" or st.extra.get("failed_stage") != "shipping":
         return False
-    if (err := rebuilt(st, run_dir)) is None:
-        return False
-    try:
-        shipfix.heal(st, err, now)
-        stage = "implement"
-    except retry.RetryLaterError:
+    if _ship_again(st, run_dir):
         stage = "shipping"
-    except NeedsYouError:  # kuhy's, or the bound is spent: nothing was counted
+    elif (err := rebuilt(st, run_dir)) is None:
         return False
+    else:
+        try:
+            shipfix.heal(st, err, now)
+            stage = "implement"
+        except retry.RetryLaterError:
+            stage = "shipping"
+        except NeedsYouError:  # kuhy's, or the bound is spent: nothing was counted
+            return False
     st.stage, st.error, st.last_tag, st.assignee = stage, None, None, "claude"
     for key in DROPPED:
         st.extra.pop(key, None)

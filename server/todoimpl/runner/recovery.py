@@ -26,8 +26,9 @@ def interrupted(root: Path) -> list[str]:
         if st is None:  # pragma: no cover - the file was just globbed
             continue
         if st.stage == "shipping":  # Ship is idempotent: it goes on by itself, no click, no Needs you (T1988)
-            if "umbrella" in st.extra or resume_ship(st):  # the umbrella's children count their own resumes
-                queue.append(st.task_id)
+            if "umbrella" not in st.extra:  # the umbrella's children count their own resumes
+                resume_ship(st, time.time())  # past the cap it waits on the ladder (T2510)
+            queue.append(st.task_id)
             store.save(path.parent, st)
         elif (
             st.stage == "gate" and not hold.held()

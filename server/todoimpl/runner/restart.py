@@ -7,14 +7,14 @@ from typing import TYPE_CHECKING
 
 from todoimpl.umbrella.sched import start_stage
 
-from . import deployline, hold
+from . import deployline, hold, retry
 
 if TYPE_CHECKING:
     from todoimpl.board.state import RunState
     from todoimpl.todo_mcp.items import Item
 
-INTERRUPTED = "Ship was interrupted by a restart"  # an error starts so when the automatic resumes ran out
-MAX_RESUMES = 2  # automatic Ship resumes per click; a ship that keeps restarting the board stops
+INTERRUPTED = "Ship was interrupted by a restart"  # the error older servers parked a cut Ship with
+MAX_RESUMES = 2  # Ship resumes at once per click; past them each resume waits a step of the retry ladder
 SPEC_MARKER = re.compile(r"^\s*(done|verify|done_check)\s*:", re.IGNORECASE | re.MULTILINE)
 RESUMABLE = ("spec", "plan", "implement", "live_check", "checks")
 
@@ -24,15 +24,18 @@ def needs_spec(item: Item) -> bool:
     return item.done_check is None and not SPEC_MARKER.search(item.body)
 
 
-def resume_ship(st: RunState) -> bool:
-    """Count one automatic resume of a Ship a restart cut; False (and Needs you) when they ran out (T1988)."""
+def resume_ship(st: RunState, now: float) -> None:
+    """Count one automatic resume of a Ship a restart cut (T1988); it always goes on, never to kuhy (T2510).
+
+    Ship is idempotent and a restart is the board's own business (a deploy of todoImplementer), so the first
+    `MAX_RESUMES` resumes go on at once and each later one rests in `paused_retry` for the next ladder step
+    (1, 2, 5, 10, then 30 min): a Ship that itself keeps restarting the board slows down instead of parking.
+    """
     done = int(st.extra.get("ship_resumes", 0))
-    if done >= MAX_RESUMES:
-        st.extra["failed_stage"], st.stage = "shipping", "failed"
-        st.error = f"{INTERRUPTED} {done + 1} times in a row: check origin and the note, then Retry"
-        return False
     st.extra["ship_resumes"] = done + 1
-    return True
+    if done >= MAX_RESUMES:
+        wait = retry.later(st, now, f"Ship was cut by {done + 1} restarts in a row: it goes on", "killed")
+        retry.pause(st, wait.until, wait.why, wait.kind)
 
 
 def restart_stage(st: RunState, item: Item) -> str:

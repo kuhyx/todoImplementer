@@ -151,9 +151,10 @@ the "session already pushed" path) and before the note closes, Ship runs the rep
   pushes; after the push, before `pushed.json`, it recognises the push on origin (`_landed`) and goes on to the checks
   and the deploy; mid-deploy it adopts the running unit or its record; after the deploy it reuses the green record and
   closes (closing a closed note overwrites the evidence); a rebase the restart cut half way (`<run dir>/rebasing`) is
-  aborted first. At most 2 automatic resumes per click (`ship_resumes`, reset by Ship and Retry); then the run fails
-  "Ship was interrupted by a restart N times in a row ..." and Retry goes straight back to `shipping`, as does Retry on
-  the older form of that failure. An umbrella child is resumed the same way, and a child found in `shipping` takes
+  aborted first. The first 2 resumes per click go on at once (`ship_resumes`, reset by Ship and Retry); each later one
+  rests one retry-ladder step in `paused_retry` and goes on (T2510): a restart is never kuhy's. Deploys of
+  todoImplementer restarted the server 3 times in 80 s on 2026-11-22. A child an older server failed "Ship was
+  interrupted by a restart ..." revives into `shipping`; Retry on that text also goes straight back to `shipping`. An umbrella child is resumed the same way, and a child found in `shipping` takes
   its repo's lock with `force` (it was already working): it never queues behind another run of the repo, so a restart
   cannot burn a resume while the Ship waits (T2463).
 - **Deploy into kuhy's checkout (T2007).** A deploy that starts with `git -C ~/src/<repo> pull --ff-only` fails when
@@ -161,11 +162,17 @@ the "session already pushed" path) and before the note closes, Ship runs the rep
   untracked). `runner/deployheal.py` reads that text from the failed record only. If every blocking file already equals
   the incoming content (a session wrote the same change there) and the index holds nothing of kuhy's (a staged edit of
   his counts as his), it restores them (tracked: back to HEAD; untracked: removed) and deploys again at once. A git
-  failure while healing (his own git holds a lock) waits the same way. Otherwise it touches nothing: the run rests in `paused_retry` ("deploy
-  waits: edits in ~/src/<repo> block the pull (<file>)") on the backoff ladder, 12 waits (`shipfix.MAX_DEPLOY_WAITS`,
-  counter `retries`), and the resumed Ship only redeploys (`pushed.json`). After the 12th it ends in Needs you naming the
-  files: "commit or discard them, then Retry". "waiting for build lock held by ..." in such a tail is the first log line
-  of any queued check (`buildlock.held`, outside the timeout), not a cause.
+  failure while healing (his own git holds a lock) waits the same way. Edits whose files all rested 30 min
+  (`deployheal.QUIET`) are strays a board run left (free workers wrote into checkouts, 2026-11-21): the board writes
+  `<run>/deploy/stray-<ts>.patch`, stashes them (`git stash push -u -m todoimpl-stray-<card> -- <files>`, untracked
+  too), deploys, and names both in the close evidence (T2512). Fresher edits are touched by nothing: the run rests in
+  `paused_retry` ("deploy waits: edits in ~/src/<repo> block the pull (<file>)") on the ladder, 12 waits
+  (`shipfix.MAX_DEPLOY_WAITS`, counter `retries`); the resumed Ship only redeploys (`pushed.json`) and sets them aside
+  once they rest. Only a git failure past the ladder ends in Needs you, with one exact step: "run `git -C <checkout>
+  stash push -u -m todoimpl-<card> -- <files>`, then Retry"; the umbrella card shows it whole (T2509), and the child
+  revives by itself once those files are clean (T2511). A deploy that refuses a dirty checkout itself ("<checkout> is
+  dirty") is handled the same, every dirty file counted (T2507). A red deploy's text leaves out "waiting for build lock
+  held by ..." lines, the first log line of any queued check, not a cause (T2508).
 - **Checks red after the rebase (T2008).** Ship's re-run of the checks on the rebased tree used to end in Needs you.
   Now the session gets a fix turn (red tails, "fix them yourself: commit, rebase, push, deploy"), same bounce and counter
   (`ship_fixes`, 2) as a refused commit; the third time is Needs you. `ask_grants` could not bound it: a finished turn
@@ -178,7 +185,8 @@ the "session already pushed" path) and before the note closes, Ship runs the rep
   it), then Needs you; its text leads with the deploy's own `FAIL` lines when the 600-char tail would cut them. A
   phone wait (`appfix.phone_wait`) comes first; a blocked pull (T2007) gets no fix turn. Umbrella children get it
   too (T2343). A failure that is not the phone's (exit 30) drops the phone wait an earlier deploy left (T2465).
-- **Umbrella card.** Children that are pushed but not deployed are listed apart from children that need kuhy:
+- **Umbrella card.** Before it says Needs you, settle revives every child the board retries itself (T2511).
+  Children that are pushed but not deployed are listed apart from children that need kuhy:
   `3 of 7 children need you: a (why); b. 4 pushed, not deployed: c (declares no deploy: command in CLAUDE.md); ...`.
 - **Self-healing.** The implement prompt (`prompts/standing.py`, `DEPLOY`) tells a session to add the line when the repo
   lacks one, and a Ship that finds none sends the session back to add it (below).

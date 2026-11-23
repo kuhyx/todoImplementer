@@ -18,7 +18,7 @@ from todoimpl.runner.pipeline import WORK_STAGES, CancelledError, LimitHitError
 from todoimpl.runner.restart import INTERRUPTED, resume_ship
 from todoimpl.todo_mcp.model import TodoError
 
-from . import archived, bounce, issues, note, sched
+from . import archived, bounce, issues, note, revive, sched
 from . import store as ustore
 from .children import Pool, Ticker
 from .rounds import run_round
@@ -90,9 +90,10 @@ class Umbrella:
             st = child_state(self.run_dir, cid)
             if st is None or kid.done or st.stage == "shipped" or cid in held:
                 continue
-            if st.stage == "shipping" and not resume_ship(st):  # a restart cut its Ship: it goes on (T1988)
-                store.save(ustore.child_dir(self.run_dir, cid), st)  # ...unless that happened too often
-                continue
+            if (
+                st.stage == "shipping"
+            ):  # a restart cut its Ship: it goes on, past the cap after a wait (T2510)
+                resume_ship(st, self.d.ctx.now())
             if retry_failed and (st.stage in ("failed", "cancelled") or st.last_tag in ("Q", "A")):
                 self._reset(st)
                 store.save(ustore.child_dir(self.run_dir, cid), st)  # a gate child is not restarted below
@@ -188,6 +189,8 @@ class Umbrella:
         self._pause(states)
         needy = [r for r in found if r["status"] != "done"]
         unverified = [r for r in found if r["status"] == "done" and bounce.unverified(states[r["id"]])]
+        if needy and revive.children(self.run_dir, d.ctx.now()):  # board work after all: no Needs you (T2511)
+            return "implement"
         if needy or unverified:  # T1953: say what each child waits for; T1955: done needs green checks
             last = {str(row.get("child")): str(row.get("symptom", "")) for row in issues.read(self.run_dir)}
             what = [(r, bounce.needs(states[r["id"]], last.get(r["repo"], ""))) for r in needy]

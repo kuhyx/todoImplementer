@@ -14,7 +14,7 @@ import subprocess
 import sys
 import threading
 import time
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from typing import TYPE_CHECKING, Any
 
 from . import cardslice, deployheal, launch, stepwatch
@@ -23,7 +23,7 @@ from .deployheal import DirtyCheckoutError
 from .deployhost import DEPLOY_DIR, EXIT_FILE
 from .deployline import PREFIX, command_of, is_none, nothing
 from .files import NeedsYouError, read_json, write_json
-from .gate import UNIT_ENV
+from .gate import UNIT_ENV, WAIT_LINE
 from .worktree import git, repo_dir
 
 if TYPE_CHECKING:
@@ -56,11 +56,15 @@ class DeployFailedError(NeedsYouError):
 
     @classmethod
     def build(cls, exit_code: int | None, tail: str) -> DeployFailedError:
-        """Return the failure; its text leads with the FAIL lines the shown tail would cut (T2050)."""
+        """Return the failure; its text leads with the FAIL lines the shown tail would cut (T2050).
+
+        The build lock's wait line is no cause: the text leaves it out, the brief keeps it (T2508).
+        """
         why = "timed out" if exit_code is None else f"exit {exit_code}"
-        cut = [ln.strip()[:FAIL_WIDTH] for ln in tail[:-TAIL].splitlines() if "FAIL" in ln]
+        shown = "\n".join(ln for ln in tail.splitlines() if not ln.startswith(WAIT_LINE)).strip()
+        cut = [ln.strip()[:FAIL_WIDTH] for ln in shown[:-TAIL].splitlines() if "FAIL" in ln]
         lead = f"{' | '.join(cut[:FAIL_LINES])} ... " if cut else ""
-        return cls(f"{PREFIX}: deploy failed ({why}): {lead}{tail[-TAIL:]}", exit_code, tail)
+        return cls(f"{PREFIX}: deploy failed ({why}): {lead}{shown[-TAIL:]}", exit_code, tail)
 
     @property
     def output(self) -> str:
@@ -158,11 +162,12 @@ def _record(run_dir: Path, commit: str, command: str, card: str, wt: Path) -> di
         time.sleep(POLL)
 
 
-def _heal(repo: str | None, tail: str, *, healed: bool) -> bool:
-    """Say whether to deploy once more: kuhy's blocking edits equalled the incoming files and are restored.
+def _heal(repo: str | None, tail: str, run_dir: Path, notes: list[str], *, healed: bool) -> bool:
+    """Say whether to deploy once more: the blocking edits equalled the incoming files, or were set aside.
 
-    Raises DirtyCheckoutError when his own edits block the pull (the checkout is left as it is); False when
-    there is no checkout to look at (T2007).
+    Edits at rest for `deployheal.QUIET` s are strays (a board run wrote them, T2512): stashed, a patch in
+    the run dir, a line in `notes`. Raises DirtyCheckoutError for fresh edits (the checkout stays as is);
+    False when there is no checkout (T2007), or the deploy refused a dirty tree but it is clean (T2507).
     """
     try:
         checkout = repo_dir(repo)
@@ -171,13 +176,26 @@ def _heal(repo: str | None, tail: str, *, healed: bool) -> bool:
     files: list[str] = []
     if not healed:
         try:
-            files = deployheal.heal(checkout)
+            if deployheal.BLOCKED not in tail and not deployheal.dirty(checkout):
+                return False
+            files = (
+                deployheal.heal(checkout)
+                if deployheal.BLOCKED in tail
+                else deployheal.heal(checkout, every=True)
+            )
         except NeedsYouError:  # git failed there (a lock of kuhy's own git): wait, as for his edits
             files = deployheal.listed(tail)
         else:
             if not files:
                 return True
-    raise DirtyCheckoutError(PREFIX, checkout, files or deployheal.listed(tail))
+            if patch := deployheal.set_aside(
+                checkout, files, run_dir / DEPLOY_DIR, run_dir.name, time.time()
+            ):
+                notes.append(
+                    f"set aside stray edits in {checkout}: {patch} (git stash todoimpl-stray-{run_dir.name})"
+                )
+                return True
+    raise DirtyCheckoutError(PREFIX, checkout, files or deployheal.listed(tail), run_dir.name)
 
 
 def run(wt: Path, run_dir: Path, card: str, repo: str | None, command: str | None = None) -> CheckResult:
@@ -190,7 +208,7 @@ def run(wt: Path, run_dir: Path, card: str, repo: str | None, command: str | Non
     if is_none(command):  # `- deploy: none (<why>)`: nothing runs anywhere, the push is the deploy (T2342)
         return nothing(command)
     commit = git(wt, "rev-parse", "HEAD").stdout.strip()
-    healed = False
+    healed, notes = False, list[str]()
     while True:
         done = _record(run_dir, commit, command, card, wt)
         git(
@@ -198,9 +216,9 @@ def run(wt: Path, run_dir: Path, card: str, repo: str | None, command: str | Non
         )  # what the deploy left in the tree is not work:
         git(wt, "clean", "-fdq", check=False)  # a later squash (`add --all`) must not push it
         result = CheckResult("deploy", command, done["exit"], str(done["tail"]), str(done["log"]))
-        if result.passed:
-            return result
-        if deployheal.blocked(result.tail) and _heal(repo, result.tail, healed=healed):
+        if result.passed:  # the close evidence names any stray edits the board set aside
+            return replace(result, tail="\n".join([result.tail, *notes])) if notes else result
+        if deployheal.blocked(result.tail) and _heal(repo, result.tail, run_dir, notes, healed=healed):
             healed = True
             continue
         raise DeployFailedError.build(result.exit_code, result.tail)

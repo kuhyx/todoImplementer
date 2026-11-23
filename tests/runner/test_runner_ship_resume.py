@@ -115,18 +115,19 @@ def test_t1988_a_restart_during_ships_own_rebase_aborts_it_and_ships(
     _one_push_one_close(world, client)
 
 
-def test_t1988_a_ship_cut_more_than_twice_stops_with_the_real_reason(world: Env) -> None:
+def test_t2510_a_ship_cut_more_than_twice_rests_on_the_ladder_and_never_needs_kuhy(world: Env) -> None:
     for left in (0, MAX_RESUMES - 1, MAX_RESUMES):
         name = f"card{left}-0"
         store.save(
             world.root / name, store.RunState(task_id=name, stage="shipping", extra={"ship_resumes": left})
         )
-    assert recovery.interrupted(world.root) == ["card0-0", f"card{MAX_RESUMES - 1}-0"]
-    stopped = store.load(world.root / f"card{MAX_RESUMES}-0")
-    assert stopped is not None
-    assert (stopped.stage, stopped.extra["failed_stage"]) == ("failed", "shipping")
-    assert str(stopped.error).startswith(INTERRUPTED)
-    assert f"{MAX_RESUMES + 1} times" in str(stopped.error)
+    assert recovery.interrupted(world.root) == ["card0-0", f"card{MAX_RESUMES - 1}-0", f"card{MAX_RESUMES}-0"]
+    resting_ship = store.load(world.root / f"card{MAX_RESUMES}-0")
+    assert resting_ship is not None
+    assert (resting_ship.stage, resting_ship.error) == ("paused_retry", None)
+    assert resting_ship.extra["resume_stage"] == "shipping"
+    assert (resting_ship.resume_at or 0) > 0
+    assert f"{MAX_RESUMES + 1} restarts" in resting_ship.extra["retry_reason"]
     resting = store.load(world.root / "card0-0")
     assert resting is not None
     assert resting.extra["ship_resumes"] == 1

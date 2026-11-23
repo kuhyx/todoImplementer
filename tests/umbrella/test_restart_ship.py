@@ -53,7 +53,7 @@ def test_t1988_a_child_found_mid_ship_after_a_restart_ships_again_by_itself(worl
     assert child.extra["ship_resumes"] == 1
 
 
-def test_t1905_a_child_cut_again_and_again_stops_with_the_interrupted_text_and_retry_ships_it(
+def test_t1905_a_child_cut_again_and_again_rests_on_the_ladder_and_ships_by_itself(
     world: Env, free: Free
 ) -> None:
     sched, client = boot(world, 1)
@@ -65,14 +65,7 @@ def test_t1905_a_child_cut_again_and_again_stops_with_the_interrupted_text_and_r
     store.save(child_dir(world.root / CARD, cid), stuck)
     again = Scheduler(client, world.root, check_timeout=20)
     try:
-        st = at_rest(world, again, "failed")
-        child = store.load(child_dir(world.root / CARD, cid))
-        assert child is not None
-        assert (child.stage, child.extra["failed_stage"]) == ("failed", "shipping")
-        assert str(child.error).startswith("Ship was interrupted by a restart")
-        assert "1 of 1 children need you" in str(st.error)
-        again.start(CARD)  # Retry: no second Ship click
-        at_rest(world, again, "shipped")
+        at_rest(world, again, "shipped")  # no Needs you, no click: the ladder wait, then Ship goes on
     finally:
         again.close()
     done = store.load(child_dir(world.root / CARD, cid))
@@ -128,3 +121,18 @@ def test_t2463_a_cut_ship_does_not_wait_for_another_run_of_its_repo_nor_burn_its
     child = _after_restart(world, client, cid, "shipped")  # red before: it queued behind other-run
     assert (child.stage, child.error) == ("shipped", None)
     assert child.extra["ship_resumes"] == 1
+
+
+def test_t2511_settle_revives_a_child_the_board_retries_itself_instead_of_needs_you(
+    world: Env, free: Free
+) -> None:
+    sched, client = boot(world, 1)
+    sched.close()
+    cid = _seed(world, client, "failed")
+    old = store.load(child_dir(world.root / CARD, cid))
+    assert old is not None
+    old.extra["failed_stage"] = "shipping"
+    old.error = "Ship was interrupted by a restart 3 times in a row: check origin and the note, then Retry"
+    store.save(child_dir(world.root / CARD, cid), old)
+    child = _after_restart(world, client, cid, "shipped")  # red before: the umbrella said 1 of 1 need you
+    assert (child.stage, child.error) == ("shipped", None)

@@ -13,6 +13,7 @@ import re
 from typing import TYPE_CHECKING
 
 from todoimpl.errors.marks import unattended
+from todoimpl.runner.deployheal import is_step
 from todoimpl.runner.deployline import PREFIX
 
 if TYPE_CHECKING:
@@ -88,7 +89,8 @@ def needs(st: RunState | None, symptom: str = "") -> str:
         for i in range(len(lines) - 1, -1, -1):
             if found := _TAGGED.match(lines[i]):
                 return short(" ".join([found.group(1), *lines[i + 1 :]]))
-    return short((st.error or symptom).removeprefix(f"{PREFIX}: "))
+    why = (st.error or symptom).removeprefix(f"{PREFIX}: ")
+    return why if is_step(why) else short(why)  # kuhy's one exact step is never cut (T2509)
 
 
 def _listed(pairs: list[tuple[str, str]]) -> str:

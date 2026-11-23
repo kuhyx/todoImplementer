@@ -7,11 +7,16 @@ checkout has edits (or untracked files) at paths the incoming commit changes, an
 - Every blocking file already holds the incoming content (a session wrote the same change into the checkout):
   restore those files, losslessly, and deploy again.
 - Any other edit is kuhy's: nothing of his is touched, the deploy waits on the backoff ladder (`shipfix`) and
-  only after the ladder names the files to him.
+  only after the ladder gives him one exact step: a stash of exactly those files, which loses nothing (T2507).
+
+A repo's own deploy may refuse any dirty checkout before its pull ("<checkout> is dirty", signal-bot): same
+handling, with every dirty file counted, once the checkout really is dirty (T2507).
 """
 
 from __future__ import annotations
 
+import re
+import shlex
 from pathlib import Path
 
 from .files import NeedsYouError
@@ -23,26 +28,49 @@ STOPS = ("Please ", "Aborting", "error:", "hint:", "fatal:")
 UNTRACKED = "??"
 RENAME_OR_COPY = "RC"
 SHOWN = 4
+REFUSED = re.compile(r"\bis dirty\b|\buncommitted (?:changes|edits)\b", re.IGNORECASE)  # a deploy's own guard
+QUIET = 1800.0  # s every blocking file must rest before the board takes the edits for strays (T2512)
+STEP = "stash push -u -m todoimpl"  # the one step the text gives kuhy: lossless, `git stash pop` undoes it
 
 
 class DirtyCheckoutError(NeedsYouError):
     """The deploy's pull is blocked by edits in kuhy's checkout; `files` are the ones that differ."""
 
-    def __init__(self, prefix: str, checkout: Path, files: list[str]) -> None:  # noqa: D107
+    def __init__(self, prefix: str, checkout: Path, files: list[str], card: str = "") -> None:  # noqa: D107
         where = str(checkout).replace(str(Path.home()), "~", 1)
-        shown = ", ".join(files[:SHOWN]) + (f" and {len(files) - SHOWN} more" if len(files) > SHOWN else "")
-        edits = f" to {shown}" if files else " (the deploy log names the files)"
+        paths = f" -- {shlex.join(files)}" if files else ""
+        step = f"git -C {where} {STEP}{'-' + card if card else ''}{paths}"
         super().__init__(
-            f"{prefix}: the deploy's pull into {where} stops on uncommitted edits{edits}: "
-            "commit or discard them, then Retry",
-            "run_failed",
+            f"{prefix}: uncommitted edits in {where} block the deploy: run `{step}`, then Retry", "run_failed"
         )
         self.where, self.files = where, files
 
 
+def is_step(text: str) -> bool:
+    """Return True for a `DirtyCheckoutError` text: the umbrella card shows its step whole (T2509)."""
+    return STEP in text
+
+
 def blocked(text: str) -> bool:
-    """Return True when a deploy's output ends on git refusing a merge over local files."""
-    return BLOCKED in text
+    """Return True when a deploy's output ends on git refusing a merge or the deploy a dirty tree."""
+    return BLOCKED in text or REFUSED.search(text) is not None
+
+
+def dirty(checkout: Path) -> bool:
+    """Return True when the checkout has any edited, staged or untracked file."""
+    return bool(_dirty(checkout))
+
+
+def files_of(text: str) -> list[str]:
+    """Return the paths a `DirtyCheckoutError` step names (after its ` -- `), [] when it names none."""
+    step = text.partition("`")[2].partition("`")[0]
+    return shlex.split(step.partition(" -- ")[2])
+
+
+def still_dirty(checkout: Path, files: list[str]) -> bool:
+    """Return True while any of `files` (none given: any file) is dirty in the checkout."""
+    rows = _dirty(checkout)
+    return any(path in files for _, path in rows) if files else bool(rows)
 
 
 def listed(text: str) -> list[str]:
@@ -113,19 +141,47 @@ def _discard(checkout: Path, status: str, path: str) -> None:
         git(checkout, "rm", "-q", "-f", "--", path)
 
 
-def heal(checkout: Path) -> list[str]:
+def heal(checkout: Path, *, every: bool = False) -> list[str]:
     """Restore kuhy's blocking files when all of them already equal the incoming content.
 
-    Returns the files that differ, untouched, when any does (all or nothing); [] when the checkout is now free
-    for the pull (restored, or nothing was in the way).
+    Blocking are the dirty files the pull changes, or with `every` (a deploy refusing any dirty tree) every
+    dirty file. Returns the files that differ, untouched, when any does (all or nothing); [] when the checkout
+    is now free for the pull (restored, or nothing was in the way).
     """
     git(checkout, "fetch", "--quiet", "origin", check=False)
     ref = _incoming(checkout)
     incoming = set(git(checkout, "diff", "--name-only", "-z", "HEAD", ref, check=False).stdout.split("\0"))
-    blocking = [(status, path) for status, path in _dirty(checkout) if path in incoming]
+    blocking = [(status, path) for status, path in _dirty(checkout) if every or path in incoming]
     differ = [path for _, path in blocking if not _only_incoming(checkout, ref, path)]
     if differ:
         return sorted(differ)
     for status, path in blocking:
         _discard(checkout, status, path)
     return []
+
+
+def _changed_at(path: Path) -> float:
+    """Return a file's mtime; 0 (at rest) for a deleted one."""
+    try:
+        return path.lstat().st_mtime
+    except OSError:
+        return 0.0
+
+
+def set_aside(checkout: Path, files: list[str], keep: Path, card: str, now: float) -> Path | None:
+    """Stash stray edits so the pull goes on, losing nothing; return the patch kept in `keep` (T2512).
+
+    Only when every file has rested `QUIET` s: a board run's leftovers (free workers wrote into kuhy's
+    checkouts), not an edit he is making now. The stash (`todoimpl-stray-<card>`, `git stash pop` undoes it)
+    holds everything, untracked files too; the patch copies the tracked part. None: nothing moved.
+    """
+    if any(_changed_at(checkout / name) > now - QUIET for name in files):
+        return None
+    keep.mkdir(parents=True, exist_ok=True)
+    patch = keep / f"stray-{int(now)}.patch"
+    patch.write_text(
+        git(checkout, "diff", "--binary", "HEAD", "--", *files, check=False).stdout, encoding="utf-8"
+    )
+    message = f"todoimpl-stray-{card}"
+    git(checkout, "stash", "push", "--include-untracked", "-m", message, "--", *files, check=False)
+    return None if still_dirty(checkout, files) else patch

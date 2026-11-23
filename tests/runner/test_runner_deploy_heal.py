@@ -66,7 +66,7 @@ def test_t2007_a_different_edit_of_kuhy_is_never_touched_and_nothing_else_is_res
     assert stop.value.kind == "run_failed"
     assert stop.value.text.startswith("pushed, not deployed: ")
     assert f"{TRACKED}" in stop.value.text
-    assert "commit or discard" in stop.value.text
+    assert "stash push -u" in stop.value.text  # one exact step (T2507)
     assert (checkout / TRACKED).read_text(encoding="utf-8") == "mine\n"
     assert (checkout / FRESH).read_text(encoding="utf-8") == "fresh\n"
 
