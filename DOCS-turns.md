@@ -19,7 +19,9 @@ credits route runs a role on a lesser model than it wanted (every credit turn ru
 
 The live check runs every phone check itself (T2522): taps, ratings, screenshots and timing measured on the
 device happen on its own Pixel slot or the emulator, never as an ask for kuhy, even for a criterion marked
-`(kuhy)` (`prompts/phone.py` `LIVE_WORK`, `DOCS-asks.md`).
+`(kuhy)` (`prompts/phone.py` `LIVE_WORK`, `DOCS-asks.md`). An ask of phone work only that outlived its two
+send-backs is no rest either (T2523): implement goes on to a fresh live check, a live check settles its report into
+a fix turn, and that turn carries the phone note.
 
 A turn has a wall-clock limit: `$TODOIMPL_TURN_TIMEOUT` seconds (default 4 h, above a manager round with coaching).
 The limit travels in `<stem>.invoke.json`, so the turn host enforces it across a server restart: SIGTERM, then

@@ -12,14 +12,12 @@ import hashlib
 import re
 from typing import TYPE_CHECKING
 
-from .parsing import BULLET, CRITERIA_HEADING
+from .parsing import BULLET, CRITERIA_HEADING, is_kuhy, words
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 ASK_ID = re.compile(r"^c(\d+)$", re.IGNORECASE)
-PREFIX = re.compile(r"^\s*(?:[-*]|\d+[.)]|C\d+(?:\s*\[[\w-]+\])?[.:)])\s+", re.IGNORECASE)
-MARK = re.compile(r"^\s*\(kuhy\)\s*", re.IGNORECASE)
 
 
 def blocks(plan: str) -> list[str]:
@@ -38,7 +36,7 @@ def blocks(plan: str) -> list[str]:
 
 def normalise(text: str) -> str:
     """Return the criterion's words alone: no id prefix, no `(kuhy)` marker, single spaces."""
-    return " ".join(MARK.sub("", PREFIX.sub("", text, count=1), count=1).split())
+    return words(text)
 
 
 def digest(text: str) -> str:
@@ -56,7 +54,7 @@ def for_ask(plan: str, ask_id: str) -> str | None:
     if (match := ASK_ID.match(ask_id)) is not None:
         n = int(match.group(1))
         return digest(found[n - 1]) if 0 < n <= len(found) else None
-    marked = [text for text in found if MARK.match(PREFIX.sub("", text, count=1))]
+    marked = [text for text in found if is_kuhy(text)]
     return digest(marked[0]) if len(marked) == 1 else None
 
 

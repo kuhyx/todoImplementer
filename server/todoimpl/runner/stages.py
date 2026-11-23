@@ -13,7 +13,7 @@ from todoimpl.umbrella import bounce
 from todoimpl.umbrella.note import is_umbrella
 from todoimpl.umbrella.run import run as run_umbrella
 
-from . import hold, partproof, phone, tiering
+from . import devicework, hold, partproof, phone, tiering
 from .checks import SENTENCE_NOTE, discover, record, run_all
 from .closing import closing_stage
 from .files import NeedsYouError, write_json
@@ -84,6 +84,9 @@ def _implement(d: Driver) -> str | None:  # noqa: PLR0911 - one return per way o
     if res.tag in ("Q", "A") and bounce.again(d.state):  # an umbrella child has no one to ask (T1952)
         d.state.extra["nudge"] = bounce.brief(res.text)
         return "implement"
+    if devicework.to_claude(d, res):  # phone work is never kuhy's: a fresh live check does it (T2523)
+        d.state.sessions.pop("live_check", None)
+        return "live_check"
     nxt = d.after_tag(res, "shipping" if d.state.extra.get("reship") else "live_check")
     if nxt == "shipping":
         d.state.extra.pop("reship")
@@ -138,7 +141,7 @@ def _live_check(d: Driver) -> str | None:  # noqa: PLR0911 - one return per way 
     if phone.attach_if_present(st, run_dir, res.tag):  # the Pixel is in adb: test on it, never rest (T2083)
         return "live_check"
     settles = phone.answered(st, run_dir, res.tag, replied=replied)
-    if res.tag == "Q" or (res.tag == "A" and not settles):
+    if res.tag == "Q" or (res.tag == "A" and not settles and not devicework.to_claude(d, res)):
         if not bounce.again(st):
             return None
         st.extra["failure_tail"] = bounce.brief(res.text)  # a child fixes what its live check found (T1952)

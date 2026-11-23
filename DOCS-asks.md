@@ -65,8 +65,15 @@ session's own phone slot, and `approval.kuhy_ids` drops a marked one unless it i
 block holds such phone work and nothing else but commands the session may run itself (nothing root or in the
 never-add set) goes back to the session (`askform.needs_form`) with a note to drive the phone itself, whatever its
 `A:` line says. It has its own budget, twice per run (`phone_asks`, cleared by Start, Retry and Ship reruns), so a
-block written after the bare-`A:` note still goes back; past it the ask shows to kuhy. A real decision, an approval
-of a deliverable or a root command still reaches kuhy.
+block written after the bare-`A:` note still goes back. Past it the ask still never shows to kuhy (T2523,
+`devicework.to_claude`): from implement the card goes on to a fresh live check, from the live check its report is
+settled by the usual rules (an open phone check gets the fix turn), each next turn carrying the phone note.
+When every turn keeps asking and no other criterion was verified, `live.settle` still ends in Needs you. A real
+decision, an approval of a deliverable or a root command still reaches kuhy.
+
+The `(kuhy)` mark counts in every head plans write (T2523, `parsing.HEAD`, shared by `approval` and `crithash`):
+`C9. (kuhy)`, `- C9. (kuhy)`, `- C9: (kuhy)`, `C9 (kuhy)`, `**C9** (kuhy)`, `C9 [part]: (kuhy)` and
+`- C9. (kuhy) [part]:`. Elsewhere in the text it is no mark. Criteria keep their plan position as their id.
 
 The approve is keyed to the criterion's text, not to `plan.md`'s mtime (T2462): on kuhy's click the server stores
 `crit`, a hash of the criterion (`runner/crithash.py`: no `Cn` prefix, part tag or `(kuhy)` marker, whitespace

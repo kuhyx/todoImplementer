@@ -11,7 +11,15 @@ QUESTION = re.compile(
 )
 RECOMMENDATION = re.compile(r"^\s*➡️?\s*(.*?)\s*$")
 CRITERIA_HEADING = re.compile(r"^#+\s*acceptance criteria\b", re.IGNORECASE)
-BULLET = re.compile(r"^\s*(?:[-*]|\d+[.)]|C\d+(?:\s*\[[\w-]+\])?[.:)])\s+(.*\S)")  # `C1 [part key]:` (T2460)
+# One parser for a plan criterion's head, shared by approval.py and crithash.py (T2523). Plans write the id
+# as `C1.`, `C1 [part key]:` (T2460), `**C1**`, or bare `C1` right before the `(kuhy)` mark, with or without
+# a list bullet in front; the mark follows the id or the part key, and anywhere else is no mark.
+ID = r"C\d+(?:\s*\[[\w-]+\])?"
+BULLET = re.compile(rf"^\s*(?:[-*]|\d+[.)]|{ID}[.:)]|\*\*{ID}[.:)]?\*\*[.:)]?|{ID}(?=\s+\(kuhy\)))\s+(.*\S)")
+HEAD = re.compile(
+    rf"^\s*(?:(?:[-*]|\d+[.)])\s+)?(?:\*{{0,2}}\b{ID}[.:)]?\*{{0,2}}[.:)]?\s+)?(?P<mark>\(kuhy\)\s*)?",
+    re.IGNORECASE,
+)
 SELF_CHECK = re.compile(
     r"^\s*(?:[-*]\s*)?`?(C\d+|.{2,}?)`?:\s*`?(done|not done)\b`?[\s:,.;()-]*(.*?)\)?`?\s*$", re.IGNORECASE
 )
@@ -50,6 +58,20 @@ def parse_criteria(plan: str) -> list[str]:
         elif inside and (bullet := BULLET.match(line)):
             found.append(bullet.group(1))
     return found
+
+
+def _head(criterion: str) -> re.Match[str]:
+    return next(HEAD.finditer(criterion))  # every part of HEAD is optional: the first match is at 0
+
+
+def is_kuhy(criterion: str) -> bool:
+    """Return True when the criterion's head carries the `(kuhy)` mark: kuhy's to tick (T2362)."""
+    return _head(criterion).group("mark") is not None
+
+
+def words(criterion: str) -> str:
+    """Return the criterion's text after its head (bullet, id, part key, mark), on single spaces."""
+    return " ".join(criterion[_head(criterion).end() :].split())
 
 
 def parse_self_check(text: str) -> list[dict[str, object]]:

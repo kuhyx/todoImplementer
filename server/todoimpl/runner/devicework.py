@@ -5,7 +5,9 @@ plus the watcher's start command, because the plan had marked that check `(kuhy)
 screenshots and timing measured on the device are a live check Claude drives itself (phone_slot, phone_vd,
 adb, emulator). So a `(kuhy)` criterion that only asks for phone interaction is no approval gate, and an ask
 block made only of such phone work and commands the session may run itself goes back to the session
-(`askform.needs_form`). An approval of a deliverable stays kuhy's, even when it names the phone.
+(`askform.needs_form`). An approval of a deliverable stays kuhy's, even when it names the phone. Past its two
+send-backs such an ask still never rests on kuhy (T2523): `to_claude` sends the card on to a fresh live check
+(from implement) or settles the live check's report (an open phone check gets a fix turn), with the same note.
 """
 
 from __future__ import annotations
@@ -14,11 +16,14 @@ import re
 from typing import TYPE_CHECKING
 
 from todoimpl.asks.allow import NEVER_ADD, ROOT
+from todoimpl.asks.parse import parse_asks
+from todoimpl.errors.marks import unattended
 
 if TYPE_CHECKING:
     from todoimpl.asks.parse import Ask
 
     from .pipeline import Driver
+    from .stream import TurnResult
 
 KEY = "phone_asks"  # its own budget: the bare-`A:` note may be what made the session write this block
 MAX_RUN = 2  # per run, cleared by Start, Retry and Ship reruns (scheduler.RESET)
@@ -81,4 +86,20 @@ def send_back(driver: Driver) -> bool:
     extra["granted_note"] = NOTE
     driver.save()  # before the turn starts: a restart during it must not send the same note twice
     driver.activity("the ask hands kuhy phone work, the session resumes to do it itself")
+    return True
+
+
+def to_claude(driver: Driver, res: TurnResult) -> bool:
+    """Return True when an `A:` would rest on an ask of phone work only: the next turn is Claude's (T2523).
+
+    `askform.needs_form` sent it back to the session twice already. The next turn carries the phone note.
+    Umbrella children and error runs, and a phone wait the phone stage tracks, keep their own paths.
+    """
+    st = driver.state
+    if res.tag != "A" or unattended(st) or st.extra.get("waiting_phone"):
+        return False
+    if not claude_work(parse_asks(str(st.extra.get("last_reply", "")))):
+        return False
+    st.extra["nudge"] = NOTE
+    driver.activity("the ask still hands kuhy phone work: a Claude turn does it instead")
     return True

@@ -12,7 +12,6 @@ says so at once instead of asking him again.
 
 from __future__ import annotations
 
-import re
 from typing import TYPE_CHECKING, Any
 
 from todoimpl.asks import carry, store
@@ -22,13 +21,13 @@ from todoimpl.asks.parse import parse_asks
 from . import crithash
 from .devicework import is_phone_check
 from .files import NeedsYouError
+from .parsing import is_kuhy, words
 
 if TYPE_CHECKING:
     from pathlib import Path
 
     from .pipeline import Driver
 
-MARK = re.compile(r"^\s*\(kuhy\)", re.IGNORECASE)
 MAX_NUDGES = 1
 NUDGE = (
     "(runner) {ids} is kuhy's to tick, not yours: no tick of yours counts and the run cannot ship "
@@ -47,7 +46,9 @@ STALE = (
 
 def kuhy_ids(criteria: list[str]) -> list[str]:
     """Return the ids of the plan criteria marked `(kuhy)`; a phone check is Claude's despite it (T2522)."""
-    return [f"C{n}" for n, text in enumerate(criteria, 1) if MARK.match(text) and not is_phone_check(text)]
+    return [
+        f"C{n}" for n, text in enumerate(criteria, 1) if is_kuhy(text) and not is_phone_check(words(text))
+    ]
 
 
 def _planned(run_dir: Path) -> float:
