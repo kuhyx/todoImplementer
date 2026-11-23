@@ -9,6 +9,8 @@ from todoimpl.board.state import SpecQuestion
 QUESTION = re.compile(
     r"^\s*❓️?\s*\*\*(Q\d+)\*\*\s*(?:[-:\u2013\u2014]\s*)?(?:\*\*(.+?)\*\*\s*:?\s*)?(.*?)\s*$"
 )
+# The same card with id and title in one bold: `❓ **Q1 - title**: body` (T2524).
+QUESTION_JOINED = re.compile(r"^\s*❓️?\s*\*\*(Q\d+)\s*[-:\u2013\u2014]\s*(.+?)\*\*\s*:?\s*(.*?)\s*$")
 RECOMMENDATION = re.compile(r"^\s*➡️?\s*(.*?)\s*$")
 CRITERIA_HEADING = re.compile(r"^#+\s*acceptance criteria\b", re.IGNORECASE)
 # One parser for a plan criterion's head, shared by approval.py and crithash.py (T2523). Plans write the id
@@ -36,7 +38,7 @@ def parse_questions(text: str) -> list[SpecQuestion]:
     cards: dict[str, SpecQuestion] = {}
     current: SpecQuestion | None = None
     for line in text.splitlines():
-        if found := QUESTION.match(line):
+        if found := QUESTION.match(line) or QUESTION_JOINED.match(line):
             qid, title, rest = found.groups()
             current = SpecQuestion(qid, (title or rest or qid).strip(), rest if title else "")
             cards[qid] = current
