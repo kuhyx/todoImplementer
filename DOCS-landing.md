@@ -23,8 +23,7 @@ Every work-stage prompt (implement, fix, resume, fresh, live_check) carries it:
 - Each board turn and free worker attempt snapshots the card's own checkout (`<stem>.checkout.json`) and compares it
   after: files dirty afterwards that were clean or held other content go to `<run>/checkout-edits.jsonl` and a
   feed line (a worker's to `free-issues.jsonl`, phase `checkout`). `srcguard.attributed` / `owner` say whether edits
-  still sitting there are exactly a card's, for the stray stash (T2512). Bash writes into *other* repos' checkouts
-  are not watched.
+  still sitting there are exactly a card's, for the stray stash (T2512). Bash writes into other repos are unwatched.
 - Also granted: installers, confirm scripts and other repo scripts, marker files, approving its own drafts.
 - Heavy commands still go through `capped.sh`. Every tool call is one step that ends within 60 s (one gate step or
   test shard, push and deploy as calls of their own), because the stall watch files any quiet stretch over 60 s
