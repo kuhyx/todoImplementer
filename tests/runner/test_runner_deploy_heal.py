@@ -103,7 +103,7 @@ def test_t2007_a_git_failure_while_healing_waits_instead_of_parking_on_a_bare_er
     wt, run_dir, checkout = _incoming(world)
     (checkout / FRESH).write_text("mine\n", encoding="utf-8")
 
-    def locked(_checkout: Path) -> list[str]:
+    def locked(_checkout: Path, *, every: bool) -> list[str]:
         raise NeedsYouError("fatal: Unable to create '.git/index.lock': File exists.")
 
     monkeypatch.setattr(deployheal, "heal", locked)

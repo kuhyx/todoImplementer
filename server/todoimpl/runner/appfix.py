@@ -14,6 +14,7 @@ from todoimpl.errors import ledger, marks
 from todoimpl.repotask import files
 
 from .phone import SERIAL, adb_command, attached_serials
+from .stray import SUFFIX as STRAY_SUFFIX
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -54,9 +55,14 @@ def forget(st: RunState) -> None:
 
 
 def shipped(root: Path, run_dir: Path, item: Item, commit: str, now: float) -> None:
-    """Mark the tickets of the ticked parts as shipped in `commit`; the loop tells their sources."""
+    """Mark the tickets of the ticked parts as shipped in `commit`; the loop tells their sources.
+
+    With no commit only stray-work tickets count: "none of it is worth landing" closes them, and a ticket
+    left open would be filed again once its note is done (T2518). An app error closed so is not fixed.
+    """
     texts = [part.body for part in files.ticked(run_dir, item)] if item.parts else [item.body]
-    if keys := [key for text in texts for key in marks.signatures(text)]:
+    found = [key for text in texts for key in marks.signatures(text)]
+    if keys := [key for key in found if commit or key.endswith(STRAY_SUFFIX)]:
         ledger.mark_shipped(root, keys, commit, now)
 
 

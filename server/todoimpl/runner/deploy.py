@@ -17,12 +17,12 @@ import time
 from dataclasses import asdict, replace
 from typing import TYPE_CHECKING, Any
 
-from . import cardslice, deployheal, launch, stepwatch, stray
+from . import cardslice, deployheal, launch, srcguard, stepwatch, stray
 from .checks import CheckResult, clean_env, from_row, report
 from .deployheal import DirtyCheckoutError
 from .deployhost import DEPLOY_DIR, EXIT_FILE
 from .deployline import PREFIX, command_of, is_none, nothing
-from .files import NeedsYouError, read_json, write_json
+from .files import NeedsYouError, read_json, root_of, write_json
 from .gate import UNIT_ENV, WAIT_LINE
 from .worktree import git, repo_dir
 
@@ -165,9 +165,10 @@ def _record(run_dir: Path, commit: str, command: str, card: str, wt: Path) -> di
 def _heal(repo: str | None, tail: str, run_dir: Path, notes: list[str], *, healed: bool) -> bool:
     """Say whether to deploy once more: the blocking edits equalled the incoming files, or were set aside.
 
-    Edits at rest for `deployheal.QUIET` s are strays (a board run wrote them, T2512): stashed, a patch in
-    the run dir, a line in `notes`. Raises DirtyCheckoutError for fresh edits (the checkout stays as is);
-    False when there is no checkout (T2007), or the deploy refused a dirty tree but it is clean (T2507).
+    Edits at rest for `deployheal.QUIET` s, or a card's recorded ones at once (T2518), are strays (T2512):
+    stashed, a patch in the run dir, a line in `notes`. Raises DirtyCheckoutError for fresh edits (the
+    checkout stays as is); False when there is no checkout (T2007), or the deploy refused a dirty tree but
+    it is clean (T2507).
     """
     try:
         checkout = repo_dir(repo)
@@ -178,20 +179,17 @@ def _heal(repo: str | None, tail: str, run_dir: Path, notes: list[str], *, heale
         try:
             if deployheal.BLOCKED not in tail and not deployheal.dirty(checkout):
                 return False
-            files = (
-                deployheal.heal(checkout)
-                if deployheal.BLOCKED in tail
-                else deployheal.heal(checkout, every=True)
-            )
+            files, blocking = deployheal.heal(checkout, every=deployheal.BLOCKED not in tail)
         except NeedsYouError:  # git failed there (a lock of kuhy's own git): wait, as for his edits
             files = deployheal.listed(tail)
         else:
             if not files:
                 return True
+            owner = srcguard.owner(root_of(run_dir), checkout, blocking) or ""  # a card's edits: no wait
             if aside := deployheal.set_aside(
-                checkout, files, run_dir / DEPLOY_DIR, run_dir.name, time.time()
-            ):  # work origin lacks becomes a ticket for Claude (T2514)
-                notes.append(stray.route(checkout, str(repo), aside, files, time.time()))
+                checkout, blocking, run_dir / DEPLOY_DIR, run_dir.name, time.time(), owner
+            ):  # every blocking file, equal ones too (T2518); work origin lacks: a ticket for Claude (T2514)
+                notes.append(stray.route(checkout, str(repo), aside, blocking, time.time()))
                 return True
     raise DirtyCheckoutError(PREFIX, checkout, files or deployheal.listed(tail), run_dir.name)
 

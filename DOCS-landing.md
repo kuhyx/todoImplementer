@@ -171,18 +171,18 @@ the "session already pushed" path) and before the note closes, Ship runs the rep
   untracked). `runner/deployheal.py` reads that text from the failed record only. If every blocking file already equals
   the incoming content (a session wrote the same change there) and the index holds nothing of kuhy's (a staged edit of
   his counts as his), it restores them (tracked: back to HEAD; untracked: removed) and deploys again at once. A git
-  failure while healing (his own git holds a lock) waits the same way. Edits whose files all rested 30 min
-  (`deployheal.QUIET`) are strays a board run left (free workers wrote into checkouts, 2026-11-21): the board writes
-  `<run>/deploy/stray-<ts>.patch`, stashes them (`git stash push -u -m todoimpl-stray-<card>-<ts> -- <files>`,
-  untracked too), deploys, and names both in the close evidence (T2512). Work origin lacks becomes a part of the
-  repo's card for Claude to land or drop (`DOCS-errors.md`, "Stray edits", T2514). Fresher edits are touched by nothing: the run rests in
-  `paused_retry` ("deploy waits: edits in ~/src/<repo> block the pull (<file>)") on the ladder, 12 waits
-  (`shipfix.MAX_DEPLOY_WAITS`, counter `retries`); the resumed Ship only redeploys (`pushed.json`) and sets them aside
-  once they rest. Only a git failure past the ladder ends in Needs you, with one exact step: "run `git -C <checkout>
-  stash push -u -m todoimpl-<card> -- <files>`, then Retry"; the umbrella card shows it whole (T2509), and the child
-  revives by itself once those files are clean (T2511). A deploy that refuses a dirty checkout itself ("<checkout> is
-  dirty") is handled the same, every dirty file counted (T2507). A red deploy's text leaves out "waiting for build lock
-  held by ..." lines, the first log line of any queued check, not a cause (T2508).
+  failure while healing (his own git holds a lock) waits the same way. Strays a board run left (free workers, 2026-11-21)
+  are set aside: every file blocking the pull, one equal to origin too (T2518), once all rested 30 min
+  (`deployheal.QUIET`), or at once when they are exactly a card's recorded edits (`srcguard.owner`, T2515; the
+  card is named). The board writes `<run>/deploy/stray-<ts>.patch`, stashes them (`git stash push -u -m
+  todoimpl-stray-<card>-<ts> -- <files>`), deploys and names both in the close evidence (T2512); work origin lacks
+  becomes a part of the repo's card (`DOCS-errors.md`, "Stray edits", T2514). Dirty files the pull does not touch
+  stay (dufs-cloud, book-guard 2026-11-23: the deploy's own build output). Fresher edits are touched by nothing: the
+  run rests in `paused_retry` ("deploy waits: edits in ~/src/<repo> block the pull (<file>)"), 12 ladder waits
+  (`shipfix.MAX_DEPLOY_WAITS`), the resumed Ship only redeploys (`pushed.json`). A git failure past the ladder
+  is Needs you with one step: "run `git -C <checkout> stash push -u -m todoimpl-<card> -- <files>`, then Retry",
+  shown whole on the umbrella card (T2509); the child revives once those files are clean (T2511). A deploy refusing
+  a dirty checkout itself ("<checkout> is dirty") counts every dirty file (T2507). Build-lock wait lines are no cause (T2508).
 - **Checks red after the rebase (T2008).** Ship's re-run of the checks on the rebased tree used to end in Needs you.
   Now the session gets a fix turn (red tails, "fix them yourself: commit, rebase, push, deploy"), same bounce and counter
   (`ship_fixes`, 2) as a refused commit; the third time is Needs you. `ask_grants` could not bound it: a finished turn

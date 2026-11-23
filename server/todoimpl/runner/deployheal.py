@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .files import NeedsYouError
-from .worktree import base_ref, git
+from .worktree import GitError, base_ref, git
 
 BLOCKED = "would be overwritten by merge"  # ends both of git's messages: local changes, untracked files
 HEADERS = ("Your local changes to the following files", "The following untracked working tree files")
@@ -142,23 +142,25 @@ def _discard(checkout: Path, status: str, path: str) -> None:
         git(checkout, "rm", "-q", "-f", "--", path)
 
 
-def heal(checkout: Path, *, every: bool = False) -> list[str]:
+def heal(checkout: Path, *, every: bool = False) -> tuple[list[str], list[str]]:
     """Restore kuhy's blocking files when all of them already equal the incoming content.
 
     Blocking are the dirty files the pull changes, or with `every` (a deploy refusing any dirty tree) every
-    dirty file. Returns the files that differ, untouched, when any does (all or nothing); [] when the checkout
-    is now free for the pull (restored, or nothing was in the way).
+    dirty file. Returns (differ, blocking): the files that differ, untouched, when any does (all or nothing),
+    and every blocking file, which a stray set-aside must move for the pull to go through (T2518). ([], [...])
+    means the checkout is now free for the pull (restored, or nothing was in the way).
     """
     git(checkout, "fetch", "--quiet", "origin", check=False)
     ref = incoming_ref(checkout)
     incoming = set(git(checkout, "diff", "--name-only", "-z", "HEAD", ref, check=False).stdout.split("\0"))
     blocking = [(status, path) for status, path in _dirty(checkout) if every or path in incoming]
+    every_path = sorted(path for _, path in blocking)
     differ = [path for _, path in blocking if not _only_incoming(checkout, ref, path)]
     if differ:
-        return sorted(differ)
+        return sorted(differ), every_path
     for status, path in blocking:
         _discard(checkout, status, path)
-    return []
+    return [], every_path
 
 
 def _changed_at(path: Path) -> float:
@@ -171,10 +173,11 @@ def _changed_at(path: Path) -> float:
 
 @dataclass(frozen=True)
 class Aside:
-    """Stray edits set aside: the stash commit that holds them and the patch copied from it."""
+    """Stray edits set aside: the stash, the patch copied from it, the card that left them ("": unknown)."""
 
     stash: str
     patch: Path
+    owner: str = ""
 
 
 def _stash_of(checkout: Path, message: str) -> str | None:
@@ -183,14 +186,18 @@ def _stash_of(checkout: Path, message: str) -> str | None:
     return next((row.split()[0] for row in rows if row.endswith(f": {message}")), None)
 
 
-def set_aside(checkout: Path, files: list[str], keep: Path, card: str, now: float) -> Aside | None:
+def set_aside(  # noqa: PLR0913, PLR0917 - one set-aside's parts
+    checkout: Path, files: list[str], keep: Path, card: str, now: float, owner: str = ""
+) -> Aside | None:
     """Stash stray edits so the pull goes on, losing nothing; return the stash and a patch in `keep` (T2512).
 
     Only when every file has rested `QUIET` s: a board run's leftovers (free workers wrote into kuhy's
-    checkouts), not an edit he is making now. The stash (`todoimpl-stray-<card>-<ts>`, `git stash pop` undoes
-    it) and the patch both hold everything, untracked files too (T2514). None: nothing moved.
+    checkouts), not an edit he is making now; at once when `owner`, the card whose recorded edits they all
+    still are (`srcguard.owner`, T2515). `files` are all that block the pull, equal ones too (T2518).
+    The stash (`todoimpl-stray-<card>-<ts>`, `git stash pop` undoes it) and the patch both hold everything,
+    untracked files too (T2514); a patch git cannot show names the stash instead. None: nothing moved.
     """
-    if any(_changed_at(checkout / name) > now - QUIET for name in files):
+    if not owner and any(_changed_at(checkout / name) > now - QUIET for name in files):
         return None
     message = f"todoimpl-stray-{card}-{int(now)}"
     git(checkout, "stash", "push", "--include-untracked", "-m", message, "--", *files, check=False)
@@ -198,6 +205,9 @@ def set_aside(checkout: Path, files: list[str], keep: Path, card: str, now: floa
         return None
     keep.mkdir(parents=True, exist_ok=True)
     patch = keep / f"stray-{int(now)}.patch"
-    shown = git(checkout, "stash", "show", "--patch", "--binary", "--include-untracked", stash)
-    patch.write_text(shown.stdout, encoding="utf-8")
-    return Aside(stash, patch)
+    try:
+        shown = git(checkout, "stash", "show", "--patch", "--binary", "--include-untracked", stash).stdout
+    except GitError as exc:  # the work is in the stash all the same: the ticket names it (T2518)
+        shown = f"# git stash show failed: {exc.text}\n# the stray work is in stash {stash}\n"
+    patch.write_text(shown, encoding="utf-8")
+    return Aside(stash, patch, owner)

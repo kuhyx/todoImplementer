@@ -90,9 +90,9 @@ def shipping(d: Driver) -> str | None:
     except (GateRedError, NoDeployLineError, DeployFailedError) as failed:  # Claude's to fix (T2340-T2343)
         return _heal(d, failed)
     sha = st.ship["commit"]
+    appfix.shipped(d.ctx.root, d.ctx.run_dir, d.item, sha, d.ctx.now())  # no commit: stray tickets (T2518)
     if sha:
         st.head_sha = sha
-        appfix.shipped(d.ctx.root, d.ctx.run_dir, d.item, sha, d.ctx.now())
     if sha and "pushed_at" not in st.ship:  # ship() closed it because the session pushed it already (T1865)
         d.activity(f"closed: the session already pushed {sha[:12]}")
         return "shipped"

@@ -205,9 +205,11 @@ A deploy that sets aside a board run's leftovers in kuhy's checkout (`DOCS-landi
 (`todoimpl-stray-<card>-<ts>`) and `<run>/deploy/stray-<ts>.patch`, untracked files included. `runner/stray.py`
 then asks whether origin already holds that work: the stash merged into the incoming ref (base: the commit it was
 made on) leaves origin's tree as is, and each untracked file is on origin with the same content. Yes: nothing to
-do, the close evidence says "origin already holds them". No, or git cannot tell: the work is filed as kind
+do, the close evidence says "origin already holds them". No, or git cannot tell (a failed `ls-tree`, no origin branch, a patch `git stash show` could not write, which
+then names the stash; T2518): the work is filed as kind
 `work.stray` (signature `<sha256(patch)[:12]>-stray`, the same patch counts again) in
 `<error state>/app-errors/stray-work.json` against the deploy's repo. The errors loop makes it a part of that
 repo's card under the usual start gate. Its text (`ticket.STRAY_GOAL`) tells the session to read the stash in its
 own worktree, land what is useful and drop the rest, never touch the stash in kuhy's checkout, and ask kuhy
-nothing; "none of it is worth landing, because ..." counts as done.
+nothing; "none of it is worth landing, because ..." counts as done: Ship closes such a part with no commit and
+marks its ticket shipped, so the loop never files it again (T2518; an app error closed with no commit stays open).
