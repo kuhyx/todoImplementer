@@ -38,6 +38,16 @@ def test_t2601_the_coverage_command_runs_before_the_gaps_are_read(world: Env) ->
     assert not worktree.dirty(tree)  # the report is gone, so no later commit can carry it
 
 
+def test_t2601_a_coverage_command_under_its_threshold_still_files_the_gaps(world: Env) -> None:
+    _gaps_tool(world)  # `--cov-fail-under=100` exits non-zero exactly when there are gaps to file
+    kuhy_repo(
+        world, test="true", coverage="echo data > cov.xml; exit 2", coverage_gaps="coverage-gaps cov.xml"
+    )
+    run.visit(load(world), NOW, push=False)
+    assert len(records()) == len(GAPS["files"])
+    assert "nolimit-coverage" not in [r["signature"] for r in records()]
+
+
 def test_t2601_a_red_coverage_command_is_one_ticket_and_no_gaps_run(world: Env) -> None:
     _gaps_tool(world)
     kuhy_repo(world, test="true", coverage="exit 3", coverage_gaps="coverage-gaps cov.xml")

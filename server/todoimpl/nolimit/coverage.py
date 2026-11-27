@@ -7,7 +7,9 @@ the same file seen again counts up, never files twice. Exit 2 (the report is unr
 none) is one ticket of its own. A repo with no such bullet is skipped.
 
 The repo's own `- coverage:` command runs first when it has one (T2601: kcd2-dice-solver's `test` writes no
-lcov report, only `pnpm run coverage` does); a red one is one `nolimit-coverage` ticket and no gaps are read.
+lcov report, only `pnpm run coverage` does). Its exit code alone means nothing: `--cov-fail-under=100` exits
+non-zero exactly when there are gaps to file. Only when no report can be read is a red one the ticket
+(`nolimit-coverage`).
 The visit drops the reports afterwards (`worktree.discard_changes`), so no later commit carries them.
 """
 
@@ -59,17 +61,15 @@ def run(repo: Repo, wt: Path, now: float) -> list[str]:
     if cmd is None:
         return []
     make = generate(repo)
-    if make is not None and (filed := _failed(repo, steps.run("coverage", make, wt), now)) is not None:
-        return filed
-    if (filed := _failed(repo, steps.run("coverage-gaps", cmd, wt), now)) is not None:
-        (wt / OUT).unlink(missing_ok=True)
-        return filed
-    return [tickets.gap(repo, f, now) for f in gaps(wt)]
-
-
-def _failed(repo: Repo, done: steps.Step, now: float) -> list[str] | None:
-    """File a cut or red step's ticket; return its signatures (empty for a cut one), None when it passed."""
+    made = steps.run("coverage", make, wt) if make is not None else None
+    if made is not None and made.slow:
+        tickets.slow(repo, made, now)
+        return []
+    done = steps.run("coverage-gaps", cmd, wt)
     if done.slow:
         tickets.slow(repo, done, now)
         return []
-    return None if done.passed else tickets.red(repo, done, now)
+    if not done.passed:  # no readable report: a red coverage command is the cause when there was one
+        (wt / OUT).unlink(missing_ok=True)
+        return tickets.red(repo, made if made is not None and not made.passed else done, now)
+    return [tickets.gap(repo, f, now) for f in gaps(wt)]
