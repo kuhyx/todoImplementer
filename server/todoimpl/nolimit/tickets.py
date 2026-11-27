@@ -30,6 +30,7 @@ FILE = "nolimit.json"
 KIND = "nolimit.red"
 PREFIX = "nolimit-"
 MESSAGE = "the no-limit runner found {what} red ({step}): make it green"
+GAP = "the no-limit runner found {file} not fully covered (lines {lines}, {branches} branches): cover it"
 DETAIL = 1500
 FAILED = (
     re.compile(r"^FAILED (\S+)", re.MULTILINE),  # pytest's short summary
@@ -63,38 +64,62 @@ def _app(repo: Repo) -> str:
     return heavybuild.NOT_APP.sub("-", repo.name.lower()).strip("-") or "repo"
 
 
+def _load() -> list[dict[str, Any]]:
+    data = read_json(path())
+    return data.get("errors", []) if isinstance(data, dict) else []
+
+
+def _save(errors: list[dict[str, Any]]) -> None:
+    path().parent.mkdir(parents=True, exist_ok=True)
+    atomic.write_text(path(), json.dumps({"version": 1, "errors": errors}, indent=2) + "\n")
+
+
+def _count(errors: list[dict[str, Any]], repo: Repo, sig: str, said: tuple[str, str], now: float) -> None:
+    """Count one sighting of `sig` (message, detail) in `errors`: a new record first, the count up after."""
+    text, detail = said
+    app = _app(repo)
+    record = next((e for e in errors if e.get("app") == app and e.get("signature") == sig), None)
+    if record is None:
+        record = {"app": app, "repo": repo.slug, "signature": sig, "kind": KIND, "count": 0, "build": 0,
+                  "message": text, "first_seen": _iso(now)}  # fmt: skip
+        errors.append(record)
+    record.update(count=int(record["count"]) + 1, last_seen=_iso(now), detail=detail, open=True)
+
+
 def red(repo: Repo, step: Step, now: float) -> list[str]:
     """Count one sighting of each failure of a red step; return the signatures it filed."""
-    data = read_json(path())
-    errors: list[dict[str, Any]] = data.get("errors", []) if isinstance(data, dict) else []
-    app, filed = _app(repo), []
+    errors, filed = _load(), []
     found: list[str | None] = [*failures(step)] or [None]
     for failure in found:
         sig = signature(step, failure)
-        record = next((e for e in errors if e.get("app") == app and e.get("signature") == sig), None)
-        if record is None:
-            what = failure or f"`{step.command}`"
-            text = MESSAGE.format(what=what, step=step.name)
-            record = {"app": app, "repo": repo.slug, "signature": sig, "kind": KIND, "count": 0, "build": 0,
-                      "message": text, "first_seen": _iso(now)}  # fmt: skip
-            errors.append(record)
+        text = MESSAGE.format(what=failure or f"`{step.command}`", step=step.name)
         detail = f"exit {step.exit_code} after {step.seconds:g} s: {step.command}\n{step.tail[-DETAIL:]}"
-        record.update(count=int(record["count"]) + 1, last_seen=_iso(now), detail=detail, open=True)
+        _count(errors, repo, sig, (text, detail), now)
         filed.append(sig)
-    path().parent.mkdir(parents=True, exist_ok=True)
-    atomic.write_text(path(), json.dumps({"version": 1, "errors": errors}, indent=2) + "\n")
+    _save(errors)
     return filed
+
+
+def gap(repo: Repo, found: dict[str, Any], now: float) -> str:
+    """Count one sighting of an uncovered file (a `coverage-gaps --json` entry); return its signature."""
+    file = str(found["path"])
+    sig = f"{PREFIX}coverage-{hashlib.sha1(file.encode(), usedforsecurity=False).hexdigest()[:8]}"
+    lines = found.get("missed_lines") or "-"
+    text = GAP.format(file=file, lines=lines, branches=found.get("missed_branch_count", 0))
+    errors = _load()
+    _count(errors, repo, sig, (text, json.dumps(found)[:DETAIL]), now)
+    _save(errors)
+    return sig
 
 
 def resolve(repo: Repo) -> int:
     """Mark the repo's open records resolved (its gate is green); return how many were open."""
-    data = read_json(path())
-    errors: list[dict[str, Any]] = data.get("errors", []) if isinstance(data, dict) else []
+    errors = _load()
     mine = [e for e in errors if e.get("app") == _app(repo) and e.get("open") is not False]
     for record in mine:
         record["open"] = False
     if mine:
-        atomic.write_text(path(), json.dumps({"version": 1, "errors": errors}, indent=2) + "\n")
+        _save(errors)
     return len(mine)
 
 

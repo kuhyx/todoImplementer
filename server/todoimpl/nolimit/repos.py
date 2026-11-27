@@ -69,7 +69,8 @@ def slug_of(path: Path) -> str | None:
     return f"{OWNER}/{hosted.group(2)}"
 
 
-def _read(path: Path) -> str:
+def claude_md(path: Path) -> str:
+    """Return the checkout's CLAUDE.md text; empty when it is missing or unreadable."""
     try:
         return (path / "CLAUDE.md").read_text(encoding="utf-8")
     except OSError, UnicodeDecodeError:
@@ -80,7 +81,7 @@ def load(path: Path) -> Repo | None:
     """Return the repo of one checkout, None when it is no real checkout of kuhy's."""
     if not (path / ".git").is_dir() or (slug := slug_of(path)) is None:
         return None
-    return Repo(path.name, path, slug, commands_of(_read(path)))
+    return Repo(path.name, path, slug, commands_of(claude_md(path)))
 
 
 def discover(src: Path) -> list[Repo]:

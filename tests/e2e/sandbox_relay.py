@@ -19,7 +19,7 @@ _NAMESPACE = re.compile(r"sandbox/[a-z0-9_-]+")
 
 
 def env(work: Path, namespace: str, real_home: Path | None = None) -> dict[str, str]:
-    """Link the relay's credentials into the scratch HOME and return the server env that turns the relay on."""
+    """Link the relay's credentials into the scratch HOME; return the server env that turns the relay on."""
     if not _NAMESPACE.fullmatch(namespace):
         msg = f"relay namespace must be sandbox/<lowercase>, got {namespace!r}"
         raise SystemExit(msg)

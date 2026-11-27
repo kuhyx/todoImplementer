@@ -2,8 +2,10 @@
 
 Order: (1) the board worktree from `origin/<default>`; (2) setup (locked deps); (3) autofixes, committed on
 the `nolimit/<date>` branch when they changed anything (the repo's own commit hooks run, never skipped);
-(4) the full gate; (5) green: push fast-forward to origin's default branch and run the CLAUDE.md deploy,
-unless `push` is off or nothing was committed; red: the commit is discarded and each failure is a ticket.
+(4) the full gate; (5) green: the coverage gaps become tickets (`coverage.py`) and the dependency pins are
+bumped, kept only when the gate stays green (`bump.py`); (6) push fast-forward to origin's default branch
+and run the CLAUDE.md deploy, unless `push` is off or nothing was committed; red: the commit is discarded
+and each failure is a ticket.
 A read-only repo (no gate) runs its `lint` only and never commits.
 
 Before each step `still()` is asked again: False ends the visit at once (`stopped`, a Claude route opened).
@@ -17,7 +19,7 @@ from typing import TYPE_CHECKING
 from todoimpl.runner import deployline
 from todoimpl.runner.worktree import GitError
 
-from . import fixes, status, steps, tickets, worktree
+from . import bump, coverage, fixes, status, steps, tickets, worktree
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -98,6 +100,9 @@ class Visit:
             worktree.discard(tree)
             return status.RED
         tickets.resolve(self.repo)
+        coverage.run(self.repo, tree.path, self.now)  # after resolve: the gaps still open are counted again
+        if self.still():
+            bump.run(self.repo, tree, gate, self.now)
         if not (self.push and worktree.ahead(tree)):
             return status.GREEN
         if not self.step("push", PUSH.format(base=tree.base), tree).passed:

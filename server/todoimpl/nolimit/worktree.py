@@ -96,3 +96,15 @@ def discard(tree: Tree) -> None:
     """Drop every commit and change the tick made: back to `origin/<base>`."""
     git(tree.path, "reset", "-q", "--hard", f"origin/{tree.base}", timeout=GIT_LIMIT)
     git(tree.path, "clean", "-fdq", timeout=GIT_LIMIT)
+
+
+def discard_changes(tree: Tree) -> None:
+    """Drop uncommitted changes and new files; the branch's commits stay."""
+    git(tree.path, "reset", "-q", "--hard", "HEAD", timeout=GIT_LIMIT)
+    git(tree.path, "clean", "-fdq", timeout=GIT_LIMIT)
+
+
+def drop_last(tree: Tree) -> None:
+    """Drop the branch's newest commit and every change after it."""
+    git(tree.path, "reset", "-q", "--hard", "HEAD~1", timeout=GIT_LIMIT)
+    git(tree.path, "clean", "-fdq", timeout=GIT_LIMIT)

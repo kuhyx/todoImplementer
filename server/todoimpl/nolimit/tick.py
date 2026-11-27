@@ -22,7 +22,7 @@ from todoimpl.board.clone import src_root
 from todoimpl.board.state import run_root
 from todoimpl.runner import freeok
 
-from . import repos, run, status, trigger
+from . import chores, repos, run, status, trigger
 from .worktree import home
 
 if TYPE_CHECKING:
@@ -37,13 +37,24 @@ def tick(
     root: Path, clock: Callable[[], float] = time.time, gateway_up: Callable[[], bool] = freeok.gateway_up,
     *, push: bool = True,
 ) -> str | None:  # fmt: skip
-    """Visit the next repo while the trigger holds; return its result, None when the runner rests."""
+    """Visit the next repo, then run the next board chore, while the trigger holds.
+
+    Return the visit's result, None when the runner rests (or no repo is left to visit).
+    """
     active = trigger.holds(root, clock(), gateway_up)
     status.set_active(root, active=active)
-    repo = status.pick(root, repos.discover(src_root())) if active else None
-    if repo is None:
+    if not active:
         return None
-    return visit(root, repo, clock, lambda: trigger.holds(root, clock(), gateway_up), push=push)
+
+    def still() -> bool:
+        return trigger.holds(root, clock(), gateway_up)
+
+    repo = status.pick(root, repos.discover(src_root()))
+    result = None if repo is None else visit(root, repo, clock, still, push=push)
+    if still():
+        name, report = chores.tick(root, still, clock=clock)
+        log.info("no-limit chore %s: %s", name, json.dumps(report)[:300])
+    return result
 
 
 def visit(
@@ -92,8 +103,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--repo", help="visit this ~/src checkout now, whatever the trigger says")
     parser.add_argument("--once", action="store_true", help="one tick, then exit")
     parser.add_argument("--no-push", action="store_true", help="commit on the branch, never push or deploy")
+    parser.add_argument(
+        "--chore", choices=chores.NAMES, help="run this board chore now, whatever the trigger"
+    )
     args = parser.parse_args(argv)
     root, push = run_root(), not args.no_push
+    if args.chore is not None:
+        name, report = chores.tick(root, lambda: True, args.chore)
+        print(json.dumps({"chore": name, "report": report}))
+        return 0
     if args.repo is None and not args.once:
         Loop(root, step=lambda r: tick(r, push=push)).run_forever()
         return 0

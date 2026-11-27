@@ -121,6 +121,7 @@ def make_repo(world: Env, name: str = "demo", files: dict[str, str] | None = Non
     repo.mkdir()
     sh(repo, "git", "init", "-q", "-b", "main")
     for rel, text in {"CLAUDE.md": CLAUDE_MD, **(files or {"README.md": "demo\n"})}.items():
+        (repo / rel).parent.mkdir(parents=True, exist_ok=True)
         (repo / rel).write_text(text, encoding="utf-8")
     sh(repo, "git", "add", "-A")
     sh(repo, "git", "commit", "-q", "-m", "init")

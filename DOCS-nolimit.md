@@ -3,7 +3,7 @@
 kuhy (2026-11-27): when no Claude route can run a turn (the plan is limited for 12 h to 4 days, the free API
 credits are not `ready`, the free gateway is down or no public card waits), the board should still do useful
 work that costs no tokens. Code: `server/todoimpl/nolimit/`. Regressions: `tests/regressions/DOCS-nolimit.md`
-(T2540 to T2549).
+(T2540 to T2550, T2584 to T2590).
 
 ## What the board can do with no tokens, ranked
 
@@ -15,13 +15,13 @@ Ranked by what it saves the next Claude turn, then by risk. "Built" means this r
 | 2 | Apply the repo's own lint and format autofixes (ruff, eslint, prettier), commit them, push fast-forward and deploy when the full gate is green | yes |
 | 3 | Cut any step at 60 s and file one slow-step ticket per repo and step, so a slow gate is fixed before a card waits on it | yes |
 | 4 | Install each repo's locked deps in a fresh worktree; a lockfile that is not frozen (the install changes the tree) is a ticket | yes |
-| 5 | Precompute each waiting card's next-turn context (diff against its base, gate output, failing tests) into `<run>/nolimit-context.md`, and make the next prompt point at it | no |
-| 6 | Bump dependency pins to the newest stable versions (the freshness gate's list), run the full gate, push on green | no |
-| 7 | Rebase stale board worktrees of waiting cards onto origin, so the next turn starts from a current base | no |
-| 8 | Run each repo's `coverage-gaps` and file the uncovered lines as tickets | no |
-| 9 | Warm the shared caches (pnpm store, uv cache, Flutter pub cache) so the next turn's installs run offline | no |
-| 10 | Prune board worktrees and branches of shipped or cancelled runs, and report the disk it frees | no |
-| 11 | Refresh the repo visibility cache (`free-llm-check-dir`) for every repo, so the free route knows which cards are public | no |
+| 5 | Precompute each waiting card's next-turn context (diff against its base, gate output, failing tests) into `<run>/nolimit-context.md`, and make the next prompt point at it | yes |
+| 6 | Bump dependency pins to the newest stable versions (the freshness gate's list), run the full gate, push on green | yes |
+| 7 | Rebase stale board worktrees of waiting cards onto origin, so the next turn starts from a current base | yes |
+| 8 | Run each repo's `coverage-gaps` and file the uncovered lines as tickets | yes |
+| 9 | Warm the shared caches (pnpm store, uv cache, Flutter pub cache) so the next turn's installs run offline | yes |
+| 10 | Prune board worktrees and branches of shipped or cancelled runs, and report the disk it frees | yes |
+| 11 | Refresh the repo visibility cache (`free-llm-check-dir`) for every repo, so the free route knows which cards are public | yes |
 
 ## When it runs (`trigger.py`)
 
@@ -50,7 +50,9 @@ A repo whose step was cut is done for the cycle like any other and is tried agai
 1. `git fetch` in kuhy's checkout, then the board worktree `<run root>/nolimit/<repo>` on `nolimit/<date>`
    from `origin/<default>` (`git worktree add`, or a forced checkout of an existing one). These two are the only
    commands that touch `~/src/<repo>`, and both write inside `.git` alone. Branches of other days are deleted.
-2. Setup: `pnpm install --frozen-lockfile --prefer-offline` and `uv sync --frozen` when the lockfiles exist.
+2. Setup: `pnpm install --frozen-lockfile --prefer-offline`, `uv sync --frozen` and `flutter pub get
+   --enforce-lockfile` for every lockfile at the root or one dir down (`app/`, `web/`). This also warms the
+   shared stores (pnpm store, uv cache, pub cache), so the next turn installs offline (#9, T2587).
 3. Autofixes, picked from the repo's config: ruff when it is configured; eslint and prettier only on the
    paths the repo's own `package.json` scripts run them on (T2550), never on the whole tree. A fixer that finds errors it cannot fix exits 0 (the gate reports
    them); only a crash is red, and its changes are dropped.
@@ -58,10 +60,37 @@ A repo whose step was cut is done for the cycle like any other and is tried agai
 5. The full gate. Red: the commit is discarded and each failure is a ticket. Green: the repo's earlier no-limit
    records are marked resolved; then, unless `--no-push` or nothing was committed, `git push origin
    HEAD:<default>` after checking that origin is an ancestor (fast-forward only), and the CLAUDE.md `deploy`.
+6. Still green, before the push: `coverage.py` runs the repo's `coverage-gaps` bullet with `--json --max-files
+   10` and files one ticket per uncovered file (`nolimit-coverage-<sha8 of path>`; an unreadable report is
+   `nolimit-coverage-gaps`, #8, T2584). Then `bump.py`, only in a repo with
+   `scripts/check_dependency_freshness.sh`: `~/.claude/scripts/apply_dep_pins.py .`, relock (`uv lock`,
+   `pnpm install --lockfile-only`, `flutter pub get`), one commit, the gate again. Green: the commit is pushed
+   with the rest. Red: the commit is dropped and each failure is a `nolimit-bump*` ticket (#6, T2588).
 
 Every repo command runs as `capped.sh timeout -k 5 60 bash -c <command>` (`steps.py`, through
 `runner.checks.run_capped`, so a build waits for the build lock first). Git plumbing (fetch, worktree, status,
 reset) runs through `runner.worktree.git` with the same 60 s limit.
+
+## Chores (`chores.py`)
+
+After the tick's repo visit, one board-wide chore runs, in turn: `prune`, `rebase`, `context`, `visibility`.
+Each stops after 45 s (the rest waits for its next turn), asks `still()` before each card, and runs every
+command as a capped step under 60 s. Cards are the run dirs whose `state.json` names a worktree (`cards.py`):
+ended (shipped, closed, done manually, cancelled), busy (`turn.pid` exists: never touched) or waiting.
+
+- `prune` (#10, T2585): an ended card's clean worktree is removed (`git worktree remove --force` from the
+  owning repo, after `du -sb`); its branch is deleted only when its tip is on origin. A tree with changes stays.
+  The report names each card and `freed_bytes`.
+- `rebase` (#7, T2586): a waiting card's clean tree is rebased onto `origin/<base>`; a conflict aborts (the
+  tree is as it was) and files `nolimit-rebase` for the card's repo.
+- `context` (#5, T2590): `<run>/nolimit-context.md` per waiting card: commits on top of `origin/<base>`, the
+  diff stat, uncommitted files, the repo's `test-changed` output and the failing tests it names, stamped with
+  HEAD (an unchanged HEAD is skipped). `prompts/nolimitctx.py` adds "read <file> first" to the next prompt.
+- `visibility` (#11, T2589): `free-llm-check-dir <repo>` for each `~/src` repo whose cache entry is missing or
+  older than 20 h, never-cached first; the tool missing is an `error` in the report.
+
+Reports land in `nolimit.json` under `chores` (`at`, `report`) and `chore_next`. CLI: `--chore <name>` runs one
+now, whatever the trigger.
 
 ## Tickets (`tickets.py`)
 

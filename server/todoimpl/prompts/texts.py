@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from todoimpl import night
 from todoimpl.newtask import images
 
-from . import phone, standing
+from . import nolimitctx, phone, standing
 from .kind import HINTS, detect_kind
 from .research import research
 from .umbrella import manager
@@ -62,7 +62,7 @@ def item(ctx: PromptContext) -> str:
         lines.append(
             f"Files attached to this item: open each with the Read tool: {', '.join(map(str, files))}"
         )
-    lines.append(f"done_check: {ctx.done_check or 'none'}")
+    lines += [f"done_check: {ctx.done_check or 'none'}", *nolimitctx.pointer(ctx.run_dir)]
     if ctx.spec_answers:
         lines += ["Spec answers:", *(f"- {q}: {a}" for q, a in ctx.spec_answers)]
     if ctx.notes:
