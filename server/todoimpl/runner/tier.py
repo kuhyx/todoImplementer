@@ -15,7 +15,7 @@ TICKET_LINE = re.compile(r"^[ \t]*Error-Signature:", re.MULTILINE)  # an app err
 ESCALATE_LINE = re.compile(r"^[ \t]*ESCALATE:[ \t]*(.*?)[ \t]*$", re.IGNORECASE | re.MULTILINE)
 REASON_MAX = 300
 NO_REASON = "no reason given"
-MANAGER_MODEL = "opus"  # kuhy, 2026-11-10: the free-worker manager is Opus, not Sonnet
+MANAGER_MODEL = "sonnet"  # the free-worker manager runs the default model (kuhy, 2026-11-27, T2615)
 MANAGER_EFFORT = "high"  # every card turn runs at high effort (kuhy, 2026-11-21, T2476)
 ESCALATED_EFFORT = "xhigh"  # escalation = more thought on the same model
 

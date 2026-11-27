@@ -31,7 +31,8 @@ MODELS: Final = (
     Model("claude-haiku-5-5", "haiku", "5.5", "Haiku 5.5"),
 )
 DEFAULT: Final = "default"  # a note's word that drops the pin: the role, tier and escalation rules pick again
-DEFAULT_MODEL: Final = "claude-opus-5-5"  # what the roles run unpinned (kuhy, 2026-11-21): its button says so
+# What the roles run unpinned (kuhy, 2026-11-27, T2615: Sonnet, Opus only by a pick); its button says so.
+DEFAULT_MODEL: Final = "claude-sonnet-5-5"
 PIN: Final = "model_pin"  # state.extra key
 IDS: Final = (*(m.id for m in MODELS), DEFAULT)
 

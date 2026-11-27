@@ -29,7 +29,7 @@ def test_t2218_without_a_pin_the_picker_presses_the_latest_model() -> None:
     card = build_card(Note(), run(extra={"last_model": "opus"}), ctx(live=("c59d2588-0",)))
     picker = _picker(card)
     assert picker is not None
-    assert (picker["enabled"], picker["value"]) == (True, modelpick.DEFAULT_MODEL)
+    assert (picker["enabled"], picker["value"]) == (True, "claude-opus-5-5")
 
 
 def test_t2218_no_picker_once_the_run_ended_or_while_it_ships() -> None:

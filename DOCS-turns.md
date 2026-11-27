@@ -8,13 +8,13 @@ shapes of `--output-format json` (one object, or the event array of claude 2.1),
 `<root>/oneshot-usage.jsonl`, which `/api/usage` adds to `cost.total_usd` (`cost.oneshot_usd`).
 
 Per-turn knobs (`runner/claude.py`): model by role (`ROLE_MODELS`), `--effort` by role (`ROLE_EFFORT`: high, the
-classifier low; kuhy 2026-11-21, T2471: every card role runs Opus 5.5 at high effort unpinned); the credit spec passes it to the SDK. The **live check is its own role**
-`live_check` (Opus, high): verify-and-report work in a fresh session seeded from `handoff_summary` (plan text in
-the prompt, not twice), so it never resumes the Opus transcript and pays no cache write on it. Its session is dropped
+classifier low; kuhy 2026-11-27, T2615: every card role runs Sonnet 5.5 at high effort unpinned, Opus only when kuhy picks it); the credit spec passes it to the SDK. The **live check is its own role**
+`live_check` (Sonnet, high): verify-and-report work in a fresh session seeded from `handoff_summary` (plan text in
+the prompt, not twice), so it never resumes the implementer's transcript and pays no cache write on it. Its session is dropped
 whenever the implementer worked since (entering from `implement`); the checklist redo, the phone nudge and an `R:`
 continue resume it. A resumed session already holds plan.md: its prompt names the path, a new one inlines the text
 (`Situation` `resume`, `runner/prompting.py`). `result.json` records `model`, `wanted_model` and `effort`; when the
-credits route runs a role on a lesser model than it wanted (every credit turn runs the `credits_model` setting, default Opus 5.5; a Sonnet role on Opus is no hold) the feed says so and
+credits route runs a role on a lesser model than it wanted (every credit turn runs the `credits_model` setting, default Sonnet 5.5; a Sonnet role on Opus is no hold) the feed says so and
 `state.extra.credit_downgrade[role]` holds `{wanted, ran}`.
 
 The live check runs every phone check itself (T2522): taps, ratings, screenshots and timing measured on the
@@ -36,7 +36,7 @@ A server-side API error (5xx, overloaded) is retried at most `retry.MAX_API_RETR
 follow-up note (`retry.later` is uncapped; DOCS-resilience, DOCS-spec Q4). A bare `API Error` or `timed out` is no
 longer transient: it takes the crash path (3 tries, then Needs you).
 
-Not changed on purpose: every role on credits runs the `credits_model` setting (Opus 5.5 since 2026-11-15; Sonnet before, kuhy 2026-11-08).
+Not changed on purpose: every role on credits runs the `credits_model` setting (Sonnet 5.5 since 2026-11-27, T2615; Opus 2026-11-15 to 11-27; Sonnet before, kuhy 2026-11-08).
 
 ## kuhy's model pick (T2215-T2220)
 
@@ -54,7 +54,7 @@ Code: `server/todoimpl/modelpick.py` (names, plain regex, no LLM), `runner/model
 - The card's current stage runs again on the pick. A live turn is cut and its session resumed with
   `--resume <id> --model <pin>` (claude 2.1.328 switches a resumed session's model; probed 2026-11-19).
 - The picker is the one place a card shows its model (T2477: no label in the drawer, card sheet or detail page).
-  It presses the pin, else the model the latest turn ran on (`state.extra.last_model`), else the default, Opus 5.5,
+  It presses the pin, else the model the latest turn ran on (`state.extra.last_model`), else the default, Sonnet 5.5,
   and has no Default button: the default model's button carries an inline `default` note (choice `note`, T2470).
   The note word `default` still drops the pin.
 - Before Start (T2478): every card with an enabled Start or Restart (Backlog, Cancelled, a startable Yours card,

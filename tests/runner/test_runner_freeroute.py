@@ -48,7 +48,7 @@ def test_t2531_a_limited_public_card_runs_free_and_waits_for_claude_to_verify(
         lift_limit(world, sched)
         st = wait_stage(world, sched, "gate", turns=2)
         verify = world.calls()[3]
-        assert verify["model"] == "opus"
+        assert verify["model"] == "sonnet"
         assert verify["resume"] is None  # a fresh Claude session, never the free one
         assert "free_unverified" not in st.extra
     finally:

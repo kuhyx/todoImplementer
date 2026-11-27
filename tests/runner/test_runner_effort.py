@@ -80,6 +80,6 @@ def test_t1897_a_cheap_run_that_gives_up_reruns_at_more_effort_on_the_same_model
     """kuhy, 2026-11-10: the manager is Opus, so escalation is effort (high, then xhigh; T2476)."""
     st = run_to_gate(world, PLAN, GIVE_UP, IMPL, LIVE_OK, **CHEAP)
     first, second = implement_calls(world)
-    assert (first["model"], first["effort"]) == ("opus", "high")
-    assert (second["model"], second["effort"]) == ("opus", "xhigh")
+    assert (first["model"], first["effort"]) == ("sonnet", "high")
+    assert (second["model"], second["effort"]) == ("sonnet", "xhigh")
     assert st.extra["escalated"] is True

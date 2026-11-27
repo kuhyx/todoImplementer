@@ -16,15 +16,15 @@ from todoimpl.newtask import images
 
 from . import buildlock, mcpconf, policy, userbase, venvless
 
-# Every card role runs Opus 5.5 at high effort unpinned (kuhy, 2026-11-21: "default should be opus 5.5 with
-# high effort"; before: Sonnet for spec, plan, closing and the live check, medium effort). T2471.
+# Every card role runs Sonnet 5.5 at high effort unpinned (kuhy, 2026-11-27: "default model should be SONNET,
+# NOT opus"; Opus is a conscious pick in the model picker). T2615; T2471 had set Opus.
 ROLE_MODELS = {
-    "spec": "opus",
-    "plan": "opus",
-    "manager": "opus",  # umbrella rounds: runs the free workers (kuhy, 2026-11-10: opus, not sonnet)
-    "closing": "opus",
-    "implement": "opus",
-    "live_check": "opus",  # verify-and-report work: its own fresh session, seeded from the handoff
+    "spec": "sonnet",
+    "plan": "sonnet",
+    "manager": "sonnet",  # umbrella rounds: runs the free workers
+    "closing": "sonnet",
+    "implement": "sonnet",
+    "live_check": "sonnet",  # verify-and-report work: its own fresh session, seeded from the handoff
     "classify": "haiku",
 }
 # Default reasoning effort per role: high (kuhy, 2026-11-21); the classifier is plain extraction.

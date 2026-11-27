@@ -12,7 +12,7 @@ list lines; `Task`, `Item` and `CardTask` carry it. Inside every board column, k
 ones, before the Needs-you order (questions, effort, longest waiting). The page renders the server order and never
 sorts; the card payload has no `created_by`.
 
-## The cheap tier: Opus manager, free models, higher effort last
+## The cheap tier: Sonnet manager, free models, higher effort last
 
 A card is tier `cheap` when its section text (the item body) has a line `Tier: cheap` (case-insensitive) or its
 title contains `text-free (textgate-rework)`. A repo card (`DOCS-repotask.md`) is titled after the repo, so the title
@@ -20,7 +20,7 @@ of any part the run works counts too (T1999): one cheap part makes the card chea
 A card holding an app error ticket (an `Error-Signature:` line) is never cheap: kuhy keeps error fixes off free
 models (2026-11-21, T2445).
 The scope is kuhy's, not a default: he asked for free models on the textgate reworks (note 4f77d502, 2026-11-10) and
-set Opus medium as the default model (`DOCS-turns.md`); every other card stays `normal`. Measured 2026-11-12: cheap
+set Sonnet 5.5 as the default model (2026-11-27, `DOCS-turns.md`); every other card stays `normal`. Measured 2026-11-12: cheap
 cards averaged $26 against $14 for normal ones (n = 9 and 62), so widening the tier would not cut spend.
 The tier is decided once per cycle, at the first implement-role turn, and
 stored in `state.extra.tier` (`cheap` | `normal`); before a run the card derives it from the note. A new repo-card
@@ -29,19 +29,19 @@ its cycles and the parts change.
 
 For a cheap run the **implement role** (the implement and fix stages, one session; the live check is its own
 role since T1896) runs on
-`opus` at `--effort high` (kuhy, 2026-11-10: the manager is Opus, not Sonnet; high since 2026-11-21, T2476; `runner/tier.py` `MANAGER_*`). The
-credit route (`credit.py`) runs the `credits_model` setting (default `claude-opus-5-5`) for every role and passes the effort to the SDK.
+`sonnet` at `--effort high` (the default model, kuhy 2026-11-27, T2615; high since 2026-11-21, T2476; `runner/tier.py` `MANAGER_*`). The
+credit route (`credit.py`) runs the `credits_model` setting (default `claude-sonnet-5-5`) for every role and passes the effort to the SDK.
 
 1. **Free models, only when allowed.** Before each implement or fix turn the server asks `freegate.check`: the
    `claude-free` and `free-llm-check-dir` tools exist, `free-llm-check-dir <worktree>` approves (public repo only:
    free providers log prompts; the check reads the GitHub origin's visibility, so a worktree under `~/.cache`
    passes for a public repo), `~/.config/omniroute/api_key` exists and the gateway (`http://127.0.0.1:20128`,
    `$TODOIMPL_FREE_GATEWAY`) answers `GET /v1/models` within 2 s. The verdict is `state.extra.free_models`.
-2. **Allowed:** the prompt gets the manager addendum. Opus writes each bounded sub-task to a file and runs it
+2. **Allowed:** the prompt gets the manager addendum. The manager writes each bounded sub-task to a file and runs it
    through the server's worker command (`python -m todoimpl.runner.freeworker <worktree> <file> <log> --issues
    <run dir> --child <repo>`, never raw `claude-free`: it loads kuhy's `~/.claude` and answers with a grilling
    round instead of editing). The command runs `claude-free` with hooks off and a no-questions preamble, logs to
-   `<log>` and exits 0 only when the worktree changed. Opus reads each diff, runs the checks itself, repairs
+   `<log>` and exits 0 only when the worktree changed. The manager reads each diff, runs the checks itself, repairs
    permission blocks the worker hit, and **coaches** a worker that failed, declined or misread: it diagnoses why
    (log, diff), fixes the cause (clearer prompt, missing context such as the textgate rules, a smaller task) and
    reruns the worker, up to 3 coached attempts, each logged with phase `prompt`. Only after that does it finish the

@@ -89,7 +89,7 @@ def purchased_usd() -> float:
 
 
 MODEL_KEY = "credits_model"
-MODEL = "claude-opus-5-5"  # kuhy, 2026-11-15: credit turns run on Opus 5.5 (before: sonnet, 2026-11-08)
+MODEL = "claude-sonnet-5-5"  # the default model (kuhy, 2026-11-27, T2615); `credits_model` picks another
 
 
 def model() -> str:

@@ -37,7 +37,7 @@ def test_t1999_a_textgate_part_on_a_repo_card_runs_on_the_free_workers(rig: Rig,
     assert rig.card(repo)["tier"]["cheap"] is True  # the badge reads the parts, not the repo-name title
     card, st = run_to_gate(rig, repo, note)
     impl = implement_calls(rig)
-    assert [c["model"] for c in impl] == ["opus"]
+    assert [c["model"] for c in impl] == ["sonnet"]
     assert "todoimpl.runner.freeworker" in str(impl[0]["prompt"])  # the manager addendum
     assert "textgate" in str(impl[0]["prompt"]).lower()
     assert (st.extra["tier"], st.extra["free_models"]) == ("cheap", True)

@@ -30,7 +30,7 @@ def test_t2478_a_backlog_card_offers_the_picker_pressed_on_the_default() -> None
     card = build_card(Note(), None, ctx())
     picker = _picker(card)
     assert picker is not None
-    assert (picker["enabled"], picker["value"]) == (True, OPUS)
+    assert (picker["enabled"], picker["value"]) == (True, SONNET)
     assert picker["choices"] == modelpick.choices()
     validate("common", card, "task_card")
 
@@ -46,9 +46,9 @@ def test_t2478_a_cancelled_card_presses_its_pin_else_the_default_never_its_last_
     pinned = _picker(build_card(Note(), run(stage="cancelled", extra={modelpick.PIN: HAIKU}), ctx()))
     assert pinned is not None
     assert (pinned["enabled"], pinned["value"]) == (True, HAIKU)
-    plain = _picker(build_card(Note(), run(stage="cancelled", extra={"last_model": "sonnet"}), ctx()))
+    plain = _picker(build_card(Note(), run(stage="cancelled", extra={"last_model": "opus"}), ctx()))
     assert plain is not None
-    assert plain["value"] == OPUS  # Restart runs unpinned on the default, whatever the last turn ran on
+    assert plain["value"] == SONNET  # Restart runs unpinned on the default, whatever the last turn ran on
 
 
 def test_t2478_a_yours_note_that_can_start_offers_the_picker() -> None:

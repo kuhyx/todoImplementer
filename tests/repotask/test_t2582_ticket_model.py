@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from repofakes import IMPL, LIVE, PLAN, Rig
+from todoimpl import modelpick
 from todoimpl.board.state import RunState
 from todoimpl.errors import ticket
 from todoimpl.errors.record import AppError
@@ -40,7 +41,7 @@ def test_t2582_a_card_with_a_kuhy_part_runs_the_default_model(rig: Rig) -> None:
     repo = rig.repo()
     rig.note(repo, "demo errors", TICKET + "\n\n## kuhy fix\nMake the kuhy fix.\ndone: it works")
     card = repo_card_id(repo)
-    assert _model(rig) == "claude-opus-5-5"
+    assert _model(rig) == modelpick.DEFAULT_MODEL
     rig.script(card, PLAN, IMPL, LIVE)
     rig.sched.start(card)
     rig.until(lambda: len(rig.world.calls()) >= 2)

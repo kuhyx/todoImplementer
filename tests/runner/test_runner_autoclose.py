@@ -46,7 +46,7 @@ def test_marker_appearing_starts_a_closing_run_without_a_click(world: Env) -> No
         assert st.worktree is None
         assert not (world.root / CARD / "wt").exists()
         call = world.calls()[0]
-        assert call["model"] == "opus"  # T2471
+        assert call["model"] == "sonnet"  # T2615
         assert call["cwd"] == str(world.src / "demo")
         assert "Edit" in call["argv"]
         assert st.checks is not None
