@@ -28,6 +28,12 @@ def test_t2535_links_in_both_forms_in_order_without_repeats(tmp_path: Path) -> N
     assert found == [("abc-1", "1.jpg"), ("def_2", "2.png"), ("ghi", "3.webp")]
 
 
+def test_t2535_a_linked_file_that_is_no_image_is_not_listed(tmp_path: Path) -> None:
+    """Live card b5b87376 listed an attached .xml as an image: its thumbnail could only break."""
+    text = f"![]({DUFS}/b5/852e.xml) ![]({DUFS}/b5/a.JPG) ![]({DUFS}/b5/1.jpeg) {DUFS}/b5/notes.pdf"
+    assert imagelinks.links(text, tmp_path) == [{"folder": "b5", "file": "1.jpeg"}]
+
+
 def test_t2535_title_loses_its_image_markdown(tmp_path: Path) -> None:
     assert imagelinks.strip_title(f"Fix this ![]({DUFS}/a/1.jpg) now", tmp_path) == "Fix this now"
     assert imagelinks.strip_title(f"![]({tmp_path}/a/1.jpg)", tmp_path) == ""

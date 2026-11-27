@@ -40,9 +40,14 @@ def _pattern(root: Path) -> re.Pattern[str]:
 
 
 def links(text: str, root: Path) -> list[dict[str, str]]:
-    """Return the images `text` links, first-seen order, each once: `{folder, file}`."""
+    """Return the images `text` links, first-seen order, each once: `{folder, file}`.
+
+    Other todo-images attachments (an .xml, a .pdf) are no image: they get no thumbnail.
+    """
     found: list[dict[str, str]] = []
     for folder, file in _pattern(root).findall(text):
+        if file.rpartition(".")[2] not in TYPES:
+            continue
         if (one := {"folder": folder, "file": file}) not in found:
             found.append(one)
     return found
