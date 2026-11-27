@@ -46,18 +46,22 @@ def _session(stream: Path) -> tuple[str, str] | None:
     return next((found for line in head.splitlines() if (found := _init(line)) is not None), None)
 
 
-def until(stream: Path, start: float) -> float | None:
-    """Return the newest work of the sub-agents whose transcript changed since `start`, None when none."""
+def transcripts(stream: Path, start: float) -> list[Path]:
+    """Return the turn's sub-agent transcripts changed since `start` (an earlier turn's are never read)."""
     if (found := _session(stream)) is None:
-        return None
+        return []
     cwd, sid = found
-    times: list[float] = []
+    paths: list[Path] = []
     for path in (PROJECTS / UNSAFE.sub("-", cwd) / sid / "subagents").glob("agent-*.jsonl"):
         try:
-            if path.stat().st_mtime < start:  # an earlier turn's sub-agent: never read again
-                continue
+            if path.stat().st_mtime >= start:
+                paths.append(path)
         except OSError:
             continue
-        if (at := newest(path)) is not None:
-            times.append(at)
+    return paths
+
+
+def until(stream: Path, start: float) -> float | None:
+    """Return the newest work of the sub-agents whose transcript changed since `start`, None when none."""
+    times = [at for path in transcripts(stream, start) if (at := newest(path)) is not None]
     return max(times, default=None)

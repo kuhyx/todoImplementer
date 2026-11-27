@@ -150,6 +150,12 @@ Its end (`worker*.log.exit`) is activity too, so the manager's quiet counts from
 A sub-agent's own message lines count too: claude keeps its thinking, advisor call and text out of the turn's
 stream, so the watch reads its transcript under `~/.claude/projects` (T2561). A stream line bigger than the
 64 KB tail (a skill list) makes the readers look 4x further back, up to 16 MB (T2560).
+The newest line is the newest stamp, not the line written last: claude writes a queued prompt late with the
+stamp of its queueing (T2562).
+A sub-agent writes nothing while it thinks, so a quiet card with a sub-agent request out (`api-request` with no
+answer in its transcript) is held, up to 240 s from the request (`stall/hold.py`, `stalls-held.json`). The answer
+judges it: its output tokens are taken to have come at 80 tokens/s (the slowest of 111 long sub-agent requests on
+2026-11-27 ran at 82) up to the answer, and the quiet left before that is filed when over 60 s (T2563).
 
 - `stall/watch.py` ticks every 10 s. A card with a live turn (`turn.pid` alive) whose last real activity is over 60 s
   old is one stall episode. A fresh turn counts from its start. An episode counts once however many ticks it lasts.

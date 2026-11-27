@@ -47,7 +47,7 @@ def _tails(path: Path) -> Iterator[tuple[list[bytes], float]]:
         size *= GROW
 
 
-def _rows(lines: list[bytes]) -> Iterator[tuple[int, object]]:
+def rows(lines: list[bytes]) -> Iterator[tuple[int, object]]:
     """Yield each parsed line from the newest back, with how many lines are newer; a torn line is skipped."""
     for back, line in enumerate(reversed(lines)):
         try:
@@ -56,7 +56,8 @@ def _rows(lines: list[bytes]) -> Iterator[tuple[int, object]]:
             continue
 
 
-def _walk(path: Path, decide: Callable[[list[bytes], float], object], *, default: object) -> object:
+def walk(path: Path, decide: Callable[[list[bytes], float], object], *, default: object) -> object:
+    """Return what `decide` makes of the file's tails, from the shortest; `default` when none decides."""
     try:
         for lines, mtime in _tails(path):
             if (found := decide(lines, mtime)) is not UNDECIDED:
@@ -86,26 +87,39 @@ def _writing(row: object) -> bool:
 
 
 def _newest(lines: list[bytes], mtime: float) -> object:
-    for back, row in _rows(lines):
+    """Return the newest stamp of the tail's message lines, not the last written one's (T2562).
+
+    claude writes a queued prompt (a task notification) when it sends it, stamped when it was queued, so
+    the line written last can be older than tool results before it. Only the last written message line can
+    still wait on an advisor answer: every line after a call is later work.
+    """
+    found: list[float] = []
+    seen = False
+    for back, row in rows(lines):
         if not isinstance(row, dict) or row.get("type") not in OUTPUT:
             if back == 0 and _writing(row):
                 return mtime  # the model is writing its answer or thinking right now (T2452, T2469)
             continue
         at = _stamp(row)
         if at is None:
-            return mtime if back == 0 else None
-        return at + ADVISOR if _pending_advisor(row) else at
-    return UNDECIDED
+            if back == 0:
+                return mtime
+        elif not seen and _pending_advisor(row):
+            found.append(at + ADVISOR)
+        else:
+            found.append(at)
+        seen = True
+    return max(found, default=None) if seen else UNDECIDED
 
 
 def newest(path: Path) -> float | None:
     """Return when the stream's newest message or tool result line was written; see `scan.last_output`."""
-    found = _walk(path, _newest, default=None)
+    found = walk(path, _newest, default=None)
     return found if isinstance(found, float) else None
 
 
 def _ended(lines: list[bytes], _mtime: float) -> object:
-    for _back, row in _rows(lines):
+    for _back, row in rows(lines):
         kind = row.get("type") if isinstance(row, dict) else None
         if kind == "result":
             return True
@@ -116,4 +130,4 @@ def _ended(lines: list[bytes], _mtime: float) -> object:
 
 def ended(path: Path) -> bool:
     """Return True when a `result` line comes after the stream's last message line (T2505)."""
-    return _walk(path, _ended, default=False) is True
+    return walk(path, _ended, default=False) is True
