@@ -22,8 +22,11 @@ if TYPE_CHECKING:
     from todoimpl.board.state import RunState
 
 
-def _or_free(choice: route.Choice, st: RunState | None) -> route.Choice:
-    return route.Choice(freeroute.FREE) if choice.route is None and freeroute.eligible(st) else choice
+def _or_free(root: Path, choice: route.Choice, st: RunState | None) -> route.Choice:
+    if choice.route is not None or not freeroute.eligible(st) or st is None:
+        return choice
+    # a repo card's error tickets live in its parts, not in note_body (T2622)
+    return choice if files.error_fix(root / st.task_id) else route.Choice(freeroute.FREE)
 
 
 def _hold(root: Path, now: float, choice: route.Choice, card: str | None) -> route.Choice:
@@ -38,12 +41,12 @@ def _hold(root: Path, now: float, choice: route.Choice, card: str | None) -> rou
 def choose(root: Path, now: float, st: RunState | None, card: str | None = None) -> route.Choice:
     """Return the route a turn of `st` (of `card` with no saved state) would take now; None = it waits."""
     found = st.task_id if st is not None else card
-    return _or_free(_hold(root, now, route.choose(root, now), found), st)
+    return _or_free(root, _hold(root, now, route.choose(root, now), found), st)
 
 
 def claim(root: Path, now: float, card: str, st: RunState | None) -> route.Choice:
     """`route.claim` (counts a credit turn as running), else `free` when the run may go free."""
-    return _or_free(_hold(root, now, route.claim(root, now, card), card), st)
+    return _or_free(root, _hold(root, now, route.claim(root, now, card), card), st)
 
 
 def admits(root: Path, now: float, card: str) -> bool:

@@ -15,6 +15,7 @@ from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Any
 
 from todoimpl.board.parts import TICKS
+from todoimpl.errors.marks import signatures
 from todoimpl.runner.files import read_json, write_json
 
 from . import lane
@@ -73,7 +74,8 @@ def snapshot(run_dir: Path, item: Item, note_priority: str = "medium") -> None:
     first = lane.first(item.parts, item.body)
     own = note_priority if item.parts else lane.priority(note_priority, item.body)
     level = _top([own, *(p.priority for p in item.parts)])
-    write_json(run_dir / PRIORITY, {"priority": level, "lane": first})
+    fix = any(signatures(text) for text in (item.body, *(p.body for p in item.parts if p.actionable)))
+    write_json(run_dir / PRIORITY, {"priority": level, "lane": first, "error_fix": fix})
 
 
 def priority(run_dir: Path) -> str:
@@ -83,6 +85,12 @@ def priority(run_dir: Path) -> str:
     except OSError, ValueError:
         return "medium"
     return _top([data.get("priority")] if isinstance(data, dict) else [])
+
+
+def error_fix(run_dir: Path) -> bool:
+    """Say whether the last drive's open parts hold an app-error ticket: never free models (T2445, T2622)."""
+    data = read_json(run_dir / PRIORITY)
+    return isinstance(data, dict) and data.get("error_fix") is True
 
 
 def lane_rank(run_dir: Path) -> int:

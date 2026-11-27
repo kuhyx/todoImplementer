@@ -59,7 +59,7 @@ const hasReason = (a: { enabled: boolean; reason: null | string }): boolean => a
 /** A checkbox sent with its action's click (Start/Restart: auto_ship). */
 export const actionOption = z
   .strictObject({ enabled: z.boolean(), id: z.enum(["auto_ship"]), label: z.string().min(1), reason: z.string().nullable() })
-  .refine(hasReason, { message: "a disabled option needs a reason" });
+  .refine(hasReason, { error: "a disabled option needs a reason" });
 
 /** One row of the model picker: the id the click sends, a short name. */
 export const actionChoice = z.strictObject({
@@ -83,7 +83,7 @@ export const action = z
     value: z.string().optional(),
     waits: actionWaits.optional(),
   })
-  .refine(hasReason, { message: "a disabled action needs a reason" });
+  .refine(hasReason, { error: "a disabled action needs a reason" });
 export const actions = z.array(action);
 
 export const question = z.strictObject({

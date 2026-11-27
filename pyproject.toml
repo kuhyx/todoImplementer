@@ -10,8 +10,8 @@ requires-python = ">=3.15"
 dependencies = [
     "crdt-sync @ git+https://github.com/kuhyx/utils@crdt-sync-v0.11.1#subdirectory=crdt-sync",
     "cryptography==50.0.2",
-    "httpx==0.28.1",
-    "rtdb-relay @ git+https://github.com/kuhyx/utils@rtdb-relay-v0.2.2#subdirectory=rtdb_relay",
+    "httpx==0.29.0",
+    "rtdb-relay @ git+https://github.com/kuhyx/utils@rtdb-relay-v0.2.3#subdirectory=rtdb_relay",
 ]
 
 [dependency-groups]

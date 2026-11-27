@@ -88,7 +88,8 @@ def actions(  # noqa: PLR0913 - the signature of the interface plus keyword-only
     model kuhy picked before Start (`runner/prepin.py`).
     """
     clock = time.time() if now is None else now
-    free = limit.holds and may_go_free(task.repo, task.body)
+    parts = [p.body for p in getattr(task, "parts", ()) if p.actionable]  # T2622: tickets live in parts
+    free = limit.holds and may_go_free(task.repo, "\n".join([task.body or "", *parts]))
     block = launch_block(limit, clock, free=free) or check_block(run, check, task.status)
     out = _primary(task, run, status, block, repo_missing)
     if status in WONT:  # T2045: abandons every note behind the card
