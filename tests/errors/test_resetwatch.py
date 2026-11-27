@@ -38,7 +38,7 @@ def test_t2558_a_weekly_reset_files_one_high_note_and_starts_it_first(w: Watch) 
     assert w.sched.extras[0] == {"tokenopt": {"key": key, "at": T0 + 120.0}}
     ((card, line),) = w.lines  # the feed line; the test home has no ~/.claude to make a worktree of
     assert card == CARD
-    assert line.startswith(f"token optimization after reset {key[:10]}; no ~/.claude worktree: ")
+    assert line.startswith(f"token optimization after reset {key[:10]}; ~/.claude worktree: ")
     assert w.state()["last_reset"] == key
     assert w.state()["pending"] is None
     for _ in range(3):
@@ -83,7 +83,18 @@ def test_t2551_a_lift_and_a_late_weekly_probe_are_still_one_reset(w: Watch) -> N
     assert len(w.added()) == 1
 
 
+def test_t2551_a_5h_limit_lifting_is_no_reset_of_the_week(w: Watch) -> None:
+    w.week(T0)
+    w.paused(T0 - 2 * 86400.0)  # a 5 h window two days before the week ends
+    w.tick()
+    assert w.state()["limit_seen"] is None
+    limits.clear(w.rig.root)
+    w.tick()
+    assert w.added() == []
+
+
 def test_t2551_a_lift_alone_files_a_note_and_a_held_limit_without_a_paused_card_does_not(w: Watch) -> None:
+    w.week(T0)
     limits.write_until(w.rig.root, T0)
     w.tick()
     assert w.state()["limit_seen"] is None  # nothing rested paused_limit

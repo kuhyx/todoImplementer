@@ -51,7 +51,7 @@ STEPS = (
 WHERE = (
     "Skills: `token-dashboard` (the token-dashboard MCP tools) and `token-optimization` (the audit). "
     f"Repos: this one ({REPO}) and ~/.claude, through `{WORKTREE}` in your run dir: a worktree of ~/.claude "
-    "that is in your dirs. Commit ~/.claude changes there, push them fast-forward only "
+    "that is in your dirs. Commit ~/.claude changes there, rebase onto `origin/main`, push fast-forward only "
     "(`git push origin HEAD:main`, never forced) and run the deploy command of ~/.claude/CLAUDE.md "
     "(`## Commands`, `deploy:`). Write no other repo."
 )
@@ -101,11 +101,12 @@ def claude_home() -> Path:
 def ensure_worktree(run_dir: Path, home: Path | None = None) -> str | None:
     """Add `<run dir>/claude-wt` as a detached worktree of ~/.claude's main; return why it failed, else None.
 
-    Detached, so a second cycle never trips over a branch the first one made. An existing one is kept.
+    Detached, so a second cycle never trips over a branch the first one made. An existing clean one moves to
+    today's main (the card's run dir is the same every week); a dirty one is kept, and that is named.
     """
     target = run_dir / WORKTREE
     if (target / ".git").exists():
-        return None
+        return _refresh(target)
     run_dir.mkdir(parents=True, exist_ok=True)
     repo = ("-C", str(home or claude_home()), "worktree")
     try:
@@ -113,6 +114,20 @@ def ensure_worktree(run_dir: Path, home: Path | None = None) -> str | None:
         git(run_dir, *repo, "add", "--detach", str(target), "main")
     except GitError as exc:
         log.warning("token optimization: no ~/.claude worktree at %s: %s", target, exc.text)
+        return exc.text
+    return None
+
+
+def _refresh(target: Path) -> str | None:
+    """Move a clean kept worktree to main; return why it stays where it is, else None."""
+    try:
+        if git(target, "status", "--porcelain").stdout.strip():
+            why = f"{target} has uncommitted work from an earlier round: kept as it is"
+            log.warning("token optimization: %s", why)
+            return why
+        git(target, "checkout", "-q", "--detach", "main")
+    except GitError as exc:
+        log.warning("token optimization: ~/.claude worktree at %s not moved: %s", target, exc.text)
         return exc.text
     return None
 

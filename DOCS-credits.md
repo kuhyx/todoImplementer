@@ -137,8 +137,8 @@ reset.
 
 kuhy's rule (2026-11-27): every usage reset buys one round of token optimization. `runner/resetwatch.py` ticks
 every 60 s and counts two events: the weekly window resetting (`seven_day.resets_at` in `usage-probe.json`
-jumps more than a day; a first start only learns it) and the first lift of `limit-until` after a run rested
-`paused_limit`. Both landing together are ONE reset, keyed by its instant (keys within an hour are one).
+jumps more than a day; a first start only learns it) and the first lift of the weekly limit (`limit-until` equal
+to `seven_day.resets_at`; a 5 h limit is no reset) after a run rested `paused_limit`. Both landing together are ONE reset, keyed by its instant (keys within an hour are one).
 `reset-watch.json` (`last_reset`, `limit_seen`, `week_resets_at`, `pending`) is written durably before the
 note, and the note's `Reset-Key:` line finds one a cut tick filed: a restart never files a second note.
 
@@ -147,13 +147,13 @@ after reset <date>`: kuhy's four steps as he wrote them, the skills `token-dashb
 a `done:` line (no Spec questions). Its card starts as soon as it rests (no run, or the cycle shipped) with
 `extra.tokenopt` = `{key, at}`: first in the queue, unattended (`marks.unattended`), shipping itself
 (`marks.ships_itself`), card `auto: tokenopt`, feed line `token optimization after reset <date>`. Its turns get
-`<run>/claude-wt`, a detached worktree of ~/.claude's main (`$CLAUDE_CONFIG_DIR`); the session may push it
-fast-forward and run ~/.claude's deploy, and writes no other repo. A missing worktree is named in the feed
-line. The next cycle drops the mark (`appfix.forget`).
+`<run>/claude-wt`, a detached worktree of ~/.claude's main (`$CLAUDE_CONFIG_DIR`; a kept clean one moves to
+main, a dirty one stays and is named in the feed line, as is a missing one); the session may push it
+fast-forward and run ~/.claude's deploy, and writes no other repo. The next cycle drops the mark (`appfix.forget`).
 
 Sandbox trigger: with a `seven_day` window in `$TODOIMPL_HOME/usage-probe.json` and one tick passed, add
-`7*86400` to `seven_day.resets_at`. For the lift: write a future epoch to `limit-until`, save a run with stage
-`paused_limit`, wait a tick, delete `limit-until`.
+`7*86400` to `seven_day.resets_at`. For the lift: write `seven_day.resets_at` to `limit-until`, save a run with
+stage `paused_limit`, wait a tick, delete `limit-until`.
 
 ## Overage guard
 

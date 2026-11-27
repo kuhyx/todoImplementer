@@ -1,7 +1,7 @@
 """After a usage reset the board files one token optimization note and starts it first (DOCS-credits.md).
 
 Two events count (kuhy, 2026-11-27): the weekly window resetting (`seven_day.resets_at` in the stored probe,
-`usage-probe.json`, jumps forward) and the first lift of the plan limit after a card rested `paused_limit`.
+`usage-probe.json`, jumps forward) and the first lift of the weekly limit after a card rested `paused_limit`.
 Both landing together make ONE note, keyed by the reset instant: a key within `MERGE` of the last one is the
 same reset. `reset-watch.json` under the board home holds `last_reset`, `limit_seen`, the last weekly reset
 time and the reset still to file or start (`pending`); it is written durably before any note, and the
@@ -82,12 +82,17 @@ def weekly(data: dict[str, Any], probe: oauth.Probe | None, now: float) -> str |
     return tokenopt.iso(min(last, now))
 
 
-def lifted(data: dict[str, Any], root: Path, now: float) -> str | None:
-    """Return the reset key on the first lift after a card rested `paused_limit`; note a held limit."""
+def lifted(data: dict[str, Any], root: Path, probe: oauth.Probe | None, now: float) -> str | None:
+    """Return the reset key on the first lift of the weekly limit after a card rested `paused_limit`.
+
+    Only the weekly window's limit counts (its `limit-until` is the probe's `seven_day.resets_at`): a 5 h
+    limit lifting is no reset of the week, so it files nothing.
+    """
     until = limits.active_until(root, now)
     seen = _number(data.get("limit_seen"))
+    week = probe.seven_day if probe is not None else None
     if until is not None:
-        if paused(root):
+        if week is not None and abs(until - week.resets_at) < MERGE and paused(root):
             data["limit_seen"] = until
         return None
     data["limit_seen"] = None
@@ -163,8 +168,9 @@ class ResetWatch:
     def tick(self) -> None:
         """Notice a reset (one key per tick, the weekly one first), then file and start its note."""
         now, data = self.clock(), load(self.root)
-        week = weekly(data, oauth.load(self.root), now)
-        lift = lifted(data, self.root, now)
+        probe = oauth.load(self.root)
+        week = weekly(data, probe, now)
+        lift = lifted(data, self.root, probe, now)
         if (key := week or lift) is not None and accept(data, key):
             log.info("usage reset %s: a token optimization note is due", key)
         save(self.root, data)
@@ -212,7 +218,7 @@ class ResetWatch:
         data["pending"] = None
         save(self.root, data)
         line = f"{tokenopt.FEED} {key[:10]}"
-        (self.feed or self._bus_line)(card, line if why is None else f"{line}; no ~/.claude worktree: {why}")
+        (self.feed or self._bus_line)(card, line if why is None else f"{line}; ~/.claude worktree: {why}")
 
     def _bus_line(self, card: str, text: str) -> None:
         """Publish the activity line on the scheduler's bus (a fake scheduler has none)."""

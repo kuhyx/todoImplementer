@@ -76,13 +76,38 @@ def test_t2555_the_run_gets_a_detached_worktree_of_claude_home(tmp_path: Path) -
         ["git", "-C", str(target), "branch", "--show-current"], capture_output=True, text=True, check=True
     )
     assert head.stdout.strip() == ""  # detached: a second cycle never trips over a branch
-    assert tokenopt.ensure_worktree(run, home) is None  # kept
+    git = ["git", "-C", str(home), "-c", "user.name=t", "-c", "user.email=t@t"]
+    subprocess.run([*git, "commit", "-q", "--allow-empty", "-m", "next week"], check=True)
+    assert tokenopt.ensure_worktree(run, home) is None  # kept, and moved to today's main
+    assert _head(target) == _head(home)
+    (target / "wip.txt").write_text("x", encoding="utf-8")
+    subprocess.run([*git, "commit", "-q", "--allow-empty", "-m", "again"], check=True)
+    why = tokenopt.ensure_worktree(run, home)
+    assert why is not None
+    assert "uncommitted" in why  # a dirty one stays where it is, and says so
+    assert _head(target) != _head(home)
     st = RunState(task_id="x-0", stage="implement", extra=dict(MARK))
     assert tokenopt.dirs(st, run) == (target,)
     assert tokenopt.dirs(RunState(task_id="x-0", stage="implement"), run) == ()
     subprocess.run(["rm", "-rf", str(target)], check=True)
     assert tokenopt.ensure_worktree(run, home) is None  # deleted by hand: pruned and added again
     assert (target / ".git").exists()
+
+
+def _head(repo: Path) -> str:
+    done = subprocess.run(
+        ["git", "-C", str(repo), "rev-parse", "HEAD"], capture_output=True, text=True, check=True
+    )
+    return done.stdout.strip()
+
+
+def test_t2555_a_broken_kept_worktree_is_named(tmp_path: Path) -> None:
+    target = tmp_path / "run" / tokenopt.WORKTREE
+    target.mkdir(parents=True)
+    (target / ".git").write_text("gitdir: /nowhere\n", encoding="utf-8")
+    why = tokenopt.ensure_worktree(tmp_path / "run", tmp_path)
+    assert why is not None
+    assert "status" in why
 
 
 def test_t2555_no_claude_home_is_a_named_failure(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
