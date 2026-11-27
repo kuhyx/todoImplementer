@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from todoimpl.repotask import lane
 from todoimpl.todo_mcp.items import split_items
 
 if TYPE_CHECKING:
@@ -47,7 +48,7 @@ class CardTask:
             item.body,
             item.repo,
             item.status,
-            task.priority,
+            lane.priority(task.priority, item.body),  # other apps' reports are always low (T2592)
             item.done_check,
             item,
             task.created_by,

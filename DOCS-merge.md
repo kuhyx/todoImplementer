@@ -114,3 +114,10 @@ failed merge); removing it from the app is open work.
 `tests/merge/` (chunk `merge` in the Makefile): text, classifier (a `claude` shim on PATH), store, apply against the
 fake todo MCP, service, the auto loop (`test_merge_auto.py`), CLI with a shim for the todo CLI, wiring, contract;
 `tests/http/test_http_merge.py`; `tests/errors/test_loop_merged.py` (a merged error ticket).
+
+## Lane and priority of a merged card (T2592)
+
+A merged card (umbrella children `## kuhyx/<repo> (<key>)`, same-repo members `### <id>`) takes the best lane of
+its open members (`repotask/lane.py`; all members when every one is done). An umbrella of only other apps' error
+tickets ("Fix perf.slow slow wait across apps") is lane `app`: priority `low` on the card, the picker and the Start
+confirm, idle-board starts only, Sonnet. One kuhy member keeps the whole card in kuhy's lane at its note's priority.
