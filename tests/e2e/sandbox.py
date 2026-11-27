@@ -5,7 +5,8 @@
                          (one note each), the fake `claude`, the REAL `claude-free` (OmniRoute, free models),
                          the fake Anthropic API (fake_batches.py); `idea` adds a repo-less note (triage)
     sandbox.py credits on [purchased usd]|off   scratch key for the free credits (only the fake API takes it)
-    sandbox.py serve     start `python -m todoimpl.http.main` on a free port; prints the board URL
+    sandbox.py serve [relay sandbox/slotN]   start `python -m todoimpl.http.main` on a free port; prints the
+                         board URL; `relay` also serves it to that phone slot build (sandbox_relay.py)
     sandbox.py limit on|off    put the plan limit on (an hour) or lift it
     sandbox.py post <path> [json]   POST to the sandbox server (same-origin, CSRF token)
     sandbox.py cards     one line per card: id, status, route, current line, tier badges
@@ -31,6 +32,7 @@ from e2e_procs import free_port, launch, stop, tail, wait_for
 from e2e_world import PYTHON, REPO_ROOT, SCRATCH, SHIMS, State, _git, save, server_env, write_shims
 from sandbox_credits import env as credit_env
 from sandbox_credits import set_credits, start_fake
+from sandbox_relay import env as relay_env
 
 HERE = Path(__file__).resolve().parent
 POINTER = SCRATCH / "sandbox"
@@ -133,15 +135,18 @@ def up(idea: str = "") -> None:
     print(f"sandbox world {work}: notes {', '.join(i[:8] for i in state.note_ids)}")
 
 
-def serve() -> None:
-    """Start (or restart: the old server stops first) the server on a free port and wait for /version."""
+def serve(relay: str = "") -> None:
+    """Start (or restart: the old server stops first) the server on a free port and wait for /version.
+
+    `relay` (a slot's `sandbox/slotN`) also serves the board to that slot build on the phone.
+    """
     state = _load()
     if "server" in state.handles:
         stop(state.handles.pop("server"))
     state.port = free_port()
     log = state.path / "artifacts" / "server.log"
     argv = [PYTHON, "-m", "todoimpl.http.main", "--port", str(state.port)]
-    full = {**server_env(state), **credit_env(state.path)}
+    full = {**server_env(state), **credit_env(state.path), **(relay_env(state.path, relay) if relay else {})}
     state.handles["server"] = launch("server", argv, full, REPO_ROOT, log)
     save(state)
     import urllib.request  # noqa: PLC0415 - only this command talks HTTP
@@ -207,6 +212,8 @@ def main(argv: list[str]) -> int:
         set_credits(_load().path, argv[1], float(argv[2]) if len(argv) == 3 else 0.0)
     elif argv == ["up", "idea"]:
         up("idea")
+    elif argv[:2] == ["serve", "relay"] and len(argv) == 3:
+        serve(argv[2])
     elif argv[:1] == ["limit"] and len(argv) == 2:
         limit(argv[1])
     elif argv[:1] == ["post"] and len(argv) in {2, 3}:
