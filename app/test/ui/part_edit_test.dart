@@ -228,6 +228,7 @@ void main() {
     await tester.tap(_key('part-save-aaaa1111-0'));
     await tester.pumpAndSettle(); // the sheet's own card stays the old one
     expect(_name(tester, 'aaaa1111-0'), 'Fix more'); // live: image markdown
+    expect(find.bySemanticsLabel('Edit Fix more'), findsOneWidget);
     await tester.tap(_key('part-edit-aaaa1111-0'));
     await tester.pumpAndSettle();
     final title = tester.widget<TextField>(_key('part-title-aaaa1111-0'));

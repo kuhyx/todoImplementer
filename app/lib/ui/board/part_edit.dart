@@ -125,7 +125,7 @@ class _PartEditsState extends State<PartEdits> {
       onPressed: p.editable && _busy == null ? () => _edit(p) : null,
     );
     return Semantics(
-      label: ['Edit ${p.title}', ?p.reason].join(': '),
+      label: ['Edit ${_label(p)}', ?p.reason].join(': '),
       button: true,
       enabled: p.editable,
       excludeSemantics: true,
