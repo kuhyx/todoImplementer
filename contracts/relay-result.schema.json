@@ -38,7 +38,7 @@
       "description": "The first seven are the HTTP codes (common.schema.json#/$defs/error), same meaning. Relay-only: unknown_kind (not in the allowlist), unsealed (no _e2e blob, or it did not open), expired (sent_at older than 24 h), rate_limited (over 30 act requests a minute), too_large (data over 4 MB, e.g. a screenshot), stale_client (app older than meta.min_client), gave_up (3 claim attempts)."
     },
     "data": {
-      "description": "Per-kind shape. Action kinds: {task: task_card} as the HTTP action reply. Read kinds: the GET body. task_shot: {png_b64}. live_watch, snapshot_refresh, notify_test: {}.",
+      "description": "Per-kind shape. Action kinds: {task: task_card} as the HTTP action reply. Read kinds: the GET body. task_shot: {png_b64}. image_get (T2535): {data_b64, type} (a PNG: {png_b64}). live_watch, snapshot_refresh, notify_test: {}.",
       "anyOf": [
         {"$ref": "#/$defs/action_data"},
         {"$ref": "https://todoimplementer.local/contracts/task.schema.json"},

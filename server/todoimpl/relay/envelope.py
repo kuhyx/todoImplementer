@@ -18,6 +18,8 @@ DEV: Final = re.compile(r"[0-9a-f-]{36}")
 GROUP: Final = re.compile(r"[0-9a-f]{12}")
 SHOT: Final = re.compile(r"[A-Za-z0-9_./-]+\.png")
 LOG: Final = re.compile(r"[^/]{1,64}")
+IMAGE_FOLDER: Final = re.compile(r"[A-Za-z0-9_-]+")  # images.schema.json#/$defs/note_image (T2535)
+IMAGE_FILE: Final = re.compile(r"[A-Za-z0-9_-]+\.[a-z0-9]{1,10}")
 TOKENS_PATH: Final = re.compile(r"(|/(panel|session|items|ab|context-file|schema)(/[^?#]{0,200})?)")
 MAX_NAME: Final = 200
 MAX_QUERY: Final = 2000
@@ -47,6 +49,10 @@ def _shape(kind: str) -> tuple[frozenset[str], dict[str, Any]]:
         "task_shot": (frozenset({"card", "name"}), {**card, "name": _shot}),
         "umbrella_log": (frozenset({"card", "log"}), {**card, "log": lambda v: _text(v, LOG)}),
         "tokens": (frozenset({"path", "query"}), {"path": lambda v: _text(v, TOKENS_PATH), "query": _query}),
+        "image_get": (
+            frozenset({"folder", "file"}),
+            {"folder": lambda v: _text(v, IMAGE_FOLDER), "file": lambda v: _text(v, IMAGE_FILE)},
+        ),
         "live_watch": (frozenset({"card"}), {"card": lambda v: v is None or _text(v, CARD_ID)}),
         "snapshot_refresh": (frozenset(), {}),
         "notify_test": (frozenset(), {}),

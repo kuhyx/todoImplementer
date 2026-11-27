@@ -85,6 +85,9 @@ READS: Final[dict[str, Kind]] = {
         "read", lambda b: Call("GET", f"/api/umbrella/{_seg(b['card'])}/log/{_seg(b['log'])}")
     ),
     "tokens": Kind("read", _tokens),
+    "image_get": Kind(
+        "read", lambda b: Call("GET", f"/api/image/{_seg(b['folder'])}/{_seg(b['file'])}")
+    ),  # T2535
 }
 ROUTED: Final[dict[str, Kind]] = {
     **{f"task_{a.replace('-', '_')}": _task(a) for a in bodies.ACTIONS},

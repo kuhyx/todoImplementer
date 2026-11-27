@@ -42,6 +42,7 @@
     {"if": {"properties": {"kind": {"const": "session_handoff"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/args_only_handoff"}}}},
     {"if": {"properties": {"kind": {"enum": ["task_detail", "task_issues", "umbrella"]}}}, "then": {"properties": {"body": {"$ref": "#/$defs/card_only"}}}},
     {"if": {"properties": {"kind": {"const": "task_shot"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/shot_body"}}}},
+    {"if": {"properties": {"kind": {"const": "image_get"}}}, "then": {"properties": {"body": {"$ref": "https://todoimplementer.local/contracts/images.schema.json#/$defs/note_image"}}}},
     {"if": {"properties": {"kind": {"const": "umbrella_log"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/umbrella_log_body"}}}},
     {"if": {"properties": {"kind": {"const": "tokens"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/tokens_body"}}}},
     {"if": {"properties": {"kind": {"const": "live_watch"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/watch_body"}}}},
@@ -56,7 +57,7 @@
         "ask_answer", "ask_take_recommended", "ask_run", "ask_undo", "ask_approve", "ask_reject",
         "new_task", "credits_fallback", "merge_merge", "merge_dismiss",
         "session_resume", "session_mark", "session_delete", "session_handoff",
-        "task_detail", "task_issues", "task_shot", "umbrella", "umbrella_log", "tokens",
+        "task_detail", "task_issues", "task_shot", "umbrella", "umbrella_log", "tokens", "image_get",
         "live_watch", "snapshot_refresh", "notify_test", "image_upload"
       ],
       "description": "The allowlist. Write kinds (lane act) mirror every POST route except /api/pair; read kinds (lane read) mirror the GET routes no snapshot node covers."

@@ -50,6 +50,7 @@ def bodies(card: str) -> dict[str, dict[str, Any]]:
         "umbrella": {"card": card},
         "umbrella_log": {"card": card, "log": card},
         "tokens": {"path": "/schema", "query": ""},
+        "image_get": {"folder": "3d6cd2ea-de63", "file": "1.jpg"},  # no such image: 404 on both sides
     }
 
 

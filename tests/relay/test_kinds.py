@@ -25,7 +25,7 @@ def schema_kinds() -> set[str]:
 
 def test_the_allowlist_is_the_contracts() -> None:
     assert set(kinds.ALL) == schema_kinds()
-    assert len(kinds.ALL) == len(set(kinds.ALL)) == 37
+    assert len(kinds.ALL) == len(set(kinds.ALL)) == 38
 
 
 def test_lanes() -> None:
@@ -79,6 +79,9 @@ BAD = [
     req("merge_merge", {"group": "0123456789ab", "args": {"extra": 1}}),
     req("tokens", {"path": "/../etc", "query": ""}),
     req("task_shot", {"card": CARD, "name": "a.jpg"}),
+    req("image_get", {"folder": "..", "file": "1.jpg"}),
+    req("image_get", {"folder": "a", "file": "../1.jpg"}),
+    req("image_get", {"folder": "a", "file": "1.jpg", "x": 1}),
     req("umbrella_log", {"card": CARD, "log": "a/b"}),
     req("live_watch", {"card": 7}),
     req("notify_test", {"x": 1}),

@@ -58,6 +58,8 @@ def data_of(reply: Reply) -> dict[str, Any]:
         raise refusal(reply)
     if reply.ctype == "image/png":
         data: dict[str, Any] = {"png_b64": base64.b64encode(reply.body).decode()}
+    elif reply.ctype.startswith("image/"):  # a note image (T2535): any of png, jpeg, webp, gif
+        data = {"data_b64": base64.b64encode(reply.body).decode(), "type": reply.ctype}
     elif reply.ctype.startswith("application/json"):
         body = json.loads(reply.body)
         data = {k: v for k, v in body.items() if k != "ok"} if isinstance(body, dict) else {"data": body}
