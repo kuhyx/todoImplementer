@@ -2,8 +2,12 @@
 
 kuhy's rule (2026-11-17): every app error, and every wait the user sees for more than 1 s, is reported by the app,
 becomes ONE ticket per identical error, and the board works on it with no questions until it is fixed, shipped and
-deployed, when weekly Claude usage is under 80 % or free tokens are still unused. A fix that is pushed but not yet on
-his phone reads "wait for phone to connect, then update the app" and finishes by itself when the phone connects.
+deployed. kuhy's rule (2026-11-27, T2582): other apps' reports have the lowest priority. Their card starts by
+itself only when no other run works, is queued or paused, and only while weekly Claude usage is under 80 % or free
+credits are ready; it runs on Sonnet 5.5; a Start click of kuhy's starts it at any time. The board's own tickets
+(its stalls and errors, slow steps, heavy builds, no-limit reds, stray edits) keep going first. A fix that is pushed
+but not yet on his phone reads "wait for phone to connect, then update the app" and finishes by itself when the
+phone connects.
 Code: `server/todoimpl/errors/` (`record`, `adapters`, `sources`, `ledger`, `ticket`, `gate`, `loop`, `settle`,
 `marks`), `runner/appfix.py`, `runner/phone_sched.py`. Contract: `contracts/app-error.schema.json`. The apps' side
 (reporting) is each app's; kartka's is `~/src/kartka/docs/DOCS-error-reports.md`.
@@ -48,7 +52,8 @@ A **report** is `{"version": 1, "errors": [record, ...]}`. The ticket key is `<a
 Each tick: (1) `settle` (below), (2) each open record gets its ticket, (3) at most ONE card starts.
 
 **Ticket.** One `## ` part of the repo's note, made in-process by `NewTaskService.create` (no HTTP endpoint, no
-CSRF). Because kuhy's rule is one card per repo (`DOCS-repotask.md`), the part sits on the repo's card
+CSRF), filed `low`: the todo app keeps the higher of the note's and the new part's priority, so a ticket never
+raises the priority kuhy gave the note. Because kuhy's rule is one card per repo (`DOCS-repotask.md`), the part sits on the repo's card
 `<sha1(repo)[:8]>-0`, it is not a card of its own. Title `Fix <app>: <kind> <message, 80 chars> [<sig8>]` (the sig
 keeps two errors from sharing a title: the twin refusal). Body, in order: the goal ("Fix this error / bring this
 wait under 1 s without breaking existing behaviour. Do not ask kuhy anything; take recommended answers."), a
@@ -66,6 +71,21 @@ backticks become quotes, so an error cannot split the note.
 - **Count.** The `Seen:` line is rewritten only when the count changed (no note spam).
 - **Closed by hand.** A ticket missing from the board for two ticks (a Ship may be closing it right now) is
   forgotten, and the next report makes a new one.
+
+**Who starts first** (`idle.py`, T2582). A ticket is the board's own when its key is `todoimplementer:*` or its
+signature starts `stall-`, `slow-`, `heavy-`, `nolimit-` or ends `-stray` (`marks.board_key`); every other one is
+another app's report. Each tick looks at the cards in this order: a card holding a stall (reason `stall`, no usage
+gate), then a card holding any other board ticket, then cards of only other apps' reports. Such a card also waits
+while any other run dir holds a run that works, is queued or paused (`spec` to `closing`, `paused_limit`,
+`paused_retry`) with no error and no `Q:`/`A:` tag; a run resting on kuhy (Needs you, waiting for the phone) does
+not hold it, nor does a Backlog card nobody started. Inside a card kuhy's parts still come first, then the board's,
+then the reports (`repotask/lane.py`, DOCS-repotask.md), and a card of only reports counts as `low` everywhere
+(the board's sort, the Start confirm, the weekly reserve).
+
+**Model.** A run whose open parts are all other apps' reports records `extra.ticket_model` (Sonnet 5.5,
+`repotask/ticketmodel.py`) and every turn runs it, on the credits route too. kuhy's own pick (`model_pin`) wins;
+the picker presses Sonnet before Start. A card that also holds a kuhy or board part runs the default model until
+only reports are left.
 
 **Start gate**, evaluated for every not-yet-started card on every tick, so a card made at 85 % starts after the
 reset (`gate.py`). First that holds is the card's `reason`:
@@ -181,14 +201,15 @@ judges it: its output tokens are taken to have come at 80 tokens/s (the slowest 
 - A `stall-job` on a repo's own gate or test step (`check_gate_stamp.sh step <id>`, `test_shard.sh <shard>`,
   `test.sh --shard N/M`, T2450) is
   filed as `perf.slowstep` (`slow-<step>`) in `app-errors/slow-steps.json` against the card's repo, like heavy
-  builds; other stalls stay todoImplementer tickets. These routed slow-step tickets are stalls too: ungated and
-  started first (reason `stall`).
-- A stall ticket is ungated and first: the loop starts it before any other error card and skips the usage gate for
-  it (reason `stall`).
+  builds; other stalls stay todoImplementer tickets. These routed slow-step tickets are stalls too (reason `stall`).
+- A stall ticket skips the usage gate and goes before every other error card (reason `stall`, "Who starts first").
 
 ## Defaults chosen (not in the brief)
 
 - One start per tick, three starts per ticket, five phone waits per cycle, 60 s tick.
+- "Waiting" for the idle rule means queued or paused runs, not Backlog or Needs-you cards: those would hold the
+  reports forever. The usage gate still applies to reports on an idle board.
+- A part with several `Error-Signature:` lines (a merge) is a report only when every key is another app's.
 - A ticket closed by hand comes back on the next report (resolve it at the source to stop it).
 - No reason adds `Tier: cheap` to a ticket, and a `Tier: cheap` line on a ticket's card is ignored (T2445).
 - A failed deploy with no Pixel attached counts as "waiting for the phone" for error runs only; any run's exit 30

@@ -67,6 +67,7 @@ def test_t2012_at_most_one_card_starts_per_tick(world: World) -> None:
     world.loop.sources = lambda: [world.source, other]
     world.tick()
     assert len(world.starts()) == 1  # kartka's two errors are one card, tutor's is another
+    world.run("cancelled")  # other apps' reports start one at a time, on an idle board (T2582)
     world.tick()
     assert len(world.starts()) == 2
     assert {c[1] for c in world.starts()} == {CARD, repo_card_id("kuhyx/tutor")}

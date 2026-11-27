@@ -21,7 +21,7 @@ from todoimpl.http.newtask import NewTask
 from todoimpl.stall.report import is_stall
 from todoimpl.todo_mcp.model import TodoError
 
-from . import ledger, repair, settle, ticket, twin
+from . import idle, ledger, repair, settle, ticket, twin
 from . import sources as sources_mod
 from .gate import Gate
 from .marks import KEY
@@ -59,6 +59,12 @@ def _reopens(entry: dict[str, Any], record: AppError) -> int | None:
         return fixed if record.build >= fixed else None
     installed, seen = entry.get("installed_at"), _epoch(record.last_seen)
     return fixed if isinstance(installed, int | float) and seen is not None and seen > installed else None
+
+
+def _order(keys: list[str]) -> int:
+    if any(is_stall(key) for key in keys):
+        return idle.STALL
+    return idle.APP if idle.app_only(keys) else idle.BOARD
 
 
 class ErrorLoop:
@@ -151,7 +157,8 @@ class ErrorLoop:
             if (held := twin.join(self.tasks, record, body)) is not None:
                 self._put(record, held, count=0, starts=0, missing=0)
                 return
-            self.creator.create(NewTask(record.repo, title, body, ()))
+            # filed low: it never raises the priority kuhy gave the note (T2582)
+            self.creator.create(NewTask(record.repo, title, body, (), priority=ticket.PRIORITY))
         except TodoError as exc:
             log.warning("error %s: no ticket made: %s", record.key, exc)
             return
@@ -207,11 +214,12 @@ class ErrorLoop:
 
         now = self.clock()
         data = ledger.load(self.root)
-        # A stall ticket (DOCS-errors.md, "Stalls") goes first and skips the usage gate: kuhy's top priority.
-        wanted = sorted(self._wanted(cards).items(), key=lambda kv: not any(is_stall(k) for k, _f in kv[1]))
+        # A stall ticket (DOCS-errors.md, "Stalls") goes first and skips the usage gate: kuhy's top priority;
+        # then the board's other tickets; other apps' reports last, and only on an idle board (T2582).
+        wanted = sorted(self._wanted(cards).items(), key=lambda kv: _order([k for k, _f in kv[1]]))
         for card, parts in wanted:
             keys = [key for key, _found in parts]
-            if not self._resting(card):
+            if not self._resting(card) or (idle.app_only(keys) and idle.busy(self.root, card)):
                 continue
             stall = any(is_stall(key) for key in keys)
             reason = "stall" if stall else self.gate.check(self.root, str(data[keys[0]]["repo"]), now)

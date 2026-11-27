@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 
 from todoimpl.prompts import coach
 from todoimpl.prompts import tier as texts
+from todoimpl.repotask import ticketmodel
 from todoimpl.umbrella import issues
 
 from . import freegate, freeworker, tier
@@ -39,6 +40,7 @@ def _cheap(d: Driver) -> bool:
 def plan_turn(d: Driver, role: str) -> Turn:
     """Decide the model and addendum of one turn; an implement turn first takes the free-models verdict."""
     st = d.state
+    ticketmodel.mark(st, d.item, d.ctx.run_dir)  # other apps' tickets run on Sonnet (T2582)
     if role != IMPLEMENT:
         return Turn()
     if st.extra.get("research"):  # the role default like every card turn (T2476), no free workers

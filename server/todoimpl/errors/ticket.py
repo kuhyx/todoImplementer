@@ -25,6 +25,9 @@ if TYPE_CHECKING:
 __all__ = ["Found", "body", "error_line", "find", "refresh", "seen", "signatures", "title"]
 
 MESSAGE_IN_TITLE = 80
+PRIORITY = (
+    "low"  # a ticket never raises the priority of the note it joins: the todo app keeps the higher (T2582)
+)
 GOAL = (
     "Fix this error / bring this wait under 1 s without breaking existing behaviour. "
     "Do not ask kuhy anything; take recommended answers."

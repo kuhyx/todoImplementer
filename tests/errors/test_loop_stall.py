@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from errfakes import kartka_entry
 from loopfakes import CARD, World
+from todoimpl.board.state import RunState, run_dir, save
 from todoimpl.errors.sources import Source, state_base
 from todoimpl.repotask.ids import repo_card_id
 from todoimpl.stall import report, slowstep
@@ -31,6 +32,11 @@ def test_t2403_a_stall_ticket_starts_before_any_other_error_card(world: World) -
     world.entries(kartka_entry())
     board = _with_stall(world)
     world.tick()
+    world.tick()
+    assert [start[1] for start in world.starts()] == [
+        board
+    ]  # kartka's report waits for an idle board (T2582)
+    save(run_dir(world.rig.root, board), RunState(task_id=board, stage="cancelled"))
     world.tick()
     assert [start[1] for start in world.starts()] == [board, CARD]
 

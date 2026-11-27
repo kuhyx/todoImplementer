@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any
 from todoimpl.board import state as store
 from todoimpl.board.status import SILENT, WAITS_FOR
 from todoimpl.credits import ledger, live, setting
+from todoimpl.repotask import ticketmodel
 
 from . import (
     adopt,
@@ -89,7 +90,7 @@ def _launch(  # noqa: PLR0913, PLR0917 - the turn environment plus its route
 ) -> orphans.Record:
     plan = session.plan_turn(_prior(env, state, role), now=env.now())
     allow = allowlist.rules_for(files.root_of(env.run_dir), state.repo, state.task_id)
-    pin = pinned(state)  # kuhy's pick wins over the role, tier and escalation models
+    pin = pinned(state) or ticketmodel.of(state)  # kuhy's pick, else Sonnet for app tickets (T2582)
     model = pin or model
     build = {"credits": credit.build, freeroute.FREE: freeroute.build}.get(route, claude.build)
     given = pin if route == "credits" else model  # a credit turn runs `credits_model` unless pinned

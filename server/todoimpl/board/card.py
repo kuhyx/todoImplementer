@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any
 from todoimpl import modelpick
 from todoimpl.errors.marks import TOKENOPT, is_tokenopt_run, signatures
 from todoimpl.newtask import imagelinks
+from todoimpl.repotask import ticketmodel
 
 from . import cyclefloor
 from .actions import actions
@@ -162,7 +163,7 @@ def _auto(entry: Mapping[str, Any] | None) -> str | None:
 def build_card(task: TaskLike, run: RunState | None, ctx: Context) -> dict[str, Any]:
     """Return the task_card object for one note."""
     tid = task.id
-    pin = ctx.pin(tid)
+    pin = ctx.pin(tid) or ticketmodel.for_card(task)  # app tickets run on Sonnet (T2582)
     if cycle_end(task, run):  # parts are left: the next cycle; its pin is the one Start runs on
         pin, run = pinned(run) or pin, None
     live = tid in ctx.live
