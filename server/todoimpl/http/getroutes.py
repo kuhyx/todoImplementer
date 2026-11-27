@@ -13,7 +13,7 @@ from .reply import Reply, error_reply
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from .umbrella import Backend
+    from .backend import Backend
 
 IMAGE_PATH = re.compile(r"/api/image/(.*)")
 MAX_AGE = (("Cache-Control", "private, max-age=86400"),)  # a dufs image never changes under its name
