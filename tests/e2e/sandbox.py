@@ -35,6 +35,7 @@ from sandbox_credits import set_credits, start_fake
 HERE = Path(__file__).resolve().parent
 POINTER = SCRATCH / "sandbox"
 REPOS = {"e2e-demo": "PUBLIC", "e2e-private": "PRIVATE"}
+PRIORITY = {"e2e-demo": "low", "e2e-private": "high"}  # the weekly reserve checks (T2533)
 FREE = Path.home() / ".local" / "bin" / "claude-free"
 KEY = Path.home() / ".config" / "omniroute" / "api_key"
 
@@ -111,6 +112,7 @@ def up(idea: str = "") -> None:
             "repo": f"kuhyx/{n}",
             "title": f"{n} hello",
             "body": "## add hello\nCreate hello.txt with the word hi.",
+            "priority": PRIORITY[n],
         }
         for n in REPOS
     ] + (

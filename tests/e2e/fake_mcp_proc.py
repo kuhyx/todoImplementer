@@ -25,7 +25,13 @@ def main(argv: list[str]) -> int:
             ids.append(fake.seed_sections(note["repo"], [(title, body) for title, body in note["sections"]]))
         else:
             ids.append(
-                fake.seed(note["repo"], note["title"], note["body"], done_check=note.get("done_check"))
+                fake.seed(
+                    note["repo"],
+                    note["title"],
+                    note["body"],
+                    done_check=note.get("done_check"),
+                    priority=note.get("priority", "medium"),
+                )
             )
     tmp = out.with_suffix(".tmp")
     tmp.write_text(json.dumps({"url": fake.url, "ids": ids}), encoding="utf-8")
