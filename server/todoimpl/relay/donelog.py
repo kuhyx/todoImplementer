@@ -11,10 +11,11 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import time
 from collections import OrderedDict
 from typing import TYPE_CHECKING, Any, Final
+
+from todoimpl import atomic
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -45,9 +46,7 @@ class DoneLog:
             if at >= cutoff:
                 self._keep(rid, result)
                 kept.append(line)
-        tmp = path.with_name(f".{path.name}.tmp")
-        tmp.write_text("".join(f"{line}\n" for line in kept), encoding="utf-8")
-        tmp.replace(path)
+        atomic.write_text(path, "".join(f"{line}\n" for line in kept))
 
     def get(self, rid: str) -> dict[str, Any] | None:
         """Return the recorded result of `rid`, or None."""
@@ -57,11 +56,7 @@ class DoneLog:
         """Record `rid` (on disk too when `durable` and a path is set); return `result`."""
         if durable and self.path is not None:
             row = {"rid": rid, "at": int(time.time() * 1000), "result": result}
-            self.path.parent.mkdir(parents=True, exist_ok=True)
-            with self.path.open("a", encoding="utf-8") as handle:
-                handle.write(json.dumps(row, separators=(",", ":")) + "\n")
-                handle.flush()
-                os.fsync(handle.fileno())
+            atomic.append_line(self.path, json.dumps(row, separators=(",", ":")))
         self._keep(rid, result)
         return result
 
