@@ -62,6 +62,12 @@
       },
       "required": ["reason", "keys"]
     },
+    "tokenopt": {
+      "type": "object",
+      "description": "Set when the reset watch started the card (DOCS-credits.md, token optimization): the reset instant its note is keyed by. Such a run goes first in the queue, answers to no one, ships itself when green and gets the <run>/claude-wt worktree of ~/.claude; the next cycle drops it.",
+      "properties": {"key": {"type": "string"}, "at": {"type": "number"}},
+      "required": ["key"]
+    },
     "phone_update": {"type": "object", "description": "A failed deploy waits for the phone (status waiting_phone_update): when it began and which try this is.", "properties": {"since": {"type": "number"}, "tries": {"type": "integer", "minimum": 1}}, "required": ["since", "tries"]},
     "phone_tries": {"type": "integer", "minimum": 1, "description": "How many phone waits this cycle had; the watcher gives up after five."},
     "repotask": {"type": "boolean", "description": "The run is a repo task's (DOCS-repotask.md): its id is the repo's, its parts are the repo's open sections."},

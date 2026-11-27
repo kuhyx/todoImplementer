@@ -10,6 +10,7 @@ from todoimpl.board.parts import kuhys
 from todoimpl.board.state import RunState, clip_body
 from todoimpl.board.status import CYCLE_ENDS, MANUAL_STAGE
 from todoimpl.board.types import MANUAL_REASON
+from todoimpl.errors import marks
 from todoimpl.repotask.start import prepare
 from todoimpl.todo_mcp.model import TodoError
 
@@ -141,7 +142,7 @@ class Scheduler(PhoneEngine):
             prepin.adopt(st, self.root / card)  # a model kuhy picked before this Start (T2478)
             self.save(card, st)
             if st.stage != "gate":
-                self.enqueue(card)
+                self.enqueue(card, first=marks.is_tokenopt_run(st))  # the reset's tokenopt run goes first
 
     def spec_answers(self, card: str, answers: dict[str, str]) -> None:  # noqa: D102
         with self._cv:

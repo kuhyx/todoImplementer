@@ -49,8 +49,8 @@ def phone_wait(st: RunState, failed: DeployFailedError, now: float) -> None:
 
 
 def forget(st: RunState) -> None:
-    """Drop the marks of the last cycle (error run, phone tries) when a new one starts."""
-    for key in (marks.KEY, marks.PHONE_TRIES):
+    """Drop the marks of the last cycle (error run, phone tries, tokenopt) when a new one starts."""
+    for key in (marks.KEY, marks.PHONE_TRIES, marks.TOKENOPT):
         st.extra.pop(key, None)
 
 

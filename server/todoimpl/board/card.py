@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from todoimpl import modelpick
-from todoimpl.errors.marks import signatures
+from todoimpl.errors.marks import TOKENOPT, is_tokenopt_run, signatures
 from todoimpl.newtask import imagelinks
 
 from . import cyclefloor
@@ -153,6 +153,11 @@ def pinned(run: RunState | None) -> str | None:
     return pin if isinstance(pin, str) and pin else None
 
 
+def _auto(entry: Mapping[str, Any] | None) -> str | None:
+    """Return a Backlog card's auto-close line: the latest done_check poll's reason."""
+    return str(entry["reason"]) if entry is not None else None
+
+
 def build_card(task: TaskLike, run: RunState | None, ctx: Context) -> dict[str, Any]:
     """Return the task_card object for one note."""
     tid = task.id
@@ -198,7 +203,7 @@ def build_card(task: TaskLike, run: RunState | None, ctx: Context) -> dict[str, 
         "updated": _updated(run, status, tid, ctx),
         "actions": [a.to_dict() for a in buttons],
         "auto_start": run.auto_start if run is not None else None,
-        "auto": str(entry["reason"]) if entry is not None else None,
+        "auto": TOKENOPT if run is not None and is_tokenopt_run(run) else _auto(entry),
     }
     if status == Status.YOURS and kuhys(task.title, getattr(task, "parts", ())):
         card["current"] = manual_ask(task)  # what kuhy must do, never "no repo" on a card that has one

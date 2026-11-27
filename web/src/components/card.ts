@@ -73,6 +73,12 @@ const CATEGORY_LABEL: Record<NeedsCategory, string> = {
   questions: "Questions",
 };
 
+/** The card's auto line: the reset watch's run reads as what it does, an auto-close poll word for word. */
+export function autoLine(card: TaskCard): null | string {
+  if (card.auto === null) return null;
+  return card.auto === "tokenopt" ? "auto: token optimization after reset" : `auto: ${card.auto}`;
+}
+
 /** "auto: done_check passed at 14:05" on a run a passing done_check started; the time is the server's. */
 export function autoBadge(card: TaskCard): null | string {
   return card.auto_start === null ? null : `auto: done_check passed at ${formatClock(card.auto_start.passed_at)}`;
@@ -130,7 +136,7 @@ export function renderCard(card: TaskCard, now: number, shouldShowRepo = false):
     card.needs !== null && card.needs.text !== card.current && h("span", { class: "card-needs", text: card.needs.text }),
     card.needs !== null && h("span", { attrs: { "data-category": card.needs.category }, class: "card-category", text: CATEGORY_LABEL[card.needs.category] }),
     card.partial !== null && h("span", { class: "card-partial", text: partialLine(card.partial) }),
-    card.auto !== null && h("span", { class: "card-auto", text: `auto: ${card.auto}` }),
+    card.auto !== null && h("span", { class: "card-auto", text: autoLine(card) ?? "" }),
     card.auto_start !== null && h("span", { attrs: { "data-tone": "accent" }, class: "chip card-badge", text: autoBadge(card) ?? "" }),
     h("span", { class: "card-meta", text: meta.join(" · ") }),
   );

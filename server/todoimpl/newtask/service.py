@@ -105,7 +105,7 @@ class NewTaskService:
         """Add the section and return its note id8; two parts may share a title (T2482)."""
         task = _real(task)
         try:
-            note = self._client.add_task(task.repo, task.title, self._linked(task))
+            note = self._client.add_task(task.repo, task.title, self._linked(task), priority=task.priority)
         except TodoError as exc:
             raise BackendError(UPSTREAM, upstream_text(str(exc))) from exc
         return note.id[:8]

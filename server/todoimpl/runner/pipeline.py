@@ -17,6 +17,7 @@ from .files import KilledError, NeedsYouError
 from .permit import with_grant
 from .prompting import Ask, prompt_for
 from .repolock import RepoLocks
+from .tokenopt import dirs as tokenopt_dirs
 from .turn import TurnEnv, run_turn
 from .turnhooks import HOOKS
 
@@ -196,7 +197,8 @@ class Driver:
 
         env = TurnEnv(ctx.run_dir, worktree.turn_dir(st, self.item.repo), ctx.publish, ctx.register, ctx.now)
         try:
-            who = (env, st, role, with_grant(st, build_for, role), (ctx.run_dir,))
+            dirs = (ctx.run_dir, *tokenopt_dirs(st, ctx.run_dir))  # a tokenopt run: its ~/.claude worktree
+            who = (env, st, role, with_grant(st, build_for, role), dirs)
             if (claimed := chain.claim(ctx.root, ctx.now(), ctx.run_dir.name, st)).route is None:
                 raise LimitHitError(claimed.until or ctx.now())  # another card took the last of the pace
             res = run_turn(*who, claimed.route, plan.model, "high" if stage == "fix" else plan.effort)

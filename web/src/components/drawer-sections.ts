@@ -2,7 +2,7 @@ import type { TaskDetail } from "@/lib/schemas";
 import type { ActionId } from "@/lib/schemas-common";
 
 /** Drawer sections that depend only on the task detail. Buttons are supplied by the caller from actions[]. */
-import { autoBadge, routeChip, statusChip, tierBadges, triageBadge } from "@/components/card";
+import { autoBadge, autoLine, routeChip, statusChip, tierBadges, triageBadge } from "@/components/card";
 import { renderNeedsLinks } from "@/components/needs-links";
 import { renderParts, waitsBadge } from "@/components/repo-parts";
 import { renderUmbrella } from "@/components/umbrella";
@@ -26,7 +26,7 @@ export function renderHead(detail: TaskDetail): HTMLElement {
     card.waits_on != null && waitsBadge(card.waits_on),
     card.parts !== undefined && card.parts.length > 0 && renderParts(card.parts),
     detail.umbrella !== undefined && renderUmbrella(detail.umbrella, card.id),
-    card.auto !== null && h("p", { class: "drawer-auto", text: `auto: ${card.auto}` }),
+    card.auto !== null && h("p", { class: "drawer-auto", text: autoLine(card) ?? "" }),
     card.auto_start !== null && h("p", { class: "drawer-auto", text: autoBadge(card) ?? "" }),
   );
 }

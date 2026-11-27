@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { autoBadge, renderCard } from "@/components/card";
+import { autoBadge, autoLine, renderCard } from "@/components/card";
 import { renderHead } from "@/components/drawer-sections";
 import { renderUsage } from "@/components/usage-strip";
 import { board as boardSchema } from "@/lib/schemas";
@@ -19,6 +19,14 @@ describe("auto close on the board", () => {
     const element = renderCard(waiting, NOW);
     expect(element.querySelector(".card-auto")?.textContent).toBe("auto: waiting for a pass");
     expect(renderCard(base, NOW).querySelector(".card-auto")).toBeNull();
+  });
+
+  it("[T2557] names the reset watch's token optimization run on the card and in the drawer", () => {
+    const tokenopt = { ...base, ...preset("working", true), auto: "tokenopt" };
+    expect(taskCard.parse(tokenopt)).toEqual(tokenopt);
+    expect(renderCard(tokenopt, NOW).querySelector(".card-auto")?.textContent).toBe("auto: token optimization after reset");
+    expect(renderHead(makeDetail(tokenopt)).querySelector(".drawer-auto")?.textContent).toBe("auto: token optimization after reset");
+    expect(autoLine(base)).toBeNull();
   });
 
   it("badges a run a passing done_check started, with the pass time, and keeps it once done", () => {

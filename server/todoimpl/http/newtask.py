@@ -45,6 +45,7 @@ class NewTask:
     body: str
     images: tuple[noteimages.Ref, ...]
     files: tuple[str, ...] = ()
+    priority: str = "medium"  # the board's own notes may file higher (the token optimization: high)
 
 
 @runtime_checkable

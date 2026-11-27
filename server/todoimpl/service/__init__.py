@@ -15,6 +15,7 @@ from todoimpl.nolimit.tick import Loop as NoLimitLoop
 from todoimpl.peer import service as peer
 from todoimpl.repotask import foldasks, legacy
 from todoimpl.runner.autocheck import AutoCloser
+from todoimpl.runner.resetwatch import ResetWatch
 from todoimpl.todo_mcp.client import TodoClient
 from todoimpl.triage.label import label_of
 from todoimpl.umbrella import registry
@@ -157,4 +158,6 @@ def build_backend(
         StallWatch(root).start()
         # No Claude route at all: rerun repo gates and apply autofixes with no tokens (DOCS-nolimit.md).
         backend.nolimit = NoLimitLoop(root).start()
+        # A usage reset files one token optimization note and starts it first (DOCS-credits.md).
+        ResetWatch(root, lambda: cache.snapshot().tasks, new_tasks, scheduler).start()
     return backend
