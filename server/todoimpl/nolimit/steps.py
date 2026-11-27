@@ -3,6 +3,8 @@
 The command runs as `timeout -k 5 60 bash -c <command>` inside `checks.run_capped` (capped.sh, its own process
 group, the build lock or light slot first): `timeout` cuts it at 60 s even if the server dies meanwhile, and
 `run_capped`'s own wait (10 s later) kills the tree as a backstop. A cut step is `slow`, never red.
+Steps run at a board gate step's cap (`gatehost.STEP_ENV`: 4 GiB, 20 % CPU, T2618): at capped.sh's 10 % a
+kcd2 visit with a bump ran past 60 s.
 """
 
 from __future__ import annotations
@@ -15,6 +17,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from todoimpl.runner.checks import run_capped
+from todoimpl.runner.gatehost import STEP_ENV
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -58,7 +61,7 @@ def run(
     """Run `command` in `cwd` and return its step; a run that `timeout` cut or that outlived it is slow."""
     with tempfile.TemporaryFile("w+", encoding="utf-8", errors="replace") as out:
         began = time.monotonic()
-        code = run_capped(wrapped(command, limit), cwd, limit + BACKSTOP, out, env)
+        code = run_capped(wrapped(command, limit), cwd, limit + BACKSTOP, out, {**STEP_ENV, **(env or {})})
         seconds = time.monotonic() - began
         out.seek(0)
         lines = out.read().splitlines()
