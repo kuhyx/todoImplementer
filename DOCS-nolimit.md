@@ -87,7 +87,7 @@ ended (shipped, closed, done manually, cancelled), busy (`turn.pid` exists: neve
   diff stat, uncommitted files, the repo's `test-changed` output and the failing tests it names, stamped with
   HEAD (an unchanged HEAD is skipped). `prompts/nolimitctx.py` adds "read <file> first" to the next prompt.
 - `visibility` (#11, T2589): `free-llm-check-dir <repo>` for each `~/src` repo whose cache entry is missing or
-  older than 20 h, never-cached first; the tool missing is an `error` in the report.
+  older than the tool's own day-long TTL (T2616), never-cached first; the tool missing is an `error` in the report.
 
 Reports land in `nolimit.json` under `chores` (`at`, `report`) and `chore_next`. CLI: `--chore <name>` runs one
 now, whatever the trigger.

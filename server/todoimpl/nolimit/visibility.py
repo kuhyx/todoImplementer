@@ -2,8 +2,10 @@
 
 `free-llm-check-dir <repo>` keeps `~/.cache/omniroute_offload/visibility.json` (one `gh repo view` per repo,
 cached a day); `runner.freeok.public` reads it and counts a missing entry as private. The chore runs the
-tool, as a capped step under 60 s, for every `~/src` repo whose entry is missing or older than `STALE`,
-oldest first, so the cache never lapses while Claude is out. Exit 2 is the tool's "private": a refresh too.
+tool, as a capped step under 60 s, for every `~/src` repo whose entry is missing or has lapsed (`STALE`, the
+tool's own TTL), oldest first. The tool answers an entry under a day old from its cache without
+rewriting it, so running it earlier refreshes nothing (T2616); the free route reads an entry of any age.
+Exit 2 is the tool's "private": a refresh too.
 The tool missing is an error the report names, never a silent pass.
 """
 
@@ -25,7 +27,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 TOOL = "free-llm-check-dir"
-STALE = 20 * 3600.0  # the tool's own TTL is a day: refresh before it lapses
+STALE = 86400.0  # the tool's own TTL (`_privacy.CACHE_TTL_S`): younger entries it will not refetch
 BUDGET = 45.0
 REFUSED = 2  # the tool's exit for a repo that may not go to free models (private): still refreshed
 
@@ -52,7 +54,7 @@ def run(
     if tool is None:
         return {"error": f"{TOOL} is not on PATH", "refreshed": []}
     known = cache()
-    stale = [r for r in repos.discover(src_root()) if _age(known.get(r.slug), now) > STALE]
+    stale = [r for r in repos.discover(src_root()) if _age(known.get(r.slug), now) >= STALE]
     stale.sort(key=lambda r: -_age(known.get(r.slug), now))
     began = clock()
     refreshed: list[str] = []
@@ -61,6 +63,6 @@ def run(
         if not still() or clock() - began > BUDGET:
             break
         done = steps.run("visibility", f"{shlex.quote(tool)} {shlex.quote(str(repo.path))}", repo.path)
-        ok = done.exit_code in {0, REFUSED} and _age(cache().get(repo.slug), time.time()) <= STALE
+        ok = done.exit_code in {0, REFUSED} and _age(cache().get(repo.slug), time.time()) < STALE
         (refreshed if ok else failed).append(repo.slug)
     return {"refreshed": refreshed, "failed": failed, "stale_left": len(stale) - len(refreshed) - len(failed)}
