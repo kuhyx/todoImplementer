@@ -31,7 +31,7 @@ Tokenless work while no Claude route runs (trigger, repo visits, autofix commits
 - coverage: `make test`
 - coverage-gaps: `coverage-gaps coverage.xml`
 - apk: `make apk` (release APK for the Pixel and the emulator, arm64 + x64, under 60 s cold; CI builds every ABI)
-- gate: `make fast` (in a board session one step per call, each under 60 s: `make lines private md regressions lint`, `make types`, `make web-lint`, `make web-test`, `make test-shard SHARD=1 COV_DIR=<dir>` for SHARD 1..6 into a new dir, then `make test-cov COV_DIR=<dir>`)
+- gate: `make fast` (in a board session one step per call, each under 60 s: `make lines private md regressions lint`, `make types`, `make web-lint`, `make web-test`, `make test-shard SHARD=1 COV_DIR=<dir>` for SHARD 1..8 into a new dir, then `make test-cov COV_DIR=<dir>`)
 
 ## Rules
 

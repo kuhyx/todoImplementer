@@ -8,7 +8,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from test_makefile_coverage import REPO, copy_make, make_env
+from test_makefile_coverage import REPO, SHARDS, copy_make, make_env
 
 
 def test_t2487_make_test_runs_one_capped_pytest_per_shard(tmp_path: Path) -> None:
@@ -19,8 +19,8 @@ def test_t2487_make_test_runs_one_capped_pytest_per_shard(tmp_path: Path) -> Non
     env = {**make_env(), "FAKECOV_SLEEP": "0"}
     run = subprocess.run(argv, env=env, capture_output=True, text=True, check=False, timeout=30)
     assert run.returncode == 0, run.stdout + run.stderr
-    assert "chunks 6 of 6" in run.stdout
-    assert log.read_text().count("x") == 6  # six capped pytest runs: six tickets
+    assert f"chunks {SHARDS} of {SHARDS}" in run.stdout
+    assert log.read_text().count("x") == int(SHARDS)  # one capped pytest run (one ticket) per shard
 
 
 def test_t2496_a_failing_shard_exits_non_zero_and_is_not_stamped(tmp_path: Path) -> None:

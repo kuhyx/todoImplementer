@@ -1,17 +1,19 @@
 """`make test` keeps its coverage data per run: two runs in one worktree cannot clobber it (T1920)."""
 
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 FAKES = REPO / "tests" / "fixtures" / "fakecov"
+SHARDS = re.search(r"^SHARDS \?= (\d+)$", (REPO / "Makefile").read_text(encoding="utf-8"), re.MULTILINE)[1]
 
 
 def make_env() -> dict[str, str]:
     """Fake pytest/coverage first on PATH; a board build-lock shim on PATH runs `make` at once (T2003)."""
-    env = {**os.environ, "PATH": f"{FAKES}:{os.environ['PATH']}", "FAKECOV_CHUNKS": "6", "MAKEFLAGS": ""}
+    env = {**os.environ, "PATH": f"{FAKES}:{os.environ['PATH']}", "FAKECOV_CHUNKS": SHARDS, "MAKEFLAGS": ""}
     return {**env, "TODOIMPL_BUILD_LOCK_HELD": "1"}
 
 
@@ -36,7 +38,7 @@ def test_t1920_two_overlapping_make_test_runs_both_see_all_their_chunks(tmp_path
     second = make_test(tmp_path)
     outs = [p.communicate(timeout=30)[0] for p in (first, second)]
     assert [first.returncode, second.returncode] == [0, 0], outs
-    assert all("chunks 6 of 6" in out for out in outs), outs
+    assert all(f"chunks {SHARDS} of {SHARDS}" in out for out in outs), outs
 
 
 def test_a_run_leaves_no_coverage_data_in_the_worktree(tmp_path: Path) -> None:

@@ -72,7 +72,7 @@ test:
 # A board session runs the suite as SHARDS calls, each under 60 s (T2416): `make test-shard SHARD=k` for k in
 # 1..SHARDS into one new COV_DIR, then `make test-cov` combines exactly those SHARDS files (missing one fails) and
 # enforces 100 %. Same tests as `make test`.
-SHARDS ?= 6
+SHARDS ?= 8
 SHARD_FILES = $(foreach k,$(shell seq 1 $(SHARDS)),$(COV_DIR)/.coverage.shard$(k)of$(SHARDS))
 test-shard:
 	@$(KEY); mkdir -p "$(COV_DIR)" && python3 scripts/test_shard.py $(SHARD) $(SHARDS) >/dev/null && \
