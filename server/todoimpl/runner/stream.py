@@ -212,7 +212,7 @@ class StreamParser:
         res = self.result
         text, errors = obj.get("result"), obj.get("errors")
         said = [e for e in errors if isinstance(e, str)] if isinstance(errors, list) else []
-        res.text = (text if isinstance(text, str) else "") or "; ".join(said)  # an error result: `errors` only
+        res.text = (text if isinstance(text, str) else "") or "; ".join(said)  # error results: `errors` only
         cost = obj.get("total_cost_usd")
         res.cost_usd = float(cost) if isinstance(cost, int | float) else 0.0
         usage = obj.get("modelUsage")
