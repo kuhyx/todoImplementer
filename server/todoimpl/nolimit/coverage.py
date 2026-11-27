@@ -5,6 +5,10 @@ board worktree right after the gate wrote the report, with `--json --max-files 1
 most ten tickets (the worst files first). One ticket per repo and file (`nolimit-coverage-<sha8 of path>`):
 the same file seen again counts up, never files twice. Exit 2 (the report is unreadable: the gate wrote
 none) is one ticket of its own. A repo with no such bullet is skipped.
+
+The repo's own `- coverage:` command runs first when it has one (T2601: kcd2-dice-solver's `test` writes no
+lcov report, only `pnpm run coverage` does); a red one is one `nolimit-coverage` ticket and no gaps are read.
+The visit drops the reports afterwards (`worktree.discard_changes`), so no later commit carries them.
 """
 
 from __future__ import annotations
@@ -31,6 +35,12 @@ def command(repo: Repo) -> str | None:
     return f"{base} --json --max-files {MAX_FILES} > {OUT}; c=$?; [ $c -le 1 ] || exit $c"
 
 
+def generate(repo: Repo) -> str | None:
+    """Return the repo's command that writes the coverage report, None without one (`n/a` included)."""
+    found = repo.commands.get("coverage")
+    return None if not found or found.lower().startswith("n/a") else found
+
+
 def gaps(wt: Path) -> list[dict[str, Any]]:
     """Return the report's files, then remove the report (it must not reach a commit)."""
     out = wt / OUT
@@ -48,11 +58,18 @@ def run(repo: Repo, wt: Path, now: float) -> list[str]:
     cmd = command(repo)
     if cmd is None:
         return []
-    done = steps.run("coverage-gaps", cmd, wt)
+    make = generate(repo)
+    if make is not None and (filed := _failed(repo, steps.run("coverage", make, wt), now)) is not None:
+        return filed
+    if (filed := _failed(repo, steps.run("coverage-gaps", cmd, wt), now)) is not None:
+        (wt / OUT).unlink(missing_ok=True)
+        return filed
+    return [tickets.gap(repo, f, now) for f in gaps(wt)]
+
+
+def _failed(repo: Repo, done: steps.Step, now: float) -> list[str] | None:
+    """File a cut or red step's ticket; return its signatures (empty for a cut one), None when it passed."""
     if done.slow:
         tickets.slow(repo, done, now)
         return []
-    if not done.passed:
-        (wt / OUT).unlink(missing_ok=True)
-        return tickets.red(repo, done, now)
-    return [tickets.gap(repo, f, now) for f in gaps(wt)]
+    return None if done.passed else tickets.red(repo, done, now)

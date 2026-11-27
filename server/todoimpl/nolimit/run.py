@@ -101,6 +101,7 @@ class Visit:
             return status.RED
         tickets.resolve(self.repo)
         coverage.run(self.repo, tree.path, self.now)  # after resolve: the gaps still open are counted again
+        worktree.discard_changes(tree)  # reports the gate and coverage wrote never reach the bump's commit
         if self.still():
             bump.run(self.repo, tree, gate, self.now)
         if not (self.push and worktree.ahead(tree)):

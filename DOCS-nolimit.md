@@ -3,7 +3,7 @@
 kuhy (2026-11-27): when no Claude route can run a turn (the plan is limited for 12 h to 4 days, the free API
 credits are not `ready`, the free gateway is down or no public card waits), the board should still do useful
 work that costs no tokens. Code: `server/todoimpl/nolimit/`. Regressions: `tests/regressions/DOCS-nolimit.md`
-(T2540 to T2550, T2584 to T2590, T2600).
+(T2540 to T2550, T2584 to T2590, T2600, T2601).
 
 ## What the board can do with no tokens, ranked
 
@@ -60,7 +60,7 @@ A repo whose step was cut is done for the cycle like any other and is tried agai
 5. The full gate. Red: the commit is discarded and each failure is a ticket. Green: the repo's earlier no-limit
    records are marked resolved; then, unless `--no-push` or nothing was committed, `git push origin
    HEAD:<default>` after checking that origin is an ancestor (fast-forward only), and the CLAUDE.md `deploy`.
-6. Still green, before the push: `coverage.py` runs the repo's `coverage-gaps` bullet with `--json --max-files
+6. Still green, before the push: `coverage.py` runs the repo's `coverage` bullet (unless `n/a`, T2601), then its `coverage-gaps` bullet with `--json --max-files
    10` and files one ticket per uncovered file (`nolimit-coverage-<sha8 of path>`; an unreadable report is
    `nolimit-coverage-gaps`, #8, T2584). Then `bump.py`, only in a repo with
    `scripts/check_dependency_freshness.sh`: `~/.claude/scripts/apply_dep_pins.py .`, relock (`uv lock`,
