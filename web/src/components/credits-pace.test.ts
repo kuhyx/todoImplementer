@@ -10,8 +10,8 @@ const fill = (root: HTMLElement): string => root.querySelector<HTMLElement>(".c-
 describe("credits pace strip", () => {
   it("[T2532] shows a spinner with the count of pending batches and the oldest's age", () => {
     expect(renderCreditsPace(makeCredits()).querySelector(".c-batch")).toBeNull();
-    const pending = { est_usd: 0.02, oldest_at: 1_000, pending: 2 };
-    const strip = renderCreditsPace(makeCredits({ batches: pending }), 1_000 + 300);
+    const pending = { est_usd: 0.02, oldest_at: 1000, pending: 2 };
+    const strip = renderCreditsPace(makeCredits({ batches: pending }), 1300);
     const batch = strip.querySelector<HTMLElement>(".c-batch");
     expect(batch?.querySelector(".spinner")).not.toBeNull();
     expect(batch?.textContent).toBe("2");
