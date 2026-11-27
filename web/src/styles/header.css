@@ -65,6 +65,7 @@
 }
 
 .meter {
+  position: relative;
   display: block;
   height: var(--space-2);
   background: var(--surface-2);
@@ -219,4 +220,19 @@
 
 .c-left {
   color: var(--text-muted);
+}
+
+/* The weekly reserve ticks on the 7 d meter (T2533): lit while the 90 % or 95 % hold is on. */
+.r-tick {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--at);
+  width: 1px;
+  background: var(--border);
+}
+
+.r-tick[data-lit="true"] {
+  width: 2px;
+  background: var(--danger, var(--text));
 }

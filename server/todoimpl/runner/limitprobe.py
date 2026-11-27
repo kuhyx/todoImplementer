@@ -14,7 +14,7 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from todoimpl.credits import marks
-from todoimpl.usage import oauth
+from todoimpl.usage import hold, oauth
 
 from . import limits
 
@@ -23,6 +23,7 @@ if TYPE_CHECKING:
 
 log = logging.getLogger("todoimpl.runner")
 INTERVAL = 300.0
+NEAR_INTERVAL, NEAR_AT = 60.0, 0.85  # T2533: probe every minute close to the weekly reserve
 MIN_GAP = 60.0
 
 
@@ -62,6 +63,8 @@ class LimitProbe:
             if probe is None:
                 return None
             oauth.save(self.root, probe)
+            if (week := probe.seven_day) is not None:  # the weekly reserve (T2533)
+                hold.apply_probe(self.root, week.utilization, week.resets_at, now)
             if limits.active_until(self.root, now) is not None:
                 blocked = probe.blocked_until(now)
                 if blocked is None:
@@ -85,12 +88,6 @@ class LimitProbe:
         if self._once is not None:
             self._once.join(10)
 
-    def _safe_tick(self) -> None:
-        try:
-            self.tick()
-        except Exception:
-            log.exception("limit probe crashed")
-
     def start(self) -> None:
         """Run the loop in a daemon thread (idempotent); the first probe happens off the startup path."""
         if self._thread is None:
@@ -103,7 +100,19 @@ class LimitProbe:
         if self._thread is not None:
             self._thread.join(5)
 
+    def wait_after(self, probe: oauth.Probe | None) -> float:
+        """Return the wait before the next probe: a minute from 85 % of the weekly window (T2533)."""
+        week = probe.seven_day if probe is not None else None
+        near = week is not None and week.utilization >= NEAR_AT
+        return min(self._interval, NEAR_INTERVAL) if near else self._interval
+
+    def _safe_tick(self) -> oauth.Probe | None:
+        try:
+            return self.tick()
+        except Exception:
+            log.exception("limit probe crashed")
+            return None
+
     def _loop(self) -> None:
         while not self._stop.is_set():
-            self._safe_tick()
-            self._stop.wait(self._interval)
+            self._stop.wait(self.wait_after(self._safe_tick()))

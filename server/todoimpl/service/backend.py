@@ -25,7 +25,7 @@ from todoimpl.runner.scheduler import RunnerError
 from todoimpl.stall.scan import card_activity
 from todoimpl.todo_mcp.model import TodoError, upstream_text
 from todoimpl.umbrella.view import overlay_for
-from todoimpl.usage import limit_state
+from todoimpl.usage import hold, limit_state
 from todoimpl.usage.interventions import record
 
 from . import dropping, livefeed, notes, permission, shots, tracking
@@ -100,7 +100,13 @@ class ServiceBackend:
             self.limit_probe.refresh_if_due()  # a page load re-checks a held limit in the background
         return Context(
             live=frozenset(self.scheduler.running()),
-            limit=Limit(active, state.until if active else None, Credits(**route.view(self.root, now))),
+            limit=Limit(
+                active,
+                state.until if active else None,
+                Credits(**route.view(self.root, now)),
+                hold.level(self.root, now),
+                hold.used(self.root, now),
+            ),
             now=now,
             repo_missing=self._repo_missing,
             auto_close=autocheck.enabled(self.root),

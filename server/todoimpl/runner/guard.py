@@ -9,11 +9,14 @@ overage, so only plan turns are watched.
 from __future__ import annotations
 
 import json
+import threading
 import time
+import weakref
 from typing import TYPE_CHECKING, Any
 
 from todoimpl.board.types import fmt_when
 from todoimpl.credits import marks
+from todoimpl.usage import hold
 
 from .limits import FALLBACK_PAUSE, write_until
 from .stream import Activity, StreamParser
@@ -23,6 +26,21 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 FULL = 1.0
+_LOCK = threading.Lock()
+_RUNNING: weakref.WeakSet[OverageGuard] = weakref.WeakSet()  # the guards of the plan turns being read now
+HOLD_TEXT = (
+    "Weekly usage reached 95 % (the 5 % emergency reserve): every plan turn was stopped and runs pause "
+    "until the weekly window resets {when}."
+)
+
+
+def stop_all(root: Path, until: float) -> int:
+    """Stop every running plan turn under `root` (T2533); each pauses until `until`. Return how many."""
+    with _LOCK:
+        mine = [g for g in _RUNNING if g.root == root and g.until is None]
+    for one in mine:
+        one.halt(until, HOLD_TEXT.format(when=fmt_when(until, one.now())))
+    return len(mine)
 
 
 def reset_of(obj: dict[str, Any], now: float) -> float:
@@ -57,7 +75,10 @@ class OverageGuard(StreamParser):
         """`stop` kills the turn, `announce` writes a feed line, `hit` tells the driver the pause end."""
         super().__init__()
         self._args = (root, card, stop, announce, hit, clock)
+        self.root, self.now = root, clock
         self.until: float | None = None
+        with _LOCK:
+            _RUNNING.add(self)
 
     def feed(self, line: str) -> list[Activity]:
         """Parse as usual; the first line with `isUsingOverage` triggers the guard."""
@@ -65,7 +86,23 @@ class OverageGuard(StreamParser):
         if self.until is None and self.result.limit is not None and self.result.limit.using_overage:
             self.until = self._trip(json.loads(line))
             out.append(Activity("error", "overage guard: extra usage started, the turn was stopped"))
+        elif self.until is None and '"rate_limit_event"' in line:
+            week = hold.from_event(json.loads(line))
+            if week is not None and hold.observe(self.root, *week, self.now()) == hold.ALL:
+                stop_all(self.root, week[1])
+                out.append(Activity("error", "weekly usage at 95 %: every plan turn was stopped"))
         return out
+
+    def halt(self, until: float, text: str) -> None:
+        """Stop this turn and pause its run until `until` (the weekly hold), once."""
+        if self.until is not None:
+            return
+        _root, _card, stop, announce, hit, _clock = self._args
+        self.until = until
+        marks.raise_alert(self.root, text, until)
+        announce(text)
+        hit(until)
+        stop()
 
     def _trip(self, obj: dict[str, Any]) -> float:
         root, card, stop, announce, hit, clock = self._args

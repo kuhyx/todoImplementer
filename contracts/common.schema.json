@@ -116,9 +116,11 @@
       "properties": {
         "active": {"type": "boolean"},
         "until": {"anyOf": [{"$ref": "#/$defs/epoch"}, {"type": "null"}]},
-        "credits": {"$ref": "https://todoimplementer.local/contracts/credits.schema.json#/$defs/credits"}
+        "credits": {"$ref": "https://todoimplementer.local/contracts/credits.schema.json#/$defs/credits"},
+        "weekly_hold": {"enum": ["none", "low_medium", "all"], "description": "The weekly reserve (T2533): at 90 % of seven_day medium and low cards take no plan turn (low_medium), at 95 % no card does and running plan turns were stopped (all)."},
+        "weekly_used": {"anyOf": [{"type": "number", "minimum": 0}, {"type": "null"}], "description": "The seven_day share the hold last saw (1.0 = full), null with no hold."}
       },
-      "required": ["active", "until", "credits"],
+      "required": ["active", "until", "credits", "weekly_hold", "weekly_used"],
       "additionalProperties": false
     },
     "error": {

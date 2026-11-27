@@ -115,7 +115,7 @@ export function makeUsage(): Usage {
     five_hour: { resets_at: NOW + 8100, status: "allowed", utilization: 0.42 },
     free: makeFree(),
     generated_at: NOW,
-    limit: { active: false, credits: makeCredits(), until: null },
+    limit: { active: false, credits: makeCredits(), until: null, weekly_hold: "none", weekly_used: null },
     overage: { status: "rejected", using: false },
     seven_day: { resets_at: NOW + 3 * 86_400, status: "allowed_warning", utilization: 0.77 },
   };

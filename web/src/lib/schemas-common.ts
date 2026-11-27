@@ -134,6 +134,8 @@ export const limit = z.strictObject({
   active: z.boolean(),
   credits,
   until: epoch.nullable(),
+  weekly_hold: z.enum(["none", "low_medium", "all"]),
+  weekly_used: z.number().nonnegative().nullable(),
 });
 
 export const apiError = z.strictObject({

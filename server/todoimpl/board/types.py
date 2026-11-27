@@ -73,6 +73,8 @@ class Limit:
     active: bool = False
     until: float | None = None
     credits: Credits = Credits()
+    weekly_hold: str = "none"  # T2533: none, low_medium or all
+    weekly_used: float | None = None
 
     @property
     def holds(self) -> bool:

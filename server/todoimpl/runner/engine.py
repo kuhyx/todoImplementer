@@ -216,7 +216,8 @@ class Engine:
                 card, {"type": "activity", "at": self.clock(), "kind": "error", "text": lost, "tool": None}
             )
         try:
-            item = self.client.get_task(card).item
+            task = self.client.get_task(card)
+            item = task.item
         except TodoError as exc:
             if retry.is_transient(str(exc)):
                 wait = retry.later(st, self.clock(), f"todo app unreachable: {exc}", "todo")
@@ -228,10 +229,7 @@ class Engine:
             with self._cv:
                 self.save(card, st)
             return
-        if item.parts:
-            files.snapshot(
-                run_dir, item
-            )  # the parts of this drive, for the tick command to check keys against
+        files.snapshot(run_dir, item, task.priority)  # parts for the tick command; priority for T2533
         publish: Callable[[dict[str, Any]], None] = partial(self.bus.publish, card)
         ctx = Ctx(
             self.root, run_dir, self.client, publish, partial(self._register, card), self.clock,

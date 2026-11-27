@@ -20,7 +20,22 @@ function tone(utilization: number): string {
   return utilization >= 0.75 ? "warn" : "ok";
 }
 
-function meter(label: string, window: Window, now: number): HTMLElement {
+const RESERVE = [
+  { at: 90, lit: ["low_medium", "all"] },
+  { at: 95, lit: ["all"] },
+] as const;
+
+/** The weekly reserve (T2533): a tick at 90 % and 95 % of the 7 d window, lit while that hold is on. */
+function reserveTicks(hold: string): HTMLElement[] {
+  return RESERVE.map(({ at, lit }) => {
+    const isLit = (lit as readonly string[]).includes(hold);
+    const tick = h("span", { attrs: { "data-at": at, "data-lit": String(isLit), title: isLit ? "Reserve" : undefined }, class: "r-tick" });
+    tick.style.setProperty("--at", `${String(at)}%`);
+    return tick;
+  });
+}
+
+function meter(label: string, window: Window, now: number, hold = "none"): HTMLElement {
   if (window === null) {
     return h("div", { class: "meter-box" }, h("span", { class: "meter-label", text: label }), h("span", { class: "meter-note", text: "no reading yet" }));
   }
@@ -34,6 +49,7 @@ function meter(label: string, window: Window, now: number): HTMLElement {
       "span",
       { attrs: { "aria-label": `${label} used`, "aria-valuemax": 100, "aria-valuemin": 0, "aria-valuenow": Math.round(window.utilization * 100), role: "meter" }, class: "meter" },
       fill,
+      ...(label === "7 d" ? reserveTicks(hold) : []),
     ),
     h("span", { class: "meter-value", text: formatPercent(window.utilization) }),
     h("span", { class: "meter-note", text: `resets ${formatIn(window.resets_at, now)} (${formatClock(window.resets_at)})` }),
@@ -69,7 +85,7 @@ export function renderUsage(usage: null | Usage, board: Board | null, error: nul
     { class: "usage" },
     h("div", { class: "usage-row" },
       build !== null && h("span", { class: "build", text: build }),
-      usage !== null && meter("7 d", usage.seven_day, now),
+      usage !== null && meter("7 d", usage.seven_day, now, board?.limit.weekly_hold),
       usage !== null && renderFree(usage.free, now),
       board !== null && renderCreditsPace(board.limit.credits),
       h("a", { attrs: { href: "/usage" }, class: "usage-link", text: "Usage details" }),

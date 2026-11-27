@@ -9,6 +9,7 @@ writes it in one case, under the same lock: Ship unticks a part no live row prov
 from __future__ import annotations
 
 import fcntl
+import json
 from contextlib import contextmanager
 from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Any
@@ -49,10 +50,33 @@ class Ticks:
         return {"done": sum(1 for step in found if step["done"]), "total": len(found)}
 
 
-def snapshot(run_dir: Path, item: Item) -> None:
-    """Write the drive's parts in work order, so the tick command can check keys against them."""
-    rows = [{"key": p.key, "title": p.title, "human": p.human, "held": p.held} for p in item.parts]
-    write_json(run_dir / PARTS, rows)
+PRIORITIES = ("low", "medium", "high")
+PRIORITY = "priority.json"  # the card's priority for the weekly reserve (T2533)
+
+
+def _top(found: list[Any]) -> str:
+    known = [PRIORITIES.index(p) for p in found if p in PRIORITIES]
+    return PRIORITIES[max(known)] if known else "medium"
+
+
+def snapshot(run_dir: Path, item: Item, note_priority: str = "medium") -> None:
+    """Write the drive's parts in work order (the tick command checks their keys) and the card's priority.
+
+    The priority is the highest of the card's note and its parts' parent notes (T2533).
+    """
+    if item.parts:
+        rows = [{"key": p.key, "title": p.title, "human": p.human, "held": p.held} for p in item.parts]
+        write_json(run_dir / PARTS, rows)
+    write_json(run_dir / PRIORITY, {"priority": _top([note_priority, *(p.priority for p in item.parts)])})
+
+
+def priority(run_dir: Path) -> str:
+    """Return the card's priority as the last drive wrote it; `medium` when unknown."""
+    try:
+        data = json.loads((run_dir / PRIORITY).read_text(encoding="utf-8"))
+    except OSError, ValueError:
+        return "medium"
+    return _top([data.get("priority")] if isinstance(data, dict) else [])
 
 
 def known(run_dir: Path) -> set[str]:
