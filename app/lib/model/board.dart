@@ -37,6 +37,7 @@ class TaskCard {
     this.escalated = false,
     this.images = const [],
     this.parts = const [],
+    this.lane = 'kuhy',
   });
 
   /// Parses a card.
@@ -62,8 +63,13 @@ class TaskCard {
       escalated: flag(tier, 'escalated'),
       images: objs(j, 'images').map(NoteImage.fromJson).toList(),
       parts: objs(j, 'parts').map(RepoPart.fromJson).toList(),
+      lane: strOr(j, 'lane') ?? 'kuhy',
     );
   }
+
+  /// Who asked for the work the run starts with: `kuhy`, `board` or `app`
+  /// (other apps' error reports); Backlog puts kuhy's first (T2580).
+  final String lane;
 
   /// Item id.
   final String id;

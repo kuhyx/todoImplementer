@@ -48,8 +48,25 @@ void main() {
   testWidgets('repo groups show for every sort but least effort', (
     tester,
   ) async {
-    await _pump(tester);
+    final relay = await _pump(tester);
     expect(find.byKey(const ValueKey('group-kuhyx/demo')), findsNothing);
+    await tester.tap(find.byKey(const Key('sort')));
+    await _settle(tester);
+    await tester.tap(find.byIcon(Icons.sort_by_alpha).last);
+    await _settle(tester);
+    // Backlog is one priority-ordered list whatever the sort (T2583)
+    expect(find.byKey(const ValueKey('group-kuhyx/demo')), findsNothing);
+    relay.push(
+      boardJson([
+        for (final (id, repo) in [('a1', 'kuhyx/demo'), ('y1', null)])
+          card(id, repo: repo, column: 'running', status: 'working'),
+      ]),
+    );
+    await _settle(tester);
+    await tester.tap(find.byKey(const Key('sort')));
+    await _settle(tester);
+    await tester.tap(find.byIcon(Icons.low_priority).last);
+    await _settle(tester);
     await tester.tap(find.byKey(const Key('sort')));
     await _settle(tester);
     await tester.tap(find.byIcon(Icons.sort_by_alpha).last);

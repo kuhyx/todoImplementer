@@ -100,7 +100,9 @@ describe("renderBoard", () => {
     expect(root.querySelector('.col[data-col="needs_you"] .card-meta')?.textContent).toMatch(/ · /v);
     const grouped = { ...DEFAULT_STATE, sort: "priority" as const };
     const byRepo = mount(renderBoard(buildView(board, grouped), grouped, NOW, handlers()));
-    expect(byRepo.querySelector('.col[data-col="backlog"] .group-name')?.textContent).toBe("Yours");
+    expect(byRepo.querySelector('.col[data-col="backlog"] .group-name')).toBeNull(); // Backlog is one list (T2583)
+    expect(byRepo.querySelector('.col[data-col="backlog"] .group')?.getAttribute("aria-label")).toBe("Highest priority first");
+    expect(byRepo.querySelector('.col[data-col="done"] .group-name')).not.toBeNull();
     expect(root.querySelector(".col[data-active]")?.getAttribute("data-col")).toBe("needs_you");
     expect(root.querySelector('.tab[aria-current="true"]')?.textContent).toContain("Needs you");
   });

@@ -24,7 +24,8 @@ board made one card per `## ` section and the cards of one repo ran in parallel 
   never move. Answers kuhy gave on a former `-1` card are moved once (`repotask/foldasks.py`, called by the board
   fetch): only the ask ids an open manual part asks now, never over a record the `-0` card has, then a mark file
   in the old dir (kept, never deleted) stops a second move. An old `-1` run that shipped still shows in Done.
-- Card fields: `priority` = the highest part priority that Claude can work, `status` `in progress` when any note
+- Card fields: `priority` = the highest part priority that Claude can work (other apps' reports count as low), `lane`
+  = who asked for the part the run starts with (`kuhy`, `board`, `app`), `status` `in progress` when any note
   is, `body` = the work parts as `### Part <key>: <title>` blocks (level 3 on purpose: a `## ` line would split the
   card), `done_check` = the one check of the work parts or the distinct ones chained `(a) && (b)`.
 - `GET /api/board` cards carry `parts` (optional, repo tasks only) and, for a queued card, `waits_on`.
@@ -109,6 +110,8 @@ title and body edits through a card.
 - **Won't do** (T2045) drops a card no turn works on (Backlog, Cancelled, Yours, Needs you; confirm first): it
   abandons every note behind the card, then cancels a run that has not ended. It refuses before any write when a
   note also holds work on another card (a held part), and names that card.
+
+Priority, the Backlog order and the Start confirm: `DOCS-priority.md`.
 
 ## The per-repo lock
 

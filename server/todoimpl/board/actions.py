@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from todoimpl import modelpick
 from todoimpl.runner.freeok import may_go_free
 
+from . import prioaction
 from .button import Action
 from .needs import needs
 from .norepo import is_yours
@@ -97,7 +98,7 @@ def actions(  # noqa: PLR0913 - the signature of the interface plus keyword-only
         out.append(Action("done-manually", "Done manually", why is None, why, confirm=True))
     if run is not None and status not in DONE:
         out += _session(run, status) + _model(run, status)
-    out += _prestart(out, run, status, pin)
+    out += _prestart(out, run, status, pin) + prioaction.action(task, status)
     if run is not None and run.lesson and run.lesson.get("state") == "drafted":
         out.append(Action("lesson-approve", "Approve lesson"))
     return out

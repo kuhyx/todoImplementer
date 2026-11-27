@@ -15,8 +15,11 @@ describe("buildView", () => {
     expect(view.flatMap((c) => c.groups.flatMap((g) => g.cards))).toHaveLength(38);
   });
 
-  it("groups by repo with Yours first and repos A-Z", () => {
-    const labels = backlog(buildView(board, { ...DEFAULT_STATE, sort: "priority" }))?.groups.map((g) => g.label) ?? [];
+  it("groups by repo with Yours first and repos A-Z (outside Backlog)", () => {
+    const tasks = board.tasks.map((c) => ({ ...c, column: "running" as const }));
+    const running = buildView({ ...board, tasks }, { ...DEFAULT_STATE, sort: "priority" }).find((c) => c.id === "running");
+    const labels = running?.groups.map((g) => g.label) ?? [];
+    expect(labels.length).toBeGreaterThan(1);
     expect(labels[0]).toBe("Yours");
     expect(labels.slice(1)).toEqual(labels.slice(1).toSorted((a, b) => a.localeCompare(b)));
   });
@@ -42,6 +45,19 @@ describe("buildView", () => {
     expect(needsYou?.groups).toHaveLength(1);
     expect(needsYou?.groups[0]?.label).toBe("");
     expect(needsYou?.groups[0]?.cards.map((c) => c.id)).toEqual(["zzzzzzzz-0", "yyyyyyyy-0", "aaaaaaaa-0"]);
+  });
+
+  it("[T2583] Backlog is one list whatever the sort: high first, kuhy's cards before automatic ones", () => {
+    const base = board.tasks.find((c) => c.column === "backlog");
+    if (base === undefined) throw new Error("fixture");
+    const at = (id: string, priority: string, lane: "app" | "board" | "kuhy", title: string) => ({ ...base, id, lane, priority, repo: title, title });
+    const tasks = [at("aaaaaaaa-0", "low", "kuhy", "a"), at("bbbbbbbb-0", "medium", "app", "b"), at("cccccccc-0", "medium", "kuhy", "c"),
+      at("dddddddd-0", "high", "board", "d"), at("eeeeeeee-0", "medium", "board", "e")];
+    for (const sort of ["title", "priority", "updated", "effort", "cost"] as const) {
+      const groups = backlog(buildView({ ...board, tasks }, { ...DEFAULT_STATE, sort }))?.groups ?? [];
+      expect(groups.map((g) => g.label)).toEqual([""]);
+      expect(groups[0]?.cards.map((c) => c.id)).toEqual(["dddddddd-0", "cccccccc-0", "eeeeeeee-0", "bbbbbbbb-0", "aaaaaaaa-0"]);
+    }
   });
 
   it("filters by repo and by Yours", () => {

@@ -24,8 +24,9 @@ export const NEEDS_KINDS = [
 ] as const;
 export const ACTION_IDS = [
   "start", "spec-answers", "spec-ok", "send", "ship", "close", "cancel", "lesson-approve", "copy-resume", "go", "copy-fix",
-  "rerun", "wont", "done-manually", "model",
+  "rerun", "wont", "done-manually", "model", "priority",
 ] as const;
+export const LANES = ["kuhy", "board", "app"] as const; // who asked: kuhy, the board, other apps' reports (T2580)
 
 export const stage = z.enum(STAGES);
 export const status = z.enum(STATUSES);
@@ -67,6 +68,9 @@ export const actionChoice = z.strictObject({
   note: z.literal("default").optional(), // the model the roles run unpinned (T2470)
 });
 
+/** Start only (T2583): the higher-priority Backlog card a click would jump; the drawer asks first (priority.schema.json). */
+export const actionWaits = z.strictObject({ id: itemId, priority: z.string(), title: z.string().min(1) });
+
 export const action = z
   .strictObject({
     choices: z.array(actionChoice).min(1).optional(),
@@ -77,6 +81,7 @@ export const action = z
     option: actionOption.optional(),
     reason: z.string().nullable(),
     value: z.string().optional(),
+    waits: actionWaits.optional(),
   })
   .refine(hasReason, { message: "a disabled action needs a reason" });
 export const actions = z.array(action);
@@ -193,6 +198,7 @@ export const taskCard = z.strictObject({
   current: z.string(),
   id: itemId,
   images: z.array(noteImage).min(1).optional(),
+  lane: z.enum(LANES),
   needs,
   partial,
   parts: z.array(repoPart).optional(),
@@ -210,6 +216,7 @@ export const taskCard = z.strictObject({
   waits_on: itemId.nullable().optional(),
 });
 
+export type ActionWaits = z.infer<typeof actionWaits>;
 export type Action = z.infer<typeof action>;
 export type ActionOption = z.infer<typeof actionOption>;
 export type ActionChoice = z.infer<typeof actionChoice>;

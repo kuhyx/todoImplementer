@@ -11,6 +11,7 @@ import 'package:todo_implementer/model/board.dart';
 import 'package:todo_implementer/model/json.dart';
 import 'package:todo_implementer/sync/board_relay.dart';
 import 'package:todo_implementer/ui/board/action_bar.dart';
+import 'package:todo_implementer/ui/board/auto_ship_chip.dart';
 import 'package:todo_implementer/ui/board/detail_page.dart'
     show kDetailPatience;
 import 'package:todo_implementer/ui/board/glyphs.dart';
@@ -20,7 +21,9 @@ import 'package:todo_implementer/ui/board/model_picker.dart';
 import 'package:todo_implementer/ui/board/needs_line.dart';
 import 'package:todo_implementer/ui/board/note_images.dart';
 import 'package:todo_implementer/ui/board/part_edit.dart';
+import 'package:todo_implementer/ui/board/priority_picker.dart';
 import 'package:todo_implementer/ui/board/spec_answers.dart';
+import 'package:todo_implementer/ui/board/start_confirm.dart';
 
 /// Relay kind of a card action id (`spec-ok` -> `task_spec_ok`).
 String kindOf(String actionId) => 'task_${actionId.replaceAll('-', '_')}';
@@ -109,6 +112,7 @@ class _CardSheetState extends State<CardSheet> {
           }),
         );
       case 'start':
+        if (a.waits case final w? when !await confirmStart(context, w)) return;
         final args = a.option?.enabled ?? false
             ? <String, dynamic>{'auto_ship': _autoShip}
             : <String, dynamic>{};
@@ -117,21 +121,6 @@ class _CardSheetState extends State<CardSheet> {
         await _settle(await _send(kindOf(a.id), const {}));
     }
   }
-
-  Widget _autoShipChip(CardAction opt) => Semantics(
-    label: opt.spoken,
-    excludeSemantics: true,
-    child: Align(
-      alignment: Alignment.centerLeft,
-      child: FilterChip(
-        key: const Key('auto-ship'),
-        avatar: const Icon(Icons.rocket_launch_outlined),
-        label: const SizedBox.shrink(),
-        selected: _autoShip,
-        onSelected: opt.enabled ? (v) => setState(() => _autoShip = v) : null,
-      ),
-    ),
-  );
 
   @override
   Widget build(BuildContext context) {
@@ -206,12 +195,17 @@ class _CardSheetState extends State<CardSheet> {
                 ),
               ),
             ],
-            if (offers['start']?.option case final opt?) _autoShipChip(opt),
+            if (offers['start']?.option case final opt?)
+              AutoShipChip(
+                opt,
+                selected: _autoShip,
+                onChanged: (v) => setState(() => _autoShip = v),
+              ),
             const SizedBox(height: AppSpacing.sm),
             ActionBar(
               actions: [
                 for (final a in card.actions)
-                  if (a.id != 'model' && a != specOk) a,
+                  if (a.id != 'model' && a.id != 'priority' && a != specOk) a,
               ],
               onRun: _run,
             ),
@@ -221,6 +215,9 @@ class _CardSheetState extends State<CardSheet> {
                 onPick: (id) async =>
                     await _settle(await _send('task_model', {'model': id})),
               ),
+            ?priorityRow(offers['priority'], (p) async {
+              await _settle(await _send('task_priority', {'priority': p}));
+            }),
             if (questions != null) ...[
               const SizedBox(height: AppSpacing.md),
               SpecAnswers(

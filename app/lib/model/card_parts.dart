@@ -5,6 +5,9 @@ library;
 import 'package:flutter/foundation.dart';
 import 'package:todo_implementer/model/json.dart';
 
+/// The Backlog card a Start would jump (`priority.schema.json#/$defs/waits`).
+typedef Waits = ({String id, String title, String priority});
+
 /// A button the card offers (`common.schema.json#/$defs/action`).
 @immutable
 class CardAction {
@@ -18,6 +21,7 @@ class CardAction {
     this.value,
     this.option,
     this.choices = const [],
+    this.waits,
   });
 
   /// Parses one action.
@@ -31,6 +35,14 @@ class CardAction {
       confirm: flag(j, 'confirm'),
       value: strOr(j, 'value'),
       option: o == null ? null : CardAction.fromJson(o),
+      waits: switch (objOr(j, 'waits')) {
+        final w? => (
+          id: str(w, 'id'),
+          title: str(w, 'title'),
+          priority: str(w, 'priority'),
+        ),
+        null => null,
+      },
       choices: [
         for (final c in objs(j, 'choices'))
           (
@@ -67,6 +79,10 @@ class CardAction {
 
   /// start only: the auto_ship checkbox.
   final CardAction? option;
+
+  /// start only (T2583): the higher-priority Backlog card a tap would jump;
+  /// the sheet asks "start anyway?" first.
+  final Waits? waits;
 
   /// Screen-reader text: the label, plus the reason when disabled.
   String get spoken => [label, if (!enabled) ?reason].join(': ');

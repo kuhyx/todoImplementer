@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 from todoimpl import modelpick
 from todoimpl.errors.marks import TOKENOPT, is_tokenopt_run, signatures
 from todoimpl.newtask import imagelinks
-from todoimpl.repotask import ticketmodel
+from todoimpl.repotask import lane, ticketmodel
 
 from . import cyclefloor
 from .actions import actions
@@ -189,6 +189,7 @@ def build_card(task: TaskLike, run: RunState | None, ctx: Context) -> dict[str, 
         "title": task.title,
         "repo": task.repo,
         "priority": task.priority,
+        "lane": lane.of_card(task),  # who asked: kuhy first in Backlog (T2580)
         "assignee": _assignee(task, run),
         "stage": run.stage if run is not None else None,
         "status": status.value,

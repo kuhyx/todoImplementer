@@ -3,6 +3,7 @@
 library;
 
 import 'package:flutter/foundation.dart';
+import 'package:todo_implementer/model/backlog_order.dart';
 import 'package:todo_implementer/model/board.dart';
 
 /// The repo filter value for cards without a repo.
@@ -163,10 +164,13 @@ List<ColumnView> buildView(Board board, ViewState s) {
   final visible = board.tasks.where((c) => _matches(c, s)).toList();
   return [
     for (final col in board.columns)
-      ColumnView(
-        col,
-        sortCards(visible.where((c) => c.column == col.id).toList(), s.sort),
-      ),
+      ColumnView(col, switch (sortCards(
+        visible.where((c) => c.column == col.id).toList(),
+        s.sort,
+      )) {
+        final sorted when col.id == 'backlog' => backlogOrder(sorted),
+        final sorted => sorted,
+      }),
   ];
 }
 

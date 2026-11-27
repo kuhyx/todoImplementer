@@ -85,6 +85,7 @@ export function makeCards(): TaskCard[] {
       auto_start: null,
       cost_usd: cost,
       id: idFor(index),
+      lane: "kuhy",
       partial: null,
       priority,
       repo: repository,

@@ -42,6 +42,9 @@ export function bodyFor(action: ActionId, payload: Payload): Record<string, unkn
     case "model": {
       return { model: payload.model ?? "default" };
     }
+    case "priority": {
+      return { priority: payload.model ?? "medium" }; // the drawer sends a picker's pressed value as `model`
+    }
     case "send": {
       const images = payload.images ?? [];
       return { ...(images.length > 0 && { images }), text: payload.text ?? "" };

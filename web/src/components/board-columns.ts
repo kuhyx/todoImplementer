@@ -24,7 +24,7 @@ function emptyText(column: ColumnView): string {
 /** A group with an empty label is a flat list (Least effort, Recently updated): no heading, the repo goes on each card. */
 function renderGroup(group: ColumnView["groups"][number], now: number, state: ViewState, handlers: ColumnHandlers): HTMLElement {
   const isFlat = group.label === "";
-  const flatName = state.sort === "updated" ? "Newest first" : "Easiest first";
+  const flatName = group.name ?? (state.sort === "updated" ? "Newest first" : "Easiest first");
   return h(
     "section",
     { attrs: { "aria-label": isFlat ? flatName : group.label }, class: "group" },

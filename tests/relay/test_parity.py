@@ -31,6 +31,7 @@ def bodies(card: str) -> dict[str, dict[str, Any]]:
         "task_done_manually": card_args,
         "task_model": {"card": card, "args": {"model": "claude-fable-5-2"}},
         "task_part_edit": {"card": card, "args": {"part": "aaaa1111-0", "title": "t", "body": ""}},
+        "task_priority": {"card": card, "args": {"priority": "high"}},
         "ask_answer": {"card": card, "args": {"ask": "pick", "option": "a"}},
         "ask_take_recommended": card_args,
         "ask_run": {"card": card, "args": {"ask": "cmd", "add": True}},

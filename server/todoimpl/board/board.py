@@ -11,7 +11,7 @@ from todoimpl.asks.view import items as ask_items
 from todoimpl.peer.book import thread_of
 from todoimpl.runner.parsing import parse_questions
 
-from . import cyclefloor
+from . import cyclefloor, outrank
 from .askfallback import fallback
 from .card import Context, build_card, cycle_end
 from .partedit import with_bodies
@@ -69,6 +69,9 @@ def build_board(
     # Inside a column kuhy's own notes come first, then the Needs-you order.
     built.sort(key=lambda pair: (order.index(pair[0]["column"]), pair[1], *_ask_order(pair[0])))
     cards = [card for card, _ in built]
+    waiting = outrank.backlog(tasks, dict(runs))
+    for card in cards:  # Start asks first while a higher card waits in Backlog (T2583)
+        outrank.mark(card, waiting)
     return {
         "build": build,
         "generated_at": ctx.now,

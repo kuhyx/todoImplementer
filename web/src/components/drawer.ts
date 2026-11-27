@@ -12,6 +12,7 @@ import { createFeed } from "@/components/feed-view";
 import { loader, showToast } from "@/components/feedback";
 import { PartEditor } from "@/components/part-edit";
 import { SendImages } from "@/components/send-images";
+import { isStartConfirmed } from "@/components/start-confirm";
 import { csrfToken, restoreInputs, snapshotInputs } from "@/lib/boot";
 import { h, must } from "@/lib/dom";
 import { errorText, getJson, postAction } from "@/lib/http";
@@ -136,6 +137,7 @@ export class TiDrawer extends HTMLElement {
   }
 
   async #activate(detail: TaskDetail, action: Action): Promise<void> {
+    if (action.waits !== undefined && !(await isStartConfirmed(action.waits))) return; // T2583: a higher card waits
     if (action.confirm === true && this.#bar.confirming !== action.id) {
       this.#bar = { ...this.#bar, confirming: action.id };
       this.#render();

@@ -13,6 +13,7 @@ import { type Sort, type ViewState, YOURS } from "@/lib/hash-state";
 export interface Group {
   cards: TaskCard[];
   label: string;
+  name?: string; // a flat list's accessible name when its order is not the picked sort's (Backlog, T2583)
   repo: null | string;
 }
 
@@ -68,6 +69,15 @@ export function sortCards(cards: TaskCard[], sort: Sort): TaskCard[] {
   );
 }
 
+const LANE_RANK: Record<string, number> = { app: 2, board: 1, kuhy: 0 };
+
+/** Backlog is one list: high priority first, kuhy's cards before automatic ones; the picked sort breaks ties (T2583). */
+function backlogGroups(cards: TaskCard[], sort: Sort): Group[] {
+  if (cards.length === 0) return [];
+  const ranked = sortCards(cards, sort).toSorted((a, b) => COMPARE.priority(a, b) || (LANE_RANK[a.lane] ?? 0) - (LANE_RANK[b.lane] ?? 0));
+  return [{ cards: ranked, label: "", name: "Highest priority first", repo: null }];
+}
+
 /** Yours first, then repos A-Z. */
 function compareGroups(a: Group, b: Group): number {
   return Number(b.repo === null) - Number(a.repo === null) || a.label.localeCompare(b.label);
@@ -90,7 +100,7 @@ export function buildView(board: Board, state: ViewState): ColumnView[] {
   const visible = board.tasks.filter((card) => matchesRepository(card, state.repo) && matchesQuery(card, state.q));
   return board.columns.map((column) => {
     return {
-      groups: group(
+      groups: (column.id === "backlog" ? backlogGroups : group)(
         visible.filter((card) => card.column === column.id),
         state.sort,
       ),

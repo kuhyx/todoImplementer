@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Callable
 from typing import Any
 
 from todoimpl import modelpick
+from todoimpl.board.prioaction import LEVELS
 from todoimpl.newtask import noteimages
 
 QUESTION_ID = re.compile(r"Q[0-9]+")
@@ -25,6 +27,7 @@ ACTIONS = (
     "wont",
     "done-manually",
     "model",
+    "priority",
 )
 
 
@@ -90,16 +93,24 @@ def _model(body: dict[str, Any]) -> str | None:
     return None if body["model"] in modelpick.IDS else f"model must be one of {', '.join(modelpick.IDS)}"
 
 
+def _priority(body: dict[str, Any]) -> str | None:
+    if (bad := _only(body, "priority")) is not None:
+        return bad
+    return None if body["priority"] in LEVELS else f"priority must be one of {', '.join(LEVELS)}"
+
+
+CHECKS: dict[str, Callable[[dict[str, Any]], str | None]] = {
+    "start": _start,
+    "spec-answers": _answers,
+    "send": _text,
+    "lesson-approve": _lesson,
+    "model": _model,
+    "priority": _priority,
+}
+
+
 def check(action: str, body: dict[str, Any]) -> str | None:
     """Return what is wrong with the body for this action, or None when it is valid."""
-    if action == "start":
-        return _start(body)
-    if action == "spec-answers":
-        return _answers(body)
-    if action == "send":
-        return _text(body)
-    if action == "lesson-approve":
-        return _lesson(body)
-    if action == "model":
-        return _model(body)
+    if (found := CHECKS.get(action)) is not None:
+        return found(body)
     return None if not body else "body must be empty"

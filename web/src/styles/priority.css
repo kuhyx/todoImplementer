@@ -1,0 +1,56 @@
+/* Priority picker (T2583): three icon buttons, the card's priority filled like the model picker's pin. */
+.priority-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.priority-picker .btn[aria-pressed="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-fill);
+}
+
+/* Start while a higher card waits (T2583): a centred modal over a scrim, the waiting card's glyph and title. */
+.start-confirm {
+  width: min(28rem, calc(100% - 2 * var(--space-3)));
+  padding: var(--space-4);
+  color: var(--text);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.start-confirm::backdrop {
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+}
+
+.start-confirm h2 {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-subtitle);
+}
+
+.start-confirm-waits {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-4);
+}
+
+.start-confirm-waits svg {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  fill: none;
+  stroke: currentcolor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.start-confirm-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}

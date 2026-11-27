@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:todo_implementer/model/backlog_order.dart';
 import 'package:todo_implementer/model/board.dart';
 import 'package:todo_implementer/model/board_view.dart';
 import 'package:todo_implementer/model/json.dart';
@@ -103,12 +104,34 @@ void main() {
     });
 
     test('every sort order', () {
-      List<String> by(BoardSort s) => ids('backlog', ViewState(sort: s));
+      final backlog = b.tasks.where((c) => c.column == 'backlog').toList();
+      List<String> by(BoardSort s) =>
+          sortCards(backlog, s).map((c) => c.id).toList();
       expect(by(BoardSort.priority), ['b2', 'b1', 'b3']);
       expect(by(BoardSort.updated), ['b2', 'b1', 'b3']);
       expect(by(BoardSort.cost), ['b1', 'b2', 'b3']);
       expect(by(BoardSort.title), ['b2', 'b3', 'b1']);
       expect(by(BoardSort.effort), ['b2', 'b1', 'b3']);
+    });
+
+    test('[T2583] Backlog: priority first, then kuhy before automatic', () {
+      final mixed = Board.fromJson(
+        boardJson([
+          {...card('a', priority: 'medium', title: 'a'), 'lane': 'app'},
+          {...card('k', priority: 'medium', title: 'z'), 'lane': 'kuhy'},
+          {...card('h', priority: 'high', title: 'y'), 'lane': 'board'},
+          {...card('o', priority: 'medium', title: 'b'), 'lane': 'odd'},
+          card('l', priority: 'low', title: 'c'),
+        ]),
+      );
+      for (final s in BoardSort.values) {
+        final col = buildView(mixed, ViewState(sort: s)).first;
+        expect(col.cards.map((c) => c.id), ['h', 'o', 'k', 'a', 'l']);
+        final groups = columnGroups('backlog', col.cards, s);
+        expect((groups.single.flat, groups.single.cards), (true, col.cards));
+      }
+      expect(columnGroups('backlog', const [], BoardSort.title), isEmpty);
+      expect(columnGroups('done', col0(mixed), BoardSort.title), isNotEmpty);
     });
 
     test('repo filter and fuzzy search', () {
@@ -162,6 +185,8 @@ void main() {
     });
   });
 }
+
+List<TaskCard> col0(Board b) => b.tasks;
 
 Json _needs(String category, int effort) => {
   'kind': 'claude_action',

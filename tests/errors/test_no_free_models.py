@@ -29,6 +29,7 @@ def test_t2445_a_cycle_that_now_holds_a_ticket_drops_a_cheap_tier_it_kept() -> N
     # a repo card's `tier` stays across cycles: a shipped cheap cycle must not carry it to a ticket
     st = SimpleNamespace(extra={"tier": "cheap", "escalated": True, "escalate_reason": "x"})
     item = SimpleNamespace(title="kuhyx/kartka", body=TICKET, parts=())
-    driver = cast("Driver", SimpleNamespace(state=st, item=item))
+    driver = cast("Driver", SimpleNamespace(state=st, item=item, ctx=SimpleNamespace(run_dir=None)))
     assert tiering.plan_turn(driver, tiering.IMPLEMENT) == tiering.Turn()
     assert st.extra["tier"] == "normal"
+    assert st.extra["ticket_model"] == "claude-sonnet-5-5"  # an app's ticket runs on Sonnet (T2582)

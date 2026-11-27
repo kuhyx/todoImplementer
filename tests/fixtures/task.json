@@ -4,6 +4,7 @@
     "title": "Demo task",
     "repo": "demo",
     "priority": "high",
+    "lane": "kuhy",
     "assignee": "claude",
     "stage": "checks",
     "status": "working",

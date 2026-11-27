@@ -9,6 +9,7 @@ Umbrella tracking view and the free-token strip (gateway quotas, cooldowns, ETA)
 Merging similar tasks (Haiku groups, merged by the board itself with no click, umbrella notes, CLI): `DOCS-merge.md`.
 Manual Claude Code sessions page (status tags, resume, mark, delete, guard, phone): `DOCS-sessions.md`.
 One card, one run per repo (parts, ticks, per-repo lock, section-run transition, note migration CLI): `DOCS-repotask.md`.
+Priority picker, Backlog order, Start confirm modal: `DOCS-priority.md`.
 Asks as buttons in the note (`ask` block: choice, command, screenshot, risk rule, 24 h auto-adopt, sweep): `DOCS-asks.md`.
 Phone over mobile data (Host-based device gate, pairing QR, cookie, device store, exemptions): `DOCS-phone.md`.
 Native Flutter app (phone + PC, Firebase RTDB relay, FCM pings, Astro retirement): `DOCS-native-app.md`; relay kinds,

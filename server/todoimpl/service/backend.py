@@ -14,6 +14,7 @@ from todoimpl.apikey.keystatus import board_field
 from todoimpl.board.board import build_board, build_task, repo_checker
 from todoimpl.board.card import Context
 from todoimpl.board.diff import worktree_diff
+from todoimpl.board.outrank import backlog, mark
 from todoimpl.board.state import load, load_runs, run_dir
 from todoimpl.board.types import Credits, Limit
 from todoimpl.credits import marks, route
@@ -28,7 +29,7 @@ from todoimpl.umbrella.view import overlay_for
 from todoimpl.usage import hold, limit_state
 from todoimpl.usage.interventions import record
 
-from . import dropping, livefeed, notes, permission, shots, tracking
+from . import dropping, livefeed, notes, permission, priorities, shots, tracking
 from .settings import credits_fallback as _credits_fallback
 
 if TYPE_CHECKING:
@@ -159,7 +160,10 @@ class ServiceBackend:
             return None
         run = self._with_extras(load(run_dir(self.root, id8)))
         diff = worktree_diff(run.worktree, run.base_sha) if run is not None else None
-        return build_task(found, run, run_dir(self.root, id8), self._context(), diff)
+        detail = build_task(found, run, run_dir(self.root, id8), self._context(), diff)
+        tasks = self.cache.snapshot().tasks  # Start asks first while a higher card waits (T2583)
+        mark(detail["card"], backlog(tasks, dict(load_runs(self.root, [t.id for t in tasks]))))
+        return detail
 
     def shot(self, id8: str, name: str) -> bytes | None:
         """Bytes of the png at `name` (a/b.png) under `<run dir>/shots`; None when it resolves outside it."""
@@ -171,6 +175,7 @@ class ServiceBackend:
     worker_log = tracking.worker_log  # the tail of a child's newest worker log
     wont = dropping.wont  # Won't do click (T2045)
     done_manually = dropping.done_manually  # Done manually click (T2064)
+    priority = priorities.set_priority  # Priority pick (T2583)
     set_credits_fallback = _credits_fallback  # POST /api/settings/credits-fallback
 
     subscribe = livefeed.subscribe  # GET /api/live: this cycle's activity, then the live events

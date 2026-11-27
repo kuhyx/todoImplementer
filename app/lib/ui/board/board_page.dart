@@ -8,6 +8,7 @@ import 'dart:async';
 import 'package:design_system/design_system.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:todo_implementer/model/backlog_order.dart';
 import 'package:todo_implementer/model/board.dart';
 import 'package:todo_implementer/model/board_view.dart';
 import 'package:todo_implementer/model/json.dart';
@@ -166,7 +167,7 @@ class _BoardPageState extends State<BoardPage> {
                     )
                   : BoardGrid(
                       key: ValueKey('grid-$active'),
-                      groups: groupCards(cards, _state.sort),
+                      groups: columnGroups(active, cards, _state.sort),
                       onOpen: _open,
                       relay: widget.relay,
                     ),

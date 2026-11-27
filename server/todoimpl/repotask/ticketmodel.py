@@ -32,7 +32,7 @@ def for_card(card: object) -> str | None:
     return MODEL if lane.of_card(card) == lane.APP else None
 
 
-def mark(st: RunState, item: Item, run_dir: Path) -> None:
+def mark(st: RunState, item: Item, run_dir: Path | None) -> None:
     """Record (or drop) the ticket model before a turn."""
     if (model := for_item(item, run_dir)) is not None:
         st.extra[KEY] = model

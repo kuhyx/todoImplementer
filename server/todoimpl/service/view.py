@@ -85,6 +85,10 @@ class ItemView:
             raise TodoError(snap.error)
         return [t for t in snap.tasks if status in (None, t.status) and repo in (None, t.repo)]
 
+    def set_note_priority(self, note: str, priority: str) -> None:
+        """Set one note's priority (a card's priority pick, T2583); the caller refreshes the cache."""
+        self._client.update_task(note, priority=priority)
+
     def update_task(self, card: str, **fields: str | None) -> CardTask:
         """Change note-level fields (status, priority, repo); title/body edits are refused."""
         if set(fields) - PASS_THROUGH:

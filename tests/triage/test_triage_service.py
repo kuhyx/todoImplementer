@@ -40,7 +40,13 @@ def test_t2070_a_manual_note_stays_yours_with_start_and_the_two_hand_endings(rig
     rig.backend.cache.refresh()
     shown = rig.card(card)
     assert (shown["triage"], shown["status"]) == ("manual", "yours")
-    assert [a["id"] for a in shown["actions"]] == ["start", "wont", "done-manually", "model"]  # T2478
+    assert [a["id"] for a in shown["actions"]] == [
+        "start",
+        "wont",
+        "done-manually",
+        "model",
+        "priority",
+    ]  # T2478, T2583
 
 
 def test_t2070_an_existing_repo_label_sets_the_repo_and_the_card_joins_that_repos(

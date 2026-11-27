@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://todoimplementer.local/contracts/priority.schema.json",
+  "title": "Priority and who asked (T2580, T2583)",
+  "description": "Defs the card and its actions reference: the card's lane and the higher Backlog card a Start would jump.",
+  "$defs": {
+    "lane": {
+      "enum": ["kuhy", "board", "app"],
+      "description": "Who asked for the work the run starts with (repotask/lane.py): kuhy, the board itself, or other apps' error reports (always low priority). Backlog sorts kuhy first at equal priority."
+    },
+    "waits": {
+      "type": "object",
+      "description": "start only (T2583): a Backlog card of higher priority waits; the page and the app ask 'start anyway?' in a modal before the click goes out. The highest such card is named.",
+      "properties": {
+        "id": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/item_id"},
+        "title": {"type": "string", "minLength": 1},
+        "priority": {"type": "string"}
+      },
+      "required": ["id", "title", "priority"],
+      "additionalProperties": false
+    }
+  }
+}

@@ -98,6 +98,13 @@
       "required": ["part", "title", "body"],
       "additionalProperties": false
     },
+    "priority": {
+      "type": "object",
+      "description": "Priority picker (T2583): set the card's priority on every note behind it (a repo card: the notes of its open parts that are not other apps' reports).",
+      "properties": {"priority": {"enum": ["high", "medium", "low"]}},
+      "required": ["priority"],
+      "additionalProperties": false
+    },
     "credits_fallback": {
       "type": "object",
       "description": "POST /api/settings/credits-fallback (not task-scoped): turn the free API credits fallback on or off for every run.",
