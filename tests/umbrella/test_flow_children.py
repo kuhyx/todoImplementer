@@ -26,7 +26,7 @@ def _run(world: Env, sched: Scheduler, stage: str) -> Any:
         sched.close()
 
 
-def test_an_escalated_child_gets_one_opus_attempt_and_the_width_stays(world: Env, free: Free) -> None:
+def test_an_escalated_child_gets_one_more_effort_attempt_and_the_width_stays(world: Env, free: Free) -> None:
     sched, _ = boot(world, 1)
     world.script(NOTE, *manager("CHILD kuhyx/alpha: escalate the worker looped"))
     world.script("umbr0001-1", {"_fake": "result", "text": "C1: done\n\nD: done"})
@@ -36,7 +36,7 @@ def test_an_escalated_child_gets_one_opus_attempt_and_the_width_stays(world: Env
     assert rec["rounds"][0]["next"] == 1
     assert rec["rounds"][0]["children"][0]["checks"] is None
     impl = [c for c in world.calls() if "Implement stage" in str(c["prompt"])]
-    assert [c["model"] for c in impl] == ["opus"]
+    assert [c["model"] for c in impl] == ["sonnet"]  # the default model (T2615)
     assert "the worker looped" in str(impl[0]["prompt"])
     assert "Escalation:" in str(impl[0]["prompt"])
 

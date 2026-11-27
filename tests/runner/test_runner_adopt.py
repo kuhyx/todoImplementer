@@ -81,7 +81,7 @@ def test_a_finished_turn_of_another_role_is_charged_and_dropped_then_the_asked_t
     assert res.text == "Did the thing.\n\nD: done"  # the implement turn's own result, not the plan's
     assert st.cost_usd == 0.26  # the plan turn's 0.25 was kept, then the implement turn's 0.01
     assert st.sessions["plan"]["session_id"] == "s1"
-    assert [c["model"] for c in world.calls()] == ["opus"]
+    assert [c["model"] for c in world.calls()] == ["sonnet"]
 
 
 def test_turns_that_keep_getting_lost_stop_the_run_for_kuhy(

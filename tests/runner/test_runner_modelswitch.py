@@ -83,16 +83,16 @@ def test_t2216_a_live_turn_is_cut_and_resumed_on_the_picked_model(world: Env) ->
         wait(
             lambda: any('"init"' in p.read_text() for p in run.glob("implement-*.stream.jsonl"))
         )  # its session
-        sched.set_model(CARD, SONNET)
+        sched.set_model(CARD, OPUS)  # the default is Sonnet: a real switch
         assert modelpick.PIN not in state(world).extra  # the live drive owns state.json until it ends
         st = wait_stage(world, sched, "gate", turns=3)
         cut, resumed, live = world.calls()[1:]
-        assert (resumed["model"], live["model"]) == (SONNET, SONNET)
+        assert (resumed["model"], live["model"]) == (OPUS, OPUS)
         assert resumed["resume"] is not None
         assert resumed["resume"] == st.sessions["implement"]["session_id"]
         assert "mid-turn" in str(resumed["prompt"])
-        assert cut["model"] == "opus"
-        assert st.extra[modelpick.PIN] == SONNET
+        assert cut["model"] == "sonnet"  # the default role model
+        assert st.extra[modelpick.PIN] == OPUS
         assert not (world.root / CARD / modelswitch.FILE).exists()
     finally:
         sched.close()

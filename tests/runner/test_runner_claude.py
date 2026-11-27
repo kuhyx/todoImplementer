@@ -13,7 +13,7 @@ def test_build_has_the_agreed_argv_and_env(world: Env, tmp_path: Path) -> None:
         "-p",
         "override\ngo",
         "--model",
-        "opus",
+        "sonnet",
         "--output-format",
         "stream-json",
         "--verbose",
@@ -48,12 +48,12 @@ def test_classify_is_read_only_and_models_follow_roles(
     assert "--resume" not in inv.argv
     assert inv.argv[-9:-4] == ("Bash(git push:*)", "Bash(git push *)", "Edit", "Write", "NotebookEdit")
     assert [claude.model_for(r) for r in ("spec", "plan", "implement", "classify")] == [
-        "opus",
-        "opus",
-        "opus",
+        "sonnet",
+        "sonnet",
+        "sonnet",
         "haiku",
     ]
-    assert claude.model_for("manager") == "opus"
+    assert claude.model_for("manager") == "sonnet"
     monkeypatch.setenv("TODOIMPL_MODEL", "haiku")
     assert claude.model_for("implement") == "haiku"
 

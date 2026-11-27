@@ -142,7 +142,7 @@ def _brief(u: Umbrella, cur: dict[str, Any], kids: list[Child]) -> str:
 
 
 def _manage(u: Umbrella, cur: dict[str, Any], live: list[Child]) -> None:
-    """Run the Opus manager over the live children; a failed turn escalates all of them."""
+    """Run the Sonnet manager over the live children; a failed turn escalates all of them."""
     d = u.d
     for kid in live:  # a round begun before the rules existed gets them now; a coached file keeps its edits
         _ensure_rules(child_dir(u.run_dir, kid.cid), kid)
@@ -151,7 +151,7 @@ def _manage(u: Umbrella, cur: dict[str, Any], live: list[Child]) -> None:
     # turn does not read it: run_turn follows the recorded turn before it builds a prompt)
     try:
         verdicts = ramp.parse_verdicts(d.turn("manager", "implement", prompt="manager").text, live)
-    except KilledError:  # a killed manager is retried (and then asks kuhy), never a reason to spend Opus
+    except KilledError:  # a killed manager is retried (and then asks kuhy), never a reason to escalate
         raise
     except NeedsYouError as exc:
         verdicts = ramp.all_escalate(live, exc.text)
@@ -212,7 +212,7 @@ def _finish(u: Umbrella, cur: dict[str, Any], kids: list[Child]) -> None:
         st = child_state(u.run_dir, cid)
         assert st is not None  # noqa: S101 - _prepare saved it
         st.extra["verdict"] = {"kind": verdict.kind, "detail": verdict.detail}
-        if verdict.kind == "escalate":  # the one Opus attempt
+        if verdict.kind == "escalate":  # the one higher-effort attempt
             st.extra.setdefault("notes", []).append(escalated(verdict.detail))
             st.stage = "implement"
         elif green is False:

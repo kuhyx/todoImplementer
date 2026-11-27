@@ -49,7 +49,7 @@ def test_t2478_with_no_pick_start_runs_on_the_role_model(world: Env) -> None:
         sched.start(CARD)
         st = wait_stage(world, sched, "gate", turns=3)
         assert modelpick.PIN not in st.extra
-        assert {c["model"] for c in world.calls()} == {"opus"}
+        assert {c["model"] for c in world.calls()} == {"sonnet"}
     finally:
         sched.close()
 

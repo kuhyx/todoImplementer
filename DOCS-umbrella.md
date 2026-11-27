@@ -1,7 +1,7 @@
 # Umbrella notes: many per-repo tasks, one card, an exponential ramp
 
 kuhy's design (2026-11-10). About 56 "Make <app> text-free (textgate-rework)" sections sit in per-repo notes. One
-umbrella note collects them; one Opus manager runs free workers for them in rounds that widen 1, 2, 4, 8 while the
+umbrella note collects them; one Sonnet manager runs free workers for them in rounds that widen 1, 2, 4, 8 while the
 free tier proves itself. Code: `server/todoimpl/umbrella/`, `runner/freeworker.py`, `prompts/umbrella.py`,
 `board/umbrella.py`. The free tier of single notes is `DOCS-tiers.md`; the tracking view of a run is `DOCS-tracking.md`;
 kills, reboots and outages are `DOCS-resilience.md`.
@@ -59,7 +59,7 @@ Round width `w` starts at 1. Each round:
 2. The server asks `freegate.check` per child: public repo, gateway answering, tools present. Anything else = **not
    free**: the manager does that child itself and it never counts as clean. A dead gateway also writes its exact
    error to the issue log.
-3. ONE manager turn (role `manager`, model opus, `--effort high` (`claude.ROLE_EFFORT`, T2471), a fresh session per round, cwd the umbrella run dir) gets
+3. ONE manager turn (role `manager`, model sonnet (T2615), `--effort high` (`claude.ROLE_EFFORT`, T2471), a fresh session per round, cwd the umbrella run dir) gets
    `prompts/umbrella.py`: the children with worktree, task file, worker log and `free: yes|no`. It starts the free
    workers in parallel, watches them, fixes what they hit (permission blocks, broken edits, failing checks), finishes
    or redoes their work, runs each child's checks, and ends with one line per child:
@@ -72,7 +72,7 @@ Round width `w` starts at 1. Each round:
    success) or `coached <n>` with n below the cap of 3 (free success after coaching: it proves the coached prompt
    works), it was free, and its checks are green. `fixed` (the manager did the edits) never counts. If every child of the round counts, `w` doubles for the next round; otherwise it stays.
 6. Each child then goes through its own pipeline in its own thread, while the next round starts: `escalate` -> one
-   higher-effort Opus implement attempt (with `prompts/tier.escalated`); red checks -> a fix turn (the usual `check_fixes` path);
+   higher-effort Sonnet implement attempt (with `prompts/tier.escalated`); red checks -> a fix turn (the usual `check_fixes` path);
    otherwise Live check -> Checks -> Ship: every child ships when its checks pass, with or without a `done_check`
    (kuhy, 2026-11-10: T1923; since 2026-11-19 every card does, T2060), and a child left at its gate by an older server ships on the next drive,
    and so does a child whose Ship a restart cut (T1905, T1988). Children are normal runs of their repo: `Todo: <source

@@ -180,7 +180,7 @@ class Pool:
 
 
 def fresh_state(kid: Child, round_n: int, now: float, *, auto_ship: bool) -> store.RunState:
-    """Return the run state of a child entering its first round: implement stage, normal (Opus) tier."""
+    """Return the run state of a child entering its first round: implement stage, normal (Sonnet) tier."""
     st = store.RunState(
         task_id=kid.cid, stage="implement", repo=kid.repo, started_at=now, auto_ship=auto_ship
     )

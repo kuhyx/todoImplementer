@@ -32,6 +32,9 @@ def test_the_ledger_cost_is_scaled_to_the_billed_cost_by_the_factor(root: Path) 
 
 
 def test_each_running_credit_turn_reserves_four_dollars_of_the_cap_on_opus(root: Path) -> None:
+    setting.settings_path().write_text(
+        '{"credits_monthly_usd": 200, "credits_month_start_day": 1, "credits_model": "claude-opus-5-5"}'
+    )  # Opus: a $4 reserve
     spend(root, 78.0, WEEK2 - 3600)  # not within $20 of the cap: only the reserve counts
     for n in range(5):
         live.begin(root, f"card{n:04d}-0")
