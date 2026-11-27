@@ -13,20 +13,19 @@ from typing import TYPE_CHECKING
 
 from todoimpl import atomic
 
-from . import cards, repos, steps, tickets
+from . import cards, ctxfile, repos, steps, tickets
 
 if TYPE_CHECKING:
     from collections.abc import Callable
     from pathlib import Path
 
-FILE = "nolimit-context.md"
 BUDGET = 45.0
 STAMP = "<!-- head {sha} -->"
 
 
 def path(run_dir: Path) -> Path:
     """Return the card's context file."""
-    return run_dir / FILE
+    return ctxfile.path(run_dir)
 
 
 def _fresh(card: cards.Card, head: str) -> bool:

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from todoimpl.nolimit.context import path
+from todoimpl.nolimit.ctxfile import path
 
 if TYPE_CHECKING:
     from pathlib import Path
