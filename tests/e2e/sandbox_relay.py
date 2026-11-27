@@ -28,5 +28,6 @@ def env(work: Path, namespace: str, real_home: Path | None = None) -> dict[str, 
         link = work / "home" / rel
         link.parent.mkdir(parents=True, exist_ok=True)
         if not link.is_symlink():
+            link.unlink(missing_ok=True)  # the server's atomic save swaps a link for a file (T2620)
             link.symlink_to(real / rel)
     return {"TODOIMPL_RELAY": "1", "TODOIMPL_RELAY_NAMESPACE": namespace}
