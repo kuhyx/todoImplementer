@@ -17,19 +17,33 @@ from pathlib import Path
 from .output import newest
 
 PROJECTS = Path.home() / ".claude" / "projects"
-HEAD = 1 << 20  # bytes of the init line read: it lists every tool, 8 KB today
+HEAD = 1 << 20  # bytes read for the init line: it lists every tool, 8 KB today
 UNSAFE = re.compile(r"[^A-Za-z0-9]")  # Claude Code names a project's dir by its cwd, every other char a dash
 
 
+def _init(line: bytes) -> tuple[str, str] | None:
+    """Return the cwd and session id of a `system init` line, None for any other line."""
+    try:
+        row = json.loads(line)
+    except ValueError:  # the head cut it, or claude is mid-write
+        return None
+    if not isinstance(row, dict) or (row.get("type"), row.get("subtype")) != ("system", "init"):
+        return None
+    cwd, sid = row.get("cwd"), row.get("session_id")
+    return (cwd, sid) if isinstance(cwd, str) and isinstance(sid, str) and sid else None
+
+
 def _session(stream: Path) -> tuple[str, str] | None:
-    """Return the turn's cwd and session id from the stream's first line, None when it names neither."""
+    """Return the turn's cwd and session id from the stream's `system init` line in its first `HEAD` bytes.
+
+    Not always the first line: claude may write a `system dev_intent` line before it (17 of 293 streams).
+    """
     try:
         with stream.open("rb") as fh:
-            row = json.loads(fh.readline(HEAD))
-    except OSError, ValueError:
+            head = fh.read(HEAD)
+    except OSError:
         return None
-    cwd, sid = (row.get("cwd"), row.get("session_id")) if isinstance(row, dict) else (None, None)
-    return (cwd, sid) if isinstance(cwd, str) and isinstance(sid, str) and sid else None
+    return next((found for line in head.splitlines() if (found := _init(line)) is not None), None)
 
 
 def until(stream: Path, start: float) -> float | None:

@@ -112,6 +112,17 @@ def test_t2561_a_stream_with_no_session_reads_no_transcript(tmp_path: Path) -> N
     stream.write_text('{"type": "system", "subtype": "init", "cwd": "/w/a", "session_id": "s"', "utf-8")
     assert subagent.until(stream, 0.0) is None  # a torn first line
     assert subagent.until(run_dir / "gone.stream.jsonl", 0.0) is None
+    stream.write_text('[1]\n{"type": "system", "subtype": "status"}\n', "utf-8")
+    assert subagent.until(stream, 0.0) is None  # no init line at all
+
+
+def test_t2561_an_init_line_after_a_dev_intent_line_is_found(tmp_path: Path) -> None:
+    run_dir = _card(tmp_path)
+    stream = run_dir / f"{STEM}.stream.jsonl"
+    intent = {"type": "system", "subtype": "dev_intent", "kind": "android_app", "session_id": SID}
+    stream.write_text(json.dumps(intent) + "\n" + stream.read_text("utf-8"), "utf-8")
+    _transcript(THOUGHT)
+    assert subagent.until(stream, 0.0) == pytest.approx(AT + 27.1)
 
 
 def test_t2561_a_transcript_that_vanished_is_skipped(tmp_path: Path) -> None:
