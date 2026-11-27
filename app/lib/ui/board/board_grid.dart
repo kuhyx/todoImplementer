@@ -7,6 +7,7 @@ import 'package:design_system/design_system.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:todo_implementer/model/board.dart';
 import 'package:todo_implementer/model/board_view.dart';
+import 'package:todo_implementer/sync/board_relay.dart';
 import 'package:todo_implementer/ui/board/card_tile.dart';
 
 /// One grid cell: a group head or a card.
@@ -23,13 +24,21 @@ List<GridItem> gridItems(List<CardGroup> groups) => [
 /// The column grid.
 class BoardGrid extends StatelessWidget {
   /// Creates the grid.
-  const new({required this.groups, required this.onOpen, super.key});
+  const new({
+    required this.groups,
+    required this.onOpen,
+    this.relay,
+    super.key,
+  });
 
   /// The column's groups.
   final List<CardGroup> groups;
 
   /// Opens a card's sheet.
   final ValueChanged<TaskCard> onOpen;
+
+  /// Loads the tiles' note images.
+  final BoardRelay? relay;
 
   @override
   Widget build(BuildContext context) {
@@ -44,6 +53,7 @@ class BoardGrid extends StatelessWidget {
           return CardTile(
             key: ValueKey('card-${card.id}'),
             card: card,
+            relay: relay,
             onOpen: () => onOpen(card),
           );
         }

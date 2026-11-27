@@ -21,7 +21,11 @@ Json _withPics(Json c) => {
   'images': [_pic],
 };
 
-Future<FakeRelay> _sheet(WidgetTester tester, {RelayOutcome? image}) async {
+Future<FakeRelay> _sheet(
+  WidgetTester tester, {
+  RelayOutcome? image,
+  bool open = true,
+}) async {
   pixel6a(tester);
   final relay = FakeRelay()
     ..outcomes['image_get'] =
@@ -34,6 +38,7 @@ Future<FakeRelay> _sheet(WidgetTester tester, {RelayOutcome? image}) async {
   );
   relay.push(boardJson([_withPics(card('c1'))]));
   await tester.pumpAndSettle();
+  if (!open) return relay;
   await tester.tap(find.byKey(const ValueKey('card-c1')));
   await tester.pumpAndSettle();
   return relay;
@@ -79,6 +84,14 @@ void main() {
     },
   );
 
+  testWidgets('[T2535] the grid tile shows the first image', (tester) async {
+    await _sheet(tester, open: false);
+    expect(
+      find.byKey(const ValueKey('tile-image-3d6cd2ea-de63/1.jpg')),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('[T2535] an image the PC cannot send shows a broken glyph', (
     tester,
   ) async {
@@ -86,7 +99,10 @@ void main() {
       tester,
       image: const RelayFailed(code: 'not_found', error: 'gone', retry: false),
     );
-    expect(find.byIcon(Icons.broken_image_outlined), findsOneWidget);
+    expect(
+      find.byIcon(Icons.broken_image_outlined),
+      findsNWidgets(2),
+    ); // tile + sheet
   });
 
   testWidgets('[T2535] the detail page shows the note images too', (

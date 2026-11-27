@@ -6,18 +6,23 @@ library;
 import 'package:design_system/design_system.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:todo_implementer/model/board.dart';
+import 'package:todo_implementer/sync/board_relay.dart';
 import 'package:todo_implementer/ui/board/glyphs.dart';
+import 'package:todo_implementer/ui/board/note_images.dart';
 
 /// The grid cell of one card.
 class CardTile extends StatelessWidget {
   /// Creates the tile.
-  const new({required this.card, required this.onOpen, super.key});
+  const new({required this.card, required this.onOpen, this.relay, super.key});
 
   /// The card.
   final TaskCard card;
 
   /// Opens the card sheet.
   final VoidCallback onOpen;
+
+  /// Loads the first note image as a thumbnail (T2535); none without it.
+  final BoardRelay? relay;
 
   @override
   Widget build(BuildContext context) {
@@ -43,14 +48,31 @@ class CardTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: Text(
-                    card.title,
-                    maxLines: 4,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppPalette.textOnDark,
-                      fontSize: AppTextSize.label,
-                    ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          card.title,
+                          maxLines: 4,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: AppPalette.textOnDark,
+                            fontSize: AppTextSize.label,
+                          ),
+                        ),
+                      ),
+                      if ((relay, card.images.firstOrNull) case (
+                        final r?,
+                        final first?,
+                      ))
+                        NoteThumb(
+                          image: first,
+                          relay: r,
+                          size: 48,
+                          zoom: false,
+                        ),
+                    ],
                   ),
                 ),
                 if (repo != null)

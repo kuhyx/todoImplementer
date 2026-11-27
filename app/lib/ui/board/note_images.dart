@@ -65,23 +65,41 @@ class NoteImages extends StatelessWidget {
       child: Wrap(
         spacing: AppSpacing.sm,
         runSpacing: AppSpacing.sm,
-        children: [for (final i in images) _Thumb(image: i, relay: relay)],
+        children: [for (final i in images) NoteThumb(image: i, relay: relay)],
       ),
     );
   }
 }
 
-class _Thumb extends StatefulWidget {
-  const new({required this.image, required this.relay});
+/// One note image as a square thumbnail; [zoom] makes a tap open it full
+/// screen (off on the board tile, whose own tap opens the card sheet).
+class NoteThumb extends StatefulWidget {
+  /// Creates the thumbnail.
+  const new({
+    required this.image,
+    required this.relay,
+    this.size = kThumb,
+    this.zoom = true,
+    super.key,
+  });
 
+  /// The image.
   final NoteImage image;
+
+  /// Where `image_get` goes.
   final BoardRelay relay;
 
+  /// Edge in logical pixels.
+  final double size;
+
+  /// Whether a tap opens it full screen.
+  final bool zoom;
+
   @override
-  State<_Thumb> createState() => _ThumbState();
+  State<NoteThumb> createState() => _ThumbState();
 }
 
-class _ThumbState extends State<_Thumb> {
+class _ThumbState extends State<NoteThumb> {
   late final Future<Uint8List?> _bytes = loadNoteImage(
     widget.relay,
     widget.image,
@@ -105,7 +123,7 @@ class _ThumbState extends State<_Thumb> {
 
   @override
   Widget build(BuildContext context) => SizedBox.square(
-    dimension: kThumb,
+    dimension: widget.size,
     child: FutureBuilder<Uint8List?>(
       future: _bytes,
       builder: (_, snap) {
@@ -119,18 +137,25 @@ class _ThumbState extends State<_Thumb> {
             color: AppPalette.danger,
           );
         }
+        final thumb = ClipRRect(
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+          child: Image.memory(
+            bytes,
+            fit: BoxFit.cover,
+            cacheWidth: (widget.size * 3).round(),
+            semanticLabel: widget.image.file,
+          ),
+        );
+        if (!widget.zoom) {
+          return KeyedSubtree(
+            key: ValueKey('tile-image-${widget.image.path}'),
+            child: thumb,
+          );
+        }
         return InkWell(
           key: ValueKey('note-image-${widget.image.path}'),
           onTap: () => _open(bytes),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(AppRadius.sm),
-            child: Image.memory(
-              bytes,
-              fit: BoxFit.cover,
-              cacheWidth: (kThumb * 3).round(),
-              semanticLabel: widget.image.file,
-            ),
-          ),
+          child: thumb,
         );
       },
     ),

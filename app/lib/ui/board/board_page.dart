@@ -168,6 +168,7 @@ class _BoardPageState extends State<BoardPage> {
                       key: ValueKey('grid-$active'),
                       groups: groupCards(cards, _state.sort),
                       onOpen: _open,
+                      relay: widget.relay,
                     ),
             ),
           ],
