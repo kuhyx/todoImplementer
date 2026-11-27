@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import http.client
 import json
+import os
 import urllib.error
 import urllib.request
 from collections.abc import Callable
@@ -47,9 +48,13 @@ def _error(body: str) -> tuple[str, str]:
 
 
 def verify(
-    key: str, transport: Transport = urllib_transport, *, url: str = MODELS_URL, timeout: float = 10.0
+    key: str, transport: Transport = urllib_transport, *, url: str | None = None, timeout: float = 10.0
 ) -> Verdict:
-    """Classify the key: valid (200), invalid (rejected), check_failed (network, 5xx, anything else)."""
+    """Classify the key: valid (200), invalid (rejected), check_failed (network, 5xx, anything else).
+
+    `url` defaults to `$TODOIMPL_MODELS_URL` (a sandbox's local fake), else the real models endpoint.
+    """
+    url = url or os.environ.get("TODOIMPL_MODELS_URL") or MODELS_URL
     headers = {"x-api-key": key, "anthropic-version": API_VERSION}
     try:
         code, body = transport(url, headers, timeout)

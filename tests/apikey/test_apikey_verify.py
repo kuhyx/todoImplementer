@@ -93,3 +93,12 @@ def test_urllib_transport_against_a_loopback_server() -> None:
         server.shutdown()
         server.server_close()
     assert verify.verify(KEY, url=url, timeout=2).outcome == "check_failed"  # nothing listens any more
+
+
+def test_t2532_models_url_override_points_the_check_at_a_local_fake(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[tuple[str, dict[str, str]]] = []
+    monkeypatch.setenv("TODOIMPL_MODELS_URL", "http://127.0.0.1:9/v1/models")
+    verify.verify(KEY, fake((200, "{}"), seen))
+    monkeypatch.delenv("TODOIMPL_MODELS_URL")
+    verify.verify(KEY, fake((200, "{}"), seen))
+    assert [url for url, _ in seen] == ["http://127.0.0.1:9/v1/models", verify.MODELS_URL]

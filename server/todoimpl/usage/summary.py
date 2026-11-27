@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from todoimpl.credits import route
 from todoimpl.runner.oneshot import spend as oneshot_spend
-from todoimpl.usage import oauth
+from todoimpl.usage import hold, oauth
 from todoimpl.usage.autonomy import autonomy_summary
 from todoimpl.usage.cost import session_costs
 from todoimpl.usage.events import iter_events, per_file, stream_files
@@ -134,6 +134,8 @@ def usage_summary(
             "active": active,
             "until": limit.until if active else None,
             "credits": route.view(root, now),
+            "weekly_hold": hold.level(root, now),
+            "weekly_used": hold.used(root, now),
         },
         "cost": {
             "today_usd": today_usd,
