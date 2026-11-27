@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 
 from adoptfakes import env, go, rig
 from todoimpl.board.state import RunState
+from todoimpl.runner import session
 from todoimpl.runner.turn import run_turn
 
 if TYPE_CHECKING:
@@ -24,7 +25,7 @@ GONE = "No conversation found with session ID: gone-1"
 def _failed_resume() -> dict[str, str]:
     result = {
         "type": "result", "subtype": "error_during_execution", "is_error": True, "num_turns": 0,
-        "session_id": "new-2", "errors": [GONE],
+        "session_id": "gone-1", "result": "", "errors": [GONE],
     }  # fmt: skip
     return {"_fake": "raw", "text": json.dumps(result)}
 
@@ -42,3 +43,11 @@ def test_t2534_a_lost_session_is_forgotten_and_the_retry_starts_fresh(world: Env
     assert "plan" not in st.sessions
     run_turn(env(run_dir, wt, events), st, "plan", go)
     assert [c["resume"] for c in world.calls()] == ["gone-1", None]
+
+
+def test_t2534_both_claude_texts_count_as_a_lost_session() -> None:
+    assert session.lost(
+        "Error: --resume requires a valid session ID or session title when used with --print."
+    )
+    assert session.lost(GONE)
+    assert not session.lost("rate limited")
