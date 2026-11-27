@@ -30,6 +30,11 @@ def _pending(error: type[Exception], since: float, now: float) -> Exception:
     return error(f"{PENDING} for {max(0, int(now - since)) // 60} min (Batches API, half price)")
 
 
+def failed_at(now: float, exc: Exception, retry_s: float) -> float:
+    """Return when a failed one-shot counts as failed: a pending batch is asked again after `POLL_S`."""
+    return now - (retry_s - batch.POLL_S) if PENDING in str(exc) else now
+
+
 def run(  # noqa: PLR0913 - one call, keyword-only
     prompt: str,
     *,

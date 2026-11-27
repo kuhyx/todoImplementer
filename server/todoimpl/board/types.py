@@ -83,7 +83,10 @@ class Limit:
 
     def to_dict(self) -> dict[str, object]:
         """Return the JSON object of the contract."""
-        return {"active": self.active, "until": self.until, "credits": self.credits.to_dict()}
+        return {
+            "active": self.active, "until": self.until, "credits": self.credits.to_dict(),
+            "weekly_hold": self.weekly_hold, "weekly_used": self.weekly_used,
+        }  # fmt: skip
 
 
 def fmt_when(epoch: float, now: float) -> str:

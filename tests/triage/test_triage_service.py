@@ -9,6 +9,7 @@ from conftest import Triage
 from contract_lib import validate
 from servicefakes import Rig
 from todoimpl.board.state import run_dir
+from todoimpl.credits import batch
 from todoimpl.repotask.ids import repo_card_id
 from todoimpl.todo_mcp.model import TodoError
 from todoimpl.triage import label, service
@@ -152,3 +153,14 @@ def test_t2070_a_note_of_urls_is_labelled_research_and_startable(rig: Rig, triag
 def test_t2070_adding_facts_to_a_missing_record_is_a_no_op(tmp_path: Path) -> None:
     label.update(tmp_path, error="x")
     assert label.load(tmp_path) is None
+
+
+def test_t2532_a_pending_batch_is_asked_again_after_a_minute(rig: Rig, triage: Make) -> None:
+    card = rig.note("https://x.example/idea", repo=None)
+    run = triage(ClassifyError("batch pending for 0 min (Batches API, half price)"), {"label": "research"})
+    assert run.service.tick() == 0
+    run.now += batch.POLL_S - 1
+    assert run.service.tick() == 0  # not yet a minute: the batch is not asked about
+    run.now += 1
+    assert run.service.tick() == 1
+    assert label.label_of(run_dir(rig.root, card)) == "research"

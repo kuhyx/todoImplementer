@@ -17,6 +17,7 @@ from todoimpl.board.repos import repo_path
 from todoimpl.board.state import RunState, load, run_dir, save
 from todoimpl.board.types import is_manual
 from todoimpl.repotask.ids import repo_card_id
+from todoimpl.runner import batchshot
 from todoimpl.todo_mcp.model import TodoError
 from todoimpl.umbrella.note import is_umbrella
 
@@ -107,7 +108,7 @@ class TriageService:
                 verdict = self._verdict(card, repos, files)
             except ClassifyError as exc:
                 log.warning("triage of %s failed: %s", card.id, exc)
-                self._failed[card.id] = self._clock()
+                self._failed[card.id] = batchshot.failed_at(self._clock(), exc, RETRY_S)  # T2532
                 continue
             directory = run_dir(self.root, card.id)
             label.save(directory, verdict, label.digest(card.title, card.body), self._clock())
