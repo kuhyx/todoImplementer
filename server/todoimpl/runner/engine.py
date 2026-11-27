@@ -164,7 +164,7 @@ class Engine:
                 if until is None and (self.root / UNTIL_FILE).exists():
                     limits.clear(self.root)
                 wake = IDLE_WAIT if until is None else min(until - now, IDLE_WAIT)
-                for card in [c for c in self._queue if c not in self._active]:
+                for card in files.queue_order(self.root, [c for c in self._queue if c not in self._active]):
                     if (hold := self._retry_wait(card, now)) > 0:
                         wake = min(wake, hold)
                     elif chain.admits(self.root, now, card) and self._admit(card):  # a route can run it

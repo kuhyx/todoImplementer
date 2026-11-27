@@ -14,6 +14,7 @@ from todoimpl.repotask.prompt import addendum
 from . import chain, checks, deploy, phone, resume, retry, stepwatch, tags, tiering, turncheck, worktree
 from .ctxcap import go_on, mark, seed
 from .files import KilledError, NeedsYouError
+from .partrefresh import before_turn
 from .permit import with_grant
 from .prompting import Ask, prompt_for
 from .repolock import RepoLocks
@@ -182,7 +183,7 @@ class Driver:
         choice = chain.choose(ctx.root, ctx.now(), st)
         if choice.route is None:  # the plan limit holds and the free credits cannot take over
             raise LimitHitError(choice.until or ctx.now())
-        nudge = st.extra.pop("nudge", False)
+        nudge = before_turn(self, role)  # an implement turn takes the fresh parts (T2581)
         cont = bool(st.extra.pop("r_continue", False))
         reseed = seed(st, role)  # the role's last session was cut at the context cap: this one is fresh
         new_session = bool(st.extra.pop("fresh", False)) or bool(reseed)

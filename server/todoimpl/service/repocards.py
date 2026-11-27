@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 from todoimpl.asks import view as asks_view
 from todoimpl.board.state import run_dir
 from todoimpl.board.types import is_manual
+from todoimpl.repotask import lane
 from todoimpl.repotask.ids import norm, repo_card_id
 from todoimpl.repotask.legacy import Older
 from todoimpl.repotask.model import Part
@@ -54,12 +55,12 @@ def _rank(priority: str) -> int:
     return PRIORITIES.index(priority) if priority in PRIORITIES else MIDDLE
 
 
-def _order(entry: _Entry) -> tuple[int, int, int, int, str, int]:
-    """Priority first, then easiest: the smallest `Scan` count, else the shortest text; stable by note."""
+def _order(entry: _Entry) -> tuple[int, int, int, int, int, str, int]:
+    """Kuhy's parts first (T2580), then priority, then easiest (smallest `Scan` count, else shortest text)."""
     part = entry.part
     scan = scan_size(part.body)
     size = (0, scan, 0) if scan is not None else (1, 0, len(part.body))
-    return (_rank(part.priority), *size, part.note_id, part.index)
+    return (lane.rank(lane.of_text(part.body)), _rank(part.priority), *size, part.note_id, part.index)
 
 
 def _entries(note: Task, older: Callable[[str], Older], released: Released) -> list[_Entry]:
@@ -74,7 +75,8 @@ def _entries(note: Task, older: Callable[[str], Older], released: Released) -> l
         # A manual part never splits off as held: it stays on the repo card that keeps its answers (T1995);
         # once released it only learns where an older run left work.
         before = (Older() if human else Older(note=older(key).note)) if manual else older(key)
-        part = Part(key, item.note_id, item.index, item.title, item.body, note.priority, item.done_check,
+        level = lane.priority(note.priority, item.body)  # other apps' reports are always low (T2580)
+        part = Part(key, item.note_id, item.index, item.title, item.body, level, item.done_check,
                     human, before.held, before.note, manual=manual)  # fmt: skip
         found.append(_Entry(note, item, part))
     return found

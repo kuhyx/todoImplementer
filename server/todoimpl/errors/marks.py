@@ -17,6 +17,9 @@ PHONE_TRIES = "phone_tries"  # state.extra: how many times the phone wait began 
 SIGNATURE = re.compile(r"^[ \t]*Error-Signature:[ \t]*(\S+)[ \t]*$", re.MULTILINE)
 TOKENOPT = "tokenopt"  # state.extra: set when the reset watch starts its card ({key, at}; DOCS-credits.md)
 RESET_KEY = re.compile(r"^[ \t]*Reset-Key:[ \t]*(\S+)[ \t]*$", re.MULTILINE)  # its part's identity line
+BOARD_APP = "todoimplementer"  # the board's own report (stalls, parse misses)
+# Signatures the board files against any repo: slow gate steps, heavy builds, no-limit reds, stray edits
+BOARD_SIGNATURE = re.compile(r"^(?:stall-|slow-|heavy-|nolimit-)|-stray$")
 
 
 def signatures(text: str) -> list[str]:
@@ -39,9 +42,21 @@ def unattended(st: RunState) -> bool:
     return "umbrella_round" in st.extra or is_error_run(st) or is_tokenopt_run(st)
 
 
-def _own(text: str) -> bool:
-    """Say whether a part is the board's own: an error ticket or a token optimization."""
+def own(text: str) -> bool:
+    """Say whether a part is automatic: an error ticket or a token optimization (not written by kuhy)."""
     return bool(signatures(text)) or RESET_KEY.search(text) is not None
+
+
+def board_key(key: str) -> bool:
+    """Say whether an errors-loop key (`<app>:<signature>`) was filed by the board, not reported by an app."""
+    app, _, sig = key.partition(":")
+    return app == BOARD_APP or BOARD_SIGNATURE.search(sig) is not None
+
+
+def app_ticket(text: str) -> bool:
+    """Say whether a part is only other apps' error reports: lowest priority, idle-only starts, Sonnet."""
+    found = signatures(text)
+    return bool(found) and not any(board_key(key) for key in found)
 
 
 def ships_itself(st: RunState, ticked: Sequence[Part], body: str) -> bool:
@@ -52,4 +67,4 @@ def ships_itself(st: RunState, ticked: Sequence[Part], body: str) -> bool:
     """
     if not (is_error_run(st) or is_tokenopt_run(st)):
         return False
-    return all(_own(part.body) for part in ticked) if ticked else _own(body)
+    return all(own(part.body) for part in ticked) if ticked else own(body)

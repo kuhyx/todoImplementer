@@ -32,8 +32,12 @@ board made one card per `## ` section and the cards of one repo ran in parallel 
 ## Parts
 
 A part is `{key, note_id, index, title, body, priority, done_check, human, held}` (`repotask/model.py`); its `key`
-is the section card id `<note id8>-<index>`. Order of work: priority (high first), then easiest (the smallest
-`Scan ...: N items` number, else the shortest text), then note id and index. The run works them in this order.
+is the section card id `<note id8>-<index>`. Order of work (`repotask/lane.py`, T2580): kuhy's parts first, then
+the board's own automatic parts (`Error-Signature:` lines the board files, `Reset-Key:`), then other apps' error
+reports; inside a lane priority (high first; other apps' reports always count as low), then easiest (the smallest
+`Scan ...: N items` number, else the shortest text), then note id and index. The run works them in this order, and
+every implement turn re-reads them: a part kuhy adds mid-run is listed first and the turn is told to switch to it
+(the automatic part waits unticked, `runner/partrefresh.py`, T2581).
 
 | State | Meaning |
 |---|---|
@@ -218,7 +222,8 @@ and the line names the copy (`images.copy_into`). Every turn gets the images roo
 - Done `## [x]` sections are dropped by the migration (their record stays in the closed note's evidence).
 - Several distinct `done_check`s are chained with `&&`; one prose check makes the chain a "sentence" the board does
   not run (the plan criteria cover it).
-- The queue order of waiting runs is the queue's (first come, first served); no priority between repos.
+- Waiting runs leave the queue kuhy's lane first (`priority.json` `lane`, written at Start), then first come,
+  first served.
 
 ## A note after the ship (T2528)
 

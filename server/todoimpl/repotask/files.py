@@ -17,6 +17,8 @@ from typing import TYPE_CHECKING, Any
 from todoimpl.board.parts import TICKS
 from todoimpl.runner.files import read_json, write_json
 
+from . import lane
+
 if TYPE_CHECKING:
     from collections.abc import Iterator
     from pathlib import Path
@@ -60,14 +62,18 @@ def _top(found: list[Any]) -> str:
 
 
 def snapshot(run_dir: Path, item: Item, note_priority: str = "medium") -> None:
-    """Write the drive's parts in work order (the tick command checks their keys) and the card's priority.
+    """Write the drive's parts in work order (the tick command checks their keys), priority and lane.
 
-    The priority is the highest of the card's note and its parts' parent notes (T2533).
+    The priority is the highest of the card's note and its parts' parent notes (T2533); a card of only other
+    apps' reports is low. The lane orders queued runs: kuhy's before automatic ones (T2580).
     """
     if item.parts:
         rows = [{"key": p.key, "title": p.title, "human": p.human, "held": p.held} for p in item.parts]
         write_json(run_dir / PARTS, rows)
-    write_json(run_dir / PRIORITY, {"priority": _top([note_priority, *(p.priority for p in item.parts)])})
+    first = lane.first(item.parts, item.body)
+    own = note_priority if item.parts else lane.priority(note_priority, item.body)
+    level = _top([own, *(p.priority for p in item.parts)])
+    write_json(run_dir / PRIORITY, {"priority": level, "lane": first})
 
 
 def priority(run_dir: Path) -> str:
@@ -77,6 +83,18 @@ def priority(run_dir: Path) -> str:
     except OSError, ValueError:
         return "medium"
     return _top([data.get("priority")] if isinstance(data, dict) else [])
+
+
+def lane_rank(run_dir: Path) -> int:
+    """Return the queue rank of a run's lane as the last snapshot wrote it; kuhy's (0) when unknown."""
+    data = read_json(run_dir / PRIORITY)
+    found = data.get("lane") if isinstance(data, dict) else None
+    return lane.rank(found) if found in lane.ORDER else 0
+
+
+def queue_order(root: Path, cards: list[str]) -> list[str]:
+    """Return queued cards kuhy's first, then the board's, then other apps' reports; FIFO inside a lane."""
+    return sorted(cards, key=lambda card: lane_rank(root / card))
 
 
 def known(run_dir: Path) -> set[str]:
