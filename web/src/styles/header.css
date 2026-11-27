@@ -232,7 +232,8 @@
   background: var(--border);
 }
 
+/* Lit in the text colour: the meter's fill is already danger-red at 90 %, a red tick would vanish in it. */
 .r-tick[data-lit="true"] {
-  width: 2px;
-  background: var(--danger, var(--text));
+  width: 3px;
+  background: var(--text);
 }
