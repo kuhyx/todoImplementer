@@ -198,4 +198,39 @@ void main() {
       expect(_name(tester, 'aaaa1111-0'), 'Fix'); // live C12p: stayed raw
     },
   );
+
+  testWidgets('[T2621] an open sheet shows the title the save answered with', (
+    tester,
+  ) async {
+    const source =
+        'Fix ![](https://kuhy-cloud.duckdns.org/todo-images/f1/1.jpg)';
+    final relay = await _sheet(
+      tester,
+      parts: [
+        {..._part('aaaa1111-0', 'Fix', _open), 'title_source': source},
+      ],
+    );
+    relay.outcomes['task_part_edit'] = const RelayOk({
+      'ok': true,
+      'task': {
+        'parts': [
+          {
+            'id': 'aaaa1111-0',
+            'title': 'Fix more',
+            'title_source': '$source more',
+          },
+        ],
+      },
+    });
+    await tester.tap(_key('part-edit-aaaa1111-0'));
+    await tester.pumpAndSettle();
+    await tester.enterText(_key('part-title-aaaa1111-0'), '$source more');
+    await tester.tap(_key('part-save-aaaa1111-0'));
+    await tester.pumpAndSettle(); // the sheet's own card stays the old one
+    expect(_name(tester, 'aaaa1111-0'), 'Fix more'); // live: image markdown
+    await tester.tap(_key('part-edit-aaaa1111-0'));
+    await tester.pumpAndSettle();
+    final title = tester.widget<TextField>(_key('part-title-aaaa1111-0'));
+    expect(title.controller!.text, '$source more'); // never drops the image
+  });
 }

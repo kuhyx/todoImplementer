@@ -42,6 +42,7 @@ class _PartEditsState extends State<PartEdits> {
   final _body = TextEditingController();
   final _shown =
       <String, String>{}; // titles saved here, before the board says so
+  final _named = <String, String>{}; // the server's title for a saved one
   String? _open;
   String? _busy;
   RelayFailed? _failure;
@@ -81,6 +82,7 @@ class _PartEditsState extends State<PartEdits> {
       _busy = p.id;
       _failure = null;
       _shown[p.id] = title;
+      _named.remove(p.id);
     });
     final out = await widget.relay.send('task_part_edit', {
       'card': widget.card.id,
@@ -92,16 +94,21 @@ class _PartEditsState extends State<PartEdits> {
       _shown.remove(p.id);
       return _fail(out);
     }
-    setState(() => _open = null);
+    final named = partTitles((out as RelayOk).data)[p.id];
+    setState(() {
+      if (named != null) _named[p.id] = named;
+      _open = null;
+    });
   }
 
-  /// The saved title shows until the board carries it; then the server's
-  /// own title, which drops image markdown (T2614, T2619).
+  /// The saved title shows until the board carries it; the server's own
+  /// title drops image markdown, from the save's answer while the sheet's
+  /// card is still the old one (T2614, T2619, T2621).
   String _label(RepoPart p) {
     final saved = _shown[p.id];
     return saved == null || saved == (p.titleSource ?? p.title)
         ? p.title
-        : saved;
+        : _named[p.id] ?? saved;
   }
 
   Widget _pencil(RepoPart p) {

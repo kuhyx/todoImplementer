@@ -56,3 +56,10 @@ Map<String, String> partBodies(Json detail) => {
   for (final p in objs(objOr(detail, 'card') ?? const {}, 'parts'))
     str(p, 'id'): str(p, 'body'),
 };
+
+/// Each part's shown title in a `task_part_edit` answer (`{ok, task}`, the
+/// fresh card), by id: an open sheet's own card is the one it opened with.
+Map<String, String> partTitles(Json answer) => {
+  for (final p in objs(objOr(answer, 'task') ?? const {}, 'parts'))
+    str(p, 'id'): str(p, 'title'),
+};
