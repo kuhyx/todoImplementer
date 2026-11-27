@@ -3,26 +3,32 @@
 rtdb_relay already refuses unknown kinds (guard 1) and unsealed requests (guard 3). This adds, before a
 handler runs: the schema check (2), replay and expiry (5), the write rate cap (6), the size cap (7), and the
 lanes: write kinds one at a time, read kinds up to four at once. The opened request is put in CURRENT for the
-handlers that need more than the body (the asking device).
+handlers that need more than the body (the asking device). Every RESCAN_S the mirrored `requests` node is
+dispatched again, so a result PUT that RTDB refused is written again while the stream stays up (T2610); the
+done-log answers that rid without running it twice, also after a restart (T2611).
 """
 
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import contextvars
 import json
 import time
-from collections import OrderedDict, deque
+from collections import deque
 from typing import TYPE_CHECKING, Any, Final
 
+from rtdb_relay import mirror, sse
 from rtdb_relay.server import RequestServer, failure
 
 from todoimpl.http import newtask
 
 from . import envelope, kinds
+from .donelog import DoneLog
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
+    from pathlib import Path
 
     from rtdb_relay.lease import Lease
     from rtdb_relay.rtdb import Rtdb
@@ -33,7 +39,7 @@ MAX_REQ: Final = 256 * 1024
 MAX_AGE_MS: Final = 24 * 3600 * 1000
 WRITES_PER_MIN: Final = 30
 READ_LANES: Final = 4
-DONE_KEPT: Final = 1024
+RESCAN_S: Final = 60.0
 
 
 class RelayServer(RequestServer):
@@ -45,14 +51,17 @@ class RelayServer(RequestServer):
         worker: str,
         handlers: Mapping[str, Handler],
         now: Callable[[], float] = time.time,
+        *,
+        done: Path | None = None,
     ) -> None:
-        """Serve `handlers` (keyed by the allowlist) as `worker`."""
+        """Serve `handlers` (keyed by the allowlist) as `worker`; write-kind results are logged at `done`."""
         super().__init__(rtdb, worker, handlers, now)
         self._clock = now
         self._act = asyncio.Lock()
         self._read = asyncio.Semaphore(READ_LANES)
         self._writes: deque[float] = deque()
-        self._done: OrderedDict[str, dict[str, Any]] = OrderedDict()
+        self._done = DoneLog(done)
+        self.tree: dict[str, Any] = {}
         self.act: str | None = None
         self.reads = 0
 
@@ -79,7 +88,7 @@ class RelayServer(RequestServer):
             return seen
         req = envelope.normalized(req)
         if (refused := self.refuse(kind, req)) is not None:
-            return self._remember(lease.rid, refused)
+            return self._remember(lease.rid, kind, refused)
         token = CURRENT.set(req)
         try:
             if kinds.lane_of(kind) == "act":
@@ -98,10 +107,24 @@ class RelayServer(RequestServer):
                         self.reads -= 1
         finally:
             CURRENT.reset(token)
-        return self._remember(lease.rid, result)
+        return self._remember(lease.rid, kind, result)
 
-    def _remember(self, rid: str, result: dict[str, Any]) -> dict[str, Any]:
-        self._done[rid] = result
-        while len(self._done) > DONE_KEPT:
-            self._done.popitem(last=False)
-        return result
+    def _remember(self, rid: str, kind: str, result: dict[str, Any]) -> dict[str, Any]:
+        return self._done.add(rid, result, durable=kinds.lane_of(kind) == "act")
+
+    async def run(self) -> None:
+        """Watch `requests` (raw, so sealing is checked) and dispatch it again every RESCAN_S."""
+        rescan = asyncio.create_task(self._rescan())
+        try:
+            async for event in sse.listen(self._raw, "requests"):
+                self.tree = mirror.apply(self.tree, event)
+                self.dispatch(self.tree)
+        finally:
+            rescan.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await rescan
+
+    async def _rescan(self) -> None:
+        while True:
+            await asyncio.sleep(RESCAN_S)
+            self.dispatch(self.tree)

@@ -11,6 +11,7 @@ from relayfakes import DEV, RIDS, ROOT, answer, board_handlers, req, serve_one
 from rtdb_relay.tests._fake_rtdb import FakeRtdb
 from todoimpl.http import newtask
 from todoimpl.http.routes import Router
+from todoimpl.relay import donelog
 from todoimpl.relay import server as relay_server
 
 
@@ -196,6 +197,6 @@ def test_device_reaches_the_handler(fake: FakeRtdb) -> None:
 def test_only_the_newest_answers_are_kept(
     fake: FakeRtdb, router: Router, backend: FakeBackend, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(relay_server, "DONE_KEPT", 1)
+    monkeypatch.setattr(donelog, "KEPT", 1)
     results = answer(fake, board_handlers(router), [req("task_detail", {"card": backend.task_id})] * 2)
     assert all(r["ok"] for r in results)

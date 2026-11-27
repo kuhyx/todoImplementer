@@ -140,6 +140,9 @@ that fails without it.
    action and it must be enabled, an `auto_ship` option (if offered) must be enabled, ids must match `CARD_ID`, shot names `SHOT_NAME`.
    A test runs every kind through both transports against one fake backend and compares the replies.
 5. **Once per rid.** The done-log answers a replayed rid from its record; `sent_at` older than 24 h is `expired`.
+   Write-kind results also go to `<run root>/relay/done.jsonl` (fsynced before the result PUT), so a restart
+   never runs a click twice; every 60 s the worker dispatches `requests/` again, so a refused result PUT is
+   written again (T2610, T2611).
 6. **Rate cap.** More than 30 write requests in a minute: `rate_limited` until the minute passes.
 7. **Size caps.** `req` over 256 KB (over `newtask.MAX_BODY` for `new_task` and `task_send`) is `bad_request`; results over 4 MB are
    `too_large`.

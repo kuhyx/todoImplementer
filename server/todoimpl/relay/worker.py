@@ -128,7 +128,8 @@ async def serve(
         pinger.check()
         publisher = Publisher(rtdb, sources(wiring.router), on_board=pinger.on_board)
         live = Live(rtdb, wiring.router)
-        server = RelayServer(rtdb, worker, handlers(wiring.router, publisher, live, pinger.notify_test))
+        table = handlers(wiring.router, publisher, live, pinger.notify_test)
+        server = RelayServer(rtdb, worker, table, done=wiring.root / "relay" / "done.jsonl")
 
         def lanes() -> dict[str, Any]:
             return {"act": server.act, "read": server.reads}
