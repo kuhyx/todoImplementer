@@ -14,10 +14,9 @@ from todoimpl.tokens_api import router as tokens_api
 from todoimpl.version import __version__
 
 from . import asks as asks_http
-from . import bodies, issues, newtask, settings
+from . import bodies, getroutes, issues, newtask, settings
 from . import merge as merge_http
 from . import sessions as sessions_http
-from . import umbrella as umbrella_http
 from .auth import check_post
 from .backend import ERROR_CODES, BackendError
 from .reply import Reply, error_reply, json_reply
@@ -104,7 +103,7 @@ class Router:
         path = parts.path
         if path == "/api/live":
             return _guard(lambda: self._live(parse_qs(parts.query), _last_seq(last_event_id)))
-        handler = self._simple.get(path) or self._merge_get(path) or umbrella_http.route(path, self.backend)
+        handler = self._simple.get(path) or self._merge_get(path) or getroutes.route(path, self.backend)
         if handler is not None:
             return _guard(handler)
         if path == tokens_api.PREFIX or path.startswith(tokens_api.PREFIX + "/"):

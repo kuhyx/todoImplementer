@@ -229,3 +229,12 @@
   border-style: dashed;
   opacity: 0.7;
 }
+
+/* The tile's thumbnail of the note's first image (T2535). */
+.card-thumb {
+  display: block;
+  max-height: 4rem;
+  max-width: 100%;
+  border-radius: var(--radius-sm, 4px);
+  object-fit: cover;
+}

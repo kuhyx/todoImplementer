@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING, Any
 
 from todoimpl import modelpick
 from todoimpl.errors.marks import signatures
+from todoimpl.newtask import imagelinks
 
 from . import cyclefloor
 from .actions import actions
@@ -203,6 +204,7 @@ def build_card(task: TaskLike, run: RunState | None, ctx: Context) -> dict[str, 
         card["current"] = manual_ask(task)  # what kuhy must do, never "no repo" on a card that has one
     if (label := getattr(task, "triage", None)) is not None:
         card["triage"] = label  # an icon on the card (DOCS-triage.md)
+    card.update(imagelinks.card_fields(task.title, task.body))  # T2535: the note's images, not their markdown
     if errors := len(signatures(task.body)):  # tickets of the errors loop on this card (a badge)
         card["app_error"] = errors
     if (umbrella := card_view(task, run)) is not None:

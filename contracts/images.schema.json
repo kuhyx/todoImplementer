@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://todoimplementer.local/contracts/images.schema.json",
+  "title": "Note images",
+  "description": "T2535: a todo-image a note links (dufs URL or local path form). GET /api/image/<folder>/<file> and the relay kind image_get serve its bytes from the todo-images folder on this PC.",
+  "$defs": {
+    "note_image": {
+      "type": "object",
+      "properties": {
+        "folder": {"type": "string", "pattern": "^[A-Za-z0-9_-]+$"},
+        "file": {"type": "string", "pattern": "^[A-Za-z0-9_-]+\\.[a-z0-9]{1,10}$"}
+      },
+      "required": ["folder", "file"],
+      "additionalProperties": false
+    }
+  }
+}

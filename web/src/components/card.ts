@@ -2,6 +2,7 @@ import type { NeedsCategory, Status, TaskCard, TriageLabel } from "@/lib/schemas
 
 /** One board card. Every word comes from the server's card; the status label is display text for the enum only. */
 import { icon, type IconName } from "@/components/icons";
+import { tileImage } from "@/components/note-images";
 import { partsStrip, waitsBadge } from "@/components/repo-parts";
 import { badge, umbrellaProgress } from "@/components/umbrella";
 import { h } from "@/lib/dom";
@@ -120,6 +121,7 @@ export function renderCard(card: TaskCard, now: number, shouldShowRepo = false):
       h("span", { class: "card-prio", text: card.priority }),
     ),
     h("span", { class: "card-title", text: card.title }),
+    tileImage(card),
     currentLine(card),
     resume !== null && h("span", { class: "card-current", text: resume }),
     card.umbrella !== undefined && umbrellaProgress(card.umbrella),

@@ -9,6 +9,7 @@ import { renderAskItems } from "@/components/ask-items";
 import {
   renderChecks, renderDetails, renderDiff, renderHead, renderLesson, renderLiveCheck, renderNeeds, renderPlan,
 } from "@/components/drawer-sections";
+import { noteImages } from "@/components/note-images";
 import { renderPeer } from "@/components/peer-thread";
 import { h, must } from "@/lib/dom";
 
@@ -31,7 +32,7 @@ export function paintDetail(root: HTMLElement, detail: TaskDetail, host: BarHost
     .filter((action) => !used.has(action.id))
     .map((action) => renderAction(action, host, detail.card.id));
   const pending = detail.card.actions.find((action) => action.id === bar.pending);
-  slot("head").replaceChildren(renderHead(detail), ...present(renderPeer(detail)));
+  slot("head").replaceChildren(renderHead(detail), ...present(noteImages(detail.card)), ...present(renderPeer(detail)));
   slot("needs").replaceChildren(...present(needs));
   slot("asks").replaceChildren(...present(renderAskItems(detail)));
   slot("actions").replaceChildren(h("div", { class: "actions" }, ...rest));

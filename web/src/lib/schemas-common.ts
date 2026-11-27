@@ -173,6 +173,10 @@ export const repoPart = z.strictObject({
 /** What triage decided about a note that had no repo (common.schema.json task_card.triage). */
 export const TRIAGE_LABELS = ["new_repo", "existing_repo", "all_repos", "research", "manual"] as const;
 
+/** A todo-image the note links (T2535); GET /api/image/<folder>/<file> serves it. */
+export const noteImage = z.strictObject({ file: z.string().regex(/^[\w-]+\.[a-z0-9]{1,10}$/), folder: z.string().regex(/^[\w-]+$/) });
+export type NoteImage = z.infer<typeof noteImage>;
+
 export const taskCard = z.strictObject({
   actions,
   app_error: z.number().int().min(1).optional(),
@@ -183,6 +187,7 @@ export const taskCard = z.strictObject({
   cost_usd: usd,
   current: z.string(),
   id: itemId,
+  images: z.array(noteImage).min(1).optional(),
   needs,
   partial,
   parts: z.array(repoPart).optional(),

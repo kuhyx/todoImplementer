@@ -172,7 +172,8 @@
         "auto_start": {"anyOf": [{"$ref": "#/$defs/auto_start"}, {"type": "null"}], "description": "Set when a passing done_check started this run (a closing run); kept after Close."},
         "auto": {"type": ["string", "null"], "description": "Backlog cards with a done_check while auto close is on: the latest poll's one-line reason."},
         "app_error": {"type": "integer", "minimum": 1, "description": "Optional: how many tickets of the errors loop (`Error-Signature:` lines, DOCS-errors.md) the card holds."},
-        "triage": {"enum": ["new_repo", "existing_repo", "all_repos", "research", "manual"], "description": "Optional: the label triage gave a note that had no repo (DOCS-triage.md); drawn as an icon."}
+        "triage": {"enum": ["new_repo", "existing_repo", "all_repos", "research", "manual"], "description": "Optional: the label triage gave a note that had no repo (DOCS-triage.md); drawn as an icon."},
+        "images": {"type": "array", "minItems": 1, "items": {"$ref": "https://todoimplementer.local/contracts/images.schema.json#/$defs/note_image"}, "description": "Optional (T2535): the todo-images the note links, first-seen order; GET /api/image/<folder>/<file> (relay kind image_get) serves each. The title has their markdown stripped (only an image: the first file name)."}
       },
       "required": [
         "id", "title", "repo", "priority", "assignee", "stage", "status", "column", "current", "needs",

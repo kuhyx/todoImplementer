@@ -192,3 +192,19 @@ ti-drawer {
 .panel {
   min-width: 0;
 }
+
+/* The note's images (T2535): thumbnails in the drawer head, each a link to the full image. */
+.note-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.note-thumb {
+  display: block;
+  max-height: 6rem;
+  max-width: 10rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 4px);
+  object-fit: cover;
+}

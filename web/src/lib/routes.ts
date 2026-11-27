@@ -1,9 +1,11 @@
 /** Every URL and POST body shape in one place (contracts/requests.schema.json). */
-import type { ActionId } from "@/lib/schemas-common";
+import type { ActionId, NoteImage } from "@/lib/schemas-common";
 
 export const routes = {
   board: "/api/board",
   creditsFallback: "/api/settings/credits-fallback",
+  /** A note's todo-image (T2535): the server reads it from the dufs folder on this PC. */
+  image: (image: NoteImage): string => `/api/image/${encodeURIComponent(image.folder)}/${encodeURIComponent(image.file)}`,
   issues: (id: string): string => `/api/task/${encodeURIComponent(id)}/issues`,
   /** The readable issue log page (web/src/issues); `issues` above is its raw ndjson. */
   issuesPage: (id: string): string => `/issues#task=${encodeURIComponent(id)}`,
