@@ -176,4 +176,26 @@ void main() {
       expect(title.controller!.text, source);
     },
   );
+
+  testWidgets(
+    '[T2619] a saved source shows the server title, not image markdown',
+    (tester) async {
+      const source =
+          'Fix ![](https://kuhy-cloud.duckdns.org/todo-images/f1/1.jpg)';
+      final relay = await _sheet(
+        tester,
+        parts: [
+          {..._part('aaaa1111-0', 'Fix', _open), 'title_source': source},
+          _part('aaaa1111-1', 'Shipped', _done),
+        ],
+      );
+      relay.outcomes['task_part_edit'] = const RelayOk({});
+      await tester.tap(_key('part-edit-aaaa1111-0'));
+      await tester.pumpAndSettle();
+      await tester.tap(_key('part-save-aaaa1111-0'));
+      await tester.pumpAndSettle();
+      expect(relay.sent.last.$1, 'task_part_edit');
+      expect(_name(tester, 'aaaa1111-0'), 'Fix'); // live C12p: stayed raw
+    },
+  );
 }

@@ -95,6 +95,15 @@ class _PartEditsState extends State<PartEdits> {
     setState(() => _open = null);
   }
 
+  /// The saved title shows until the board carries it; then the server's
+  /// own title, which drops image markdown (T2614, T2619).
+  String _label(RepoPart p) {
+    final saved = _shown[p.id];
+    return saved == null || saved == (p.titleSource ?? p.title)
+        ? p.title
+        : saved;
+  }
+
   Widget _pencil(RepoPart p) {
     if (_busy == p.id) {
       return const SizedBox.square(
@@ -175,10 +184,7 @@ class _PartEditsState extends State<PartEdits> {
           Row(
             children: [
               Expanded(
-                child: Text(
-                  _shown[p.id] ?? p.title,
-                  key: ValueKey('part-name-${p.id}'),
-                ),
+                child: Text(_label(p), key: ValueKey('part-name-${p.id}')),
               ),
               _pencil(p),
             ],

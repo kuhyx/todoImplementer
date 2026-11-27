@@ -77,12 +77,48 @@ void main() {
       for (var i = 0; i <= kImageCacheSize; i++) {
         expect(await loadNoteImage(relay, NoteImage('f', '$i.png')), isNotNull);
       }
-      await loadNoteImage(relay, NoteImage('f', '$kImageCacheSize.png'));
+      await loadNoteImage(relay, const NoteImage('f', '$kImageCacheSize.png'));
       expect(relay.sent.length, kImageCacheSize + 1);
       await loadNoteImage(relay, const NoteImage('f', '0.png'));
       expect(relay.sent.length, kImageCacheSize + 2);
     },
   );
+
+  testWidgets('[T2535] two fingers pinch the full-size image bigger', (
+    tester,
+  ) async {
+    await _sheet(tester);
+    await tester.tap(
+      find.byKey(const ValueKey('note-image-3d6cd2ea-de63/1.jpg')),
+    );
+    await tester.pumpAndSettle();
+    double scale() => tester
+        .widget<Transform>(
+          find
+              .descendant(
+                of: find.byType(InteractiveViewer),
+                matching: find.byType(Transform),
+              )
+              .first,
+        )
+        .transform
+        .getMaxScaleOnAxis();
+    expect(scale(), 1);
+    final centre = tester.getCenter(find.byType(InteractiveViewer));
+    final a = await tester.startGesture(centre - const Offset(20, 0));
+    final b = await tester.startGesture(centre + const Offset(20, 0));
+    await tester.pump();
+    for (var i = 0; i < 10; i++) {
+      await a.moveBy(const Offset(-10, 0));
+      await b.moveBy(const Offset(10, 0));
+      await tester.pump();
+    }
+    await a.up();
+    await b.up();
+    await tester.pumpAndSettle();
+    expect(find.byType(InteractiveViewer), findsOneWidget); // a pinch is no tap
+    expect(scale(), greaterThan(2));
+  });
 
   testWidgets('[T2535] the grid tile shows the first image', (tester) async {
     await _sheet(tester, open: false);
@@ -97,7 +133,7 @@ void main() {
   ) async {
     await _sheet(
       tester,
-      image: const RelayFailed(code: 'not_found', error: 'gone', retry: false),
+      image: const RelayFailed(code: 'not_found', error: 'gone'),
     );
     expect(
       find.byIcon(Icons.broken_image_outlined),
