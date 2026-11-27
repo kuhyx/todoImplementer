@@ -3,6 +3,7 @@
 import json
 import threading
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -54,6 +55,9 @@ def run_inline(job: Callable[[], None]) -> None:
 
 
 def test_send_at_the_gate_drafts_a_lesson(rig: Rig) -> None:
+    skill = Path.home() / ".claude" / "skills" / "build-backend" / "SKILL.md"  # the temp HOME (T2612)
+    skill.parent.mkdir(parents=True)
+    skill.write_text("---\nname: build-backend\n---\n", encoding="utf-8")
     tid = rig.note()
     rig.run(tid, "gate")
     rig.backend.spawn = run_inline

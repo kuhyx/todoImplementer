@@ -26,6 +26,28 @@ def _scratch(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Path]:
     shutil.rmtree(root, ignore_errors=True)
 
 
+@pytest.fixture(autouse=True)
+def _no_real_home(_scratch: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Give every test an empty temp HOME and XDG dirs (T2612).
+
+    A suite run once deleted kuhy's real free-model visibility cache and overwrote his gateway key, because
+    code that resolves `Path.home()` at call time wrote there. Git's identity comes by env.
+    """
+    home = _scratch / "home"
+    home.mkdir()
+    monkeypatch.setenv("HOME", str(home))
+    for name, sub in (
+        ("XDG_CONFIG_HOME", ".config"),
+        ("XDG_CACHE_HOME", ".cache"),
+        ("XDG_DATA_HOME", ".local/share"),
+        ("XDG_STATE_HOME", ".local/state"),
+    ):
+        monkeypatch.setenv(name, str(home / sub))
+    for role in ("AUTHOR", "COMMITTER"):
+        monkeypatch.setenv(f"GIT_{role}_NAME", "todoimpl test")
+        monkeypatch.setenv(f"GIT_{role}_EMAIL", "test@example.invalid")
+
+
 @pytest.fixture(scope="session", autouse=True)
 def _git_without_templates(tmp_path_factory: pytest.TempPathFactory) -> Iterator[None]:
     """Make `git init` copy no sample hooks (about 25 files per repo)."""

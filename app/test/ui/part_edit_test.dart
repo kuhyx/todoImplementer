@@ -27,7 +27,7 @@ final List<Json> _parts = [
 ];
 
 /// Pumps a board with one backlog repo card holding [_parts], opens its sheet.
-Future<FakeRelay> _sheet(WidgetTester tester) async {
+Future<FakeRelay> _sheet(WidgetTester tester, {List<Json>? parts}) async {
   pixel6a(tester);
   final relay = FakeRelay();
   relay.outcomes['task_detail'] = RelayOk({
@@ -44,7 +44,7 @@ Future<FakeRelay> _sheet(WidgetTester tester) async {
       home: Scaffold(body: BoardPage(relay: relay)),
     ),
   );
-  relay.push(boardJson([card('c1')..['parts'] = _parts]));
+  relay.push(boardJson([card('c1')..['parts'] = parts ?? _parts]));
   await tester.pumpAndSettle();
   await tester.tap(find.byKey(const ValueKey('card-c1')));
   await tester.pumpAndSettle();
@@ -156,4 +156,24 @@ void main() {
     expect(_key('part-title-aaaa1111-0'), findsNothing);
     expect(_key('part-failure'), findsOneWidget);
   });
+
+  testWidgets(
+    '[T2614] shows the title without image markdown, edits the source',
+    (tester) async {
+      const source =
+          'Fix ![](https://kuhy-cloud.duckdns.org/todo-images/f1/1.jpg)';
+      await _sheet(
+        tester,
+        parts: [
+          {..._part('aaaa1111-0', 'Fix', _open), 'title_source': source},
+          _part('aaaa1111-1', 'Shipped', _done),
+        ],
+      );
+      expect(_name(tester, 'aaaa1111-0'), 'Fix');
+      await tester.tap(_key('part-edit-aaaa1111-0'));
+      await tester.pumpAndSettle();
+      final title = tester.widget<TextField>(_key('part-title-aaaa1111-0'));
+      expect(title.controller!.text, source);
+    },
+  );
 }

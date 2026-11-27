@@ -178,6 +178,8 @@ export const repoPart = z.strictObject({
   state: z.enum(PART_STATES),
   steps: z.strictObject({ done: z.number().int().min(0), total: z.number().int().min(1) }).nullable(),
   title: z.string().min(1),
+  /** The note's own title with its image markdown, the editor's start value (T2614). */
+  title_source: z.string().min(1).optional(),
 });
 
 /** What triage decided about a note that had no repo (common.schema.json task_card.triage). */

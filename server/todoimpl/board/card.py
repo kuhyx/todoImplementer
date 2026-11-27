@@ -218,7 +218,7 @@ def build_card(task: TaskLike, run: RunState | None, ctx: Context) -> dict[str, 
     if (umbrella := card_view(task, run)) is not None:
         card["umbrella"] = umbrella
     if (parts := parts_of(task, run, working=status == Status.WORKING)) is not None:
-        card["parts"] = with_edit(parts, status)  # which parts kuhy may still edit (856c0f0a)
+        card["parts"] = imagelinks.part_titles(with_edit(parts, status))  # editable parts (856c0f0a)
     if (waits := ctx.waits.get(tid)) is not None and status == Status.QUEUED:
         card["waits_on"] = waits
         card["current"] = ""  # the lock badge names the run it waits on; no stage line (T1925)

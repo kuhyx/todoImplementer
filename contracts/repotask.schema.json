@@ -9,7 +9,8 @@
       "description": "One part of a repo task. id is the part's section card id <note id8>-<index>. state: todo (waits), working (the run is on it now), done (ticked this cycle), human (a MANUAL WORK REQUIRED part the run skips), held (an older per-section run still owns it and keeps its own card). steps: the sub-steps Claude split it into (done of total), null without any.",
       "properties": {
         "id": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/item_id"},
-        "title": {"type": "string", "minLength": 1},
+        "title": {"type": "string", "minLength": 1, "description": "Shown title: the note's title without its image markdown (only an image: its file name)."},
+        "title_source": {"type": "string", "minLength": 1, "description": "The note's own title with its image markdown, the editor's start value; only when it differs from title (T2614)."},
         "state": {"enum": ["todo", "working", "done", "human", "held"]},
         "steps": {
           "type": ["object", "null"],

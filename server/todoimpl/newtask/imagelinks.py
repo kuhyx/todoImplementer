@@ -60,6 +60,17 @@ def card_fields(title: str, body: str) -> dict[str, Any]:
     return {"images": found, "title": strip_title(title, root) or found[0]["file"]} if found else {}
 
 
+def part_titles(parts: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Strip the image markdown from each part's title (T2614); keep the note's own as `title_source`."""
+    root = images.root()
+    for part in parts:
+        source = part["title"]
+        found = links(source, root)
+        if found and (shown := strip_title(source, root) or found[0]["file"]) != source:
+            part["title"], part["title_source"] = shown, source
+    return parts
+
+
 def strip_title(title: str, root: Path) -> str:
     """Return the title without its image markdown (`![alt](<image link>)`); may be empty."""
     return " ".join(_markdown(root).sub(" ", title).split())

@@ -47,7 +47,7 @@ export class PartEditor {
     const label = part.edit.enabled ? `Edit ${part.title}` : `Edit ${part.title}: ${part.edit.reason}`;
     const button = iconButton("edit", label, { "data-part-edit": part.id, disabled: !part.edit.enabled || this.#pending }, () => {
       this.#open = part.id;
-      this.#draft = { body: part.body ?? "", title: part.title };
+      this.#draft = { body: part.body ?? "", title: part.title_source ?? part.title };
       this.#repaint();
       must<HTMLInputElement>(view.root, `[name="${titleName(part.id)}"]`).focus();
     });

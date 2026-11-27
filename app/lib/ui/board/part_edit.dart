@@ -69,7 +69,7 @@ class _PartEditsState extends State<PartEdits> {
     if (!mounted) return;
     setState(() => _busy = null);
     if (out is RelayFailed) return _fail(out);
-    _title.text = _shown[p.id] ?? p.title;
+    _title.text = _shown[p.id] ?? p.titleSource ?? p.title;
     _body.text = partBodies((out as RelayOk).data)[p.id] ?? '';
     setState(() => _open = p.id);
   }

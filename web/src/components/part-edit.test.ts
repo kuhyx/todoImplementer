@@ -128,4 +128,12 @@ describe("part edit", () => {
     await settle(5000);
     expect(document.querySelector("[data-part-form]")).toBeNull();
   });
+
+  it("[T2614] shows the title without image markdown and edits the note's own title", async () => {
+    const source = "Fix ![](https://kuhy-cloud.duckdns.org/todo-images/f1/1.jpg)";
+    await openWith(withParts([{ ...PARTS[0]!, title: "Fix", title_source: source }, PARTS[1]!]), {});
+    expect(q(SHOWN).textContent).toBe("Fix");
+    q('[data-part-edit="aaaa1111-0"]').click();
+    expect(q<HTMLInputElement>('[name="part-title-aaaa1111-0"]').value).toBe(source);
+  });
 });

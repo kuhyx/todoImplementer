@@ -15,6 +15,7 @@ class RepoPart {
     required this.state,
     required this.editable,
     this.reason,
+    this.titleSource,
   });
 
   /// Parses one part.
@@ -26,14 +27,19 @@ class RepoPart {
       state: str(j, 'state'),
       editable: flag(edit, 'enabled'),
       reason: strOr(edit, 'reason'),
+      titleSource: strOr(j, 'title_source'),
     );
   }
 
   /// `<note id8>-<index>`, the part's own section id.
   final String id;
 
-  /// kuhy's own title.
+  /// The shown title: kuhy's own without its image markdown (T2614).
   final String title;
+
+  /// kuhy's own title with its image markdown, the editor's start value;
+  /// null when it equals [title].
+  final String? titleSource;
 
   /// `todo`, `working`, `done`, `human`, `held`.
   final String state;
