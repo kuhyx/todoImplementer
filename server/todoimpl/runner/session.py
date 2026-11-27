@@ -41,6 +41,14 @@ def plan_turn(prior: Prior | None, *, now: float) -> TurnPlan:  # noqa: D103
     return TurnPlan(prior.session_id, "killed" if prior.lost else "resume")
 
 
+LOST = "No conversation found with session ID"  # claude's error when a resumed session is gone (T2534)
+
+
+def lost(text: str) -> bool:
+    """Say whether a turn failed because the session it resumed no longer exists (start fresh next time)."""
+    return LOST in text
+
+
 def prior_from(entry: Mapping[str, Any] | None) -> Prior | None:  # noqa: D103
     sid = entry.get("session_id") if entry else None
     if not isinstance(sid, str):

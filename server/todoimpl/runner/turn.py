@@ -136,7 +136,9 @@ def _apply(env: TurnEnv, state: RunState, rec: orphans.Record, res: TurnResult, 
         session_id=res.session_id, cumulative=res.cost_usd if res.finished else None, ended_at=env.now(),
         estimate=res.live_usd,
     )  # fmt: skip
-    if res.session_id:
+    if res.is_error and session.lost(res.text):  # T2534: a retry resuming it again fails the same way
+        state.sessions.pop(role, None)
+    elif res.session_id:
         entry = {"session_id": res.session_id, "last_turn_end": env.now(), "route": route}
         state.sessions[role] = entry | size(res)
         state.session_id = res.session_id

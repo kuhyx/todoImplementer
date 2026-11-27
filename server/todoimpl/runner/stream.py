@@ -210,8 +210,9 @@ class StreamParser:
 
     def _result(self, obj: dict[str, Any]) -> Activity:
         res = self.result
-        text = obj.get("result")
-        res.text = text if isinstance(text, str) else ""
+        text, errors = obj.get("result"), obj.get("errors")
+        said = [e for e in errors if isinstance(e, str)] if isinstance(errors, list) else []
+        res.text = text if isinstance(text, str) else "; ".join(said)  # an error result has `errors` only
         cost = obj.get("total_cost_usd")
         res.cost_usd = float(cost) if isinstance(cost, int | float) else 0.0
         usage = obj.get("modelUsage")
