@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:rtdb_relay/rtdb_relay.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:todo_implementer/config/firebase_config.dart';
+import 'package:todo_implementer/sync/offline_relay.dart';
 import 'package:todo_implementer/sync/rtdb_board_relay.dart';
 import 'package:todo_implementer/sync/usage_relay.dart';
 import 'package:todo_implementer/sync/services.dart';
@@ -27,8 +28,11 @@ void main() {
     final s = await AppServices.open(config);
     expect(s.config.isComplete, isTrue);
     expect(s.gate.locked, isTrue);
-    expect((s.relay as RtdbBoardRelay).dev, 'd1');
-    expect((s.relay as RtdbBoardRelay).moves(), isA<Stream<int>>());
+    expect(((s.relay as OfflineRelay).inner as RtdbBoardRelay).dev, 'd1');
+    expect(
+      ((s.relay as OfflineRelay).inner as RtdbBoardRelay).moves(),
+      isA<Stream<int>>(),
+    );
     final usage = s.usage! as RtdbUsageRelay;
     expect(usage.moves(), isA<Stream<int>>());
     await expectLater(
@@ -37,7 +41,10 @@ void main() {
     );
     expect(s.auth.config, config);
     expect(s.sessions, isNotNull);
-    expect((s.relay as RtdbBoardRelay).moves(), isA<Stream<int>>());
+    expect(
+      ((s.relay as OfflineRelay).inner as RtdbBoardRelay).moves(),
+      isA<Stream<int>>(),
+    );
     expect(FirebaseConfig.compiled, isA<FirebaseConfig>());
   });
 
@@ -49,7 +56,9 @@ void main() {
       syncUid: 'u',
       serverClientId: 'w',
     );
-    final relay = (await AppServices.open(config)).relay as RtdbBoardRelay;
+    final relay =
+        ((await AppServices.open(config)).relay as OfflineRelay).inner
+            as RtdbBoardRelay;
     // Not signed in: the real listen reports its failed connect instead of
     // ending at once with no event, as the unwired default did.
     final first = await relay

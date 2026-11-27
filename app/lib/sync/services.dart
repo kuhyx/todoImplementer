@@ -8,6 +8,8 @@ import 'package:todo_implementer/sync/board_relay.dart';
 import 'package:todo_implementer/sync/feed_cache.dart';
 import 'package:todo_implementer/sync/google_sign_in_backend.dart';
 import 'package:todo_implementer/sync/layout.dart';
+import 'package:todo_implementer/sync/local_copy.dart';
+import 'package:todo_implementer/sync/offline_relay.dart';
 import 'package:todo_implementer/sync/rtdb_board_relay.dart';
 import 'package:todo_implementer/sync/sessions_feed.dart';
 import 'package:todo_implementer/sync/usage_relay.dart';
@@ -57,7 +59,7 @@ class AppServices {
     final stream = RtdbStream(client);
     final hub = RequestHub(stream, fullPath('requests'));
     final rev = RevWatcher(stream, fullPath('rev'), yieldTo: hub.inFlight);
-    final relay = RtdbBoardRelay(
+    final live = RtdbBoardRelay(
       client: client,
       dev: dev,
       watch: hub.watch,
@@ -67,6 +69,11 @@ class AppServices {
       revOf: rev.changesOf,
       listen: stream.listen,
       feeds: PrefsFeedCache(await SharedPreferences.getInstance()),
+    );
+    // Offline-first (T2603): the last board and card details stay on disk.
+    final relay = OfflineRelay(
+      live,
+      PrefsLocalCopy(await SharedPreferences.getInstance()),
     );
     return AppServices(
       config: config,

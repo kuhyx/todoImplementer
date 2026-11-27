@@ -69,6 +69,9 @@ class _DemoRelay implements BoardRelay {
   );
 
   @override
+  Json? cachedDetail(String card) => null;
+
+  @override
   Stream<List<Json>> liveFeed(String card) => Stream.value(const [
     {'type': 'stage', 'stage': 'implement'},
     {'type': 'activity', 'kind': 'tool', 'tool': 'Bash', 'text': 'make test'},

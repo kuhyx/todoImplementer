@@ -207,3 +207,10 @@ class TaskDetail {
   /// Umbrella detail (`umbrella.schema.json#/$defs/detail`), if any.
   final Json? umbrella;
 }
+
+/// A kept `task_detail` copy as a [TaskDetail], or null when there is none
+/// or it lacks its card (a corrupt or foreign copy never reaches the page).
+TaskDetail? keptDetail(Json? kept) {
+  if (kept == null || objOr(kept, 'card') == null) return null;
+  return TaskDetail.fromJson(kept);
+}

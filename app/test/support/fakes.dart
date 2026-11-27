@@ -135,6 +135,12 @@ class FakeRelay implements BoardRelay {
   @override
   Stream<List<Json>> liveFeed(String card) =>
       (feeds[card] = StreamController<List<Json>>.broadcast()).stream;
+
+  /// Kept details, per card.
+  final Map<String, Json> kept = {};
+
+  @override
+  Json? cachedDetail(String card) => kept[card];
 }
 
 /// One merge suggestion JSON.

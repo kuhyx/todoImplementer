@@ -80,6 +80,10 @@ void main() {
     expect(ok.data, {'x': 1});
   });
 
+  test('[T2603] the bare relay keeps no details', () {
+    expect(relay().cachedDetail('c1'), isNull);
+  });
+
   test('a failed PUT is an offline outcome, never a hang', () async {
     putFails = true;
     final out = await relay().send('task_go', const {}) as RelayFailed;

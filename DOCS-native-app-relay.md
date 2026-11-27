@@ -45,7 +45,7 @@ shim, so a repo-less task never reaches the real todo app (T2355).
 Publishing: the worker writes a `snap` node when its JSON changes, at most every 250 ms per node, then bumps
 `rev`. The app streams `rev`, `presence/workers` and, while a drawer is open, `live/{card}`; it GETs a `snap` node
 when its counter moves. The app keeps each card's last feed (in memory, the newest 50 events in its preferences on
-close) and shows it at once on the next open (T2353). A `snapshot_refresh` request republishes every node (pull to refresh, first start).
+close) and shows it at once on the next open (T2353). Offline-first (T2603, `app/lib/sync/offline_relay.dart`): the app keeps the last `snap/board` and every card's `task_detail` on disk (2 MB budget, oldest out), prefetches the details of cards whose `updated` moved on each board sync, one request at a time, and shows the kept copy before the live answer. A `snapshot_refresh` request republishes every node (pull to refresh, first start).
 
 ## Sealing
 

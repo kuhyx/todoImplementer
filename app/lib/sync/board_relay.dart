@@ -71,6 +71,9 @@ abstract interface class BoardRelay {
   /// worker drops a watch 120 s after its last renewal); cancelling releases
   /// it.
   Stream<List<Json>> liveFeed(String card);
+
+  /// [card]'s last kept `task_detail` data, shown before the live answer.
+  Json? cachedDetail(String card);
 }
 
 const _crockford = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';

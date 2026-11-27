@@ -162,6 +162,7 @@ class Board {
     this.alert,
     this.apiKeyLevel = 'ok',
     this.apiKeyText,
+    this.raw = const {},
   });
 
   /// Parses the `snap/board` unit.
@@ -188,8 +189,12 @@ class Board {
       alert: strOr(objOr(j, 'alert') ?? const {}, 'text'),
       apiKeyLevel: key == null ? 'ok' : str(key, 'level', 'ok'),
       apiKeyText: key == null ? null : strOr(key, 'text'),
+      raw: j,
     );
   }
+
+  /// The `snap/board` node it was parsed from (kept on disk, T2603).
+  final Json raw;
 
   /// Server build id.
   final String build;

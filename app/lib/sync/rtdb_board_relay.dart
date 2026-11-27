@@ -166,6 +166,9 @@ class RtdbBoardRelay implements BoardRelay {
   }
 
   @override
+  Json? cachedDetail(String card) => null;
+
+  @override
   Future<RelayOutcome> send(String kind, Json body, {Duration? timeout}) async {
     final now = _clock();
     final rid = ulid(now: now);
