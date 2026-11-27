@@ -21,7 +21,7 @@
       "remaining_usd": 150,
       "over_cap": false,
       "running_credit_turns": 1,
-      "cost_factor": 1
+      "cost_factor": 1, "batches": {"pending": 0, "est_usd": 0, "oldest_at": null}
     }
   },
   "auto_close": false,
