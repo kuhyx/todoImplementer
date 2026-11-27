@@ -12,6 +12,7 @@ from todoimpl.apikey import cache
 from todoimpl.apikey.monitor import KeyMonitor
 from todoimpl.board import clone as clones
 from todoimpl.relay.status import NOTIFY, STATUS
+from todoimpl.stall import subagent
 
 
 @pytest.fixture(autouse=True)
@@ -193,6 +194,12 @@ def _no_real_checkouts(_scratch: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("TODOIMPL_REPO_PATHS", str(_scratch / "repo-paths" / "repo-paths.json"))
     monkeypatch.setattr(clones, "GH", "gh-disabled-in-tests")
     monkeypatch.setattr("todoimpl.service.known_repos.gh_repos", list)
+
+
+@pytest.fixture(autouse=True)
+def _no_real_transcripts(_scratch: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Point the stall scan's sub-agent transcripts at a temp dir, never kuhy's ~/.claude/projects (T2561)."""
+    monkeypatch.setattr(subagent, "PROJECTS", _scratch / "claude-projects")
 
 
 def pytest_collection_modifyitems(config: pytest.Config, items: list[pytest.Item]) -> None:
