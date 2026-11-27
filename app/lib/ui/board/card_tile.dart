@@ -62,6 +62,17 @@ class CardTile extends StatelessWidget {
                           ),
                         ),
                       ),
+                      // Written offline, sent on the next sync (T2604).
+                      if (card.status == 'unsent')
+                        const Tooltip(
+                          message: 'unsent',
+                          child: Icon(
+                            Icons.cloud_upload_outlined,
+                            key: Key('card-unsent'),
+                            size: AppTextSize.body,
+                            color: AppPalette.mutedOnDark,
+                          ),
+                        ),
                       if ((relay, card.images.firstOrNull) case (
                         final r?,
                         final first?,

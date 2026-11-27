@@ -29,6 +29,12 @@ abstract interface class LocalCopy {
 
   /// Keeps [data] as [card]'s detail, taken at [stamp].
   Future<void> saveDetail(String card, Json data, {int? stamp});
+
+  /// The unsent writes, oldest first (`{kind, body}` each).
+  List<Json> outbox();
+
+  /// Keeps [items] as the unsent writes.
+  Future<void> saveOutbox(List<Json> items);
 }
 
 /// [LocalCopy] in the app's preferences.
@@ -46,6 +52,8 @@ class PrefsLocalCopy implements LocalCopy {
 
   /// Card id -> `[stamp, size, savedSeq]`, oldest evicted first.
   static const _indexKey = 'local.details';
+
+  static const _outboxKey = 'local.outbox';
 
   static String _key(String card) => 'local.detail.$card';
 
@@ -69,6 +77,14 @@ class PrefsLocalCopy implements LocalCopy {
 
   @override
   Json? board() => _decode(prefs.getString(_boardKey));
+
+  @override
+  List<Json> outbox() =>
+      objs(_decode(prefs.getString(_outboxKey)) ?? const {}, 'items');
+
+  @override
+  Future<void> saveOutbox(List<Json> items) =>
+      prefs.setString(_outboxKey, jsonEncode({'items': items}));
 
   @override
   Future<void> saveBoard(Json node) =>
