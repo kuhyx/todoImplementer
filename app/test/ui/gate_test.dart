@@ -70,10 +70,16 @@ class _Gate extends E2eGate {
   @override
   String get reason => 'locked';
 
+  /// Locked until an unlock answers true.
+  bool opened = false;
+
+  @override
+  bool get locked => !opened;
+
   @override
   Future<bool> unlock() async {
     final a = answers.isEmpty ? true : answers.removeAt(0);
-    if (a is bool) return a;
+    if (a is bool) return opened = a;
     throw a;
   }
 }
@@ -97,6 +103,8 @@ Future<void> _pump(WidgetTester tester, AppServices s) async {
   await tester.pumpWidget(TodoImplementerApp(services: Future.value(s)));
   await tester.pumpAndSettle();
 }
+
+const _offline = RtdbError('network error: GET /e2e');
 
 void main() {
   _passphraseTests();
@@ -163,6 +171,40 @@ void main() {
     await tester.tap(find.byKey(const Key('unlock-retry')));
     await _settle(tester);
     expect(find.byType(BoardPage), findsOneWidget);
+  });
+
+  testWidgets('[T2605] an unreachable key server still opens the board', (
+    tester,
+  ) async {
+    final gate = _Gate()..answers.addAll([_offline, _offline, false]);
+    pixel6a(tester);
+    final s = _services(auth: _Auth()..session = true, gate: gate);
+    await tester.pumpWidget(TodoImplementerApp(services: Future.value(s)));
+    await _settle(tester);
+    expect(find.byType(BoardPage), findsOneWidget);
+    expect(find.byKey(const Key('unlock-retry')), findsNothing);
+    await tester.pump(const Duration(seconds: 2));
+    await _settle(tester);
+    expect(gate.answers, [false]);
+    await tester.pump(const Duration(seconds: 5));
+    await _settle(tester);
+    expect(gate.answers, isEmpty);
+    expect(find.byKey(const Key('unlock-retry')), findsOneWidget);
+  });
+
+  testWidgets('[T2605] a key server that comes back keeps the board open', (
+    tester,
+  ) async {
+    final gate = _Gate()..answers.addAll([_offline, true]);
+    pixel6a(tester);
+    final s = _services(auth: _Auth()..session = true, gate: gate);
+    await tester.pumpWidget(TodoImplementerApp(services: Future.value(s)));
+    await _settle(tester);
+    await tester.pump(const Duration(seconds: 2));
+    await _settle(tester);
+    expect(gate.answers, isEmpty);
+    expect(find.byType(BoardPage), findsOneWidget);
+    expect(find.byKey(const Key('unlock-retry')), findsNothing);
   });
 
   testWidgets('loaders while services, session and key resolve', (

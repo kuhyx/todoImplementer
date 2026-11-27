@@ -4,6 +4,8 @@
 /// the e2e root while locked, and this gate shows only the lock button.
 library;
 
+import 'dart:async';
+
 import 'package:crdt_sync_flutter/crdt_sync_flutter.dart'
     show E2ePassphraseButton;
 import 'package:design_system/design_system.dart';
@@ -14,6 +16,12 @@ import 'package:todo_implementer/sync/services.dart';
 import 'package:todo_implementer/ui/board/board_page.dart';
 import 'package:todo_implementer/ui/sessions/sessions_page.dart';
 import 'package:todo_implementer/ui/usage/usage_page.dart';
+
+/// The first wait before retrying an unreachable key server.
+const kKeyRetryFirst = Duration(seconds: 2);
+
+/// The longest wait between key retries.
+const kKeyRetryMax = Duration(seconds: 60);
 
 /// The gate in front of the shell.
 class AppGate extends StatefulWidget {
@@ -29,9 +37,47 @@ class AppGate extends StatefulWidget {
 
 class _AppGateState extends State<AppGate> {
   late Future<bool> _session = widget.services.auth.hasSession();
-  late Future<bool> _open = widget.services.gate.unlock();
+  late Future<bool> _open = _unlock();
   Object? _signInError;
   bool _busy = false;
+
+  /// The last unlock could not reach the key server (T2605): the board runs
+  /// on its kept copy (offline-first) while the unlock is retried.
+  bool _unreachable = false;
+  Timer? _keyRetry;
+  Duration _keyWait = kKeyRetryFirst;
+
+  @override
+  void dispose() {
+    _keyRetry?.cancel();
+    super.dispose();
+  }
+
+  /// Unlocks the key; an Exception is an unreachable server, not a wrong
+  /// key, so it schedules a retry instead of showing the lock.
+  Future<bool> _unlock() async {
+    try {
+      return await widget.services.gate.unlock();
+    } on Exception {
+      _unreachable = true;
+      _keyRetry ??= Timer(_keyWait, _retryUnreachable);
+      return false;
+    }
+  }
+
+  /// Backoff retry of an unreachable unlock: open needs nothing more (the
+  /// relay reconnects by itself); locked shows the lock view.
+  Future<void> _retryUnreachable() async {
+    _keyRetry = null;
+    final doubled = _keyWait * 2;
+    _keyWait = doubled > kKeyRetryMax ? kKeyRetryMax : doubled;
+    _unreachable = false;
+    final open = await _unlock();
+    if (!mounted || _unreachable) return;
+    setState(() {
+      _open = Future.value(open);
+    });
+  }
 
   Future<void> _signIn() async {
     setState(() {
@@ -57,7 +103,7 @@ class _AppGateState extends State<AppGate> {
   void _retryKey() {
     // The FutureBuilder subscribes on the next frame; mark the error handled
     // now so a failed unlock is drawn, not reported as uncaught.
-    final next = widget.services.gate.unlock()..ignore();
+    final next = _unlock()..ignore();
     setState(() {
       _open = next;
     });
@@ -91,7 +137,7 @@ class _AppGateState extends State<AppGate> {
             if (open.connectionState != ConnectionState.done) {
               return const _Loading();
             }
-            if (open.data ?? false) {
+            if ((open.data ?? false) || _unreachable) {
               final s = widget.services;
               final sessions = s.sessions;
               final usage = s.usage;
