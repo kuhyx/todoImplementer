@@ -116,3 +116,23 @@ class Needs {
   /// Absolute http(s) pages the ask names; empty when it names none.
   final List<String> links;
 }
+
+/// A todo-image the note links (`images.schema.json#/$defs/note_image`),
+/// served by the PC over the relay kind `image_get` (T2535).
+@immutable
+class NoteImage {
+  /// Creates the link.
+  const new(this.folder, this.file);
+
+  /// Parses it.
+  factory fromJson(Json j) => NoteImage(str(j, 'folder'), str(j, 'file'));
+
+  /// The note's image folder.
+  final String folder;
+
+  /// The file name inside it.
+  final String file;
+
+  /// `folder/file`, the key of its widget and cache entry.
+  String get path => '$folder/$file';
+}

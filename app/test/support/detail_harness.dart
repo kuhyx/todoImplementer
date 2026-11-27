@@ -102,6 +102,10 @@ Future<FakeRelay> pumpDetail(
   final relay = FakeRelay()
     ..outcomes['task_detail'] = outcome ?? RelayOk(detail ?? richDetail())
     ..outcomes['task_shot'] = const RelayOk({'png_b64': tinyPng})
+    ..outcomes['image_get'] = const RelayOk({
+      'data_b64': tinyPng,
+      'type': 'image/png',
+    })
     ..outcomes['task_issues'] = const RelayOk({'text': '{"a":1}\n{"b":2}\n'});
   final errors = <RelayFailed>[];
   await tester.pumpWidget(

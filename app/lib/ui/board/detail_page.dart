@@ -19,6 +19,7 @@ import 'package:todo_implementer/ui/board/live_feed.dart';
 import 'package:todo_implementer/ui/board/needs_line.dart';
 import 'package:todo_implementer/ui/board/needs_links.dart';
 import 'package:todo_implementer/ui/board/note_box.dart';
+import 'package:todo_implementer/ui/board/note_images.dart';
 import 'package:todo_implementer/ui/board/shot_image.dart';
 import 'package:todo_implementer/ui/board/umbrella_view.dart';
 
@@ -143,6 +144,7 @@ class _DetailPageState extends State<DetailPage> {
         Text(d.card.title, style: Theme.of(context).textTheme.titleMedium),
         if (d.card.repo case final repo?)
           Text(repo, style: const TextStyle(color: AppPalette.mutedOnDark)),
+        NoteImages(images: d.card.images, relay: widget.relay),
         if (d.card.current.isNotEmpty) Text(d.card.current),
         if (needs != null)
           needsTile(needs, specOk, (_) => _ask('task_spec_ok', {})),

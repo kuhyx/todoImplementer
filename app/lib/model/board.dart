@@ -33,6 +33,7 @@ class TaskCard {
     this.cheap = false,
     this.free = false,
     this.escalated = false,
+    this.images = const [],
   });
 
   /// Parses a card.
@@ -56,6 +57,7 @@ class TaskCard {
       cheap: flag(tier, 'cheap'),
       free: flag(tier, 'free'),
       escalated: flag(tier, 'escalated'),
+      images: objs(j, 'images').map(NoteImage.fromJson).toList(),
     );
   }
 
@@ -106,6 +108,9 @@ class TaskCard {
 
   /// Opus took over.
   final bool escalated;
+
+  /// The todo-images the note links, first-seen order (T2535).
+  final List<NoteImage> images;
 }
 
 /// A column header: id, the server's label (spoken) and its card count.
