@@ -8,7 +8,9 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 FAKES = REPO / "tests" / "fixtures" / "fakecov"
-SHARDS = re.search(r"^SHARDS \?= (\d+)$", (REPO / "Makefile").read_text(encoding="utf-8"), re.MULTILINE)[1]
+_SHARDS = re.search(r"^SHARDS \?= (\d+)$", (REPO / "Makefile").read_text(encoding="utf-8"), re.MULTILINE)
+assert _SHARDS is not None
+SHARDS = _SHARDS[1]
 
 
 def make_env() -> dict[str, str]:
