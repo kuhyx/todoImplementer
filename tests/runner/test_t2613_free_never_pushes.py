@@ -4,7 +4,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
-from todoimpl.prompts import standing
+from todoimpl.prompts import PromptContext, build, standing
 from todoimpl.runner import freeroute, srcwall
 from todoimpl.runner.claude import Invocation
 
@@ -48,3 +48,31 @@ def test_t2613_free_turn_env_refuses_every_push(
     assert (
         _git("push", "origin", "HEAD:main", cwd=wt).returncode == 0
     )  # the same push outside a free turn works
+
+
+@pytest.mark.parametrize("stage", ["plan", "implement", "live_check"])
+def test_t2613_real_free_prompts_hold_no_landing_text(
+    stage: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("TODOIMPL_FREE_CLAUDE", "/x/claude-free")
+    monkeypatch.setattr(srcwall, "wrap", lambda _w, _s: ([], ""))
+    ctx = PromptContext(title="t", body="", repo="r", worktree=tmp_path / "wt", run_dir=tmp_path)
+    inv = freeroute.build(stage, build(stage, ctx), tmp_path / "wt")
+    prompt = inv.argv[inv.argv.index("-p") + 1]
+    for text in ("permission to land", "push origin", "land the work yourself", "landed the same way"):
+        assert text not in prompt, (stage, text)
+    assert freeroute.NO_LAND in prompt
+
+
+def test_t2613_ssh_url_pushes_are_refused_too() -> None:
+    env = freeroute.no_push({})
+    pairs = {
+        (env[f"GIT_CONFIG_KEY_{i}"], env[f"GIT_CONFIG_VALUE_{i}"])
+        for i in range(int(env["GIT_CONFIG_COUNT"]))
+    }
+    refused = f"url.{freeroute.REFUSED}.pushInsteadOf"
+    assert {
+        (refused, "ssh://git@github.com/"),
+        (refused, "git@github.com:"),
+        (refused, "https://github.com/"),
+    } <= pairs

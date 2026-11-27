@@ -6,6 +6,7 @@ import threading
 from collections.abc import Iterator
 from pathlib import Path
 
+import home_guard
 import pytest
 import test_shard
 from todoimpl.apikey import cache
@@ -26,8 +27,12 @@ def _scratch(tmp_path_factory: pytest.TempPathFactory) -> Iterator[Path]:
     shutil.rmtree(root, ignore_errors=True)
 
 
+_cov = os.environ.get("COVERAGE_FILE")
+home_guard.install(Path(__file__).resolve().parents[1], *((Path(_cov).parent,) if _cov else ()))
+
+
 @pytest.fixture(autouse=True)
-def _no_real_home(_scratch: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def _no_real_home(_scratch: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """Give every test an empty temp HOME and XDG dirs (T2612).
 
     A suite run once deleted kuhy's real free-model visibility cache and overwrote his gateway key, because
@@ -46,6 +51,9 @@ def _no_real_home(_scratch: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     for role in ("AUTHOR", "COMMITTER"):
         monkeypatch.setenv(f"GIT_{role}_NAME", "todoimpl test")
         monkeypatch.setenv(f"GIT_{role}_EMAIL", "test@example.invalid")
+    yield
+    if seen := home_guard.take():
+        pytest.fail(f"wrote under the real HOME (T2612): {seen}")
 
 
 @pytest.fixture(scope="session", autouse=True)

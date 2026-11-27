@@ -35,11 +35,16 @@ NO_LAND = "Never push, tag or deploy: commit in the worktree only; a Claude turn
 LANDING = re.compile(
     r"You have kuhy's standing permission to land your own work\..*?landed the same way\. ", re.DOTALL
 )
+ON_MAIN = re.compile(
+    r"A criterion that only passes once the work is on main \(.*?\): land the work yourself, [^.]*\."
+)
+ON_MAIN_FREE = "A criterion that only passes once the work is on main stays `- [ ]`: a Claude turn lands it."
 REFUSED = "/nonexistent/free-turns-never-push"
 PUSH_BLOCK = (
     ("remote.origin.pushurl", REFUSED),
     (f"url.{REFUSED}.pushInsteadOf", "git@github.com:"),
     (f"url.{REFUSED}.pushInsteadOf", "https://github.com/"),
+    (f"url.{REFUSED}.pushInsteadOf", "ssh://git@github.com/"),
 )
 
 
@@ -65,7 +70,8 @@ def build(  # noqa: PLR0913, PLR0917 - same signature as claude.build
     effort: str | None = None,
 ) -> claude.Invocation:
     """Build a free turn: the plan argv on `claude-free`, behind the src wall, told never to ask."""
-    task = LANDING.sub(f"{NO_LAND} ", prompt) if LANDING.search(prompt) else f"{prompt}\n{NO_LAND}"
+    task = ON_MAIN.sub(ON_MAIN_FREE, LANDING.sub(f"{NO_LAND} ", prompt))
+    task = task if NO_LAND in task else f"{task}\n{NO_LAND}"
     inv = claude.build(
         role, f"{PREAMBLE} {PATHS}\n\n{task}", worktree, resume, extra_dirs, allow, MODEL, effort
     )
