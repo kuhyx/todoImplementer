@@ -34,7 +34,8 @@ GAP = "the no-limit runner found {file} not fully covered (lines {lines}, {branc
 DETAIL = 1500
 FAILED = (
     re.compile(r"^FAILED (\S+)", re.MULTILINE),  # pytest's short summary
-    re.compile(r"^\s*FAIL\s+(\S+)", re.MULTILINE),  # vitest's file line
+    # vitest's file line; only a test file: pytest-cov's `FAIL Required test coverage` is no test (T2602)
+    re.compile(r"^\s*FAIL\s+(\S+\.(?:test|spec)\.[cm]?[jt]sx?)\b", re.MULTILINE),
 )
 
 

@@ -3,7 +3,7 @@
 kuhy (2026-11-27): when no Claude route can run a turn (the plan is limited for 12 h to 4 days, the free API
 credits are not `ready`, the free gateway is down or no public card waits), the board should still do useful
 work that costs no tokens. Code: `server/todoimpl/nolimit/`. Regressions: `tests/regressions/DOCS-nolimit.md`
-(T2540 to T2550, T2584 to T2590, T2600, T2601).
+(T2540 to T2550, T2584 to T2590, T2600 to T2602).
 
 ## What the board can do with no tokens, ranked
 
