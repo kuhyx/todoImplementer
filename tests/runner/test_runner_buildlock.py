@@ -41,7 +41,7 @@ def test_turn_env_points_claude_at_an_env_file_that_puts_the_shims_first(
     assert env["CARGO_BUILD_JOBS"] == "4"
     assert "MAKEFLAGS" not in buildlock.TUNING  # make defaults to one job; -j4 would raise it
     shims = buildlock.root() / buildlock.SHIM_DIR
-    tools = (*buildlock.TOOLS, *buildlock.GUARDS, cardslice.SHIM)  # the slice shim rides along (T2401)
+    tools = (*buildlock.TOOLS, *buildlock.GUARDS, *buildlock.WAITS, cardslice.SHIM)  # T2401, T2591
     assert sorted(p.name for p in shims.iterdir()) == sorted(tools)
     assert all(os.access(shims / t, os.X_OK) for t in tools)
     script = f'PATH=/usr/bin:{shims}:/bin; . "$1"; . "$1"; echo "$PATH"'

@@ -58,6 +58,9 @@ LINTERS = frozenset(
 LINTERS_MARK = "@LINTERS@"
 # Guard shims: `flock` on the build lock, its holder or its queue is refused (it would jump the queue, T2167).
 GUARDS = ("flock",)
+# Wait shims: a long `timeout` around a waiter and a following `tail` end after 40 s (T2591, waitshim.sh).
+WAITS = ("timeout", "tail")
+WAIT_SOURCE = "waitshim.sh"
 # Build tuning for every turn: no Gradle daemon left behind, bounded workers and heap, four cargo jobs.
 TUNING = {
     "GRADLE_OPTS": "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=4 -Dorg.gradle.jvmargs=-Xmx3g",
@@ -86,7 +89,7 @@ def ensure(base: Path) -> Path:
     source = source.replace(LINTERS_MARK, " ".join(sorted(LINTERS))).replace(SLOTS_MARK, str(SLOTS))
     _put(wrapper, source, 0o755)
     shims = base / SHIM_DIR
-    keep = {*TOOLS, *GUARDS, cardslice.SHIM}
+    keep = {*TOOLS, *GUARDS, *WAITS, cardslice.SHIM}
     if shims.is_dir():  # a tool that left TOOLS (make, T2415) must stop locking in the running sessions too
         for stale in shims.iterdir():
             if stale.name not in keep:
@@ -98,6 +101,9 @@ def ensure(base: Path) -> Path:
     # A session's board-slice job joins its card's slice (cardslice.py, T2401).
     shim = Path(__file__).with_name(cardslice.SHIM_SOURCE).read_text(encoding="utf-8")
     _put(shims / cardslice.SHIM, shim, 0o755)
+    waits = Path(__file__).with_name(WAIT_SOURCE).read_text(encoding="utf-8")
+    for tool in WAITS:
+        _put(shims / tool, waits, 0o755)
     return shims
 
 

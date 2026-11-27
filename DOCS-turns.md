@@ -110,6 +110,9 @@ Code: `server/todoimpl/runner/buildlock.{py,sh}`; `buildlock.SLOTS` (`$TODOIMPL_
   linter list, `buildlock.LINTERS`) and `flutter|dart analyze` skip the lock. A plain make+gcc build runs unlocked. `ensure` deletes a shim
   that left the list, so running sessions drop it at the next turn.
   Never node, npx, uvx, git, python or claude: MCP servers and claude itself use them.
+- Waits end within 40 s (T2591): the `timeout` and `tail` shims (`waitshim.sh`) cut `timeout N` around a
+  waiter (tail, inotifywait, sleep, `gh ... watch`, `journalctl -f`) to 40 s when N is longer, and end a
+  following `tail -f/-F` after 40 s, with one stderr line. The session checks the job and waits again.
 - The shims reach claude's Bash tool through `CLAUDE_ENV_FILE` (`$TODOIMPL_HOME/shims-env/<card>.sh`, sourced
   before every Bash command), not a PATH prefix: kuhy's zshrc puts `~/.local/bin` (flutter, dart, uv, pytest)
   in front of any inherited PATH. MCP servers and hooks keep the plain PATH, so none of them can hold the lock.
