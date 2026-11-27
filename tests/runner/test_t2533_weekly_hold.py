@@ -116,3 +116,13 @@ def test_t2533_a_single_note_card_keeps_its_note_priority(tmp_path: Path) -> Non
     files.snapshot(tmp_path, item, "high")
     assert files.priority(tmp_path) == "high"
     assert not (tmp_path / files.PARTS).exists()  # a section card has no parts to tick
+
+
+def test_t2533_a_halted_turn_is_not_halted_twice(tmp_path: Path) -> None:
+    stopped: list[str] = []
+    one = guard.OverageGuard(
+        tmp_path, "aaaa0004-0", lambda: stopped.append("x"), lambda _t: None, lambda _u: None
+    )
+    one.halt(RESET, "first")
+    one.halt(RESET + 1, "second")
+    assert (stopped, one.until) == (["x"], RESET)

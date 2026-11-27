@@ -6,6 +6,7 @@ A fake transport stands in for api.anthropic.com: no network. `root` is the read
 from __future__ import annotations
 
 import json
+import subprocess
 from typing import TYPE_CHECKING
 
 import pytest
@@ -228,3 +229,19 @@ def test_t2532_a_bad_purchased_value_counts_as_purchased(root: Path) -> None:
     path = setting.settings_path()
     path.write_text(json.dumps({**json.loads(path.read_text()), "credits_purchased_usd": "lots"}))
     assert setting.purchased_usd() == 1.0
+
+
+def test_t2532_oneshot_plan_fallback_runs_claude_p(root: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[list[str]] = []
+
+    def fake_run(argv: list[str], **_kw: object) -> subprocess.CompletedProcess[str]:
+        seen.append(argv)
+        return subprocess.CompletedProcess(
+            argv, 0, json.dumps({"result": "plan text", "is_error": False}), ""
+        )
+
+    monkeypatch.setattr(oneshot.subprocess, "run", fake_run)
+    monkeypatch.setattr(batchshot, "run", lambda *_a, fallback, **_k: fallback())
+    out = oneshot.run("p", model="haiku", kind="merge", root=root, timeout=5, error=BoomError, batch=True)
+    assert out == "plan text"
+    assert "-p" in seen[0]
