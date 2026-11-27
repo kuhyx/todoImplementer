@@ -94,10 +94,10 @@ def test_t2588_a_bump_that_turns_the_gate_red_is_dropped_with_a_ticket(world: En
 def test_t2588_no_freshness_gate_no_bump_and_a_missing_script_is_loud(world: Env) -> None:
     kuhy_repo(world, test="true")
     tree = worktree.prepare(load(world), NOW)
-    assert bump.run(load(world), tree, "true", NOW) == bump.NONE
+    assert bump.apply(load(world), tree, NOW) == bump.NONE
     kuhy_repo(world, "fresh", test="true", files={FRESHNESS: "exit 0\n"})
     tree = worktree.prepare(load(world, "fresh"), NOW)
-    assert bump.run(load(world, "fresh"), tree, "true", NOW) == bump.FAILED
+    assert bump.apply(load(world, "fresh"), tree, NOW) == bump.FAILED
     assert "apply_dep_pins.py is missing" in str(records()[0]["detail"])
 
 

@@ -2,10 +2,11 @@
 
 Order: (1) the board worktree from `origin/<default>`; (2) setup (locked deps); (3) autofixes, committed on
 the `nolimit/<date>` branch when they changed anything (the repo's own commit hooks run, never skipped);
-(4) the full gate; (5) green: the coverage gaps become tickets (`coverage.py`) and the dependency pins are
-bumped, kept only when the gate stays green (`bump.py`); (6) push fast-forward to origin's default branch
-and run the CLAUDE.md deploy, unless `push` is off or nothing was committed; red: the commit is discarded
-and each failure is a ticket.
+(4) the dependency pins bumped and installed, one more commit (`bump.py`); (5) the full gate, once, on both
+commits (T2617); red with a bump: the bump commit is dropped and the base gated again, so a red base files
+its own failures and a green one blames the bump; (6) green: the coverage gaps become tickets (`coverage.py`);
+(7) push fast-forward to origin's default branch and run the CLAUDE.md deploy, unless `push` is off or
+nothing was committed; red: the commits are discarded and each failure is a ticket.
 A read-only repo (no gate) runs its `lint` only and never commits.
 
 Before each step `still()` is asked again: False ends the visit at once (`stopped`, a Claude route opened).
@@ -63,6 +64,24 @@ class Visit:
             self.red = True
         return done
 
+    def _gated(self, tree: Tree, gate: str) -> bool:
+        """Bump, then gate once; a red run with a bump drops it and gates the base (T2617)."""
+        if not self.still() or bump.apply(self.repo, tree, self.now) != bump.COMMITTED:
+            return self.step("gate", gate, tree).passed
+        if not self.still():
+            raise EndedError(status.STOPPED)
+        both = steps.run("gate", gate, tree.path)
+        if both.slow:  # a cut run ends the visit the way `step` ends it
+            tickets.slow(self.repo, both, self.now)
+            raise EndedError(status.SLOW)
+        if both.passed:
+            return True
+        bump.undo(self.repo, tree, self.now)
+        base = self.step("gate", gate, tree).passed
+        if base:
+            bump.blame(self.repo, both, self.now)
+        return base
+
     def run(self) -> str:
         """Visit the repo; return its result."""
         try:
@@ -96,14 +115,12 @@ class Visit:
                 worktree.discard(tree)
         if worktree.dirty(tree):
             self.step("commit", COMMIT, tree)
-        if not self.step("gate", gate, tree).passed or self.red:
+        if not self._gated(tree, gate) or self.red:
             worktree.discard(tree)
             return status.RED
         tickets.resolve(self.repo)
         coverage.run(self.repo, tree.path, self.now)  # after resolve: the gaps still open are counted again
-        worktree.discard_changes(tree)  # reports the gate and coverage wrote never reach the bump's commit
-        if self.still():
-            bump.run(self.repo, tree, gate, self.now)
+        worktree.discard_changes(tree)  # reports the gate and coverage wrote are never pushed
         if not (self.push and worktree.ahead(tree)):
             return status.GREEN
         if not self.step("push", PUSH.format(base=tree.base), tree).passed:

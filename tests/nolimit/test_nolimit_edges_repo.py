@@ -42,7 +42,7 @@ def test_a_bump_script_cut_at_60_s_files_a_slow_ticket_and_fails(
 ) -> None:
     repo, tree = bumpable(world)
     script_steps(monkeypatch, {"bump": None})
-    assert bump.run(repo, tree, "true", NOW) == bump.FAILED
+    assert bump.apply(repo, tree, NOW) == bump.FAILED
     assert [r["signature"] for r in records("slow-steps.json")] == ["slow-nolimit-bump"]
 
 
@@ -51,22 +51,42 @@ def test_a_bump_commit_that_fails_drops_the_pins_and_files_a_ticket(
 ) -> None:
     repo, tree = bumpable(world)
     script_steps(monkeypatch, {"bump-commit": 1})
-    assert bump.run(repo, tree, "true", NOW) == bump.FAILED
+    assert bump.apply(repo, tree, NOW) == bump.FAILED
     assert (tree.path / "deps.txt").read_text(encoding="utf-8") == "lib==1\n"
     assert [r["signature"] for r in records()] == ["nolimit-bump-commit"]
 
 
-def test_a_regate_cut_at_60_s_drops_the_bump_commit(world: Env, monkeypatch: pytest.MonkeyPatch) -> None:
-    repo, tree = bumpable(world)
-    script_steps(monkeypatch, {"bump-gate": None})
-    assert bump.run(repo, tree, "true", NOW) == bump.SLOW
-    assert sh(tree.path, "git", "log", "-1", "--format=%s").strip() == "commands"
-    assert [r["signature"] for r in records("slow-steps.json")] == ["slow-nolimit-bump-gate"]
+def test_a_gate_cut_at_60_s_on_a_bump_ends_the_visit_unpushed(
+    world: Env, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo, _tree = bumpable(world)
+    script_steps(monkeypatch, {"gate": None})
+    assert run.visit(repo, NOW) == status.SLOW
+    bare = world.tmp / "remotes" / "demo.git"
+    assert sh(bare, "git", "log", "-1", "--format=%s", "main").strip() == "commands"
+    assert [r["signature"] for r in records("slow-steps.json")] == ["slow-nolimit-gate"]
+
+
+def test_a_route_that_opens_after_the_bump_ends_the_visit_before_the_gate(
+    world: Env, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo, _tree = bumpable(world)
+    monkeypatch.setattr(fixes, "autofix", lambda _wt: [])
+    ran: list[str] = []
+    real = steps.run
+
+    def spy(name: str, command: str, cwd: Path, *rest: object) -> steps.Step:
+        ran.append(name)
+        return real(name, command, cwd)
+
+    monkeypatch.setattr(steps, "run", spy)
+    assert run.visit(repo, NOW, lambda: "bump-commit" not in ran) == status.STOPPED
+    assert "gate" not in ran
 
 
 def test_a_bump_that_changes_nothing_is_none(world: Env) -> None:
     repo, tree = bumpable(world, "pass")
-    assert bump.run(repo, tree, "true", NOW) == bump.NONE
+    assert bump.apply(repo, tree, NOW) == bump.NONE
     assert records() == []
 
 
@@ -86,9 +106,7 @@ def test_a_coverage_gaps_step_cut_at_60_s_files_a_slow_ticket(
     assert [r["signature"] for r in records("slow-steps.json")] == ["slow-nolimit-coverage-gaps"]
 
 
-def test_a_route_that_opens_after_the_gate_skips_the_bump(
-    world: Env, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_a_route_that_opens_before_the_bump_skips_it(world: Env, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(fixes, "autofix", lambda _wt: [])
     ran: list[str] = []
     real = steps.run
@@ -99,8 +117,9 @@ def test_a_route_that_opens_after_the_gate_skips_the_bump(
 
     monkeypatch.setattr(steps, "run", spy)
     kuhy_repo(world, test="true", files={FRESHNESS: "exit 0\n"})
-    assert run.visit(load(world), NOW, lambda: "gate" not in ran, push=False) == status.GREEN
-    assert "bump" not in ran
+    answers = iter([True])  # the visit starts, then a route opens before the bump
+    assert run.visit(load(world), NOW, lambda: next(answers, False), push=False) == status.STOPPED
+    assert ("bump" in ran, "gate" in ran) == (False, False)
 
 
 def test_the_chore_is_skipped_when_a_route_opens_during_the_visit(

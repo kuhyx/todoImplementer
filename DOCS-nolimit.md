@@ -54,18 +54,21 @@ A repo whose step was cut is done for the cycle like any other and is tried agai
    --enforce-lockfile` for every lockfile at the root or one dir down (`app/`, `web/`). This also warms the
    shared stores (pnpm store, uv cache, pub cache), so the next turn installs offline (#9, T2587).
 3. Autofixes, picked from the repo's config: ruff when it is configured; eslint and prettier only on the
-   paths the repo's own `package.json` scripts run them on (T2550), never on the whole tree. A fixer that finds errors it cannot fix exits 0 (the gate reports
-   them); only a crash is red, and its changes are dropped.
+   paths the repo's own `package.json` scripts run them on (T2550), never on the whole tree. A fixer that
+   finds errors it cannot fix exits 0 (the gate reports them); only a crash is red, and its changes are dropped.
 4. A commit of what changed (`git add -A`, the repo's own commit hooks run, never skipped).
-5. The full gate. Red: the commit is discarded and each failure is a ticket. Green: the repo's earlier no-limit
-   records are marked resolved; then, unless `--no-push` or nothing was committed, `git push origin
-   HEAD:<default>` after checking that origin is an ancestor (fast-forward only), and the CLAUDE.md `deploy`.
-6. Still green, before the push: `coverage.py` runs the repo's `coverage` bullet (unless `n/a`, T2601), then its `coverage-gaps` bullet with `--json --max-files
-   10` and files one ticket per uncovered file (`nolimit-coverage-<sha8 of path>`; an unreadable report is
-   `nolimit-coverage-gaps`, #8, T2584). Then `bump.py`, only in a repo with
-   `scripts/check_dependency_freshness.sh`: `~/.claude/scripts/apply_dep_pins.py .`, relock (`uv lock`,
-   `pnpm install --lockfile-only`, `flutter pub get`), one commit, the gate again. Green: the commit is pushed
-   with the rest. Red: the commit is dropped and each failure is a `nolimit-bump*` ticket (#6, T2588).
+5. `bump.py`, only in a repo with `scripts/check_dependency_freshness.sh`: `~/.claude/scripts/apply_dep_pins.py
+   .`, relock (`uv lock`, `pnpm install --lockfile-only`, `flutter pub get`), the setup again so the new pins
+   are installed, one commit (#6, T2588).
+6. The full gate, once, on both commits (T2617: before, the suite ran once per commit and a kcd2 visit took
+   62.6 s). Red with a bump: the bump commit is dropped, the old pins reinstalled and the base gated again;
+   green there files the red run as `nolimit-bump`, red there is the base's own. Red: the commits are
+   discarded and each failure is a ticket. Green: the repo's earlier no-limit records are marked resolved.
+7. Still green: `coverage.py` runs the repo's `coverage` bullet (unless `n/a`, T2601), then its
+   `coverage-gaps` bullet with `--json --max-files 10` and files one ticket per uncovered file
+   (`nolimit-coverage-<sha8 of path>`; an unreadable report is `nolimit-coverage-gaps`, #8, T2584). Then,
+   unless `--no-push` or nothing was committed, `git push origin HEAD:<default>` after checking that origin
+   is an ancestor (fast-forward only), and the CLAUDE.md `deploy`.
 
 Every repo command runs as `capped.sh timeout -k 5 60 bash -c <command>` (`steps.py`, through
 `runner.checks.run_capped`, so a build waits for the build lock first). Git plumbing (fetch, worktree, status,
