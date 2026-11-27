@@ -67,6 +67,7 @@ belongs to the browser device gate and goes away with it.
 |---|---|---|
 | `task_start` ... `task_done_manually` (12) | `POST /api/task/<card>/<action>`, action in `bodies.ACTIONS` | `{card, args}`; args = `requests.schema.json#/$defs/<action>` |
 | `ask_answer` ... `ask_reject` (6) | `POST /api/task/<card>/ask/<verb>` | `{card, args}`; args = `requests.schema.json#/$defs/ask_<verb>` |
+| `task_part_edit` | `POST /api/task/<card>/part-edit` (856c0f0a) | `{card, args}`; args = `$defs/part_edit` `{part, title, body}` |
 | `new_task` | `POST /api/new-task` | `{args}`; args = `$defs/new_task` (body cap stays `newtask.MAX_BODY`) |
 
 `task_send` also gets `newtask.MAX_BODY` (40 MB), since its `images` may carry inline bytes ("Images" below).

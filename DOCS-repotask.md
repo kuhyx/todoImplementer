@@ -47,6 +47,17 @@ A card with parts but none for Claude (only manual or held ones) is **Yours** an
 reason; its line is the parts' `Needs:` lines (T1951). A repo with only held parts has no `-0` card. Part titles are user content; the page adds no words (icon per
 state, a number for steps, names in `aria-label` and `title`).
 
+**Editing a part before the run reaches it** (kuhy, 856c0f0a: "edit a note if it is in backlog before it is
+ran"). Every part carries `edit: {enabled, reason}` (`board/partedit.py`): a resting card (Backlog, Yours) offers
+every part but a held one; a live run (queued, working, paused, gate, Needs you, cancelled) holds the first part
+it still owes, so only the parts after it and the manual ones stay editable; a ticked part never is. The drawer
+and the app's card sheet draw a pencil per part (disabled with that reason); the save goes to
+`POST /api/task/<card>/part-edit` `{part, title, body}` (relay kind `task_part_edit`), which checks the same flag,
+rewrites only that section through `TodoClient.edit_section` (fails closed on a section that moved or closed, or
+on text that would add a `## ` heading or open a fence) and returns the re-read card. `GET /api/task` adds each
+part's `body` as the editor's start value; the board does not carry it. `ItemView.update_task` still refuses
+title and body edits through a card.
+
 ## One run, cycles, ticks
 
 - One run state `<root>/<card id>/state.json` (`extra.repotask`), one worktree, one session at a time. Start builds

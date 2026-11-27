@@ -25,6 +25,7 @@ GOOD_REQUESTS = [
     req("task_start", {"card": CARD, "args": {"auto_ship": True}}),
     req("task_send", {"card": CARD, "args": {"text": "go on"}}),
     req("ask_answer", {"card": CARD, "args": {"ask": "pick", "option": "a"}}),
+    req("task_part_edit", {"card": CARD, "args": {"part": "aaaa1111-0", "title": "t", "body": ""}}),
     req("merge_dismiss", {"group": "0123456789ab", "args": {}}),
     req("credits_fallback", {"args": {"enabled": False}}),
     req("task_detail", {"card": CARD}),
@@ -43,6 +44,7 @@ BAD_REQUESTS = [
     req("credits_fallback", {"args": {"enabled": "yes"}}),
     req("task_send", {"card": CARD, "args": {}}),  # args pinned to requests.schema.json#/$defs/send
     req("ask_answer", {"card": CARD, "args": {"option": "a"}}),
+    req("task_part_edit", {"card": CARD, "args": {"part": "aaaa1111-0", "title": "a\nb", "body": ""}}),
     req("task_ship", {"card": CARD, "args": {"auto_ship": True}}),
     req("merge_merge", {"group": "0123456789ab", "args": {"extra": 1}}),
     req("task_detail", {"card": CARD, "extra": 1}),

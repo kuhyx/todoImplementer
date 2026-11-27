@@ -9,13 +9,13 @@ from contract_lib import validate
 from jsonschema import ValidationError
 from relayfakes import DEV, req
 from test_parity import bodies
-from todoimpl.http import asks, merge, newtask, sessions, settings
+from todoimpl.http import asks, merge, newtask, partedit, sessions, settings
 from todoimpl.http.routes import ACTION_PATH
 from todoimpl.relay import envelope, kinds
 
 CONTRACTS = Path(__file__).resolve().parents[2] / "contracts"
 CARD = "abcd1234-0"
-POST_ROUTES = (ACTION_PATH, asks.POST_PATH, merge.POST_PATH, sessions.POST_PATH)
+POST_ROUTES = (ACTION_PATH, asks.POST_PATH, merge.POST_PATH, sessions.POST_PATH, partedit.PATH)
 
 
 def schema_kinds() -> set[str]:
@@ -25,7 +25,7 @@ def schema_kinds() -> set[str]:
 
 def test_the_allowlist_is_the_contracts() -> None:
     assert set(kinds.ALL) == schema_kinds()
-    assert len(kinds.ALL) == len(set(kinds.ALL)) == 38
+    assert len(kinds.ALL) == len(set(kinds.ALL)) == 39
 
 
 def test_lanes() -> None:

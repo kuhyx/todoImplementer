@@ -163,7 +163,12 @@ export const autoStart = z.strictObject({ passed_at: epoch, reason: z.literal("d
 
 /** One part of a repo task (repotask.schema.json $defs/part): its state and, when split, the sub-step counts. */
 export const PART_STATES = ["todo", "working", "done", "human", "held"] as const;
+/** Whether kuhy may edit the part now (856c0f0a); a disabled one says why. */
+export const partEdit = z.union([z.strictObject({ enabled: z.literal(true), reason: z.null() }), z.strictObject({ enabled: z.literal(false), reason: z.string().min(1) })]);
 export const repoPart = z.strictObject({
+  /** The part's own text: only in GET /api/task, the editor's start value. */
+  body: z.string().optional(),
+  edit: partEdit,
   id: itemId,
   state: z.enum(PART_STATES),
   steps: z.strictObject({ done: z.number().int().min(0), total: z.number().int().min(1) }).nullable(),

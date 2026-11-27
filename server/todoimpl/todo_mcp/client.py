@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import os
+import threading
 import time
 from collections.abc import Callable, Mapping
 from pathlib import Path
 
+from todoimpl.todo_mcp.edit import rewrite_section, whole_note
 from todoimpl.todo_mcp.items import Item, mark_done, sections, split_items
 from todoimpl.todo_mcp.model import Task, TodoError
 from todoimpl.todo_mcp.parse import added_id, parse_detail, parse_list, to_wire
@@ -32,6 +34,7 @@ class TodoClient:
         self.url = url
         self.closed_here: set[str] = set()  # id8 of every note this process closed (the board's own closes)
         self._transport = Transport(url, token, timeout, clock)
+        self._write = threading.Lock()  # one read-modify-write of a note body at a time (close vs edit)
 
     def __repr__(self) -> str:  # noqa: D105
         return f"TodoClient({self.url!r})"
@@ -109,19 +112,37 @@ class TodoClient:
         if not evidence.strip():
             msg = "evidence: required, not blank"
             raise TodoError(msg)
-        task = self.get_task(item.note_id)
-        if is_umbrella(task.body):  # one item: its `## ` sections are children, never marked here
-            self.close_task(item.note_id, evidence)
-            return
-        current = split_items(task)
-        if item.index >= len(current) or current[item.index].title != item.title:
-            msg = f"section {item.title!r} moved or gone in note {item.note_id}"
-            raise TodoError(msg)
-        if sections(task.body) and current[item.index].status != "done":
-            self.update_task(item.note_id, body=mark_done(task.body, item.index, evidence))
-            current = split_items(self.get_task(item.note_id))
-        if all(entry.status == "done" for entry in current) or not sections(task.body):
-            self.close_task(item.note_id, evidence)
+        with self._write:
+            task = self.get_task(item.note_id)
+            if is_umbrella(task.body):  # one item: its `## ` sections are children, never marked here
+                self.close_task(item.note_id, evidence)
+                return
+            current = split_items(task)
+            if item.index >= len(current) or current[item.index].title != item.title:
+                msg = f"section {item.title!r} moved or gone in note {item.note_id}"
+                raise TodoError(msg)
+            if sections(task.body) and current[item.index].status != "done":
+                self.update_task(item.note_id, body=mark_done(task.body, item.index, evidence))
+                current = split_items(self.get_task(item.note_id))
+            if all(entry.status == "done" for entry in current) or not sections(task.body):
+                self.close_task(item.note_id, evidence)
+
+    def edit_section(self, item: Item, title: str, text: str) -> None:
+        """Rewrite one open part's own title and text (856c0f0a); fails closed on a section that moved."""
+        with self._write:
+            task = self.get_task(item.note_id)
+            if is_umbrella(task.body):
+                msg = f"note {item.note_id} is an umbrella: its sections are its children"
+                raise TodoError(msg)
+            found = sections(task.body)
+            if not found:  # a section-less note is one part: its own title and body
+                if item.index or task.title != item.title:
+                    raise TodoError(_moved(item))
+                self.update_task(item.note_id, title=title, body=whole_note(text))
+                return
+            if item.index >= len(found) or found[item.index].title != item.title or found[item.index].done:
+                raise TodoError(_moved(item))
+            self.update_task(item.note_id, body=rewrite_section(task.body, item.index, title, text))
 
     def tick_child(self, id8: str, key: str, mark: str = "x") -> None:
         """Set child `key`'s open checkbox in an umbrella note to `mark`; no write when it is not open."""
@@ -129,3 +150,7 @@ class TodoClient:
         body = tick(task.body, key, mark)
         if body != task.body:
             self.update_task(id8, body=body)
+
+
+def _moved(item: Item) -> str:
+    return f"section {item.title!r} moved or gone in note {item.note_id}"

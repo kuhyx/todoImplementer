@@ -19,6 +19,7 @@ import 'package:todo_implementer/ui/board/image_strip.dart';
 import 'package:todo_implementer/ui/board/model_picker.dart';
 import 'package:todo_implementer/ui/board/needs_line.dart';
 import 'package:todo_implementer/ui/board/note_images.dart';
+import 'package:todo_implementer/ui/board/part_edit.dart';
 import 'package:todo_implementer/ui/board/spec_answers.dart';
 
 /// Relay kind of a card action id (`spec-ok` -> `task_spec_ok`).
@@ -172,6 +173,12 @@ class _CardSheetState extends State<CardSheet> {
             ),
             if (card.repo case final repo?) Text(repo, style: muted),
             NoteImages(images: card.images, relay: widget.relay),
+            if (card.parts.isNotEmpty)
+              PartEdits(
+                card: card,
+                relay: widget.relay,
+                onError: widget.onError,
+              ),
             if (card.current.isNotEmpty) Text(card.current),
             if (needs != null)
               Row(

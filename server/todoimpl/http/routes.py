@@ -14,7 +14,7 @@ from todoimpl.tokens_api import router as tokens_api
 from todoimpl.version import __version__
 
 from . import asks as asks_http
-from . import bodies, getroutes, issues, newtask, settings
+from . import bodies, getroutes, issues, newtask, partedit, settings
 from . import merge as merge_http
 from . import sessions as sessions_http
 from .auth import check_post
@@ -178,19 +178,20 @@ class Router:
         raw = read(size) if size else b""
         if (why := check_post(origin, token, expected=self.token, origins=self.origins)) is not None:
             return error_reply("forbidden", why)
-        found = merge_http.POST_PATH.fullmatch(path)
         if path == newtask.PATH:  # create, then the card's own Start click through _action
             reply = _guard(
                 lambda: newtask.handle(self.backend, raw, lambda card: _guard(partial(self.start_card, card)))
             )
         elif path == settings.PATH:
             reply = _guard(lambda: settings.handle(self.backend, raw))
-        elif found and (api := self._merges()) is not None:
+        elif (found := merge_http.POST_PATH.fullmatch(path)) and (api := self._merges()) is not None:
             reply = _guard(lambda: merge_http.handle_post(api, found, raw))
         elif (hit := asks_http.POST_PATH.fullmatch(path)) and (ask := asks_http.api_of(self.backend)):
             reply = _guard(lambda: asks_http.handle_post(ask, hit, raw))
         elif mutation := sessions_http.POST_PATH.fullmatch(path):
             reply = _guard(lambda: sessions_http.handle_post(self, mutation, raw))
+        elif edit := partedit.PATH.fullmatch(path):  # a part's own title and text (856c0f0a)
+            reply = _guard(lambda: partedit.handle(self.backend, edit.group(1), raw))
         else:
             reply = _guard(lambda: self._action(path, raw))
         return reply

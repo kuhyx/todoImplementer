@@ -92,6 +92,9 @@ READS: Final[dict[str, Kind]] = {
 ROUTED: Final[dict[str, Kind]] = {
     **{f"task_{a.replace('-', '_')}": _task(a) for a in bodies.ACTIONS},
     **{f"ask_{v.replace('-', '_')}": _ask(v) for v in ASK_VERBS},
+    "task_part_edit": Kind(  # a part's own title and text (856c0f0a); args = {part, title, body}
+        "act", lambda b: Call("POST", f"/api/task/{_seg(b['card'])}/part-edit", _json(b["args"]))
+    ),
     "new_task": _args(newtask.PATH),
     "credits_fallback": _args(settings.PATH),
     **{f"merge_{v}": _merge(v) for v in ("merge", "dismiss")},

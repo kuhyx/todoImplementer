@@ -15,11 +15,11 @@ import { makeDetail } from "@/test/fixture-detail";
 import { makeCards, NOW } from "@/test/fixtures";
 
 const PARTS: RepoPart[] = [
-  { id: "aaaa1111-0", state: "done", steps: null, title: "Text-free leftovers" },
-  { id: "aaaa1111-1", state: "working", steps: { done: 1, total: 3 }, title: "Server strings" },
-  { id: "aaaa1111-2", state: "todo", steps: null, title: "Make tutor text-free" },
-  { id: "bbbb2222-0", state: "human", steps: null, title: "MANUAL WORK REQUIRED: sign in" },
-  { id: "cccc3333-4", state: "held", steps: null, title: "Older run" },
+  { edit: { enabled: false, reason: "ticked" }, id: "aaaa1111-0", state: "done", steps: null, title: "Text-free leftovers" },
+  { edit: { enabled: false, reason: "on it" }, id: "aaaa1111-1", state: "working", steps: { done: 1, total: 3 }, title: "Server strings" },
+  { edit: { enabled: true, reason: null }, id: "aaaa1111-2", state: "todo", steps: null, title: "Make tutor text-free" },
+  { edit: { enabled: true, reason: null }, id: "bbbb2222-0", state: "human", steps: null, title: "MANUAL WORK REQUIRED: sign in" },
+  { edit: { enabled: false, reason: "older run" }, id: "cccc3333-4", state: "held", steps: null, title: "Older run" },
 ];
 const ROW: UmbrellaDetail["rows"][number] = {
   cost_usd: 0,

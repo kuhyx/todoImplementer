@@ -27,6 +27,7 @@
     {"if": {"properties": {"kind": {"const": "task_wont"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/card_args", "properties": {"args": {"$ref": "https://todoimplementer.local/contracts/requests.schema.json#/$defs/wont"}}}}}},
     {"if": {"properties": {"kind": {"const": "task_done_manually"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/card_args", "properties": {"args": {"$ref": "https://todoimplementer.local/contracts/requests.schema.json#/$defs/done_manually"}}}}}},
     {"if": {"properties": {"kind": {"const": "task_model"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/card_args", "properties": {"args": {"$ref": "https://todoimplementer.local/contracts/requests.schema.json#/$defs/model"}}}}}},
+    {"if": {"properties": {"kind": {"const": "task_part_edit"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/card_args", "properties": {"args": {"$ref": "https://todoimplementer.local/contracts/requests.schema.json#/$defs/part_edit"}}}}}},
     {"if": {"properties": {"kind": {"const": "ask_answer"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/card_args", "properties": {"args": {"$ref": "https://todoimplementer.local/contracts/requests.schema.json#/$defs/ask_answer"}}}}}},
     {"if": {"properties": {"kind": {"const": "ask_take_recommended"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/card_args", "properties": {"args": {"$ref": "https://todoimplementer.local/contracts/requests.schema.json#/$defs/ask_take_recommended"}}}}}},
     {"if": {"properties": {"kind": {"const": "ask_run"}}}, "then": {"properties": {"body": {"$ref": "#/$defs/card_args", "properties": {"args": {"$ref": "https://todoimplementer.local/contracts/requests.schema.json#/$defs/ask_run"}}}}}},
@@ -54,6 +55,7 @@
       "enum": [
         "task_start", "task_spec_answers", "task_spec_ok", "task_send", "task_ship", "task_close", "task_cancel",
         "task_lesson_approve", "task_go", "task_rerun", "task_wont", "task_done_manually", "task_model",
+        "task_part_edit",
         "ask_answer", "ask_take_recommended", "ask_run", "ask_undo", "ask_approve", "ask_reject",
         "new_task", "credits_fallback", "merge_merge", "merge_dismiss",
         "session_resume", "session_mark", "session_delete", "session_handoff",

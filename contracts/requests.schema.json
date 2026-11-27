@@ -87,6 +87,17 @@
       "required": ["model"],
       "additionalProperties": false
     },
+    "part_edit": {
+      "type": "object",
+      "description": "POST /api/task/<card>/part-edit (856c0f0a): the part's new title and text, written into its note section; refused (disabled) unless the card's parts[].edit offers it.",
+      "properties": {
+        "part": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/item_id"},
+        "title": {"type": "string", "minLength": 1, "maxLength": 200, "pattern": "^[^\\r\\n]*\\S[^\\r\\n]*$"},
+        "body": {"type": "string", "maxLength": 20000}
+      },
+      "required": ["part", "title", "body"],
+      "additionalProperties": false
+    },
     "credits_fallback": {
       "type": "object",
       "description": "POST /api/settings/credits-fallback (not task-scoped): turn the free API credits fallback on or off for every run.",

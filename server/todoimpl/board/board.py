@@ -14,6 +14,7 @@ from todoimpl.runner.parsing import parse_questions
 from . import cyclefloor
 from .askfallback import fallback
 from .card import Context, build_card, cycle_end
+from .partedit import with_bodies
 from .umbrella import detail
 
 if TYPE_CHECKING:
@@ -128,6 +129,7 @@ def build_task(
     A repo card between cycles shows nothing of the shipped one: no plan, stages, diff or peer rows (T2479).
     """
     card = build_card(task, run, ctx)
+    with_bodies(card, task)  # the parts' own text, for the editor (856c0f0a)
     umbrella = detail(task, run)
     since = cyclefloor.since(run)
     if rests := cycle_end(task, run):

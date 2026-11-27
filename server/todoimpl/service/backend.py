@@ -88,6 +88,7 @@ class ServiceBackend:
         self.gateway = gateway  # the free-model gateway's newest reading rides on /api/usage
         self.merge_service: MergeService | None = None  # set by build_backend; the http layer looks for it
         self.ask_service: AskService | None = None  # POST /api/task/<id>/ask/<verb>
+        self.part_service: object = None  # POST /api/task/<id>/part-edit (service/partedit.py)
         self.new_task_service: NewTaskService | None = None  # POST /api/new-task
         self.triage_service: TriageService | None = None  # labels repo-less notes (DOCS-triage.md)
         self.known_repos: Callable[[], list[str]] = list  # GitHub repos beside the cards' (T2413)

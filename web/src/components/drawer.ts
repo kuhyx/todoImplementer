@@ -10,6 +10,7 @@ import { paintDetail } from "@/components/drawer-render";
 import { buildShell, paintFocus, paintTabs, type Tab, trapTab } from "@/components/drawer-shell";
 import { createFeed } from "@/components/feed-view";
 import { loader, showToast } from "@/components/feedback";
+import { PartEditor } from "@/components/part-edit";
 import { SendImages } from "@/components/send-images";
 import { csrfToken, restoreInputs, snapshotInputs } from "@/lib/boot";
 import { h, must } from "@/lib/dom";
@@ -37,6 +38,7 @@ export class TiDrawer extends HTMLElement {
   #id: null | string = null;
   #images = new SendImages();
   #opener: HTMLElement | null = null;
+  readonly #parts = new PartEditor((id) => this.#refresh(id));
   #signature = "";
   #stops: (() => void)[] = [];
   #tab: Tab = "activity";
@@ -110,6 +112,7 @@ export class TiDrawer extends HTMLElement {
     this.#signature = signature;
     const snapshot = snapshotInputs(this);
     paintDetail(this, detail, this.#host(detail), this.#bar, this.#ask);
+    this.#parts.mount(this, detail.card);
     this.#paintTabs();
     restoreInputs(this, snapshot);
     if (before !== "questions" && this.#tab === "questions") this.#ask.focus();
@@ -201,6 +204,7 @@ export class TiDrawer extends HTMLElement {
     this.#tab = "activity";
     this.#signature = "";
     this.#ask.reset();
+    this.#parts.reset();
     this.#bar = idleBar();
     this.#feed = createFeed();
     this.#images = new SendImages();

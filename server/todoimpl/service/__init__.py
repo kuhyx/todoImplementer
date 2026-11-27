@@ -27,6 +27,7 @@ from .cards import CardTask
 from .closed import ClosedNotes
 from .known_repos import KnownRepos
 from .notedone import NoteDoneWatcher
+from .partedit import PartEditService
 from .repocards import group_cards, released_in
 from .runtitles import RunTitles, card_titles
 from .scheduling import SchedulerLike
@@ -134,7 +135,11 @@ def build_backend(
     auto_merge = AutoMerge(backend.merge_service)
     new_tasks = NewTaskService(client, cache)
     backend.new_task_service = new_tasks
-    backend.ask_service = AskService(cache, scheduler, root)
+    # One statement for both: the asks and a part's own text (POST .../part-edit, 856c0f0a).
+    backend.ask_service, backend.part_service = (
+        AskService(cache, scheduler, root),
+        PartEditService(client, cache),
+    )
     backend.triage_service = TriageService(client, cache, root, scheduler=scheduler)
     if refresh:
         backend.peer_hub = peer.start(root, scheduler)  # sessions message each other (DOCS-peer.md)

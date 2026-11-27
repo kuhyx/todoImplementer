@@ -6,8 +6,10 @@ library;
 import 'package:flutter/foundation.dart';
 import 'package:todo_implementer/model/card_parts.dart';
 import 'package:todo_implementer/model/json.dart';
+import 'package:todo_implementer/model/repo_part.dart';
 
 export 'package:todo_implementer/model/card_parts.dart';
+export 'package:todo_implementer/model/repo_part.dart';
 
 /// The four board columns, in board order.
 const columnIds = ['backlog', 'running', 'needs_you', 'done'];
@@ -34,6 +36,7 @@ class TaskCard {
     this.free = false,
     this.escalated = false,
     this.images = const [],
+    this.parts = const [],
   });
 
   /// Parses a card.
@@ -58,6 +61,7 @@ class TaskCard {
       free: flag(tier, 'free'),
       escalated: flag(tier, 'escalated'),
       images: objs(j, 'images').map(NoteImage.fromJson).toList(),
+      parts: objs(j, 'parts').map(RepoPart.fromJson).toList(),
     );
   }
 
@@ -111,6 +115,9 @@ class TaskCard {
 
   /// The todo-images the note links, first-seen order (T2535).
   final List<NoteImage> images;
+
+  /// A repo card's parts, in work order; empty on any other card.
+  final List<RepoPart> parts;
 }
 
 /// A column header: id, the server's label (spoken) and its card count.
