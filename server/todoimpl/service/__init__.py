@@ -35,6 +35,8 @@ from .view import ItemView
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from todoimpl.newtask.service import NewTaskService
+
 __all__ = ["CardTask", "ItemView", "ServiceBackend", "TaskCache", "board_fetch", "build_backend"]
 
 
@@ -154,10 +156,21 @@ def build_backend(
             root, cards=lambda: cache.snapshot().tasks, tasks=client, creator=new_tasks,
             starter=scheduler, refresh=cache.refresh,
         ).start()  # fmt: skip
+        _start_upkeep(backend, root, cache, new_tasks, scheduler)
         # A running card quiet over 60 s is logged and filed (DOCS-errors.md, "Stalls").
         StallWatch(root).start()
-        # No Claude route at all: rerun repo gates and apply autofixes with no tokens (DOCS-nolimit.md).
-        backend.nolimit = NoLimitLoop(root).start()
-        # A usage reset files one token optimization note and starts it first (DOCS-credits.md).
-        ResetWatch(root, lambda: cache.snapshot().tasks, new_tasks, scheduler).start()
     return backend
+
+
+def _start_upkeep(
+    backend: ServiceBackend,
+    root: Path,
+    cache: TaskCache,
+    new_tasks: NewTaskService,
+    scheduler: SchedulerLike,
+) -> None:
+    """Start the loops that work with no tokens or file their own notes: no-limit runner, reset watch."""
+    # No Claude route at all: rerun repo gates and apply autofixes with no tokens (DOCS-nolimit.md).
+    backend.nolimit = NoLimitLoop(root).start()
+    # A usage reset files one token optimization note and starts it first (DOCS-credits.md).
+    ResetWatch(root, lambda: cache.snapshot().tasks, new_tasks, scheduler).start()
