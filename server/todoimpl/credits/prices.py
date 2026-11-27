@@ -29,7 +29,11 @@ class Rates:
 
 SONNET = Rates({"input": 3.0, "output": 15.0, "cache_read": 0.30, "cache_write": 3.75}, 2.0)
 OPUS = Rates({"input": 4.0, "output": 20.0, "cache_read": 0.20, "cache_write": 5.0}, 4.0)
-FAMILIES = {"sonnet": SONNET, "opus": OPUS}
+# Claude Haiku 5.5 list (claude-api skill, cached 2026-11-03): $0.10 in, $0.50 out up to 100K input tokens
+# (5x above, which a one-shot never reaches); cache reads 0.1x, writes 1.25x input. Batch one-shots only.
+HAIKU = Rates({"input": 0.10, "output": 0.50, "cache_read": 0.01, "cache_write": 0.125}, 0.05)
+FAMILIES = {"sonnet": SONNET, "opus": OPUS, "haiku": HAIKU}
+BATCH_FACTOR = 0.5  # the Message Batches API bills half the list price
 DEAREST = OPUS
 
 
@@ -40,6 +44,19 @@ def rates(model: str) -> Rates:
         if family in name:
             return found
     return DEAREST
+
+
+def cost(model: str, usage: dict[str, object], factor: float = 1.0) -> float:
+    """Return the dollars of an API `usage` object at `model`'s rates times `factor`; bad counts count 0."""
+    per = rates(model).per_mtok
+    keys = {"input": "input_tokens", "output": "output_tokens", "cache_read": "cache_read_input_tokens"}
+    keys["cache_write"] = "cache_creation_input_tokens"
+    total = 0.0
+    for kind, key in keys.items():
+        count = usage.get(key)
+        if isinstance(count, int) and not isinstance(count, bool):
+            total += count * per[kind] / 1e6
+    return total * factor
 
 
 def reserve(model: str) -> float:

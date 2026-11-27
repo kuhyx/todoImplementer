@@ -113,6 +113,7 @@ export const lesson = z.strictObject({
 
 /** The paced free API credits, worded and computed by the server (credits.schema.json $defs/credits). */
 export const credits = z.strictObject({
+  batches: z.strictObject({ est_usd: usd, oldest_at: epoch.nullable(), pending: z.number().int().nonnegative() }),
   cap_usd: usd,
   cost_factor: z.number().positive(),
   credit_turns_period: z.number().int().nonnegative(),

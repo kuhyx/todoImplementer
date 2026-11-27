@@ -27,6 +27,7 @@ function tooltip(credits: Credits): string {
     `remaining: ${formatUsd(credits.remaining_usd)}`,
     `credit turns: ${String(credits.credit_turns_period)}, running: ${String(credits.running_credit_turns)}`,
     `next turn: ${next}`,
+    `batches pending: ${String(credits.batches.pending)}`,
   ].join("; ");
 }
 
@@ -47,7 +48,21 @@ function bar(credits: Credits): HTMLElement {
   );
 }
 
-export function renderCreditsPace(credits: Credits): HTMLElement {
+/** Pending one-shots on the Batches API (T2532): a spinner, their count, the oldest's age in the tooltip. */
+function batches(credits: Credits, now: number): HTMLElement | null {
+  const { oldest_at: oldest, pending } = credits.batches;
+  if (pending === 0) return null;
+  const age = oldest === null ? 0 : Math.max(0, Math.floor((now - oldest) / 60));
+  const label = `Batch: ${String(pending)} pending, oldest ${String(age)} min`;
+  return h(
+    "span",
+    { attrs: { "aria-label": label, "data-pending": pending, role: "status", title: label }, class: "c-batch" },
+    h("span", { attrs: { "aria-hidden": "true" }, class: "spinner" }),
+    h("span", { class: "c-num", text: String(pending) }),
+  );
+}
+
+export function renderCreditsPace(credits: Credits, now: number = Date.now() / 1000): HTMLElement {
   const label = tooltip(credits);
   return h(
     "span",
@@ -56,5 +71,6 @@ export function renderCreditsPace(credits: Credits): HTMLElement {
     bar(credits),
     h("span", { class: "c-num", text: `≈${formatUsd(credits.spent_period_usd)} / ${formatUsd(credits.cap_usd)}` }),
     h("span", { class: "c-num c-left", text: `≈${formatUsd(credits.remaining_usd)}` }),
+    batches(credits, now),
   );
 }

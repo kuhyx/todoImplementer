@@ -3,6 +3,7 @@ import type { Credits } from "@/lib/schemas-common";
 
 export function makeCredits(over: Partial<Credits> = {}): Credits {
   return {
+    batches: { est_usd: 0, oldest_at: null, pending: 0 },
     cap_usd: 100,
     cost_factor: 0.47,
     credit_turns_period: 12,

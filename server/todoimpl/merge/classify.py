@@ -85,11 +85,14 @@ def build_incremental(new: list[CardTask], groups: list[str], seen: list[CardTas
     )
 
 
-def claude_classifier(prompt: str, root: Path | None = None) -> str:
-    """Run the narrow, read-only Haiku one-shot (`runner/oneshot.py`); return its text."""
+def claude_classifier(prompt: str, root: Path | None = None, *, batch: bool = False) -> str:
+    """Run the narrow, read-only Haiku one-shot (`runner/oneshot.py`); return its text.
+
+    `batch`: the refresh is background work, so the Batches API may take it (T2532).
+    """
     return oneshot.run(
         prompt, model=model_for("classify"), kind="classify", root=root or run_root(), timeout=TIMEOUT_S,
-        error=ClassifyError, deny=DENY_ALWAYS + DENY_READONLY,
+        error=ClassifyError, deny=DENY_ALWAYS + DENY_READONLY, batch=batch,
     )  # fmt: skip
 
 

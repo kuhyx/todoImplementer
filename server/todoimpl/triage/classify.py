@@ -73,11 +73,11 @@ def has_url(title: str, body: str) -> bool:
     return URL.search(f"{title}\n{body}") is not None
 
 
-def claude_classifier(prompt: str, root: Path | None = None) -> str:
-    """Run the narrow, read-only Haiku one-shot; return its text."""
+def claude_classifier(prompt: str, root: Path | None = None, *, batch: bool = False) -> str:
+    """Run the narrow, read-only Haiku one-shot; return its text. `batch`: the Batches API may take it."""
     return oneshot.run(
         prompt, model=model_for("classify"), kind="triage", root=root or run_root(), timeout=TIMEOUT_S,
-        error=ClassifyError, deny=DENY_ALWAYS + DENY_READONLY,
+        error=ClassifyError, deny=DENY_ALWAYS + DENY_READONLY, batch=batch,
     )  # fmt: skip
 
 

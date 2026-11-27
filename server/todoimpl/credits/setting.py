@@ -77,6 +77,17 @@ def cost_factor() -> float:
     return float(value)
 
 
+PURCHASED_KEY = "credits_purchased_usd"  # kuhy, 2026-11-27: never spend bought balance (no API reads it)
+
+
+def purchased_usd() -> float:
+    """Return the bought API balance kuhy wrote down (default 0); a bad value fails closed."""
+    value = _read().get(PURCHASED_KEY, 0)
+    if isinstance(value, bool) or not isinstance(value, int | float) or value < 0:
+        return 1.0
+    return float(value)
+
+
 MODEL_KEY = "credits_model"
 MODEL = "claude-opus-5-5"  # kuhy, 2026-11-15: credit turns run on Opus 5.5 (before: sonnet, 2026-11-08)
 

@@ -88,8 +88,20 @@ def run(  # noqa: PLR0913 - one call, keyword-only
     timeout: float,
     error: type[Exception],
     deny: tuple[str, ...] = (),
+    batch: bool = False,
 ) -> str:
-    """Run the prompt on stdin and return the model's text; raise `error` on any failure."""
+    """Run the prompt on stdin and return the model's text; raise `error` on any failure.
+
+    `batch`: a background one-shot that may wait: through the Batches API when the credits allow it
+    (`batchshot`, T2532), else here.
+    """
+    if batch:
+        from . import batchshot  # noqa: PLC0415 - the credits stack loads only for batch callers
+
+        def plan() -> str:
+            return run(prompt, model=model, kind=kind, root=root, timeout=timeout, error=error, deny=deny)
+
+        return batchshot.run(prompt, model=model, kind=kind, root=root, error=error, fallback=plan)
     scratch = root / SCRATCH
     scratch.mkdir(parents=True, exist_ok=True)
     env = {**os.environ, "CLAUDE_AUTO_CONTINUE": "0"}  # handoff hooks must not spawn sessions

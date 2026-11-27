@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from typing import Protocol
 
@@ -57,6 +57,9 @@ class Credits:
     over_cap: bool = False
     running_credit_turns: int = 0
     cost_factor: float = 1.0
+    batches: dict[str, object] = field(
+        default_factory=lambda: {"pending": 0, "est_usd": 0.0, "oldest_at": None}
+    )  # pending one-shots on the Batches API (T2532)
 
     def to_dict(self) -> dict[str, object]:
         """Return the JSON object of the contract."""

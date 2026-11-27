@@ -101,6 +101,21 @@ the plan login); the credit env carries it from the 0600 invoke file the host de
 in `deploy/requirements-sdk.txt`; `scripts/deploy.sh` creates `~/.local/share/todoImplementer/sdk-venv`
 (`$TODOIMPL_SDK_VENV`) once and applies the pin. A missing venv shows as `unavailable` with that text.
 
+## One-shots on the Batches API
+
+kuhy (2026-11-27): the background one-shots run on the Message Batches API with the credit key, at half the
+list price (T2532, `credits/batch.py`, `runner/batchshot.py`). They are the triage tick and the merge refresh;
+the Start-pressed triage and the lesson drafter stay on `claude -p`, because kuhy waits on them and the lesson
+drafter has no retry. A batch goes out only when the credits are `ready`, the week's pace has room and
+`credits_purchased_usd` in `settings.json` is 0 (default; the API cannot read the balance, so the board never
+spends bought credit: any other value refuses and logs). Otherwise, and on any failed, errored, expired or
+cancelled batch, the call runs on the plan as before. No poller: the caller's own retry (10 min) asks again
+with the same prompt, finds its row in `<root>/batches.json` and polls (at most once a minute); rows survive a
+restart and go after 24 h. Spend lands in the ledger as route `batch` (Haiku 5.5 rates x 0.5) and counts in the
+pace; a pending batch counts $0.01. The strip shows a spinner with the pending count (`limit.credits.batches`).
+A billing error marks the credits exhausted for an hour. Raw HTTPS through the stdlib (no `anthropic` package);
+`$TODOIMPL_BATCH_URL` points it at a fake.
+
 ## Credits exhausted
 
 A credit turn that ends in a billing or key error ("Credit balance is too low", invalid key, spend limit) is not

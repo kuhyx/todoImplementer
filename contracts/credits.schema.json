@@ -21,11 +21,23 @@
         "remaining_usd": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/usd"},
         "over_cap": {"type": "boolean"},
         "running_credit_turns": {"type": "integer", "minimum": 0},
-        "cost_factor": {"type": "number", "exclusiveMinimum": 0}
+        "cost_factor": {"type": "number", "exclusiveMinimum": 0},
+        "batches": {
+          "type": "object",
+          "description": "One-shots pending on the Message Batches API (T2532): count, their pace estimate, when the oldest went out.",
+          "properties": {
+            "pending": {"type": "integer", "minimum": 0},
+            "est_usd": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/usd"},
+            "oldest_at": {"anyOf": [{"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"}, {"type": "null"}]}
+          },
+          "required": ["pending", "est_usd", "oldest_at"],
+          "additionalProperties": false
+        }
       },
       "required": [
         "enabled", "state", "text", "route", "period_start", "week", "monthly_usd", "cap_usd", "spent_period_usd",
-        "credit_turns_period", "remaining_usd", "over_cap", "running_credit_turns", "cost_factor"
+        "credit_turns_period", "remaining_usd", "over_cap", "running_credit_turns", "cost_factor",
+        "batches"
       ],
       "additionalProperties": false
     }

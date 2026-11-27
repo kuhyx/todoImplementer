@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 from todoimpl.apikey import cache
 from todoimpl.usage.limits import limit_state
 
-from . import live, marks, pacing, sdk, setting
+from . import batchstore, live, marks, pacing, sdk, setting
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -72,6 +72,7 @@ def view(root: Path, now: float) -> dict[str, Any]:
         "over_cap": pace.over_cap,
         "running_credit_turns": pace.running,
         "cost_factor": pace.cost_factor,
+        "batches": batchstore.view(root, now),
     }
 
 

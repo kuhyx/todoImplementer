@@ -29,6 +29,7 @@ def test_view_carries_the_pace_and_the_route_now_chosen(root: Path) -> None:
         "enabled": True, "state": "ready", "route": "credits", "period_start": PERIOD, "week": 2,
         "monthly_usd": 200.0, "cap_usd": 100.0, "spent_period_usd": 40.0, "credit_turns_period": 1,
         "remaining_usd": 160.0, "over_cap": False, "running_credit_turns": 0, "cost_factor": 1.0,
+        "batches": {"pending": 0, "est_usd": 0, "oldest_at": None},
     }  # fmt: skip
     assert view["text"]
 

@@ -67,6 +67,7 @@ class TriageService:
         self.src = src or repo_path("kuhyx/x").parent  # ~/src, or $TODOIMPL_SRC
         self._busy: set[str] = set()
         self._classifier = classifier or (lambda prompt: claude_classifier(prompt, root))
+        self._background = classifier or (lambda prompt: claude_classifier(prompt, root, batch=True))  # T2532
         self.repos = repos or Listing().get
         self._failed: dict[str, float] = {}
 
@@ -118,10 +119,11 @@ class TriageService:
     def _verdict(self, card: CardTask, repos: list[str], files: list[str], hint: str = "") -> label.Verdict:
         """Classify one note; `research` needs a URL, else the model is asked once more (T2090)."""
         prompt = build_prompt(card.title, card.body, repos, files) + hint
-        verdict = parse(self._classifier(prompt), repos)
+        ask = self._classifier if hint else self._background  # kuhy waits on a pressed Start: never a batch
+        verdict = parse(ask(prompt), repos)
         if verdict.label != label.RESEARCH or has_url(card.title, card.body):
             return verdict
-        verdict = parse(self._classifier(prompt + NOT_RESEARCH), repos)
+        verdict = parse(ask(prompt + NOT_RESEARCH), repos)
         if verdict.label == label.RESEARCH:  # still no URL: it is no reading list, kuhy decides
             return label.Verdict(label.MANUAL, f"no URL to read: {verdict.reason}")
         return verdict

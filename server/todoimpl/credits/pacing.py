@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING
 
 from todoimpl.usage import oauth
 
-from . import ledger, live, prices, setting
+from . import batchstore, ledger, live, prices, setting
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -106,8 +106,11 @@ def pace(root: Path, now: float) -> Pace:
     factor = setting.cost_factor()
     live_costs = [c * factor for c in live.costs(root)]
     reserve = prices.reserve(setting.model())
+    batches = batchstore.view(root, now)  # pending one-shots on the Batches API count as running (T2532)
+    reserved = sum(max(c, reserve) for c in live_costs) + batches["est_usd"]
+    spent = ledger.spent(root, start) + ledger.spent(root, start, "batch")
     return Pace(
-        start, week, monthly, cap_usd(week, monthly), ledger.spent(root, start) * factor,
+        start, week, monthly, cap_usd(week, monthly), spent * factor,
         ledger.turns(root, start), len(live_costs), factor, sum(live_costs),
-        sum(max(c, reserve) for c in live_costs),
+        reserved,
     )  # fmt: skip

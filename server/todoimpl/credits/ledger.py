@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 LEDGER_FILE = "credits-ledger.jsonl"
-ROUTES = ("plan", "credits", "free")
+ROUTES = ("plan", "credits", "free", "batch")  # batch: one-shots on the Batches API (T2532)
 CHILDREN_DIR = "children"  # an umbrella's child run dirs: <root>/<card>/children/<child id>/ (runner.files)
 STREAM_SUFFIX = ".stream.jsonl"
 LOCK = threading.RLock()

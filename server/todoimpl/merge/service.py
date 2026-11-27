@@ -69,7 +69,7 @@ class MergeService:
         self.cache = cache
         self.root = root
         self.store = MergeStore(root)
-        self._classifier = classifier or partial(claude_classifier, root=root)
+        self._classifier = classifier or partial(claude_classifier, root=root, batch=True)
         self._clock = clock
         self._spawn = spawn
         self._umbrella = umbrella
