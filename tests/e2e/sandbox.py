@@ -67,6 +67,22 @@ def _free_shim(state: State) -> None:
     shim.chmod(0o755)
 
 
+def _policy(work: Path) -> None:
+    """Kuhy's live session policy (bypass, hooks off), its dirs narrowed to the scratch world.
+
+    Without it turns run in acceptEdits with no allow rules, and the board's own tick command needs approval.
+    """
+    policy = {
+        "permission_mode": "bypassPermissions",
+        "add_dirs": [str(work)],
+        "disable_hooks": True,
+        "deny": [],
+    }
+    target = work / "home" / ".config" / "todoImplementer" / "session-policy.json"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(policy), encoding="utf-8")
+
+
 def up() -> None:
     """Build the scratch world and start the fake MCP."""
     SCRATCH.mkdir(parents=True, exist_ok=True)
@@ -85,6 +101,7 @@ def up() -> None:
     cache.write_text(json.dumps(seen), encoding="utf-8")
     (work / "home" / ".config" / "omniroute").mkdir(parents=True)
     (work / "home" / ".config" / "omniroute" / "api_key").symlink_to(KEY)  # the gateway may rotate it
+    _policy(work)
     notes = [
         {
             "repo": f"kuhyx/{n}",
