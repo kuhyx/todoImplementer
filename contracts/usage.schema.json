@@ -109,6 +109,9 @@
     },
     "free": {
       "$ref": "https://todoimplementer.local/contracts/free.schema.json"
+    },
+    "nolimit": {
+      "$ref": "https://todoimplementer.local/contracts/nolimit.schema.json"
     }
   },
   "required": [

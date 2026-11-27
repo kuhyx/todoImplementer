@@ -109,3 +109,12 @@
 .f-chain {
   gap: var(--space-1);
 }
+
+/* The no-limit runner's row (DOCS-nolimit.md): dimmed while it rests. */
+.nolimit-strip {
+  flex: 0 1 auto;
+}
+
+.nolimit-strip[data-active="false"] {
+  opacity: 0.6;
+}

@@ -8,6 +8,7 @@ import {
   taskCard, usd,
 } from "@/lib/schemas-common";
 import { free } from "@/lib/schemas-free";
+import { nolimit } from "@/lib/schemas-nolimit";
 import { peerMessage, peerThread } from "@/lib/schemas-peer";
 import { umbrellaDetail } from "@/lib/schemas-umbrella";
 
@@ -83,6 +84,7 @@ export const usage = z.strictObject({
   free: free.optional(),
   generated_at: epoch,
   limit,
+  nolimit: nolimit.optional(),
   overage: z.strictObject({ status: z.string(), using: z.boolean() }),
   seven_day: usageWindow,
 });

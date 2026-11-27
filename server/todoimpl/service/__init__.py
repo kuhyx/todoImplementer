@@ -11,6 +11,7 @@ from todoimpl.board.state import run_dir, run_root
 from todoimpl.credits import ledger
 from todoimpl.errors.loop import ErrorLoop
 from todoimpl.http.main import REPO, git_build_id
+from todoimpl.nolimit.tick import Loop as NoLimitLoop
 from todoimpl.peer import service as peer
 from todoimpl.repotask import foldasks, legacy
 from todoimpl.runner.autocheck import AutoCloser
@@ -154,4 +155,6 @@ def build_backend(
         ).start()  # fmt: skip
         # A running card quiet over 60 s is logged and filed (DOCS-errors.md, "Stalls").
         StallWatch(root).start()
+        # No Claude route at all: rerun repo gates and apply autofixes with no tokens (DOCS-nolimit.md).
+        backend.nolimit = NoLimitLoop(root).start()
     return backend

@@ -42,7 +42,8 @@ Source: the OmniRoute gateway (`docker` container `omniroute`, `127.0.0.1:20128`
 read by `gateway/monitor.py` on its own thread every 30 s (each call under a 2 s timeout, one login). `/api/usage`
 carries the newest reading as `free` (`contracts/free.schema.json`): no request ever waits on the gateway.
 `free.state`: `ok`, `stale` (last good reading older than 90 s), `down` (the newest read got nothing, figures are
-the last good ones), `unknown` (not read yet). The strip sits beside the 5 h / 7 d meters.
+the last good ones), `unknown` (not read yet). The strip sits beside the 5 h / 7 d meters. Beside it, the no-limit
+runner's row (`nolimit` on `/api/usage`: a wrench, the last repo, a result glyph) is described in `DOCS-nolimit.md`.
 
 Two auth tiers (both read from `~/.config/omniroute/`, never logged or sent to the page):
 the API key `api_key` for `/api/v1/models/health` (models that are cooling), and the dashboard session from

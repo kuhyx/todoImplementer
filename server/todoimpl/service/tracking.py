@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Any
 from todoimpl.board.card import build_card
 from todoimpl.board.parse import StateError
 from todoimpl.board.state import load, run_dir
+from todoimpl.nolimit import status as nolimit
 from todoimpl.umbrella import issues as issue_log
 from todoimpl.umbrella import track
 from todoimpl.umbrella.store import RECORD, children_root
@@ -30,12 +31,13 @@ def issues(backend: ServiceBackend, id8: str) -> str | None:
 
 
 def usage(backend: ServiceBackend) -> dict[str, Any]:
-    """Return GET /api/usage: plan windows, cost, autonomy and the cached free-model gateway reading."""
+    """Return GET /api/usage: plan windows, cost, autonomy, the cached gateway reading, the no-limit row."""
     known = backend.cache.run_titles.titles() if backend.cache.run_titles else {}
     titles = {**known, **card_titles(backend.cache.snapshot().tasks)}
     found = usage_summary(backend.root, backend._clock(), titles)  # noqa: SLF001
     if backend.gateway is not None:  # a cached reading: no request waits on the gateway
         found["free"] = backend.gateway.view()
+    found["nolimit"] = nolimit.view(backend.root)
     return found
 
 

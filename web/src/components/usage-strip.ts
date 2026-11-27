@@ -1,9 +1,10 @@
 import type { Board, Usage } from "@/lib/schemas";
 
-/** The one-row top bar: build name, the 7 d plan window, free models left/used, the paced credits, usage and sessions links; then banners. Numbers come from /api/usage and /api/board. */
+/** The one-row top bar: build name, the 7 d plan window, free models left/used, the no-limit runner, the paced credits, usage and sessions links; then banners. Numbers come from /api/usage and /api/board. */
 import { renderCreditsPace } from "@/components/credits-pace";
 import { renderFree } from "@/components/free-strip";
 import { icon } from "@/components/icons";
+import { renderNoLimit } from "@/components/nolimit-strip";
 import { h } from "@/lib/dom";
 import { formatClock, formatIn, formatPercent } from "@/lib/format";
 
@@ -87,6 +88,7 @@ export function renderUsage(usage: null | Usage, board: Board | null, error: nul
       build !== null && h("span", { class: "build", text: build }),
       usage !== null && meter("7 d", usage.seven_day, now, board?.limit.weekly_hold),
       usage !== null && renderFree(usage.free, now),
+      usage !== null && renderNoLimit(usage.nolimit, now),
       board !== null && renderCreditsPace(board.limit.credits),
       h("a", { attrs: { href: "/usage" }, class: "usage-link", text: "Usage details" }),
       sessionsLink(),

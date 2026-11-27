@@ -40,6 +40,7 @@ if TYPE_CHECKING:
     from todoimpl.gateway.monitor import GatewayMonitor
     from todoimpl.merge.service import MergeService
     from todoimpl.newtask.service import NewTaskService
+    from todoimpl.nolimit.tick import Loop as NoLimitLoop
     from todoimpl.runner.limitprobe import LimitProbe
     from todoimpl.triage.service import TriageService
 
@@ -91,6 +92,7 @@ class ServiceBackend:
         self.triage_service: TriageService | None = None  # labels repo-less notes (DOCS-triage.md)
         self.known_repos: Callable[[], list[str]] = list  # GitHub repos beside the cards' (T2413)
         self.peer_hub: object = None  # todoimpl.peer.hub.Hub, set by build_backend (DOCS-peer.md)
+        self.nolimit: NoLimitLoop | None = None  # tokenless repo upkeep (DOCS-nolimit.md)
 
     def _context(self) -> Context:
         now = self._clock()

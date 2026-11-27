@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://todoimplementer.local/contracts/nolimit.schema.json",
+  "title": "No-limit runner row",
+  "description": "The tokenless runner's row on the tracking strip (DOCS-nolimit.md): whether it works now (no Claude route can run a turn) and the last repo it visited with that visit's result. Inside GET /api/usage as `nolimit`.",
+  "type": "object",
+  "properties": {
+    "active": {"type": "boolean", "description": "The trigger held at the last tick."},
+    "repo": {"type": ["string", "null"], "description": "The ~/src checkout of the last visit; null before the first."},
+    "result": {
+      "enum": ["deployed", "pushed", "green", "red", "slow", "stopped", "readonly", null],
+      "description": "deployed / pushed: green gate, fixes on origin; green: green gate, nothing pushed; red: a step failed (tickets filed); slow: a step cut at 60 s; stopped: a Claude route opened; readonly: no gate, lint only."
+    },
+    "at": {"anyOf": [{"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"}, {"type": "null"}]}
+  },
+  "required": ["active", "repo", "result", "at"],
+  "additionalProperties": false
+}

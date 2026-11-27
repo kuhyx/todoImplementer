@@ -17,6 +17,7 @@ App errors become tickets (contract, sources, start gate, ship policy, waiting f
 Notes with no repo (Haiku triage: new_repo, existing_repo, all_repos, research, manual; new repos; research cards): `DOCS-triage.md`.
 Done manually, both ways (click closes the notes and rests the card; a note done in the todo app does the same): `DOCS-manual.md`.
 Sessions message each other without kuhy (loopback `/api/peer`, `peer` MCP tools and CLI, envelope, limits): `DOCS-peer.md`.
+Tokenless work while no Claude route runs (trigger, repo visits, autofix commits, tickets, strip row): `DOCS-nolimit.md`.
 
 ## Commands
 
