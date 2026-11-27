@@ -240,7 +240,7 @@ def test_t2532_oneshot_plan_fallback_runs_claude_p(root: Path, monkeypatch: pyte
             argv, 0, json.dumps({"result": "plan text", "is_error": False}), ""
         )
 
-    monkeypatch.setattr(oneshot.subprocess, "run", fake_run)
+    monkeypatch.setattr(subprocess, "run", fake_run)
     monkeypatch.setattr(batchshot, "run", lambda *_a, fallback, **_k: fallback())
     out = oneshot.run("p", model="haiku", kind="merge", root=root, timeout=5, error=BoomError, batch=True)
     assert out == "plan text"
