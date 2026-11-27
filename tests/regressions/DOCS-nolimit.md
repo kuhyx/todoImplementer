@@ -15,3 +15,4 @@ One row per bug or required behaviour, ids global and never reused. The row's te
 | T2547 | One repo per tick, in name order, a new cycle after the last repo; an inactive trigger visits none | tests/nolimit/test_nolimit_tick.py |
 | T2548 | `/api/usage` carries the runner's row (`nolimit`: on or off, last repo, last result), valid against `contracts/nolimit.schema.json` | tests/service/test_service_nolimit.py |
 | T2549 | The tracking strip shows the row with icons only (wrench, result glyph) and the repo name; its words live in `title` and `aria-label` | web/src/components/nolimit-strip.test.ts |
+| T2550 | The first real run filed a false ticket: `eslint --fix .` crashed on a repo whose lint targets `src` (typed rules over files outside the TS project). eslint and prettier now fix only the paths the repo's own `package.json` scripts run them on, and nothing when no script runs them | tests/nolimit/test_nolimit_fixes.py |

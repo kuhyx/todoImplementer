@@ -51,7 +51,8 @@ A repo whose step was cut is done for the cycle like any other and is tried agai
    from `origin/<default>` (`git worktree add`, or a forced checkout of an existing one). These two are the only
    commands that touch `~/src/<repo>`, and both write inside `.git` alone. Branches of other days are deleted.
 2. Setup: `pnpm install --frozen-lockfile --prefer-offline` and `uv sync --frozen` when the lockfiles exist.
-3. Autofixes, picked from the repo's config. A fixer that finds errors it cannot fix exits 0 (the gate reports
+3. Autofixes, picked from the repo's config: ruff when it is configured; eslint and prettier only on the
+   paths the repo's own `package.json` scripts run them on (T2550), never on the whole tree. A fixer that finds errors it cannot fix exits 0 (the gate reports
    them); only a crash is red, and its changes are dropped.
 4. A commit of what changed (`git add -A`, the repo's own commit hooks run, never skipped).
 5. The full gate. Red: the commit is discarded and each failure is a ticket. Green: the repo's earlier no-limit

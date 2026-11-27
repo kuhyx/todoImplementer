@@ -2,12 +2,15 @@
 
 Setup installs the locked deps the gate needs, from the local stores when it can (`pnpm --prefer-offline`,
 `uv sync --frozen`). Autofixes are the repo's own formatters and fixers, picked from its config: ruff
-(`[tool.ruff]` or `ruff.toml`), eslint and prettier (named in `package.json`, run through pnpm). A fixer that
-finds errors it cannot fix exits 0 here (the gate reports them); only a crash makes an autofix red.
+(`[tool.ruff]` or `ruff.toml`), and eslint and prettier on exactly the paths the repo's own `package.json`
+scripts run them on (T2550: `eslint .` crashed on a repo that lints `src` only). A fixer that finds errors it
+cannot fix exits 0 here (the gate reports them); only a crash makes an autofix red.
 """
 
 from __future__ import annotations
 
+import json
+import re
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -16,8 +19,13 @@ if TYPE_CHECKING:
 PNPM_SETUP = "pnpm install --frozen-lockfile --prefer-offline --reporter=silent"
 UV_SETUP = "uv sync --frozen --quiet"
 RUFF_FIX = "{run}ruff check --fix-only --exit-zero --quiet . && {run}ruff format --quiet ."
-ESLINT_FIX = "pnpm exec eslint --fix --quiet . ; test $? -le 1"  # 1 = errors left for the gate, 2 = a crash
-PRETTIER_FIX = "pnpm exec prettier --write --log-level warn ."
+ESLINT_FIX = (
+    "pnpm exec eslint --fix --quiet {args} ; test $? -le 1"  # 1 = errors left for the gate, 2 = a crash
+)
+PRETTIER_FIX = "pnpm exec prettier --write --log-level warn {args}"
+# `<tool> <args>` up to the next `&&`, `||`, `;` or `|` of a package.json script
+CALL = r"(?:^|[;&|]\s*)(?:(?:pnpm exec|pnpm|npx)\s+)?{tool}\s+([^;&|]+)"
+CHECK_FLAGS = re.compile(r"(?:^|\s)(?:--check|-c|--list-different|-l)(?=\s|$)")
 
 
 def _text(path: Path) -> str:
@@ -43,9 +51,27 @@ def autofix(wt: Path) -> list[tuple[str, str]]:
     if "[tool.ruff" in _text(wt / "pyproject.toml") or (wt / "ruff.toml").is_file():
         run = "uv run --frozen " if (wt / "uv.lock").is_file() else ""
         found.append(("fix-ruff", RUFF_FIX.format(run=run)))
-    package = _text(wt / "package.json")
-    if (wt / "pnpm-lock.yaml").is_file() and '"eslint"' in package:
-        found.append(("fix-eslint", ESLINT_FIX))
-    if (wt / "pnpm-lock.yaml").is_file() and '"prettier"' in package:
-        found.append(("fix-prettier", PRETTIER_FIX))
+    if (wt / "pnpm-lock.yaml").is_file():
+        scripts = _scripts(wt)
+        if (args := _args(scripts, "eslint")) is not None:
+            found.append(("fix-eslint", ESLINT_FIX.format(args=args)))
+        if (args := _args(scripts, "prettier")) is not None:
+            found.append(("fix-prettier", PRETTIER_FIX.format(args=CHECK_FLAGS.sub("", args).strip())))
     return found
+
+
+def _scripts(wt: Path) -> list[str]:
+    """Return the command strings of `package.json` `scripts`; none when it is missing or malformed."""
+    try:
+        data = json.loads(_text(wt / "package.json"))
+    except ValueError:
+        return []
+    scripts = data.get("scripts") if isinstance(data, dict) else None
+    return [v for v in scripts.values() if isinstance(v, str)] if isinstance(scripts, dict) else []
+
+
+def _args(scripts: list[str], tool: str) -> str | None:
+    """Return the arguments of the first script call of `tool`, None when no script runs it."""
+    pattern = re.compile(CALL.format(tool=tool))
+    hits = (pattern.search(script) for script in scripts)
+    return next((hit.group(1).strip() for hit in hits if hit is not None), None)
