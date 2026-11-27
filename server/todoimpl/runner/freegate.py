@@ -63,6 +63,18 @@ def _gateway_error(key: str) -> tuple[str, bool] | None:
         return f"gateway probe: {type(exc).__name__}: {exc}"[:500], True
 
 
+def _key() -> str:
+    try:
+        return (Path.home() / _KEY_REL).read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
+
+
+def check_gateway() -> bool:
+    """Say whether the gateway answers with the key on disk (the `free` route's cached probe)."""
+    return bool(key := _key()) and _gateway_error(key) is None
+
+
 def check(worktree: Path) -> Verdict:
     """Return whether the free models are allowed for this worktree right now."""
     checker = shutil.which(CHECKER)
@@ -70,11 +82,7 @@ def check(worktree: Path) -> Verdict:
         return Verdict(allowed=False, why=f"{WORKER} is not installed")
     if not _public(checker, worktree):
         return Verdict(allowed=False, why="the repo is not public")
-    try:
-        key = (Path.home() / _KEY_REL).read_text(encoding="utf-8").strip()
-    except OSError:
-        key = ""
-    if not key:
+    if not (key := _key()):
         return Verdict(allowed=False, why="no gateway key")
     if (error := _gateway_error(key)) is not None:
         return Verdict(

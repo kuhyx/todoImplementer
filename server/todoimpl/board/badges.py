@@ -19,4 +19,5 @@ def tier_badges(task: TaskLike, run: RunState | None) -> dict[str, bool]:
     else:
         cheap = is_cheap(task.title, task.body, getattr(task, "parts", ()))
     escalated = bool(extra.get("escalated"))
-    return {"cheap": cheap, "free": bool(extra.get("free_models")) and not escalated, "escalated": escalated}
+    free = (bool(extra.get("free_models")) and not escalated) or extra.get("route") == "free"  # T2531
+    return {"cheap": cheap, "free": free, "escalated": escalated}

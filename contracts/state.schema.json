@@ -33,7 +33,8 @@
     },
     "retry_kind": {"enum": ["network", "gateway", "killed", "crash", "todo", "turn"], "description": "Why a paused_retry run rests (DOCS-resilience.md): no internet, gateway unreachable, a signal killed the turn, a crash, the todo app unreachable, or another transient turn failure."},
     "retry_reason": {"type": "string", "description": "The text behind retry_kind (at most 120 characters)."},
-    "route": {"enum": ["plan", "credits"], "description": "Route of the latest turn (set after a turn ran): plan = Max subscription, credits = free API credits."},
+    "route": {"enum": ["plan", "credits", "free"], "description": "Route of the latest turn (set after a turn ran): plan = Max subscription, credits = free API credits, free = OmniRoute's free models through claude-free (T2531)."},
+    "free_unverified": {"const": true, "description": "A turn ran on the free route: the run ships only after a Claude live-check turn ended cleanly (runner/freeverify.py). Absent otherwise."},
     "tier": {"enum": ["normal", "cheap"], "description": "Decided at the first implement-role turn: cheap = the note has a `Tier: cheap` line or the text-free (textgate-rework) title, so Sonnet manages free models (DOCS-tiers.md)."},
     "free_models": {"type": "boolean", "description": "The server's verdict before the latest cheap implement turn: public repo and a live gateway."},
     "escalated": {"type": "boolean", "description": "A cheap run handed over to Opus (ESCALATE line or a failed turn); at most once per run."},
@@ -77,7 +78,7 @@
         "properties": {
           "session_id": {"type": "string"},
           "last_turn_end": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"},
-          "route": {"enum": ["plan", "credits"]},
+          "route": {"enum": ["plan", "credits", "free"]},
           "context_tokens": {"type": "integer", "minimum": 1, "description": "The session's context at the latest assistant message of its last turn: input + cache creation + cache read tokens, the main thread only (DOCS-turns.md, Context cap)."}
         },
         "required": ["session_id", "last_turn_end"],

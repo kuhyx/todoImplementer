@@ -16,12 +16,14 @@ from typing import TYPE_CHECKING
 from todoimpl.apikey import read_key
 from todoimpl.credits import sdk, setting
 
-from . import claude
+from . import claude, files
 from .files import NeedsYouError
 from .launch import SERVER_DIR
 
 if TYPE_CHECKING:
     from pathlib import Path
+
+    from todoimpl.board.state import RunState
 
 RANK = {"opus": 2, "sonnet": 1}  # model families, dearer first; anything else (haiku, unknown) ranks 0
 SETTING_SOURCES = ("user", "project", "local")  # kuhy's full setup, as the CLI loads it
@@ -65,3 +67,16 @@ def build(  # noqa: PLR0913, PLR0917 - same signature as claude.build
     return claude.Invocation(
         (str(python), "-m", MODULE, json.dumps(spec)), env, worktree, opt.notes, "credits"
     )
+
+
+def models_of(run_dir: Path, state: RunState, stem: str, role: str, route: str) -> dict[str, str]:
+    """Return {wanted, ran} of a turn and keep `extra.credit_downgrade[role]` while the role is held back."""
+    models: dict[str, str] = files.read_json(files.sibling(run_dir, stem, files.MODEL_SUFFIX)) or {}
+    held: dict[str, dict[str, str]] = state.extra.setdefault("credit_downgrade", {})
+    if models and route == "credits" and downgraded(models["wanted"], models["ran"]):
+        held[role] = {"wanted": models["wanted"], "ran": models["ran"]}
+    else:
+        held.pop(role, None)
+    if not held:
+        state.extra.pop("credit_downgrade")
+    return models

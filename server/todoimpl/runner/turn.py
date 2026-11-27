@@ -16,7 +16,20 @@ from todoimpl.board import state as store
 from todoimpl.board.status import SILENT, WAITS_FOR
 from todoimpl.credits import ledger, live, setting
 
-from . import adopt, allowlist, claude, credit, creditguard, files, guard, launch, orphans, session, watchdog
+from . import (
+    adopt,
+    allowlist,
+    claude,
+    credit,
+    creditguard,
+    files,
+    freeroute,
+    guard,
+    launch,
+    orphans,
+    session,
+    watchdog,
+)
 from .ctxcap import brake, size
 from .files import KilledError
 from .modelswitch import pinned
@@ -78,17 +91,12 @@ def _launch(  # noqa: PLR0913, PLR0917 - the turn environment plus its route
     allow = allowlist.rules_for(files.root_of(env.run_dir), state.repo, state.task_id)
     pin = pinned(state)  # kuhy's pick wins over the role, tier and escalation models
     model = pin or model
-    build = credit.build if route == "credits" else claude.build
+    build = {"credits": credit.build, freeroute.FREE: freeroute.build}.get(route, claude.build)
     given = pin if route == "credits" else model  # a credit turn runs `credits_model` unless pinned
     inv = build(role, prompt_for(plan.situation), env.worktree, plan.resume, extra_dirs, allow, given, effort)
     wanted = model or claude.model_for(role)
-    ran = (pin or setting.model()) if route == "credits" else wanted
-    if ran != wanted:  # every role on credits runs on the `credits_model` setting; the feed says so
-        env.activity("system", f"turn on free API credits: the {role} role wants {wanted}, runs on {ran}")
-    else:
-        env.activity(
-            "system", "turn on free API credits (Agent SDK)" if route == "credits" else "turn on the plan"
-        )
+    ran = {"credits": pin or setting.model(), freeroute.FREE: freeroute.MODEL}.get(route, wanted)
+    env.activity("system", freeroute.banner(route, role, wanted, ran))
     for note in inv.notes:
         env.activity("error", note)
     stem = files.new_stream(env.run_dir, role, env.now()).name.removesuffix(files.STREAM_SUFFIX)
@@ -98,25 +106,12 @@ def _launch(  # noqa: PLR0913, PLR0917 - the turn environment plus its route
     return launch.start(env.run_dir, stem, role, inv)
 
 
-def _models(env: TurnEnv, state: RunState, stem: str, role: str) -> dict[str, str]:
-    """Return {wanted, ran} of a turn and keep `extra.credit_downgrade[role]` while the role is held back."""
-    models: dict[str, str] = files.read_json(files.sibling(env.run_dir, stem, files.MODEL_SUFFIX)) or {}
-    held: dict[str, dict[str, str]] = state.extra.setdefault("credit_downgrade", {})
-    if models and credit.downgraded(models["wanted"], models["ran"]):
-        held[role] = {"wanted": models["wanted"], "ran": models["ran"]}
-    else:
-        held.pop(role, None)
-    if not held:
-        state.extra.pop("credit_downgrade")
-    return models
-
-
 def _apply(env: TurnEnv, state: RunState, rec: orphans.Record, res: TurnResult, code: int) -> None:
     """Write result.json, then cost and session into the state in one save that marks the turn consumed."""
     stem, role = str(rec.stem), str(rec.role)
     route = files.route_of(env.run_dir, stem)
-    spent = _turn_cost(state, res)
-    models = _models(env, state, stem, role)
+    spent = 0.0 if route == freeroute.FREE else _turn_cost(state, res)  # the free models cost nothing
+    models = credit.models_of(env.run_dir, state, stem, role, route)
     record = {
         "model": models.get("ran"),
         "wanted_model": models.get("wanted"),
@@ -146,6 +141,9 @@ def _apply(env: TurnEnv, state: RunState, rec: orphans.Record, res: TurnResult, 
         state.sessions[role] = entry | size(res)
         state.session_id = res.session_id
     state.extra["route"] = route
+    freeroute.after_turn(
+        state, route, role, ok=res.finished and not res.is_error, dirs=(env.run_dir, env.worktree)
+    )
     if models.get("ran"):  # the card's model line (card.schema `model`) when no pin names one
         state.extra["last_model"] = models["ran"]
     state.cost_usd = round(state.cost_usd + spent, 6)
@@ -178,7 +176,7 @@ def _consume(env: TurnEnv, state: RunState, rec: orphans.Record) -> TurnResult |
         live.begin(root, card)
         live.attach(root, card, lambda: state.extra.update(cap_hit=True), handle.stop)
         parser = creditguard.CreditGuard(root, card, env.now)
-    else:  # the free credits cannot spend overage; the plan can
+    elif files.route_of(env.run_dir, stem) == "plan":  # the credits and free models cannot spend overage
         parser = guard.OverageGuard(
             files.root_of(env.run_dir),
             env.run_dir.name,

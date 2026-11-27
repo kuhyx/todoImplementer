@@ -160,7 +160,7 @@
         "needs": {"$ref": "#/$defs/needs"},
         "partial": {"$ref": "#/$defs/partial"},
         "cost_usd": {"$ref": "#/$defs/usd"},
-        "route": {"enum": ["plan", "credits", null], "description": "Route of the run's latest turn: plan (Max subscription) or credits (free API credits, badge on the card); null before a turn."},
+        "route": {"enum": ["plan", "credits", "free", null], "description": "Route of the run's latest turn: plan (Max subscription), credits (free API credits, badge on the card) or free (OmniRoute's free models through claude-free while Claude is out, T2531: the free-models tier badge); null before a turn."},
         "parts": {"$ref": "https://todoimplementer.local/contracts/repotask.schema.json#/$defs/parts"},
         "waits_on": {"anyOf": [{"$ref": "#/$defs/item_id"}, {"type": "null"}], "description": "A queued card that waits on another run of the same repo (DOCS-repotask.md, per-repo lock): that run's id."},
         "tier": {"$ref": "#/$defs/tier_badges"}, "umbrella": {"$ref": "https://todoimplementer.local/contracts/umbrella.schema.json#/$defs/counts"},

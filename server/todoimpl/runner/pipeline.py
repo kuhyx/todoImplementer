@@ -8,11 +8,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from todoimpl.board import state as store
-from todoimpl.credits import route
 from todoimpl.prompts import PromptContext
 from todoimpl.repotask.prompt import addendum
 
-from . import checks, deploy, phone, resume, retry, stepwatch, tags, tiering, turncheck, worktree
+from . import chain, checks, deploy, phone, resume, retry, stepwatch, tags, tiering, turncheck, worktree
 from .ctxcap import go_on, mark, seed
 from .files import KilledError, NeedsYouError
 from .permit import with_grant
@@ -179,7 +178,7 @@ class Driver:
     def turn(self, role: str, stage: str, *, failure_tail: str = "", prompt: str = "") -> TurnResult:
         """One claude turn (`prompt` picks the builder, else `stage`); raises on cancel, limit, failure."""
         st, ctx = self.state, self.ctx
-        choice = route.choose(ctx.root, ctx.now())
+        choice = chain.choose(ctx.root, ctx.now(), st)
         if choice.route is None:  # the plan limit holds and the free credits cannot take over
             raise LimitHitError(choice.until or ctx.now())
         nudge = st.extra.pop("nudge", False)
@@ -198,7 +197,7 @@ class Driver:
         env = TurnEnv(ctx.run_dir, worktree.turn_dir(st, self.item.repo), ctx.publish, ctx.register, ctx.now)
         try:
             who = (env, st, role, with_grant(st, build_for, role), (ctx.run_dir,))
-            if (claimed := route.claim(ctx.root, ctx.now(), ctx.run_dir.name)).route is None:
+            if (claimed := chain.claim(ctx.root, ctx.now(), ctx.run_dir.name, st)).route is None:
                 raise LimitHitError(claimed.until or ctx.now())  # another card took the last of the pace
             res = run_turn(*who, claimed.route, plan.model, "high" if stage == "fix" else plan.effort)
         except KilledError as exc:  # the host died again and again: wait and retry before Needs you

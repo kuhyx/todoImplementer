@@ -7,6 +7,7 @@ import time
 from typing import TYPE_CHECKING
 
 from todoimpl import modelpick
+from todoimpl.runner.freeok import may_go_free
 
 from .button import Action
 from .needs import needs
@@ -45,9 +46,12 @@ def _gate(label: str, action_id: str, reason: str | None, *, confirm: bool = Fal
     return Action(action_id, label, reason is None, reason, confirm)
 
 
-def launch_block(limit: Limit, now: float) -> str | None:
-    """Return why a Claude session cannot be launched right now (the usage limit), else None; no run cap."""
-    if limit.holds:
+def launch_block(limit: Limit, now: float, *, free: bool = False) -> str | None:
+    """Return why a Claude session cannot be launched right now (the usage limit), else None; no run cap.
+
+    `free`: the card may go on the free models (`runner/freeok.py`, T2531), so the limit blocks nothing.
+    """
+    if limit.holds and not free:
         when = f" until {fmt_when(limit.until, now)}" if limit.until is not None else ""
         return f"usage limit{when}" + (f"; {limit.credits.text}" if limit.credits.enabled else "")
     return None
@@ -83,7 +87,8 @@ def actions(  # noqa: PLR0913 - the signature of the interface plus keyword-only
     model kuhy picked before Start (`runner/prepin.py`).
     """
     clock = time.time() if now is None else now
-    block = launch_block(limit, clock) or check_block(run, check, task.status)
+    free = limit.holds and may_go_free(task.repo, task.body)
+    block = launch_block(limit, clock, free=free) or check_block(run, check, task.status)
     out = _primary(task, run, status, block, repo_missing)
     if status in WONT:  # T2045: abandons every note behind the card
         out.append(Action("wont", "Won't do", confirm=True))

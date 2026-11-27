@@ -186,7 +186,7 @@ export const taskCard = z.strictObject({
   priority: z.string(),
   repo: z.string().nullable(),
   resumes_at: epoch.nullable(),
-  route: z.enum(["plan", "credits"]).nullable(),
+  route: z.enum(["plan", "credits", "free"]).nullable(),
   stage: stage.nullable(),
   status,
   tier: tierFlags,

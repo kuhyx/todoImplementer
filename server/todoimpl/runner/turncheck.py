@@ -25,6 +25,8 @@ def pause_after(st: RunState, root: Path, res: TurnResult, now: float) -> float 
     """
     if (hit := st.extra.pop("overage_hit", None)) is not None:
         return float(hit)
+    if st.extra.get("route") == "free":  # the gateway's errors are no plan limit (T2531)
+        return None
     if st.extra.get("route") == "credits":
         if not (res.is_error and errors.exhausted(res.text)):
             return None

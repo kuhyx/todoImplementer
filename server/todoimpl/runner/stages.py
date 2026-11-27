@@ -13,7 +13,7 @@ from todoimpl.umbrella import bounce
 from todoimpl.umbrella.note import is_umbrella
 from todoimpl.umbrella.run import run as run_umbrella
 
-from . import devicework, hold, partproof, phone, tiering
+from . import devicework, freeverify, hold, partproof, phone, tiering
 from .checks import SENTENCE_NOTE, discover, record, run_all
 from .closing import closing_stage
 from .files import NeedsYouError, write_json
@@ -164,6 +164,8 @@ def _live_check(d: Driver) -> str | None:  # noqa: PLR0911 - one return per way 
 
 
 def _checks(d: Driver) -> str | None:
+    if (verify := freeverify.gate(d)) is not None:  # free-model work: Claude re-checks it first (T2531)
+        return verify
     st, wt = d.state, Path(str(d.state.worktree))
     found = discover(wt, d.item.done_check)
     if d.item.done_check and not any(name == "done_check" for name, _ in found):

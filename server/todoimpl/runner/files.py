@@ -86,4 +86,4 @@ def route_of(run_dir: Path, stem: str) -> str:
         text = sibling(run_dir, stem, ROUTE_SUFFIX).read_text(encoding="utf-8").strip()
     except OSError:
         return "plan"
-    return text if text in ("plan", "credits") else "plan"
+    return text if text in ("plan", "credits", "free") else "plan"
