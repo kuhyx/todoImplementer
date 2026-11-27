@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
     from .record import AppError
 
-__all__ = ["Found", "body", "find", "refresh", "seen", "signatures", "title"]
+__all__ = ["Found", "body", "error_line", "find", "refresh", "seen", "signatures", "title"]
 
 MESSAGE_IN_TITLE = 80
 GOAL = (
@@ -63,6 +63,11 @@ def _flat(text: str) -> str:
     return " ".join(text.replace("`", "'").split())
 
 
+def error_line(record: AppError) -> str:
+    """Return the `Error:` line: kind and the whole flattened message, what one issue looks like (T2570)."""
+    return f"Error: {record.kind}: {_flat(record.message)}"
+
+
 def title(record: AppError) -> str:
     """`Fix <app>: <kind> <message>` plus the short signature, so two errors never share a title."""
     return (
@@ -85,7 +90,7 @@ def body(record: AppError, *, regression: int | None = None) -> str:
     """Return the part's text: goal, done line, what is known of the error, the Seen and signature lines."""
     how = [PERF] if record.kind.startswith("perf.") else []
     goal = [STRAY_GOAL, STRAY_DONE] if record.kind == STRAY else [GOAL, DONE]
-    lines = [*goal, *how, "", f"Error: {record.kind}: {_flat(record.message)}"]
+    lines = [*goal, *how, "", error_line(record)]
     for label, value in (("Top frame", record.top_frame), ("Detail", record.detail)):
         if value:
             lines.append(f"{label}: {_flat(value)}")
@@ -118,11 +123,21 @@ def find(cards: Iterable[CardTask], key: str) -> Found | None:
 
 
 def _spot(lines: list[str], key: str) -> tuple[int, int] | None:
-    """Return (the signature line's index, the section's first body line index) for the part of `key`."""
+    """Return (the signature line's index, the first line index of its block) in the open part of `key`.
+
+    A part may hold several signatures (a merged card, one issue seen under two signatures): a block starts
+    after the previous signature line or `### ` heading, so each signature keeps its own `Seen:` line (T2571).
+    A closed section (a folded twin) is never the one refreshed.
+    """
     for part in sections("\n".join(lines)):
-        for offset, line in enumerate(part.lines):
-            if (hit := SIGNATURE.match(line)) and hit.group(1) == key:
-                return part.heading + 1 + offset, part.heading + 1
+        start = part.heading + 1
+        for at, line in enumerate(part.lines, part.heading + 1):
+            if (hit := SIGNATURE.match(line)) is not None and not part.done:
+                if hit.group(1) == key:
+                    return at, start
+                start = at + 1
+            elif line.startswith("### "):
+                start = at + 1
     return None
 
 

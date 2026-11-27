@@ -21,7 +21,7 @@ from todoimpl.http.newtask import NewTask
 from todoimpl.stall.report import is_stall
 from todoimpl.todo_mcp.model import TodoError
 
-from . import ledger, settle, ticket
+from . import ledger, repair, settle, ticket, twin
 from . import sources as sources_mod
 from .gate import Gate
 from .marks import KEY
@@ -114,6 +114,7 @@ class ErrorLoop:
         for _source, record in found:
             if record.open:
                 self._track(record, cards)
+        repair.fold(self.root, list(self.cards()), self.tasks)  # twins made before T2570
         self._start_one(list(self.cards()))
 
     def _track(self, record: AppError, cards: Sequence[CardTask]) -> None:
@@ -145,9 +146,15 @@ class ErrorLoop:
         ledger.put(self.root, record.key, state="ticket", repo=record.repo, title=title, **fields)
 
     def _create(self, record: AppError, regression: int | None) -> None:
-        title = ticket.title(record)
-        try:
-            self.creator.create(NewTask(record.repo, title, ticket.body(record, regression=regression), ()))
+        title, body = ticket.title(record), ticket.body(record, regression=regression)
+        try:  # the todo app, not the board's cache, says whether a part already holds it (T2570)
+            if (held := twin.join(self.tasks, record, body)) is not None:
+                self._put(record, held, count=0, starts=0, missing=0)
+                return
+            self.creator.create(NewTask(record.repo, title, body, ()))
+        except TodoError as exc:
+            log.warning("error %s: no ticket made: %s", record.key, exc)
+            return
         except BackendError as exc:  # a twin title, or the todo app is down: the next tick tries again
             log.warning("error %s: no ticket made: %s", record.key, exc.message)
             return

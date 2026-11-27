@@ -60,7 +60,9 @@ backticks become quotes, so an error cannot split the note.
 
 
 - **Dedup** by the `Error-Signature:` line of an open part, and by the ledger (`<run root>/app-errors.json`). A lost
-  ledger finds the ticket again by its line; a twin title the todo app refuses is left alone.
+  ledger finds the ticket again by its line. Before any new part the todo app itself is asked, so a board that
+  is not loaded yet never makes a twin; one issue under two signatures is one part, and twins made before are
+  folded each tick (T2570, T2571, `DOCS-errors-dedup.md`, which also lists every source and its signatures).
 - **Count.** The `Seen:` line is rewritten only when the count changed (no note spam).
 - **Closed by hand.** A ticket missing from the board for two ticks (a Ship may be closing it right now) is
   forgotten, and the next report makes a new one.
