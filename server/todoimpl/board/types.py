@@ -73,8 +73,9 @@ class Limit:
     active: bool = False
     until: float | None = None
     credits: Credits = Credits()
-    weekly_hold: str = "none"  # T2533: none, low_medium or all
+    weekly_hold: str = "none"  # T2533: none, low_medium, allowance or all
     weekly_used: float | None = None
+    weekly_allowance: float | None = None  # the share of seven_day the day may have used (day N of 7 = N/7)
 
     @property
     def holds(self) -> bool:
@@ -86,6 +87,7 @@ class Limit:
         return {
             "active": self.active, "until": self.until, "credits": self.credits.to_dict(),
             "weekly_hold": self.weekly_hold, "weekly_used": self.weekly_used,
+            "weekly_allowance": self.weekly_allowance,
         }  # fmt: skip
 
 

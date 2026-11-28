@@ -35,7 +35,8 @@
       }
     },
     "weekly_hold": "none",
-    "weekly_used": null
+    "weekly_used": null,
+    "weekly_allowance": null
   },
   "cost": {
     "today_usd": 1.37,

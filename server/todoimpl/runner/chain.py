@@ -30,12 +30,12 @@ def _or_free(root: Path, choice: route.Choice, st: RunState | None) -> route.Cho
 
 
 def _hold(root: Path, now: float, choice: route.Choice, card: str | None) -> route.Choice:
-    """Apply the weekly reserve (T2533): at 90 % only high cards take the plan, at 95 % none do."""
+    """Apply the weekly holds: 90 % lets only high cards take the plan, 95 % and the daily allowance none."""
     if choice.route != route.PLAN or card is None:
         return choice
     if not hold.held(root, now, files.priority(root / card)):
         return choice
-    return route.Choice(None, hold.until(root))
+    return route.Choice(None, hold.until(root, now))
 
 
 def choose(root: Path, now: float, st: RunState | None, card: str | None = None) -> route.Choice:

@@ -222,8 +222,9 @@
   color: var(--text-muted);
 }
 
-/* The weekly reserve ticks on the 7 d meter (T2533): lit while the 90 % or 95 % hold is on. */
-.r-tick {
+/* The weekly reserve ticks on the 7 d meter (T2533): lit while the 90 % or 95 % hold is on; .a-tick is the daily allowance. */
+.r-tick,
+.a-tick {
   position: absolute;
   top: 0;
   bottom: 0;
@@ -233,7 +234,8 @@
 }
 
 /* Lit in the text colour: the meter's fill is already danger-red at 90 %, a red tick would vanish in it. */
-.r-tick[data-lit="true"] {
+.r-tick[data-lit="true"],
+.a-tick[data-lit="true"] {
   width: 3px;
   background: var(--text);
 }

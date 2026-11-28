@@ -6,8 +6,8 @@ import { makeUsage } from "@/test/fixture-detail";
 import { makeBoard, NOW } from "@/test/fixtures";
 
 const board = makeBoard();
-const lit = (hold: "all" | "low_medium" | "none"): string[] => {
-  const limit = { active: false, credits: makeCredits(), until: null, weekly_hold: hold, weekly_used: hold === "none" ? null : 0.93 };
+const lit = (hold: "all" | "allowance" | "low_medium" | "none"): string[] => {
+  const limit = { active: false, credits: makeCredits(), until: null, weekly_allowance: 0.143, weekly_hold: hold, weekly_used: hold === "none" ? null : 0.93 };
   const element = renderUsage(makeUsage(), { ...board, limit }, null, null, NOW);
   return [...element.querySelectorAll<HTMLElement>(".r-tick")].map((t) => `${t.dataset.at ?? ""}:${t.dataset.lit ?? ""}`);
 };

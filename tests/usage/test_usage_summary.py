@@ -20,7 +20,7 @@ def test_empty_root_validates_against_the_contract(tmp_path: Path, usage_validat
     assert out["five_hour"] is None
     assert out["overage"] == {"status": "unknown", "using": False}
     limit = {"active": False, "until": None, "credits": out["limit"]["credits"]}
-    assert out["limit"] == {**limit, "weekly_hold": "none", "weekly_used": None}
+    assert out["limit"] == {**limit, "weekly_hold": "none", "weekly_used": None, "weekly_allowance": None}
     assert out["cost"] == {"today_usd": 0.0, "total_usd": 0.0, "per_task": []}
 
 

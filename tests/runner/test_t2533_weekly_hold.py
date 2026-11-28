@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 NOW = 1_800_000_000.0
-RESET = NOW + 86400
+RESET = NOW + 43200  # day 7 of the window: the daily allowance is 100 %
 
 
 def _event(used: float, resets: float = RESET) -> str:

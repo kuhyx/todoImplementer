@@ -110,6 +110,7 @@ class ServiceBackend:
                 Credits(**route.view(self.root, now)),
                 hold.level(self.root, now),
                 hold.used(self.root, now),
+                hold.allowance(self.root, now),
             ),
             now=now,
             repo_missing=self._repo_missing,

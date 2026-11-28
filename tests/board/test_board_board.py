@@ -69,7 +69,7 @@ def test_board_under_a_limit_exposes_it() -> None:
     out = board.build_board([Note()], {}, ctx(limit=LIMITED), "b")
     validate("board", out)
     limit = {"active": True, "until": NOW + 3600, "credits": LIMITED.credits.to_dict()}
-    assert out["limit"] == {**limit, "weekly_hold": "none", "weekly_used": None}
+    assert out["limit"] == {**limit, "weekly_hold": "none", "weekly_used": None, "weekly_allowance": None}
     assert out["tasks"][0]["actions"][0]["enabled"] is False
 
 

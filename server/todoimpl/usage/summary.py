@@ -136,6 +136,7 @@ def usage_summary(
             "credits": route.view(root, now),
             "weekly_hold": hold.level(root, now),
             "weekly_used": hold.used(root, now),
+            "weekly_allowance": hold.allowance(root, now),
         },
         "cost": {
             "today_usd": today_usd,

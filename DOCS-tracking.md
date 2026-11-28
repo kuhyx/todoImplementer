@@ -88,3 +88,13 @@ Tooltips (not visible text) carry the provider, label, `used/total` and the rese
   the slowest, 0.2 s).
 - Worker logs are served as the last 64 KB, plain text, never cached.
 - A child's live feed link opens the umbrella drawer: child runs are not board cards and have no SSE of their own.
+
+## The weekly holds on the 7 d meter (`usage/hold.py`)
+
+- Ticks at 90 % (medium and low cards start no plan turn) and 95 % (every plan turn stops), lit while held.
+- Daily allowance (kuhy, 2026-11-28): window start is `seven_day.resets_at - 7 d`; day N (ceil of days elapsed)
+  allows N/7 (14 %, 29 %, ...), whoever spent it. Above it no card starts a plan turn, high ones too, and a
+  running chain stops at its next turn (`chain._hold`); it lifts when the next day starts. It outranks the 90 % hold.
+- The mark `usage-hold.json` keeps every probe reading; the server adds `limit.weekly_allowance` (always, once a
+  reading is known) and `weekly_hold: "allowance"`. The strip draws an allowance tick and the chip "held: allowance 14%".
+- Human-made cards keep their start-first order when the hold lifts; the order is not touched.

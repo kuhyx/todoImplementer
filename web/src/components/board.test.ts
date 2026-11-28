@@ -193,7 +193,7 @@ describe("renderUsage", () => {
   it("colours by threshold and handles missing windows, errors, limit and credit use", () => {
     const usage = makeUsage();
     const hot = { ...usage, overage: { status: "allowed", using: true }, seven_day: { ...usage.seven_day!, utilization: 0.95 } };
-    const element = renderUsage(hot, { ...board, limit: { active: true, credits: makeCredits({ text: "Server credits line." }), until: NOW + 600, weekly_hold: "none", weekly_used: null } }, "Board not refreshed: down", null, NOW);
+    const element = renderUsage(hot, { ...board, limit: { active: true, credits: makeCredits({ text: "Server credits line." }), until: NOW + 600, weekly_allowance: null, weekly_hold: "none", weekly_used: null } }, "Board not refreshed: down", null, NOW);
     expect(element.querySelector('[data-tone="danger"]')).not.toBeNull();
     expect(renderUsage({ ...usage, seven_day: null }, null, null, null, NOW).textContent).toContain("no reading yet");
     expect(element.textContent).toContain("Overage in use");
@@ -202,7 +202,7 @@ describe("renderUsage", () => {
     expect(element.querySelector('[role="alert"]')?.textContent).toBe("Board not refreshed: down");
     const warm = renderUsage({ ...usage, seven_day: { ...usage.seven_day!, utilization: 0.8 } }, null, null, null, NOW);
     expect(warm.querySelector('[data-tone="warn"]')).not.toBeNull();
-    const noUntil = renderUsage(null, { ...board, limit: { active: true, credits: makeCredits({ enabled: false, route: "plan", state: "off", text: "Credits are off." }), until: null, weekly_hold: "none", weekly_used: null } }, null, null, NOW);
+    const noUntil = renderUsage(null, { ...board, limit: { active: true, credits: makeCredits({ enabled: false, route: "plan", state: "off", text: "Credits are off." }), until: null, weekly_allowance: null, weekly_hold: "none", weekly_used: null } }, null, null, NOW);
     expect(noUntil.textContent).toContain("at an unknown time");
     expect(noUntil.textContent).toContain("Credits are off.");
   });

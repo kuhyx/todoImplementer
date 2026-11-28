@@ -36,7 +36,15 @@ function reserveTicks(hold: string): HTMLElement[] {
   });
 }
 
-function meter(label: string, window: Window, now: number, hold = "none"): HTMLElement {
+/** The daily allowance: a tick where day N of 7 ends (N/7), lit while it holds the board. */
+function allowanceTick(allowance: null | number, hold: string): HTMLElement[] {
+  if (allowance === null) return [];
+  const tick = h("span", { attrs: { "data-lit": String(hold === "allowance") }, class: "a-tick" });
+  tick.style.setProperty("--at", `${String(Math.round(allowance * 100))}%`);
+  return [tick];
+}
+
+function meter(label: string, window: Window, now: number, hold = "none", allowance: null | number = null): HTMLElement {
   if (window === null) {
     return h("div", { class: "meter-box" }, h("span", { class: "meter-label", text: label }), h("span", { class: "meter-note", text: "no reading yet" }));
   }
@@ -50,7 +58,7 @@ function meter(label: string, window: Window, now: number, hold = "none"): HTMLE
       "span",
       { attrs: { "aria-label": `${label} used`, "aria-valuemax": 100, "aria-valuemin": 0, "aria-valuenow": Math.round(window.utilization * 100), role: "meter" }, class: "meter" },
       fill,
-      ...(label === "7 d" ? reserveTicks(hold) : []),
+      ...(label === "7 d" ? [...reserveTicks(hold), ...allowanceTick(allowance, hold)] : []),
     ),
     h("span", { class: "meter-value", text: formatPercent(window.utilization) }),
     h("span", { class: "meter-note", text: `resets ${formatIn(window.resets_at, now)} (${formatClock(window.resets_at)})` }),
@@ -86,7 +94,8 @@ export function renderUsage(usage: null | Usage, board: Board | null, error: nul
     { class: "usage" },
     h("div", { class: "usage-row" },
       build !== null && h("span", { class: "build", text: build }),
-      usage !== null && meter("7 d", usage.seven_day, now, board?.limit.weekly_hold),
+      usage !== null && meter("7 d", usage.seven_day, now, board?.limit.weekly_hold, board?.limit.weekly_allowance),
+      board?.limit.weekly_hold === "allowance" && h("span", { attrs: { "data-tone": "warn" }, class: "chip", text: `held: allowance ${String(Math.round((board.limit.weekly_allowance ?? 0) * 100))}%` }),
       usage !== null && renderFree(usage.free, now),
       usage !== null && renderNoLimit(usage.nolimit, now),
       board !== null && renderCreditsPace(board.limit.credits),

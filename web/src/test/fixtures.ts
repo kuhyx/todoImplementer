@@ -114,7 +114,7 @@ export function makeBoard(cards: TaskCard[] = makeCards()): Board {
     build: "abc1234",
     columns: ids.map((id) => ({ count: cards.filter((card) => card.column === id).length, id, label: LABELS[id] })),
     generated_at: NOW,
-    limit: { active: false, credits: makeCredits(), until: null, weekly_hold: "none", weekly_used: null },
+    limit: { active: false, credits: makeCredits(), until: null, weekly_allowance: null, weekly_hold: "none", weekly_used: null },
     repos,
     slots: { used: cards.filter((card) => card.status === "working").length },
     tasks: cards,

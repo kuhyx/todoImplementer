@@ -115,13 +115,13 @@
       "type": "object",
       "description": "Claude plan limit. until=null when none is active. credits: the paced free API credits (the pace, and the route a new turn takes while the limit holds).",
       "properties": {
-        "active": {"type": "boolean"},
-        "until": {"anyOf": [{"$ref": "#/$defs/epoch"}, {"type": "null"}]},
+        "active": {"type": "boolean"}, "until": {"anyOf": [{"$ref": "#/$defs/epoch"}, {"type": "null"}]},
         "credits": {"$ref": "https://todoimplementer.local/contracts/credits.schema.json#/$defs/credits"},
-        "weekly_hold": {"enum": ["none", "low_medium", "all"], "description": "The weekly reserve (T2533): at 90 % of seven_day medium and low cards take no plan turn (low_medium), at 95 % no card does and running plan turns were stopped (all)."},
-        "weekly_used": {"anyOf": [{"type": "number", "minimum": 0}, {"type": "null"}], "description": "The seven_day share the hold last saw (1.0 = full), null with no hold."}
+        "weekly_hold": {"enum": ["none", "low_medium", "allowance", "all"], "description": "The weekly reserve (T2533): at 90 % of seven_day medium and low cards take no plan turn (low_medium), at 95 % no card does and running plan turns were stopped (all). allowance: more than day N of 7 allows (N/7), no card starts a plan turn and chains stop at their next turn until the next day."},
+        "weekly_used": {"anyOf": [{"type": "number", "minimum": 0}, {"type": "null"}], "description": "The seven_day share the hold last saw (1.0 = full), null with no hold."},
+        "weekly_allowance": {"anyOf": [{"type": "number", "minimum": 0, "maximum": 1}, {"type": "null"}], "description": "The seven_day share the board may have used by now (day N of 7 = N/7), null until a reading of the current window is known."}
       },
-      "required": ["active", "until", "credits", "weekly_hold", "weekly_used"],
+      "required": ["active", "until", "credits", "weekly_hold", "weekly_used", "weekly_allowance"],
       "additionalProperties": false
     },
     "error": {
