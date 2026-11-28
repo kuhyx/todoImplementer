@@ -173,7 +173,7 @@ def fix(ctx: PromptContext) -> str:
         item(ctx),
         plan_text(ctx),
         _rules(ctx),
-        "Find the root cause, fix it, rerun the failing command until green.",
+        "Find the root cause, fix it, rerun only the failing test (the board reruns the gate).",
         SELF_CHECK,
         f"{KUHY_LIVE} {phone.LIVE_WORK}",
         "End with `D:`.",

@@ -37,7 +37,7 @@ COUNTERS = (
 RESET = "live_fixes check_fixes nudges ship_fixes deploy_fixes reship hands_nudged".split()  # noqa: SIM905
 RESET += ["ask_grants", "ask_grant_total", "ask_forms", "ask_form_total"]  # Start and Retry reset these
 RESET += ["self_resumes", "link_nudges", "gate_kills", "gate_waits", "deploy_kills"]  # Ship reruns (T2340)
-RESET += ["answered_backs", "proof_rounds", "proof_brief", "phone_asks"]  # T2376, T2467, T2522
+RESET += ["answered_backs", "proof_rounds", "proof_brief", "phone_asks", "gate_job"]  # T2376, T2467, T2522
 
 
 class RunnerError(Exception):
@@ -136,7 +136,7 @@ class Scheduler(PhoneEngine):
             st.stage = latenote.retry_stage(self.root / card, restart_stage(st, item))
             st.error, st.last_tag, st.assignee = None, None, "claude"
             st.note_body = clip_body(item.body)
-            for key in COUNTERS:
+            for key in (*COUNTERS, *RESET):  # RESET: "Start and Retry reset these"
                 st.extra.pop(key, None)
             st.extra.update(extra or {})
             prepin.adopt(st, self.root / card)  # a model kuhy picked before this Start (T2478)

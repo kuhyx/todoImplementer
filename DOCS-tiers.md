@@ -93,3 +93,9 @@ are watched instead. Umbrella 7808ee0a-0 is why: its workers wrote a logo into n
   in a checkout are exactly one card's; an owned stray is set aside at once (T2518). Only rows of the card's own
   repo count (`own: true`): a change a turn saw in another repo may be kuhy's live edit, so it is logged but owned
   by nobody and keeps the 30 min quiet wait. An edit two cards both saw land has no owner either.
+
+## Free-route work is checked by the board (kuhy, 2026-11-28)
+
+A card whose turns ran on the `free` route no longer waits for a Claude live check (`free_unverified`,
+`freeverify.py` and the "waits for Claude verify" line are gone). Its `checks` stage runs the same board gate job as
+any card (`DOCS-landing.md`, "The board runs the gate before Ship"), no tokens, and Ship follows when it is green.

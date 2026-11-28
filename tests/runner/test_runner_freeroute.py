@@ -8,7 +8,7 @@ from types import SimpleNamespace
 
 import pytest
 from runnerfakes import SHIMS, Env, executable
-from schedfakes import CARD, IMPL, LIVE_OK, PLAN, boot, lift_limit, state, wait_stage
+from schedfakes import CARD, IMPL, LIVE_OK, PLAN, boot, state, wait_stage
 from todoimpl.board.badges import tier_badges
 from todoimpl.board.card import current_line
 from todoimpl.board.state import RunState
@@ -30,27 +30,19 @@ def free_world(world: Env, monkeypatch: pytest.MonkeyPatch, visibility: str = "P
     monkeypatch.setattr(freeok, "gateway_up", lambda: True)
 
 
-def test_t2531_a_limited_public_card_runs_free_and_waits_for_claude_to_verify(
+def test_t2531_a_limited_public_card_runs_free_and_the_board_gate_checks_it(
     world: Env, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     free_world(world, monkeypatch)
-    sched, _ = boot(world, PLAN, IMPL, LIVE_OK, LIVE_OK, done_check="true")
+    sched, _ = boot(world, PLAN, IMPL, LIVE_OK, done_check="true")
     try:
         sched.start(CARD)
-        st = wait_stage(world, sched, "paused_limit", turns=3)
+        st = wait_stage(world, sched, "gate", turns=3)
         calls = world.calls()
-        assert [c["model"] for c in calls] == ["free-best"] * 3
+        assert [c["model"] for c in calls] == ["free-best"] * 3  # no Claude verify turn
         assert freeworker.PREAMBLE in calls[0]["prompt"]
         assert st.extra["route"] == "free"
-        assert st.extra["free_unverified"] is True
-        assert st.extra["resume_stage"] == "checks"
         assert st.cost_usd == 0.0
-        lift_limit(world, sched)
-        st = wait_stage(world, sched, "gate", turns=2)
-        verify = world.calls()[3]
-        assert verify["model"] == "sonnet"
-        assert verify["resume"] is None  # a fresh Claude session, never the free one
-        assert "free_unverified" not in st.extra
     finally:
         sched.close()
 
@@ -78,7 +70,7 @@ def test_t2531_an_error_fix_never_goes_free(world: Env, monkeypatch: pytest.Monk
         sched.close()
 
 
-def test_t2531_the_card_says_it_waits_for_claude_and_shows_the_free_badge() -> None:
-    run = RunState(task_id=CARD, stage="paused_limit", extra={"free_unverified": True, "route": "free"})
-    assert current_line(Status.PAUSED_LIMIT, run, None, 0.0) == "waits for Claude verify"
+def test_t2531_the_card_shows_the_free_badge() -> None:
+    run = RunState(task_id=CARD, stage="paused_limit", extra={"route": "free"})
+    assert current_line(Status.PAUSED_LIMIT, run, None, 0.0) == "paused by the usage limit"
     assert tier_badges(SimpleNamespace(title="x", body="", parts=()), run)["free"] is True

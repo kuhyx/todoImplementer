@@ -2,8 +2,8 @@
 
 kuhy (2026-11-27): public-repo cards only, every role, no Claude manager. The turn is the plan route's own
 argv with `claude-free` in front, so streams, sessions, tags and adoption work unchanged; it keeps the free
-worker's guarantees (no-questions preamble, `srcwall` read-only checkouts, no push). Free work never ships
-by itself: `free_unverified` holds Ship until a Claude live-check turn re-checks it (`freeverify.py`).
+worker's guarantees (no-questions preamble, `srcwall` read-only checkouts, no push). Free work is checked
+by the board's gate job (`shipgate.py`) before Ship, like any card's; no Claude turn re-checks it.
 
 `eligible` sits on the engine's queue (under its lock), so it never blocks (`freeok.py`).
 """
@@ -26,19 +26,18 @@ if TYPE_CHECKING:
 
 FREE = "free"
 MODEL = "free-best"
-UNVERIFIED = "free_unverified"
 REPORTS = ("plan.md", "live_check.md")  # what a role writes to the run dir, never into the repo
 PATHS = "Write every file the task names by absolute path (plan.md, live_check.md) exactly at that path."
 # A free implement turn once pushed its commit to main before any Claude check (T2613): the turn loses the
 # landing grant, and its git cannot push (the deny list misses `git -C <wt> push`).
-NO_LAND = "Never push, tag or deploy: commit in the worktree only; a Claude turn checks and lands free work."
+NO_LAND = "Never push, tag or deploy: commit in the worktree only; the board checks and ships free work."
 LANDING = re.compile(
     r"You have kuhy's standing permission to land your own work\..*?landed the same way\. ", re.DOTALL
 )
 ON_MAIN = re.compile(
     r"A criterion that only passes once the work is on main \(.*?\): land the work yourself, [^.]*\."
 )
-ON_MAIN_FREE = "A criterion that only passes once the work is on main stays `- [ ]`: a Claude turn lands it."
+ON_MAIN_FREE = "A criterion that only passes once the work is on main stays `- [ ]`: Ship lands it."
 REFUSED = "/nonexistent/free-turns-never-push"
 PUSH_BLOCK = (
     ("remote.origin.pushurl", REFUSED),
@@ -115,13 +114,7 @@ def collect(run_dir: Path, worktree: Path) -> list[str]:
     return moved
 
 
-def after_turn(st: RunState, route: str, role: str, *, ok: bool, dirs: tuple[Path, Path]) -> None:
-    """Mark the run unverified after a free turn; clear it after a Claude live check that ran to its end.
-
-    `dirs` = (run dir, worktree): a free turn's reports that landed in the worktree move to the run dir.
-    """
+def after_turn(route: str, dirs: tuple[Path, Path]) -> None:
+    """Move the reports a free turn wrote into the worktree to the run dir; `dirs` = (run dir, worktree)."""
     if route == FREE:
-        st.extra[UNVERIFIED] = True
         collect(*dirs)
-    elif role == "live_check" and ok:
-        st.extra.pop(UNVERIFIED, None)

@@ -13,7 +13,7 @@ from todoimpl.umbrella import bounce
 from todoimpl.umbrella.note import is_umbrella
 from todoimpl.umbrella.run import run as run_umbrella
 
-from . import devicework, freeverify, hold, partproof, phone, tiering
+from . import devicework, hold, partproof, phone, shipgate, tiering
 from .checks import SENTENCE_NOTE, discover, record, run_all
 from .closing import closing_stage
 from .files import NeedsYouError, write_json
@@ -87,9 +87,14 @@ def _implement(d: Driver) -> str | None:  # noqa: PLR0911 - one return per way o
     if devicework.to_claude(d, res):  # phone work is never kuhy's: a fresh live check does it (T2523)
         d.state.sessions.pop("live_check", None)
         return "live_check"
-    nxt = d.after_tag(res, "shipping" if d.state.extra.get("reship") else "live_check")
+    regate = shipgate.again(d.state)  # the fix of a red gate goes back to the checks
+    nxt = d.after_tag(
+        res, "shipping" if d.state.extra.get("reship") else "checks" if regate else "live_check"
+    )
     if nxt == "shipping":
         d.state.extra.pop("reship")
+    elif nxt == "checks":
+        shipgate.mem(d.state).pop("again")
     elif nxt == "live_check":  # new work to check: a new live-check session, seeded from the handoff
         d.state.sessions.pop("live_check", None)
         return _owed(d)
@@ -164,10 +169,10 @@ def _live_check(d: Driver) -> str | None:  # noqa: PLR0911 - one return per way 
 
 
 def _checks(d: Driver) -> str | None:
-    if (verify := freeverify.gate(d)) is not None:  # free-model work: Claude re-checks it first (T2531)
-        return verify
     st, wt = d.state, Path(str(d.state.worktree))
     found = discover(wt, d.item.done_check)
+    if shipgate.command(wt) is not None:  # the gate job below runs the repo's tests (no second `make test`)
+        found = [(name, cmd) for name, cmd in found if name != "tests"]
     if d.item.done_check and not any(name == "done_check" for name, _ in found):
         d.activity(f"checks: done_check not run, {SENTENCE_NOTE}")
     results, log = run_all(found, wt, d.ctx.run_dir, d.ctx.check_timeout)
@@ -176,6 +181,9 @@ def _checks(d: Driver) -> str | None:
     d.activity(
         "checks: " + (", ".join(f"{r.name} {'red' if r in red else 'ok'}" for r in results) or "none found")
     )
+    if not red and (again := shipgate.settle(d)) is not None:  # the board's gate job, zero tokens
+        st.checks["passed"] = False
+        return again
     if not red:
         st.extra.pop("check_fixes", None)
         child = "umbrella_round" in st.extra  # an umbrella child ships itself when green (T1923)

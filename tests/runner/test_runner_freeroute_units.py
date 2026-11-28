@@ -5,8 +5,7 @@ import threading
 from pathlib import Path
 
 import pytest
-from todoimpl.board.state import RunState
-from todoimpl.runner import chain, freegate, freeok, freeroute, freeverify, freeworker, srcwall
+from todoimpl.runner import chain, freegate, freeok, freeroute, freeworker, srcwall
 
 
 def _cache(text: str) -> None:
@@ -109,34 +108,22 @@ def test_banner_names_the_route(route: str, wanted: str, ran: str, start: str) -
     assert freeroute.banner(route, "plan", wanted, ran).startswith(start)
 
 
-def test_after_turn_marks_clears_and_moves_stray_reports(tmp_path: Path) -> None:
+def test_after_turn_moves_stray_reports_of_a_free_turn(tmp_path: Path) -> None:
     run_dir, wt = tmp_path / "run", tmp_path / "run" / "wt"
     wt.mkdir(parents=True)
     (wt / "plan.md").write_text("plan", encoding="utf-8")
     (wt / "live_check.md").write_text("new", encoding="utf-8")
     (run_dir / "live_check.md").write_text("kept", encoding="utf-8")
-    dirs = (run_dir, wt)
-    st = RunState(task_id="a-0", stage="implement")
-    freeroute.after_turn(st, "free", "plan", ok=True, dirs=dirs)
-    assert st.extra["free_unverified"] is True
+    freeroute.after_turn("plan", (run_dir, wt))  # a plan turn moves nothing
+    assert (wt / "plan.md").exists()
+    freeroute.after_turn("free", (run_dir, wt))
     assert (run_dir / "plan.md").read_text(encoding="utf-8") == "plan"
     assert not (wt / "plan.md").exists()
     assert (run_dir / "live_check.md").read_text(encoding="utf-8") == "kept"  # never overwrites
-    freeroute.after_turn(st, "plan", "implement", ok=True, dirs=dirs)  # only a live check clears it
-    freeroute.after_turn(st, "plan", "live_check", ok=False, dirs=dirs)
-    assert st.extra["free_unverified"] is True
-    freeroute.after_turn(st, "credits", "live_check", ok=True, dirs=dirs)
-    assert "free_unverified" not in st.extra
 
 
 def test_chain_admits_reads_the_run(tmp_path: Path) -> None:
     assert chain.admits(tmp_path, 0.0, "nope-0") is True  # no limit: the plan takes any card
-
-
-def test_verify_gate_has_nothing_to_do_without_the_mark() -> None:
-    st = RunState(task_id="a-0", stage="checks")
-    driver = type("D", (), {"state": st, "ctx": type("C", (), {"now": staticmethod(lambda: 0.0)})()})()
-    assert freeverify.gate(driver) is None
 
 
 def test_visibility_cache_path_matches_free_llm_check_dir() -> None:

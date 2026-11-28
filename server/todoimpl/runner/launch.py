@@ -175,3 +175,9 @@ def start_unit(unit: str, run_dir: Path, module: str, *args: str) -> tuple[int |
 def unit_active(unit: str) -> bool:
     """Say whether the user unit `unit` is active (a vanished transient unit is not)."""
     return _run(["systemctl", "--user", "is-active", "--quiet", unit], capture_output=True).returncode == 0
+
+
+def stop_unit(unit: object) -> None:
+    """Stop the user unit `unit` (a name; anything else is ignored): a job that outlived its budget."""
+    if isinstance(unit, str) and unit:
+        _run(["systemctl", "--user", "stop", unit], capture_output=True, check=False)

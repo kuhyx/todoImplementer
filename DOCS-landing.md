@@ -108,6 +108,13 @@ No click, no `Ready to ship` / `Ready to close` status or column; `shipping` sho
 - **Test seam.** `TODOIMPL_HOLD_GATE=1` brings the old rest at `gate` back. Only the test suite sets it
   (`tests/conftest.py`), to drive Ship by hand; `tests/runner/test_runner_ship_all.py` runs the real rule.
 
+## The board runs the gate before Ship (kuhy, 2026-11-28; `runner/shipgate.py`)
+
+Sessions never run the suite. In `checks`, after the other checks, the board runs the worktree's CLAUDE.md `gate:`
+(else `test:`) bullet as a `run_job` unit named `gate` under `capped.sh` (no bullet: `checks.discover` only; with
+one, the auto `make test` is dropped). Red resumes the session once (`job <id> (<cmd>) exited <n>` + last 40 lines
+as the `fix` tail; its `D:` returns to `checks`); a second red is Needs you. State: `extra.gate_job`.
+
 ## Ship (`runner/ship.py`, T1865)
 
 A branch the session committed ships as before (squash, rebase, gate, push). A branch with a clean tree whose HEAD is

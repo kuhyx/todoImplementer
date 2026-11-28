@@ -146,9 +146,7 @@ def _apply(env: TurnEnv, state: RunState, rec: orphans.Record, res: TurnResult, 
         state.sessions[role] = entry | size(res, state.sessions.get(role))
         state.session_id = res.session_id
     state.extra["route"] = route
-    freeroute.after_turn(
-        state, route, role, ok=res.finished and not res.is_error, dirs=(env.run_dir, env.worktree)
-    )
+    freeroute.after_turn(route, (env.run_dir, env.worktree))
     if models.get("ran"):  # the card's model line (card.schema `model`) when no pin names one
         state.extra["last_model"] = models["ran"]
     state.cost_usd = round(state.cost_usd + spent, 6)
