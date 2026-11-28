@@ -26,23 +26,13 @@ jobs:
           flutter-version: 3.50.1
           channel: stable
       - run: flutter pub get
-      # lib/config/firebase_local.dart is gitignored; empty values are enough to analyze and test.
+      # lib/config/firebase_local.dart is gitignored; empty values are enough to test.
       - run: dart run tool/write_firebase_config.dart --placeholder
-      - run: flutter analyze --fatal-infos --fatal-warnings
-      - run: flutter test --coverage
-      - name: Enforce 100% line coverage
-        run: |
-          lf=$(awk -F: '/^LF:/{s+=$2} END{print s}' coverage/lcov.info)
-          lh=$(awk -F: '/^LH:/{s+=$2} END{print s}' coverage/lcov.info)
-          echo "Lines covered: $lh / $lf"
-          if [ "$lf" != "$lh" ]; then
-            echo "::error::Flutter line coverage is below 100% ($lh/$lf)"
-            exit 1
-          fi
+      - run: flutter test
 
   # Builds the phone APK, signs it with the shared release key, and publishes
-  # it to Releases. Gated on `app` so a commit that fails analyze/tests/the
-  # coverage bar never reaches the releases page.
+  # it to Releases. Gated on `app` so a commit that fails the tests never
+  # reaches the releases page.
   #
   # NOTE: versionCode is github.run_number, which is per-workflow-FILE. Never
   # rename or replace this file — the counter resets to 1, versionCode goes

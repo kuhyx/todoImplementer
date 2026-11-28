@@ -1,4 +1,5 @@
-# Gates for todoImplementer. `make fast` must be green before every commit.
+# Gates for todoImplementer. `make fast` (private scan, markdown names, web build, existing tests) must be green
+# before every commit. Lint, types, coverage and the line cap are no longer gated (kuhy, 2026-11-27, token spend).
 # Heavy commands go through the shared resource cap (2 GiB, 10 % CPU, nice).
 SHELL := /bin/bash
 .SHELLFLAGS := -euo pipefail -c
@@ -6,7 +7,7 @@ CAP ?= $(HOME)/.claude/scripts/capped.sh
 UV := $(CAP) uv run --frozen
 MESSAGE ?=
 
-.PHONY: fast fast-steps lines private md regressions lint types test test-shard test-cov cov-clean coverage web web-lint web-test apk
+.PHONY: fast fast-steps lines private md regressions lint types test test-shard test-cov cov-clean web web-build web-lint web-test apk
 
 # The tree's key is taken before the steps run and stored once they pass; pre-commit skips the gate for a
 # tree that already passed (scripts/fast_stamp.py, T2410). A suite that already passed on this tree (the board's
@@ -25,8 +26,9 @@ MARK = $(STAMP_MARK) $@ "$$k"
 
 # The checks run side by side; `test` runs after them on its own, because every capped job of one session
 # shares one 20 % CPU pool and the xdist run needs all of it to stay under the 60 s scope cap.
-fast-steps: lines private md regressions lint types web
+fast-steps: private md web
 
+# lines, regressions, lint, types and web-lint stay as on-demand targets; the gate no longer runs them.
 lines:
 	@$(KEY); python3 scripts/check_lines.py; $(MARK)
 
@@ -54,8 +56,8 @@ types:
 # run held it 58-79 s). Shards run in sequence: every capped job of one session shares one CPU pool. The coverage
 # data lives in its own temp dir (COV_DIR): two runs in one worktree (a board restart re-runs the checks while the
 # old run goes on) used to delete each other's files (T1920). Each shard's pytest basetemp is a temp dir its trap
-# removes even when the run fails (T2412: a leftover basetemp once filled /tmp's inodes). `coverage` enforces
-# fail_under = 100 over server/, scripts/, deploy/ and mcp/.
+# removes even when the run fails (T2412: a leftover basetemp once filled /tmp's inodes). No coverage is measured
+# or enforced: a passing shard leaves an empty marker file in COV_DIR (the name is kept for the board's check steps).
 JOBS ?= 4  # `make fast` steps side by side (T2410)
 TEST_JOBS ?= 6
 # Lock first, scope second (T2417): the uv or pnpm shim queues on the build lock outside capped.sh's 60 s scope,
@@ -70,39 +72,38 @@ test:
 	$(MAKE) --no-print-directory test-cov COV_DIR="$$d"; $(MARK)
 
 # A board session runs the suite as SHARDS calls, each under 60 s (T2416): `make test-shard SHARD=k` for k in
-# 1..SHARDS into one new COV_DIR, then `make test-cov` combines exactly those SHARDS files (missing one fails) and
-# enforces 100 %. Same tests as `make test`.
+# 1..SHARDS into one new COV_DIR, then `make test-cov` checks exactly those SHARDS markers exist (a missing one
+# fails). Same tests as `make test`.
 SHARDS ?= 8
-SHARD_FILES = $(foreach k,$(shell seq 1 $(SHARDS)),$(COV_DIR)/.coverage.shard$(k)of$(SHARDS))
+SHARD_FILES = $(foreach k,$(shell seq 1 $(SHARDS)),$(COV_DIR)/.shard$(k)of$(SHARDS))
 test-shard:
 	@$(KEY); mkdir -p "$(COV_DIR)" && python3 scripts/test_shard.py $(SHARD) $(SHARDS) >/dev/null && \
 	t=$$(mktemp -d "$${TMPDIR:-/tmp}/todoimpl-shard.XXXXXX") && trap 'rm -rf "$$t"' EXIT && \
-	$(TESTCAP) env COVERAGE_FILE="$(COV_DIR)/.coverage.shard$(SHARD)of$(SHARDS)" TODOIMPL_TEST_SHARD=$(SHARD)/$(SHARDS) \
-	pytest -n $(TEST_JOBS) --dist worksteal --basetemp="$$t/tmp" --cov --cov-fail-under=0 --cov-report= -q && \
+	$(TESTCAP) env TODOIMPL_TEST_SHARD=$(SHARD)/$(SHARDS) \
+	pytest -n $(TEST_JOBS) --dist worksteal --basetemp="$$t/tmp" -q && \
+	: >"$(COV_DIR)/.shard$(SHARD)of$(SHARDS)" && \
 	{ $(STAMP_MARK) shard$(SHARD)of$(SHARDS) "$$k"; }
 
 test-cov:
 	@$(KEY); for f in $(SHARD_FILES); do [[ -f "$$f" ]] || { echo "test-cov: missing $$f" >&2; exit 1; }; done; \
-	COVERAGE_FILE="$(COV_DIR)/.coverage" $(UV) coverage combine -q --keep $(SHARD_FILES) && \
-	$(MAKE) --no-print-directory coverage COV_DIR="$(COV_DIR)" && \
+	echo "shards $(SHARDS) of $(SHARDS)" && \
 	{ $(STAMP_MARK) cov-of-$(SHARDS) "$$k"; }
 
 cov-clean:
-	@rm -f .coverage .coverage.*
+	@rm -f .coverage .coverage.* .shard*of*
 
 test-%:
-	@$(UV) env COVERAGE_FILE=$(COV_DIR)/.coverage.$* pytest tests/$* --cov --cov-fail-under=0 --cov-report= -q
-
-coverage:
-	@COVERAGE_FILE=$(COV_DIR)/.coverage $(UV) coverage report
+	@$(UV) pytest tests/$* -q
 
 # Web gates run once the Astro app exists (pnpm only).
-# Two steps, so a session can run each in its own call under 60 s (T2411); `pnpm lint` is web/dev/lint.sh.
-# `web` runs them one after the other even under `make fast -j`: eslint (2.7-3.1 GB) beside vitest (1.5 GB)
-# and mypy could pass the session's 4 GiB pool (T2520).
+# The gate runs `web-build` then `web-test`, one after the other, each in its own call under 60 s (T2411).
+# `web-lint` (`pnpm lint` is web/dev/lint.sh) is on demand only.
 web:
-	@$(MAKE) --no-print-directory web-lint
+	@$(MAKE) --no-print-directory web-build
 	@$(MAKE) --no-print-directory web-test
+
+web-build:
+	@$(KEY); if [[ -f web/package.json ]]; then $(WEBCAP) build; else echo "web: no web/package.json yet"; fi; $(MARK)
 
 # Both keep the default 10 % CPU. web-lint gets 4 GiB for eslint's two threads, each holding the TS program;
 # web-test stays at the 2 GiB default (vmThreads on 3 workers peaks at 1.25 GB) (T2520).

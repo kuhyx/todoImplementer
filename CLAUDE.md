@@ -27,23 +27,19 @@ Tokenless work while no Claude route runs (trigger, repo visits, autofix commits
 - deploy: `git -C ~/src/todoImplementer pull --ff-only && ~/src/todoImplementer/scripts/deploy.sh` (Ship runs it after the push; the live unit runs from `~/src/todoImplementer`; `DOCS-landing.md`)
 - test: `make test`
 - test-changed: `scripts/test_changed.sh`
-- lint: `make lint`
-- coverage: `make test`
-- coverage-gaps: `coverage-gaps coverage.xml`
+- lint: n/a: dropped (kuhy, 2026-11-27, token spend); `make lint` still runs ruff on demand
+- coverage: n/a: dropped (kuhy, 2026-11-27, token spend)
+- coverage-gaps: n/a: dropped with coverage (kuhy, 2026-11-27)
 - apk: `make apk` (release APK for the Pixel and the emulator, arm64 + x64, under 60 s cold; CI builds every ABI)
-- gate: `make fast` (in a board session one step per call, each under 60 s: `make lines private md regressions lint`, `make types`, `make web-lint`, `make web-test`, `make test-shard SHARD=1 COV_DIR=<dir>` for SHARD 1..8 into a new dir, then `make test-cov COV_DIR=<dir>`)
+- gate: `make fast` (private scan, markdown names, web build, existing tests; in a board session one step per call, each under 60 s: `make private md`, `make web-build`, `make web-test`, `make test-shard SHARD=1 COV_DIR=<dir>` for SHARD 1..8 into a new dir, then `make test-cov COV_DIR=<dir>`)
 
 ## Rules
 
-- **Done means `make fast` is green** (line cap, private scan, markdown names, regression tags, ruff, mypy strict,
-  pytest at 100 % line and branch, web lint and tests once `web/` exists). Run heavy commands through
-  `~/.claude/scripts/capped.sh`; every single command stays under 60 s.
+- **Done means build + existing tests pass** (`make fast`: private scan, markdown names, web build, pytest and web
+  tests). No lint, type check, coverage threshold, line cap or regression-tag gate (kuhy, 2026-11-27). Run heavy
+  commands through `~/.claude/scripts/capped.sh`; every single command stays under 60 s.
 - **Restarting or deploying the server (`scripts/deploy.sh`) is always safe while sessions run**: turns are their
   own systemd units and the new server adopts them on start (DOCS-spec.md, "Turns outlive the server").
-- **250 lines per file**, code and prose (lockfiles exempt by name). Split by concern.
-- **Bugs are regressions first.** A bug gets a row in `tests/regressions/DOCS-*.md` (`| T<N> | what | test |`) and a
-  test named `test_t<N>_...` (pytest) or titled `[T<N>] ...` (vitest) that is red before the fix. A pragma or a
-  coverage exclusion needs kuhy's OK in the commit message.
 - **Hermetic tests.** Temp `HOME` and `$TODOIMPL_HOME`; shims first on `PATH` for `claude` and `git push` (a push
   fails the test); a fake todo MCP. No real todo note, repo, network or `~/.cache` is touched.
 - **Contracts.** `contracts/*.schema.json` (2020-12) fix state.json and every `/api` shape; server and web tests
@@ -60,7 +56,7 @@ Tokenless work while no Claude route runs (trigger, repo visits, autofix commits
 
 ## Boundaries
 
-- Always: write the failing check first; run `make fast` before a commit; add `Todo: <id8>` trailers; keep
+- Always: run `make fast` before a commit; add `Todo: <id8>` trailers; keep
   the server on 127.0.0.1 with Origin and CSRF checks on every POST.
 - Ask first: new dependencies, new endpoints or schema changes, anything that touches `~/src/todo`, the Caddy
   or systemd setup, or a real repo; creating the GitHub repo.

@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "astro dev",
     "icons": "node dev/make-icons.ts",
-    "build": "astro check && astro build",
+    "build": "astro build",
     "preview": "astro preview",
     "mock": "node dev/mock-server.ts",
     "lint": "bash dev/lint.sh",

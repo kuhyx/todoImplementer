@@ -7,10 +7,11 @@ index so the real index is never touched. `make fast` records the key it compute
 edit made while the gate ran leaves the stamp stale. The tests are hermetic, so the same tree gives the same
 result.
 
-A board session runs the gate one step per call instead (T2485): `make lines`, `make types`, six test shards
-and `make test-cov`. Each step marks the tree it passed on (`mark`: one file per step in `fast-steps/`), and
+A board session runs the gate one step per call instead (T2485): `make private`, `make web-build`, six test
+shards and `make test-cov`. Each step marks the tree it passed on (`mark`: one file per step in `fast-steps/`), and
 a tree that every step marked is as fresh as one `make fast` passed on: the BASE steps plus either one whole
-`test` run or all N shards of one sharding together with `cov-of-<N>` (their combined 100 % coverage).
+`test` run or all N shards of one sharding together with `cov-of-<N>` (written by `make test-cov` once every
+shard marker exists; no coverage is measured since 2026-11-27).
 """
 
 from __future__ import annotations
@@ -24,7 +25,7 @@ from pathlib import Path
 STAMP = "fast-green"
 SCRATCH = "fast-key-index"
 STEPS = "fast-steps"
-BASE = ("lines", "private", "md", "regressions", "lint", "types", "web-lint", "web-test")
+BASE = ("private", "md", "web-build", "web-test")
 COV = re.compile(r"cov-of-([1-9]\d*)")
 
 

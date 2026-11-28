@@ -19,7 +19,7 @@ def test_t2487_make_test_runs_one_capped_pytest_per_shard(tmp_path: Path) -> Non
     env = {**make_env(), "FAKECOV_SLEEP": "0"}
     run = subprocess.run(argv, env=env, capture_output=True, text=True, check=False, timeout=30)
     assert run.returncode == 0, run.stdout + run.stderr
-    assert f"chunks {SHARDS} of {SHARDS}" in run.stdout
+    assert f"shards {SHARDS} of {SHARDS}" in run.stdout
     assert log.read_text().count("x") == int(SHARDS)  # one capped pytest run (one ticket) per shard
 
 

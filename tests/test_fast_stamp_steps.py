@@ -25,7 +25,7 @@ def test_t2485_every_step_plus_every_shard_and_the_combined_coverage_is_fresh(tm
     repo = make_repo(tmp_path)
     tree = fast_stamp.key(repo)
     mark_all(repo, tree, [*fast_stamp.BASE, *SHARDS])
-    assert not fast_stamp.fresh(repo)  # the shards alone do not prove 100 % coverage
+    assert not fast_stamp.fresh(repo)  # the shards alone do not prove the whole sharding passed
     fast_stamp.mark(repo, "cov-of-6", tree)
     assert fast_stamp.fresh(repo)
     (repo / "a.txt").write_text("edited after the gate\n")
@@ -66,8 +66,7 @@ def test_t2485_mark_main(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    "target", ["lines", "private", "md", "regressions", "lint", "types", "web-lint", "web-test", "test",
-               "test-shard", "test-cov"],
+    "target", ["private", "md", "web-build", "web-test", "test", "test-shard", "test-cov"],
 )  # fmt: skip
 def test_t2485_every_gate_target_marks_its_step(target: str) -> None:
     recipe = (ROOT / "Makefile").read_text().split(f"\n{target}:\n", 1)[1].split("\n\n", 1)[0]
@@ -76,7 +75,7 @@ def test_t2485_every_gate_target_marks_its_step(target: str) -> None:
 
 def test_t2485_the_base_steps_are_the_fast_steps() -> None:
     steps = (ROOT / "Makefile").read_text().split("\nfast-steps: ", 1)[1].split("\n", 1)[0].split()
-    assert [s for s in steps if s != "web"] + ["web-lint", "web-test"] == list(fast_stamp.BASE)
+    assert [s for s in steps if s != "web"] + ["web-build", "web-test"] == list(fast_stamp.BASE)
 
 
 def test_t2485_tested_tells_whether_the_suite_passed_on_the_tree(tmp_path: Path) -> None:

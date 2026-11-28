@@ -40,7 +40,7 @@ def test_t1920_two_overlapping_make_test_runs_both_see_all_their_chunks(tmp_path
     second = make_test(tmp_path)
     outs = [p.communicate(timeout=30)[0] for p in (first, second)]
     assert [first.returncode, second.returncode] == [0, 0], outs
-    assert all(f"chunks {SHARDS} of {SHARDS}" in out for out in outs), outs
+    assert all(f"shards {SHARDS} of {SHARDS}" in out for out in outs), outs
 
 
 def test_a_run_leaves_no_coverage_data_in_the_worktree(tmp_path: Path) -> None:

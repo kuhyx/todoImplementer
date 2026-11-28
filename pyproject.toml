@@ -37,15 +37,6 @@ addopts = "--strict-markers -q"
 # A passing test's tmp_path is deleted at once: only failures keep files (a full run once filled /tmp's inodes).
 tmp_path_retention_policy = "failed"
 
-[tool.coverage.run]
-source = ["server/todoimpl", "scripts", "deploy", "mcp/todoimpl_mcp"]
-branch = true
-
-[tool.coverage.report]
-fail_under = 100
-show_missing = true
-skip_covered = true
-
 [tool.mypy]
 strict = true
 python_version = "3.15"
