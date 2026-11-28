@@ -42,6 +42,13 @@ READONLY_ROLES = frozenset({"classify", "closing"})
 KEY_VAR = "ANTHROPIC_API_KEY"
 SETTING_SOURCES = "project"  # only the repo's CLAUDE.md and settings, none of ~/.claude
 TOOLS = "Read,Edit,Write,Bash,Grep,Glob"  # built-in tools offered; MCP tools come from --mcp-config
+RESEARCH_TOOLS = f"{TOOLS},WebFetch,WebSearch"  # a research card reads the note's URLs (prompts/research.py)
+
+
+def tools_for(worktree: Path) -> str:
+    """Offer the web tools to the research stage, which runs in `<run dir>/research` (triage/research.py)."""
+    return RESEARCH_TOOLS if worktree.name == "research" else TOOLS
+
 PEER_VAR = "TODOIMPL_PEER_STDIN"  # 0: the prompt stays in argv, no peer messages mid-turn
 BG_WAIT_VAR = "CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS"  # 0: headless claude waits for background subagents
 
@@ -174,7 +181,7 @@ def build(  # noqa: PLR0913, PLR0917 - one argv, built in one place
     argv += ["--effort", opt.effort]
     argv += ["--strict-mcp-config", "--mcp-config", json.dumps({"mcpServers": opt.mcp_servers})]
     # Lean context: no ~/.claude user config, no skills, only the tools a session uses.
-    argv += ["--setting-sources", SETTING_SOURCES, "--disable-slash-commands", "--tools", TOOLS]
+    argv += ["--setting-sources", SETTING_SOURCES, "--disable-slash-commands", "--tools", tools_for(worktree)]
     if resume:
         argv += ["--resume", resume]
     argv += ["--settings", opt.settings]
