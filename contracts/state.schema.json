@@ -86,7 +86,8 @@
           "session_id": {"type": "string"},
           "last_turn_end": {"$ref": "https://todoimplementer.local/contracts/common.schema.json#/$defs/epoch"},
           "route": {"enum": ["plan", "credits", "free"]},
-          "context_tokens": {"type": "integer", "minimum": 1, "description": "The session's context at the latest assistant message of its last turn: input + cache creation + cache read tokens, the main thread only (DOCS-turns.md, Context cap)."}
+          "context_tokens": {"type": "integer", "minimum": 1, "description": "The session's context at the latest assistant message of its last turn: input + cache creation + cache read tokens, the main thread only (DOCS-turns.md, Context cap)."},
+          "calls": {"type": "integer", "minimum": 1, "description": "Main-thread assistant messages (calls) of the session so far, over every turn that ran it (DOCS-turns.md, Context cap)."}
         },
         "required": ["session_id", "last_turn_end"],
         "additionalProperties": false
@@ -94,7 +95,7 @@
     },
     "ctx_reseeds": {
       "type": "object",
-      "description": "How often the context cap (TODOIMPL_CTX_CAP) cut a role's session and its next turn started fresh from the handoff summary: role -> count. Absent until a cut.",
+      "description": "How often the context or call cap (settings ctx_cap_tokens, call_cap) cut a role's session and its next turn started fresh from the handoff summary: role -> count. Absent until a cut.",
       "additionalProperties": {"type": "integer", "minimum": 1}
     },
     "skills_loaded": {"type": "array", "items": {"type": "string"}},

@@ -129,6 +129,7 @@ def _apply(env: TurnEnv, state: RunState, rec: orphans.Record, res: TurnResult, 
         "exit_code": code,
         "num_turns": res.num_turns,
         "context_tokens": res.context_tokens,
+        "calls": res.calls,
         "denials": [{"tool": d.tool_name, "hook": d.hook, "terminal": d.terminal} for d in res.denials],
     }
     files.write_json(files.sibling(env.run_dir, stem, files.RESULT_SUFFIX), record)
@@ -141,7 +142,7 @@ def _apply(env: TurnEnv, state: RunState, rec: orphans.Record, res: TurnResult, 
         state.sessions.pop(role, None)
     elif res.session_id:
         entry = {"session_id": res.session_id, "last_turn_end": env.now(), "route": route}
-        state.sessions[role] = entry | size(res)
+        state.sessions[role] = entry | size(res, state.sessions.get(role))
         state.session_id = res.session_id
     state.extra["route"] = route
     freeroute.after_turn(
@@ -188,7 +189,7 @@ def _consume(env: TurnEnv, state: RunState, rec: orphans.Record) -> TurnResult |
             lambda until: state.extra.__setitem__("overage_hit", until),
             env.now,
         )
-    parser.on_context = brake(state, role, handle.stop)  # the context cap stops either route's turn
+    parser.on_context = brake(state, role, handle.stop, parser)  # the context cap stops either route's turn
     show, silent = (functools.partial(_show, env, state, key) for key in (WAITS_FOR, SILENT))
     show(None)  # a wait saved before a restart is no longer known
     silent(None)

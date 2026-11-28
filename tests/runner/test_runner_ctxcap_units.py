@@ -18,12 +18,12 @@ def run() -> RunState:
     return RunState(task_id="abcd1234-0", stage="implement")
 
 
-def test_t2368_the_cap_is_300000_by_default_zero_is_off_and_junk_falls_back(
+def test_t2368_the_cap_is_150000_by_default_zero_is_off_and_junk_falls_back(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.delenv(ctxcap.ENV, raising=False)
-    assert ctxcap.cap() == 300_000
-    for text, want in (("0", 0), ("123456", 123_456), ("", 300_000), ("lots", 300_000), ("-5", 300_000)):
+    assert ctxcap.cap() == 150_000
+    for text, want in (("0", 0), ("123456", 123_456), ("", 150_000), ("lots", 150_000), ("-5", 150_000)):
         monkeypatch.setenv(ctxcap.ENV, text)
         assert ctxcap.cap() == want
 
@@ -53,7 +53,7 @@ def test_t2365_the_parser_keeps_the_latest_main_thread_context_and_tells_the_bra
     quiet = StreamParser()
     quiet.feed(json.dumps(event({"input_tokens": 7})))  # nobody listens (a killed turn read again)
     assert quiet.result.context_tokens == 7
-    assert ctxcap.size(quiet.result) == {"context_tokens": 7}
+    assert ctxcap.size(quiet.result) == {"context_tokens": 7, "calls": 1}
     assert ctxcap.size(TurnResult()) == {}
 
 
@@ -72,6 +72,7 @@ def test_t2363_the_brake_stops_once_at_exactly_the_cap(monkeypatch: pytest.Monke
 
 def test_t2368_no_brake_with_the_cap_off(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv(ctxcap.ENV, "0")
+    monkeypatch.setenv(ctxcap.CALL_ENV, "0")
     assert ctxcap.brake(run(), "implement", lambda: None) is None
 
 

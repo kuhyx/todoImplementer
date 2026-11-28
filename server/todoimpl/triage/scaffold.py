@@ -6,10 +6,6 @@ never happened. Ship then says "declares no deploy" and the session adds the rea
 
 from __future__ import annotations
 
-SKILLS = (
-    "build-desktop-ui, build-web-ui, build-mobile-app, build-game, build-backend, build-background-service"
-)
-
 GITIGNORE = """.venv/
 node_modules/
 dist/
@@ -32,8 +28,8 @@ def claude_md(name: str, title: str, note: str) -> str:
 
 {title}
 
-Created by todoImplementer from todo note `{note}`. The first session picks the stack from kuhy's skills
-({SKILLS}), loads the matching one, and replaces the placeholders below.
+Created by todoImplementer from todo note `{note}`. The first session picks the stack that fits the note
+and replaces the placeholders below.
 
 ## Commands
 

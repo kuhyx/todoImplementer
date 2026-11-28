@@ -200,8 +200,14 @@ healthy wait. Code: `runner/watchdog.py` (the follower's side), `runner/deadwait
 ## Context cap (T2363-T2369)
 
 kuhy's order (2026-11-20, after sessions reached 1.22 M tokens and $212 of spend sat above 300 k): a board session
-never grows past `$TODOIMPL_CTX_CAP` tokens (default 300000, `0` = off). Code: `runner/ctxcap.py`; the hook is
-`StreamParser.on_context`, set in `turn._consume` for both routes (plan CLI and credit SDK print the same stream).
+never grows past a token cap. kuhy's order of 2026-11-28 (cache reads were 3/4 of the cost of 740 k sessions) added a
+call cap and halved the default. Both are settings of `~/.config/todoImplementer/settings.json` (`$TODOIMPL_SETTINGS`):
+`ctx_cap_tokens` (default 150000) and `call_cap` (default 150; one call = one main-thread assistant message id, summed
+in `sessions[role].calls` over the turns of one session id). `0` = off; `$TODOIMPL_CTX_CAP` and `$TODOIMPL_CALL_CAP`
+beat the file. Code: `runner/ctxcap.py`; the hook is `StreamParser.on_context`, set in `turn._consume` for both routes
+(plan CLI and credit SDK print the same stream). Reaching either cap arms the stop; it fires once no tool call is in
+flight (`ctxcap.Meter`, `StreamParser.on_idle`), so after the current tool result, never mid-call. The cut then takes the
+reseed path below; a call-cap cut says "call cap" in the seed line.
 
 - Meter: each main-thread assistant event gives input + cache creation + cache read tokens; an event with a
   `parent_tool_use_id` (a subagent) and output tokens are not counted. It reads each turn's own stream, so a session

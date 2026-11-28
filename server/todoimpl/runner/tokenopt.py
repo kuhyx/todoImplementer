@@ -49,11 +49,12 @@ STEPS = (
     "4. Implement those optimizations, improve the optimization skills with the insights",
 )
 WHERE = (
-    "Skills: `token-dashboard` (the token-dashboard MCP tools) and `token-optimization` (the audit). "
+    "Tools: the token-dashboard MCP tools. "
     f"Repos: this one ({REPO}) and ~/.claude, through `{WORKTREE}` in your run dir: a worktree of ~/.claude "
     "that is in your dirs. Commit ~/.claude changes there, rebase onto `origin/main`, push fast-forward only "
-    "(`git push origin HEAD:main`, never forced) and run the deploy command of ~/.claude/CLAUDE.md "
-    "(`## Commands`, `deploy:`). Write no other repo."
+    "(`git push origin HEAD:main`, never forced) and run the deploy command: "
+    "`git -C ~/.claude fetch -q origin main && "
+    'bash -c "$(git -C ~/.claude show origin/main:scripts/deploy_claude_config.sh)"`. Write no other repo.'
 )
 
 

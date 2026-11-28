@@ -82,7 +82,7 @@ def test_t2071_the_repo_is_private_scaffolded_pushed_to_main_and_cloned_for_kuhy
 
 def test_t2071_the_scaffold_names_the_stack_open_and_never_fakes_a_deploy_line() -> None:
     claude = scaffold.claude_md("pacman-gui", TITLE, NOTE)
-    assert "build-desktop-ui" in claude
+    assert "picks the stack that fits the note" in claude
     assert TITLE in claude
     assert not [line for line in claude.splitlines() if line.startswith("- deploy:")]
     assert "Todo: f206969c" in claude
