@@ -24,8 +24,11 @@ TIMEOUT_S = 20
 
 
 def cache_dir() -> Path:
-    """Return the cache directory: `$TODOIMPL_SHRINK_DIR`, else `~/.cache/todoImplementer/shrink`."""
-    return Path(os.environ.get(CACHE_VAR) or Path.home() / ".cache" / "todoImplementer" / "shrink")
+    """Return the cache dir: `$TODOIMPL_SHRINK_DIR`, else `shrink` in the run root (`$TODOIMPL_HOME`)."""
+    if given := os.environ.get(CACHE_VAR):
+        return Path(given)
+    home = os.environ.get("TODOIMPL_HOME")  # board/state.py `run_root`; this hook imports nothing of todoimpl
+    return (Path(home) if home else Path.home() / ".cache" / "todoImplementer") / "shrink"
 
 
 def longest_edge(magick: str, src: Path) -> int:

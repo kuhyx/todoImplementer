@@ -71,12 +71,13 @@ def test_the_flag_survives_a_restart_between_ship_and_start(
 ) -> None:
     card, _ = at_gate(rig)
     rig.sched.start_when_free(card)
+    real_spawn = whenfree.spawn
     monkeypatch.setattr(whenfree, "spawn", lambda *_: None)  # the server dies before it starts
     rig.sched.ship(card)
     rig.wait(card, {"shipped"})
     assert whenfree.armed(rig.run_dir(card))
     rig.sched.close()
-    monkeypatch.undo()
+    monkeypatch.setattr(whenfree, "spawn", real_spawn)  # not `undo()`: that would also put back the real HOME
     rig.script(card, PLAN)
     rig.sched = Scheduler(ItemView(rig.client, rig.cache, rig.world.root), rig.world.root, check_timeout=20)
     assert cycle_of(rig, card, 2).extra["cycle"] == 2
