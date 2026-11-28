@@ -1,0 +1,150 @@
+#!/usr/bin/env python3
+"""sym <name>: print where a symbol is defined and its body, from a universal-ctags index.
+
+The index is `<git dir>/tags` (each worktree has its own git dir, git ignores it). The board builds it in the
+background when it prepares a card's worktree (`sym --index`); `sym <name>` builds it once, synchronously,
+when it is missing or older than a file it points at. `$SYM_TAGS` overrides the index path.
+"""
+
+from __future__ import annotations
+
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+FALLBACK_LINES = 40  # a symbol with no `end:` field (a variable, a constant)
+MAX_BODY = 150  # a class body can be a whole file: show the head, say what was cut
+MAX_MATCHES = 5
+SKIP = ("node_modules", ".venv", "build", ".dart_tool", "dist", ".git")
+GIT = shutil.which("git") or "git"
+CTAGS = shutil.which("ctags") or "ctags"
+NO_LANG = "-JSON,-YAML,-Markdown,-XML,-SVG,-CSS,-HTML"
+
+
+def git(*args: str) -> str:
+    """Return the stdout of a git command in the current directory; exit 2 outside a work tree."""
+    proc = subprocess.run([GIT, *args], capture_output=True, text=True, check=False)  # noqa: S603
+    if proc.returncode:
+        sys.exit(f"sym: not in a git work tree ({proc.stderr.strip()})")
+    return proc.stdout.strip()
+
+
+def tags_path() -> Path:
+    """Return the index path: `$SYM_TAGS`, else `<git dir>/tags`."""
+    return Path(os.environ.get("SYM_TAGS") or Path(git("rev-parse", "--absolute-git-dir")) / "tags")
+
+
+def build(root: Path, out: Path) -> None:
+    """Index the work tree's tracked and unignored files into `out`, atomically."""
+    if not shutil.which("ctags"):
+        sys.exit("sym: universal-ctags is not installed (sudo pacman -S ctags)")
+    files = subprocess.run(  # noqa: S603
+        [GIT, "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+        cwd=root, capture_output=True, check=True,
+    ).stdout  # fmt: skip
+    names = [
+        n for n in files.split(b"\0") if n and not set(n.decode(errors="replace").split("/")) & set(SKIP)
+    ]
+    out.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=out.parent, prefix="tags.")
+    os.close(fd)
+    cmd = [
+        CTAGS,
+        "-L",
+        "-",
+        "-f",
+        tmp,
+        "--fields=+ne",
+        "--extras=+q",
+        f"--languages={NO_LANG}",
+        "--sort=no",
+        "--excmd=number",
+    ]
+    proc = subprocess.run(cmd, cwd=root, input=b"\n".join(names), capture_output=True, check=False)  # noqa: S603
+    if proc.returncode:
+        Path(tmp).unlink(missing_ok=True)
+        sys.exit(f"sym: ctags failed: {proc.stderr.decode(errors='replace').strip()[-300:]}")
+    Path(tmp).replace(out)
+
+
+def parse(tags: Path) -> dict[str, list[tuple[str, int, int | None, str]]]:
+    """Return name -> [(file, line, end, kind)] from a ctags file (fields after the `;"` TAB are k:v)."""
+    found: dict[str, list[tuple[str, int, int | None, str]]] = {}
+    for raw in tags.read_text(errors="replace").splitlines():
+        if raw.startswith("!_TAG_"):
+            continue
+        head, _, tail = raw.partition(';"\t')
+        name, file, *_ = head.split("\t")
+        kind, *fields = tail.split("\t")
+        kv = dict(f.split(":", 1) for f in fields if ":" in f)
+        if "line" in kv:
+            end = int(kv["end"]) if kv.get("end", "").isdigit() else None
+            found.setdefault(name, []).append((file, int(kv["line"]), end, kind))
+    return found
+
+
+def show(root: Path, hit: tuple[str, int, int | None, str]) -> str:
+    """Return `file:line` and the symbol's body."""
+    file, line, end, kind = hit
+    try:
+        lines = (root / file).read_text(errors="replace").splitlines()
+    except OSError:
+        return f"{file}:{line} [{kind}] (file gone)"
+    last = end if end is not None else line + FALLBACK_LINES - 1
+    body = lines[line - 1 : min(last, line - 1 + MAX_BODY)]
+    if end is None:  # no extent known: a variable or constant ends at its first blank line
+        blank = next((i for i, text in enumerate(body) if not text.strip()), len(body))
+        body, last = body[:blank], line + blank - 1
+    cut = min(last, len(lines)) - (line - 1) - len(body)
+    more = f"\n... {cut} more lines (to {file}:{last})" if cut > 0 else ""
+    return f"{file}:{line} [{kind}]\n" + "\n".join(body) + more
+
+
+def stale(root: Path, tags: Path, hits: list[tuple[str, int, int | None, str]]) -> bool:
+    """Return True when a hit's file changed after the index was built."""
+    built = tags.stat().st_mtime
+    return any((root / h[0]).stat().st_mtime > built for h in hits if (root / h[0]).exists())
+
+
+def lookup(name: str, tags: Path) -> list[tuple[str, int, int | None, str]]:
+    """Return the exact matches of `name`, one per file and line."""
+    seen: set[tuple[str, int]] = set()
+    out = []
+    for hit in parse(tags).get(name, []):
+        if hit[:2] not in seen:
+            seen.add(hit[:2])
+            out.append(hit)
+    return sorted(out, key=lambda h: (h[2] is None, h[0], h[1]))  # bodies with an extent first
+
+
+def main(argv: list[str]) -> int:
+    """Print the symbol; `--index` only (re)builds the index."""
+    if not argv or argv[0] in {"-h", "--help"}:
+        print(__doc__)
+        return 0 if argv else 2
+    root = Path(git("rev-parse", "--show-toplevel"))
+    tags = tags_path()
+    if argv[0] == "--index":
+        build(root, tags)
+        return 0
+    name = argv[0]
+    if not tags.exists():
+        build(root, tags)
+    hits = lookup(name, tags)
+    if hits and stale(root, tags, hits):
+        build(root, tags)  # a file was edited since: the line numbers moved
+        hits = lookup(name, tags)
+    if not hits:
+        print(f"sym: no symbol named {name}")
+        return 1
+    print("\n\n".join(show(root, h) for h in hits[:MAX_MATCHES]))
+    if len(hits) > MAX_MATCHES:
+        print(f"\n{len(hits) - MAX_MATCHES} more matches (narrow it: sym <Class.name>)")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

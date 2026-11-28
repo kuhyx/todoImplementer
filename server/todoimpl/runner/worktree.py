@@ -12,7 +12,7 @@ from todoimpl.board import clone as clones
 from todoimpl.board.repos import OWNER, is_clone_of, repo_path
 from todoimpl.prompts.standing import REBASE_NOTE
 
-from . import orphans
+from . import orphans, symindex
 from .checks import clean_env
 from .files import NeedsYouError, worktree_path
 
@@ -205,6 +205,7 @@ def add(repo: Path, root: Path, run_id: str, prev_base: str | None = None, *, sy
         )
         git(repo, "worktree", "add", *([str(path), branch] if exists else ["-b", branch, str(path), ref]))
     copy_machine_local(repo, path)
+    symindex.start(path)  # ctags index for `sym`, in the background
     if reused and sync:
         base, stopped = _sync(path, ref, prev_base)
     else:

@@ -14,7 +14,7 @@ from typing import Any
 
 from todoimpl.newtask import images
 
-from . import buildlock, mcpconf, policy, userbase, venvless, waitdeny
+from . import buildlock, mcpconf, policy, symindex, userbase, venvless, waitdeny
 
 # Every card role runs Sonnet 5.5 at high effort unpinned (kuhy, 2026-11-27: "default model should be SONNET,
 # NOT opus"; Opus is a conscious pick in the model picker). T2615; T2471 had set Opus.
@@ -103,6 +103,7 @@ def turn_env(worktree: Path) -> dict[str, str]:
     """
     env = {k: v for k, v in venvless.strip(os.environ).items() if k not in {KEY_VAR, buildlock.HELD_VAR}}
     return env | {
+        "PATH": f"{symindex.BIN}{os.pathsep}{env.get('PATH', '')}",  # `sym` (scripts/bin)
         "CLAUDE_AUTO_CONTINUE": "0",
         BG_WAIT_VAR: "0",
         "PHONE_LEASE_OWNER": f"todoimpl:{worktree.parent.name}",

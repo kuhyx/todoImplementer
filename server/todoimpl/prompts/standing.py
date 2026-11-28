@@ -48,6 +48,7 @@ GRANT = (
     "bare path. "
     "If a page truly must be opened, give its full absolute URL (scheme, host, port, path). "
     "Do everything else yourself and log the automatic choice. "
+    "`sym <name>` prints a symbol's file:line and body; prefer it over reading whole files. "
     "A note you file for a new project names its repo `kuhyx/<name>` and holds a line `visibility: public` "
     "or `visibility: private` (private when absent): Start creates a missing kuhyx repo with it. "
     + NIGHT.rstrip()
