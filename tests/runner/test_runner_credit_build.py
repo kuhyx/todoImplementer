@@ -9,7 +9,7 @@ from creditfakes import FAKE_KEY, enable_credits, key_file
 from runnerfakes import Env
 from todoimpl.runner import claude, credit, launch
 from todoimpl.runner.files import NeedsYouError
-from todoimpl.runner.policy import HOOKS_OFF, src_deny
+from todoimpl.runner.policy import HOOKS_OFF, shrink_dir, src_deny
 
 
 def test_t1851_plan_env_never_carries_the_api_key(world: Env, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -41,7 +41,7 @@ def test_credit_invocation_mirrors_the_plan_options_and_carries_the_key(
     assert spec["resume"] == "sess-1"
     assert spec["cwd"] == str(wt)
     assert spec["permission_mode"] == "bypassPermissions"
-    assert spec["add_dirs"] == [str(wt), str(run_dir), "/x"]
+    assert spec["add_dirs"] == [str(wt), str(run_dir), str(shrink_dir()), "/x"]
     assert spec["allowed_tools"] == ["Bash(ls:*)"]
     assert spec["disallowed_tools"] == [*claude.DENY_ALWAYS, *src_deny()]  # T2515
     assert spec["settings"] == HOOKS_OFF

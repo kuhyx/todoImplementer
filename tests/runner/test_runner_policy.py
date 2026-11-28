@@ -42,8 +42,9 @@ def test_t1641_a_valid_policy_loosens_the_session(world: Env, tmp_path: Path) ->
     inv = claude.build("implement", "p", tmp_path, allow=("Bash(ls:*)",))
     argv = inv.argv
     assert argv[argv.index("--permission-mode") + 1] == "bypassPermissions"
-    assert argv[argv.index("--add-dir") + 1 : argv.index("--add-dir") + 4] == (
+    assert argv[argv.index("--add-dir") + 1 : argv.index("--add-dir") + 5] == (
         str(tmp_path),
+        str(policy.shrink_dir()),
         str(Path.home()),
         "/srv/x",
     )

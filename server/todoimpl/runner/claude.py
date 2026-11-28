@@ -128,7 +128,7 @@ def options(  # noqa: PLR0913, PLR0917 - one set of turn options, built in one p
     env = turn_env(worktree)
     dirs = (
         str(worktree),
-        *map(str, (*extra_dirs, *images.session_dirs())),
+        *map(str, (*extra_dirs, *images.session_dirs(), policy.shrink_dir())),
         *pol.add_dirs,
     )  # images: the note's
     hooks = policy.turn_settings(hooks_off=pol.disable_hooks)

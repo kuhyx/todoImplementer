@@ -11,10 +11,14 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
 from todoimpl.board.clone import src_root
+
+from .hooks import shrink_read
 
 KEYS = frozenset({"permission_mode", "add_dirs", "disable_hooks", "deny"})
 # One Bash call ends at 40 s (claude moves it to the background), so the model gets a result and 20 s to
@@ -24,10 +28,31 @@ BASH_CAP_MS = "40000"
 BASH_CAP = {"BASH_DEFAULT_TIMEOUT_MS": BASH_CAP_MS, "BASH_MAX_TIMEOUT_MS": BASH_CAP_MS}
 
 
+SHRINK_HOOK = Path(__file__).parent / "hooks" / "shrink_read.py"
+
+
+def shrink_dir() -> Path:
+    """Return the cache directory, made if missing; a turn gets it as an add-dir so it may read the copies."""
+    found = shrink_read.cache_dir()
+    found.mkdir(parents=True, exist_ok=True)
+    return found
+
+
+def shrink_hook() -> dict[str, object]:
+    """Return the one hook of a board session: a `Read` of an image over 1000 px gets a shrunk copy."""
+    command = f"{shlex.quote(sys.executable)} {shlex.quote(str(SHRINK_HOOK))}"
+    return {"PreToolUse": [{"matcher": "Read", "hooks": [{"type": "command", "command": command}]}]}
+
+
 def turn_settings(*, hooks_off: bool) -> str:
-    """Return a board session's `--settings` JSON: the Bash cap, and hooks off when the policy says so."""
-    settings: dict[str, object] = {"disableAllHooks": True} if hooks_off else {}
-    return json.dumps({**settings, "env": BASH_CAP}, separators=(",", ":"))
+    """Return a board session's `--settings` JSON: the Bash cap and the image-shrink hook.
+
+    `hooks_off` (the policy's `disable_hooks`) used to add `disableAllHooks`, which would kill the shrink hook
+    too. Hooks of kuhy's user settings never load (`--setting-sources project`), so the shrink hook stays
+    the only one the board adds either way.
+    """
+    del hooks_off  # the policy key stays valid; the shrink hook is on in both modes
+    return json.dumps({"hooks": shrink_hook(), "env": BASH_CAP}, separators=(",", ":"))
 
 
 HOOKS_OFF = turn_settings(hooks_off=True)

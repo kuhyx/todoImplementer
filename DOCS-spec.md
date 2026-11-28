@@ -136,12 +136,13 @@ succeeded after it, and only terminal denials of a turn that did not end on `D:`
    puts exit code and output tail in the feed and reruns the failed stage on exit 0. `copy-fix` copies it; `rerun`
    ("Done, rerun") reruns after kuhy ran it in a terminal. A card with no command (a hook block) offers Retry.
 4. Sensitive files. Claude Code's own "sensitive file" refusal (`decision_reason_type: safetyCheck`) is not lifted by
-   the permission mode, and `disableAllHooks` also kills the PermissionRequest hook that could lift it. Inside the
+   the permission mode, and a hook could lift it but `disableAllHooks` is gone. Inside the
    worktree it is answered with advice and a rerun: write the file with a Bash command (patch or python). Under a
    session policy the implement prompts always carry that advice.
 5. Session policy `~/.config/todoImplementer/session-policy.json` (`$TODOIMPL_POLICY`): `permission_mode` (default
-   `acceptEdits`), `add_dirs` (default none, `~` expanded), `disable_hooks` (default false; passes
-   `--settings '{"disableAllHooks":true}'` to board sessions only), `deny` (null or missing = the built-in
+   `acceptEdits`), `add_dirs` (default none, `~` expanded), `disable_hooks` (default false; no
+   effect: sessions always carry one `--settings` hook, `runner/hooks/shrink_read.py`, which hands `Read` of an
+   image over 1000 px a shrunk copy under `~/.cache/todoImplementer/shrink/`), `deny` (null or missing = the built-in
    `git push` list, `[]` = none; the read-only role keeps its Edit/Write deny). A missing file keeps today's
    behaviour; an invalid one is ignored with a feed warning; a valid one lifts the never-list in item 2.
 

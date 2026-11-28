@@ -32,11 +32,13 @@ def _settings(argv: tuple[str, ...]) -> dict[str, object]:
 
 
 def test_t2444_a_turn_caps_its_bash_calls(world: Env, tmp_path: Path) -> None:
-    assert _settings(claude.build("implement", "p", tmp_path).argv) == {"env": CAP}
+    expected = {"hooks": policy.shrink_hook(), "env": CAP}
+    assert _settings(claude.build("implement", "p", tmp_path).argv) == expected
     (world.tmp / "session-policy.json").write_text(json.dumps({"disable_hooks": True}), encoding="utf-8")
-    assert _settings(claude.build("implement", "p", tmp_path).argv) == {"disableAllHooks": True, "env": CAP}
+    assert _settings(claude.build("implement", "p", tmp_path).argv) == expected
 
 
 def test_t2444_the_settings_are_one_json_object() -> None:
-    assert json.loads(policy.turn_settings(hooks_off=False)) == {"env": CAP}
-    assert json.loads(policy.turn_settings(hooks_off=True)) == {"disableAllHooks": True, "env": CAP}
+    expected = {"hooks": policy.shrink_hook(), "env": CAP}
+    assert json.loads(policy.turn_settings(hooks_off=False)) == expected
+    assert json.loads(policy.turn_settings(hooks_off=True)) == expected

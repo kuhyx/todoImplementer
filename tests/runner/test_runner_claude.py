@@ -22,6 +22,7 @@ def test_build_has_the_agreed_argv_and_env(world: Env, tmp_path: Path) -> None:
         "acceptEdits",
         "--add-dir",
         str(tmp_path),
+        str(policy.shrink_dir()),
         "--effort",
         "high",
         "--strict-mcp-config",
