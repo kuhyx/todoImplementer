@@ -14,6 +14,8 @@ if TYPE_CHECKING:
     from todoimpl.service.cards import CardTask
 
 CHECK_LINE = re.compile(r"^(\s*)done_check:", re.MULTILINE)
+SECTION_START = re.compile(r"^(?=### )", re.MULTILINE)
+MEMBER_HEAD = re.compile(r"### [0-9a-f]{8}(?:-\d+)?\n")
 
 
 def fingerprint(ids: Iterable[str]) -> str:
@@ -46,19 +48,44 @@ def labels(cards: list[CardTask]) -> dict[str, str]:
     }
 
 
+def unique(cards: list[CardTask]) -> list[CardTask]:
+    """Return the cards with a repeated card id kept once (first wins)."""
+    return list({card.id: card for card in cards}.values())
+
+
+def _first_seen(piece: str, seen: set[str]) -> bool:
+    """Say whether the piece stays: not a member section already in `seen`; remember it either way."""
+    key = piece.strip()
+    repeated = bool(MEMBER_HEAD.match(piece)) and key in seen
+    seen.add(key)
+    return not repeated
+
+
+def drop_repeated_sections(bodies: list[str]) -> list[str]:
+    """Return the bodies with each `### <id>` member section kept once across all of them.
+
+    Two merged notes that share a member both hold its section, same id and same text; the later copy is
+    dropped. A section with the same id but other text is another member and stays.
+    """
+    seen: set[str] = set()
+    return ["".join(p for p in SECTION_START.split(body) if _first_seen(p, seen)) for body in bodies]
+
+
 def combined_body(cards: list[CardTask]) -> str:
     """Body of the one same-repo card: `Tier: cheap` if any member has it, then each member under `### <id>`.
 
     Level 3, not the `## <id>` of the umbrella: a `## ` line inside a section would split the new card.
     """
+    cards = unique(cards)
     names = labels(cards)
-    parts = [f"### {names[card.id]}\n{member_text(card)}" for card in cards]
+    parts = drop_repeated_sections([f"### {names[card.id]}\n{member_text(card)}" for card in cards])
     head = ["Tier: cheap"] if any(has_tier(card) for card in cards) else []
     return "\n\n".join([*head, *parts])
 
 
 def umbrella_text(title: str, cards: list[CardTask]) -> str:
     """Return the umbrella note (no repo field): header, a checklist line and a `## ` section per member."""
+    cards = unique(cards)
     names = labels(cards)
     cheap = any(has_tier(card) for card in cards)
     lines = [f"# {title}", "Umbrella: per-repo", *(["Tier: cheap"] if cheap else [])]

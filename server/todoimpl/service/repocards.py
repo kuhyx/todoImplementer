@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 from todoimpl.asks import view as asks_view
 from todoimpl.board.state import run_dir
 from todoimpl.board.types import is_manual
+from todoimpl.merge.text import drop_repeated_sections
 from todoimpl.repotask import lane
 from todoimpl.repotask.ids import norm, repo_card_id
 from todoimpl.repotask.legacy import Older
@@ -83,7 +84,11 @@ def _entries(note: Task, older: Callable[[str], Older], released: Released) -> l
 
 
 def _body(parts: list[Part]) -> str:
-    return "\n\n".join(f"### Part {p.key}: {p.title}\n{p.body}".rstrip() for p in parts)
+    # Merged notes that share a member each hold its `### <id>` section: show it once.
+    bodies = drop_repeated_sections([p.body for p in parts])
+    return "\n\n".join(
+        f"### Part {p.key}: {p.title}\n{body}".rstrip() for p, body in zip(parts, bodies, strict=True)
+    )
 
 
 def _check(parts: list[Part]) -> str | None:
