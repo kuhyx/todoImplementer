@@ -9,7 +9,7 @@ from todoimpl.todo_mcp.client import TodoClient
 
 
 def test_t2058_an_open_note_without_a_repo_is_a_yours_card_in_backlog(rig: Rig) -> None:
-    idea = rig.note("wysłać jpk", repo=None)
+    idea = rig.note("wysłać jpk", "Done: sent", repo=None)
     board = rig.backend.board()
     validate("board", board)
     card = rig.card(idea)

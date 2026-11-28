@@ -10,6 +10,7 @@ from todoimpl.runner.files import write_json
 from todoimpl.runner.scheduler import RunnerError
 
 BODY = """Encrypt it
+Done: payloads are encrypted
 ```ask
 choice c1: Key source | *password | keystore
 choice c2: tutor client | *out of scope | in scope

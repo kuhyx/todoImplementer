@@ -59,8 +59,8 @@ def test_t2583_a_card_of_only_app_reports_cannot_be_raised(rig: Rig) -> None:
 def test_t2583_start_names_the_higher_backlog_card_it_would_jump(rig: Rig) -> None:
     high = rig.repo("alpha")
     low = rig.repo("beta")
-    rig.note(high, "urgent", "x", priority="high")
-    rig.note(low, "later", "y", priority="low")
+    rig.note(high, "urgent", "Done: x", priority="high")
+    rig.note(low, "later", "Done: y", priority="low")
     top, under = rig.card(high), rig.card(low)
     assert _action(top, "start") is not None
     assert "waits" not in (_action(top, "start") or {})

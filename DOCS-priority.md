@@ -16,3 +16,13 @@ than at least one task still in backlog pops a modal asking if they are sure".
   (`board/outrank.py`, the highest such card), on the board and in the task detail. The page opens a modal
   ("Start anyway?", that card's priority glyph and title; Back, Start anyway); the app opens a dialog with the same
   card and glyph buttons. Nothing is sent until kuhy confirms; the server itself never refuses such a Start.
+
+## The note check on Start (kuhy, 2026-11-28)
+
+`board/precheck.py`, no LLM, run inside `board/actions.py` so the card's Start and the POST refusal share one reason.
+A first Start (not Restart, Retry or Hand back) is disabled with the reason when the note has no done line
+(`Done:`, `Done when`, `Done means`, `Success:`, `Verify:`, `Acceptance:` at a line start, or a `- [ ]` line; a
+`done_check` on the card or a part counts), or the body is over 20000 characters, or a card has over 30 open parts.
+The repo check is the existing one (`repo ... not found`); a repo-less note passes it because Start routes it to triage.
+Exempt from the done-line rule: `created_by` claude, umbrellas, error tickets and token optimizations
+(`Error-Signature:`, `Reset-Key:`) and repo-less notes labelled `research`. Size applies to every card.

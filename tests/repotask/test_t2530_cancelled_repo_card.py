@@ -11,7 +11,7 @@ from todoimpl.todo_mcp.items import Item
 
 
 def _card(status: str = "todo") -> CardTask:
-    part = Part("aaaa1111-0", "aaaa1111", 0, "fix it", "b", "medium", None, human=False, held=False)
+    part = Part("aaaa1111-0", "aaaa1111", 0, "fix it", "Done: b", "medium", None, human=False, held=False)
     item = Item("deadbeef", 0, "demo", "body", "kuhyx/demo", status, None, "kuhy", parts=(part,))
     return CardTask("deadbeef-0", "demo", "body", "kuhyx/demo", status, "medium", None, item)
 

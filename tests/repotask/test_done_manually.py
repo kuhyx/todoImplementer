@@ -139,7 +139,7 @@ def test_t2064_a_new_part_after_done_manually_starts_a_new_cycle(rig: Rig) -> No
     rig.note(repo, "a note", "x")
     card = repo_card_id(repo)
     rig.backend.done_manually(card)
-    rig.note(repo, "later note", "y")
+    rig.note(repo, "later note", "Done: y")
     again = rig.card(repo)
     assert (again["status"], again["stage"]) == ("backlog", None)
     start = next(a for a in again["actions"] if a["id"] == "start")

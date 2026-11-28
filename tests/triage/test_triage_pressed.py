@@ -15,7 +15,7 @@ from todoimpl.triage import label
 from todoimpl.triage.classify import PRESSED
 
 Make = Callable[..., Triage]
-TITLE, BODY = "Logo for me", "K U / H Y in bold"
+TITLE, BODY = "Logo for me", "K U / H Y in bold\nDone: logo drawn"
 
 
 def manual(rig: Rig, title: str = TITLE, body: str = BODY, found: str | None = "manual") -> str:

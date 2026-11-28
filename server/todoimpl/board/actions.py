@@ -14,6 +14,7 @@ from .button import Action
 from .needs import needs
 from .norepo import is_yours
 from .parts import kuhys
+from .precheck import note_block
 from .status import MANUAL_STAGE, Status
 from .types import MANUAL_REASON, fmt_when
 
@@ -37,9 +38,15 @@ def _missing(repo_missing: str | None, block: str | None) -> str | None:
     return f"repo {repo_missing} not found" if repo_missing else block
 
 
-def _start_block(task: TaskLike, block: str | None, repo_missing: str | None) -> str | None:
-    """Return why a first start cannot succeed."""
-    return "note has no repo" if is_yours(task) else _missing(repo_missing, block)
+def _start_block(
+    task: TaskLike, block: str | None, repo_missing: str | None, *, first: bool = True
+) -> str | None:
+    """Return why a start cannot succeed: no repo, no checkout, the note check (first starts), the launch."""
+    if is_yours(task):
+        return "note has no repo"
+    if repo_missing:
+        return _missing(repo_missing, block)
+    return (note_block(task) if first else None) or block
 
 
 def _gate(label: str, action_id: str, reason: str | None, *, confirm: bool = False) -> Action:
@@ -117,10 +124,11 @@ def _primary(  # noqa: PLR0911 - one branch per status keeps the table readable
     if status == Status.YOURS and kuhys(task.title, getattr(task, "parts", ())):
         return [Action("start", "Start", enabled=False, reason=MANUAL_REASON)]
     if status == Status.YOURS and run is None and is_yours(task):  # T2092: kuhy can start any note
-        return [Action("start", "Start", block is None, block)]
+        reason = note_block(task) or block  # a repo-less note starts through triage (DOCS-triage.md)
+        return [Action("start", "Start", reason is None, reason)]
     if status in (Status.BACKLOG, Status.CANCELLED):
         label = "Restart" if status == Status.CANCELLED else "Start"
-        reason = _start_block(task, block, repo_missing)
+        reason = _start_block(task, block, repo_missing, first=status == Status.BACKLOG)
         return [Action("start", label, reason is None, reason)]
     if status in (Status.QUEUED, Status.WORKING):
         return [cancel]

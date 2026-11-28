@@ -24,7 +24,7 @@ def actions(card: dict[str, object]) -> dict[str, bool]:
 
 
 def test_t2070_a_note_that_asks_for_a_new_app_is_labelled_and_startable(rig: Rig, triage: Make) -> None:
-    card = rig.note("gui for pacman and yay", repo=None)
+    card = rig.note("gui for pacman and yay", "Done: it runs", repo=None)
     assert rig.card(card)["status"] == "yours"  # before triage: kuhy's
     assert triage(NEW).service.tick() == 1
     rig.backend.cache.refresh()
@@ -35,7 +35,7 @@ def test_t2070_a_note_that_asks_for_a_new_app_is_labelled_and_startable(rig: Rig
 
 
 def test_t2070_a_manual_note_stays_yours_with_start_and_the_two_hand_endings(rig: Rig, triage: Make) -> None:
-    card = rig.note("wysłać jpk", repo=None)
+    card = rig.note("wysłać jpk", "Done: sent", repo=None)
     triage({"label": "manual", "reason": "an errand"}).service.tick()
     rig.backend.cache.refresh()
     shown = rig.card(card)
