@@ -49,6 +49,7 @@ def tools_for(worktree: Path) -> str:
     """Offer the web tools to the research stage, which runs in `<run dir>/research` (triage/research.py)."""
     return RESEARCH_TOOLS if worktree.name == "research" else TOOLS
 
+
 PEER_VAR = "TODOIMPL_PEER_STDIN"  # 0: the prompt stays in argv, no peer messages mid-turn
 BG_WAIT_VAR = "CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS"  # 0: headless claude waits for background subagents
 

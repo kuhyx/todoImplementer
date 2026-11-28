@@ -161,6 +161,7 @@ export class TiApp extends HTMLElement {
       this.#setState({ ...this.#state, task: null }, "replace");
     });
     this.#drawer.addEventListener("task-changed", () => void this.#loadBoard());
+    this.addEventListener("credits-changed", () => void this.#loadBoard());
     this.#newTask.addEventListener("task-created", (event) => {
       this.#setState({ ...this.#state, task: (event as CustomEvent<{ id: string }>).detail.id }, "push");
       void this.#loadBoard();

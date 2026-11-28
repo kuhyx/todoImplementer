@@ -16,7 +16,15 @@ from todoimpl.todo_mcp.items import Item
 def part(key: str, **fields: bool) -> Part:
     note, _, index = key.partition("-")
     return Part(
-        key, note, int(index), key, "Done: b", "medium", None, fields.get("human", False), fields.get("held", False)
+        key,
+        note,
+        int(index),
+        key,
+        "Done: b",
+        "medium",
+        None,
+        fields.get("human", False),
+        fields.get("held", False),
     )
 
 

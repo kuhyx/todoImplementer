@@ -134,13 +134,13 @@ def test_t2532_credits_not_ready_never_batch(root: Path) -> None:
     assert api.calls == []
 
 
-def test_t2532_billing_error_marks_exhausted_and_falls_back(root: Path) -> None:
+def test_t2532_billing_error_turns_credits_off_and_falls_back(root: Path) -> None:
     body = json.dumps(
         {"type": "error", "error": {"type": "billing_error", "message": "credit balance is too low"}}
     )
     api, seen = FakeApi(create_status=400, create_body=body), list[str]()
     assert _run(root, api, fallback=seen) == "plan text"
-    assert marks.exhausted(root, NOW)
+    assert setting.off() is not None
     assert batchstore.pending(root) == []
 
 

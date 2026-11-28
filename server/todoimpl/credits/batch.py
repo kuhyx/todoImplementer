@@ -110,7 +110,9 @@ def _call(  # noqa: PLR0913, PLR0917 - one request
         msg = f"batch {method} failed: {exc}"
         raise BatchError(msg) from exc
     if status != HTTP_OK:
-        if errors.exhausted(text):
+        if errors.balance_low(text):
+            setting.turn_off(errors.BALANCE_REASON, now or time.time())
+        elif errors.exhausted(text):
             marks.mark_exhausted(root, (now or time.time()) + EXHAUSTED_S, f"batch: {text[:200]}")
         msg = f"batch {method} answered {status}: {text[:200]}"
         raise BatchError(msg)

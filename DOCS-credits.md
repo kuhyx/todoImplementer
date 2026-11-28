@@ -118,7 +118,13 @@ A billing error marks the credits exhausted for an hour. Raw HTTPS through the s
 
 ## Credits exhausted
 
-A credit turn that ends in a billing or key error ("Credit balance is too low", invalid key, spend limit) is not
+An empty balance ("Credit balance is too low", `billing_error`, insufficient funds; a credit turn or a batch call)
+switches the credits off by itself and for good (kuhy, 2026-11-28; `errors.balance_low`, `setting.turn_off`):
+`settings.json` gets `credits_fallback: false` and `credits_off: {reason, at}`, `limit.credits.off_text` reads
+"credits off: balance too low, <time>" and the strip shows it as a chip. The turn is no failure of the card: it
+resumes at once on the plan route (or waits for a plan limit). No timer, probe or balance check turns it back on;
+only kuhy's button in the strip (the play icon, `POST /api/settings/credits-fallback {enabled: true}`) does, and
+that clears `credits_off`. Every other billing or key error ("invalid key", spend limit) is not
 retried: `credits-exhausted` is written until the limit's end, the run pauses (`paused_limit`) with the visible
 reason "free API credits exhausted", and when the plan limit resets new turns use the plan again.
 

@@ -5,9 +5,11 @@ import type { Credits } from "@/lib/schemas-common";
  * the four weekly caps and the current one lit. The server computes every figure (`limit.credits`); "≈" marks the
  * ones that are estimates of the Console bill. Words live only in the tooltip (textgate).
  */
-import { icon } from "@/components/icons";
+import { icon, iconButton } from "@/components/icons";
+import { csrfToken } from "@/lib/boot";
 import { h } from "@/lib/dom";
 import { formatUsd } from "@/lib/format";
+import { postCreditsFallback } from "@/lib/http";
 
 const WEEKS = [1, 2, 3, 4] as const;
 
@@ -62,6 +64,32 @@ function batches(credits: Credits, now: number): HTMLElement | null {
   );
 }
 
+/**
+ * The board switches the credits off by itself when the balance is gone (`off_text`, worded by the server); this
+ * button is the only way back on (POST /api/settings/credits-fallback). It shows whenever the credits are off.
+ */
+function switchOn(credits: Credits): HTMLElement[] {
+  if (credits.enabled) return [];
+  const turnOn = async (button: HTMLElement): Promise<void> => {
+    const csrf = csrfToken();
+    if (csrf === null) return;
+    button.setAttribute("aria-disabled", "true");
+    try {
+      await postCreditsFallback(true, csrf);
+      button.dispatchEvent(new CustomEvent("credits-changed", { bubbles: true }));
+    } catch {
+      button.removeAttribute("aria-disabled");
+    }
+  };
+  const button = iconButton("running", "Turn credits on", {}, () => {
+    void turnOn(button);
+  });
+  return [
+    ...(credits.off_text === null ? [] : [h("span", { attrs: { "data-tone": "danger", role: "status" }, class: "chip c-off", text: credits.off_text })]),
+    button,
+  ];
+}
+
 export function renderCreditsPace(credits: Credits, now: number = Date.now() / 1000): HTMLElement {
   const label = tooltip(credits);
   return h(
@@ -72,5 +100,6 @@ export function renderCreditsPace(credits: Credits, now: number = Date.now() / 1
     h("span", { class: "c-num", text: `≈${formatUsd(credits.spent_period_usd)} / ${formatUsd(credits.cap_usd)}` }),
     h("span", { class: "c-num c-left", text: `≈${formatUsd(credits.remaining_usd)}` }),
     batches(credits, now),
+    ...switchOn(credits),
   );
 }

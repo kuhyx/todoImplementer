@@ -22,6 +22,7 @@
       "over_cap": false,
       "running_credit_turns": 1,
       "cost_factor": 1,
+      "off_text": null,
       "batches": {
         "pending": 0,
         "est_usd": 0,

@@ -101,7 +101,7 @@ def test_t1852_credits_running_out_pauses_until_the_plan_resets_without_a_retry_
         sched.start(CARD)
         st = wait_stage(world, sched, "paused_limit")
         assert st.error is None
-        assert marks.exhausted(world.root, time.time())
+        assert setting.off() is not None  # off for good, not a timed mark
         time.sleep(0.8)  # retry backoffs are 0.3 s in tests: a loop would have spent more turns
         assert len(world.calls()) == 1
         assert "retries" not in state(world).extra
@@ -109,7 +109,7 @@ def test_t1852_credits_running_out_pauses_until_the_plan_resets_without_a_retry_
         st = wait_stage(world, sched, "gate")
         assert [c["via_sdk"] for c in world.calls()] == [True, False, False, False]
         assert st.extra["route"] == "plan"
-        assert marks.exhausted(world.root, time.time())  # kept to its end: no credit retry on every dispatch
+        assert setting.off() is not None  # kept until kuhy turns it on: no credit retry on every dispatch
     finally:
         sched.close()
 
@@ -217,7 +217,7 @@ def test_t1989_paced_credits_fall_back_to_the_plan_when_they_run_out(
         st = wait_stage(world, sched, "gate")
         assert [c["via_sdk"] for c in world.calls()] == [True, False, False, False]
         assert st.extra["route"] == "plan"
-        assert marks.exhausted(world.root, time.time())  # kept: no credit retry on every dispatch
+        assert setting.off() is not None  # kept until kuhy turns it on: no credit retry on every dispatch
     finally:
         sched.close()
 

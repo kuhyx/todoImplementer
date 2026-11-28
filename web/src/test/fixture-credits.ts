@@ -9,6 +9,7 @@ export function makeCredits(over: Partial<Credits> = {}): Credits {
     credit_turns_period: 12,
     enabled: true,
     monthly_usd: 200,
+    off_text: null,
     over_cap: false,
     period_start: 1_792_740_800,
     remaining_usd: 160,

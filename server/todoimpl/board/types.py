@@ -57,6 +57,7 @@ class Credits:
     over_cap: bool = False
     running_credit_turns: int = 0
     cost_factor: float = 1.0
+    off_text: str | None = None  # "credits off: <reason>, <time>" while the board switched them off
     batches: dict[str, object] = field(
         default_factory=lambda: {"pending": 0, "est_usd": 0.0, "oldest_at": None}
     )  # pending one-shots on the Batches API (T2532)

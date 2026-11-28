@@ -6,6 +6,7 @@ setting, the SDK venv, the key status the monitor cached and the exhausted marke
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -22,6 +23,7 @@ CREDITS = "credits"
 READY_TEXT = "Turns run on free API credits, paced by week (model {model})."
 CAPPED_TEXT = "Free API credits are at this week's cap."
 OFF_TEXT = "Free API credits fallback is off: runs wait for the plan limit."
+OFF_BOARD_TEXT = "credits off: {reason}, {when}"
 EXHAUSTED_TEXT = "Free API credits exhausted: runs wait until the plan limit resets."
 
 
@@ -38,10 +40,19 @@ def ready_text() -> str:
     return READY_TEXT.format(model=setting.model())
 
 
+def off_text() -> str | None:
+    """Return "credits off: <reason>, <local time>" while the board's own switch-off holds, else None."""
+    held = setting.off()
+    if held is None:
+        return None
+    reason, at = held
+    return OFF_BOARD_TEXT.format(reason=reason, when=time.strftime("%Y-%m-%d %H:%M", time.localtime(at)))
+
+
 def state_of(root: Path, now: float) -> tuple[str, str]:
     """Return (state, text) of the fallback for the contract's `credits` object."""
     if not setting.enabled():
-        return "off", OFF_TEXT
+        return "off", off_text() or OFF_TEXT
     if sdk.python() is None:
         return "unavailable", sdk.MISSING
     ok, why = cache.usable()
@@ -60,6 +71,7 @@ def view(root: Path, now: float) -> dict[str, Any]:
     return {
         "enabled": setting.enabled(),
         "state": state,
+        "off_text": off_text(),
         "text": CAPPED_TEXT if state == "ready" and pace.over_cap else text,
         "route": chosen,
         "period_start": pace.period_start,

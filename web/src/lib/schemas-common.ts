@@ -124,6 +124,7 @@ export const credits = z.strictObject({
   credit_turns_period: z.number().int().nonnegative(),
   enabled: z.boolean(),
   monthly_usd: usd,
+  off_text: z.string().min(1).nullable(),
   over_cap: z.boolean(),
   period_start: epoch,
   remaining_usd: usd,

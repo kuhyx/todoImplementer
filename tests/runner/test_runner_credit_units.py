@@ -9,7 +9,7 @@ import pytest
 from creditfakes import enable_credits
 from runnerfakes import Env
 from todoimpl.board.state import RunState
-from todoimpl.credits import marks
+from todoimpl.credits import marks, setting
 from todoimpl.runner import files, guard, limits, turn, turncheck
 from todoimpl.runner.stream import TurnResult
 
@@ -95,11 +95,14 @@ def test_pause_after_a_credit_turn_ignores_rate_limits_and_other_errors(tmp_path
 
 def test_credit_exhaustion_marks_until_the_limit_end_or_a_pause(tmp_path: Path) -> None:
     st = RunState(task_id="t-0", stage="plan", extra={"route": "credits"})
-    broke = result(error=True, text="Credit balance is too low")
+    broke = result(error=True, text="API Error: invalid x-api-key")
     assert turncheck.pause_after(st, tmp_path, broke, NOW) == NOW + limits.FALLBACK_PAUSE
     limits.write_until(tmp_path, NOW + 50)
     assert turncheck.pause_after(st, tmp_path, broke, NOW) == NOW + 50
     assert marks.exhausted(tmp_path, NOW)
+    empty = result(error=True, text="Credit balance is too low")  # empty balance: off for good
+    assert turncheck.pause_after(st, tmp_path, empty, NOW) == NOW + 50  # the plan limit holds the card
+    assert setting.off() == ("balance too low", NOW)
 
 
 def test_an_overage_hit_wins_and_is_consumed(tmp_path: Path) -> None:

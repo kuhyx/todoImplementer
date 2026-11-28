@@ -30,16 +30,40 @@ def read() -> dict[str, object]:
     return _read()
 
 
+OFF_KEY = "credits_off"  # {"reason", "at"}: the board turned the credits off itself (kuhy, 2026-11-28)
+
+
+def off() -> tuple[str, float] | None:
+    """Return the board's own switch-off record (reason, at), None when the credits were not tripped off."""
+    value = _read().get(OFF_KEY)
+    if not isinstance(value, dict) or not isinstance(value.get("reason"), str):
+        return None
+    at = value.get("at")
+    if isinstance(at, bool) or not isinstance(at, int | float):
+        return None
+    return value["reason"], float(at)
+
+
 def enabled() -> bool:
-    """Return the fallback setting; a missing, unreadable or non-boolean value means the default, on."""
+    """Return the fallback setting; off while the switch-off record holds, else a bad value means on."""
+    if off() is not None:
+        return False
     value = _read().get(KEY)
     return value if isinstance(value, bool) else True
 
 
 def set_enabled(*, value: bool) -> None:
-    """Store the setting atomically, keeping any other key of the file."""
-    path = settings_path()
-    atomic.write_text(path, json.dumps({**_read(), KEY: value}, indent=2) + "\n")
+    """Store kuhy's toggle atomically, keeping other keys; the only way back on, it drops the switch-off."""
+    kept = {k: v for k, v in _read().items() if k != OFF_KEY}
+    atomic.write_text(settings_path(), json.dumps({**kept, KEY: value}, indent=2) + "\n")
+
+
+def turn_off(reason: str, at: float) -> None:
+    """Switch the credits off by the board's own call and keep why and when; only `set_enabled` undoes it."""
+    atomic.write_text(
+        settings_path(),
+        json.dumps({**_read(), KEY: False, OFF_KEY: {"reason": reason, "at": at}}, indent=2) + "\n",
+    )
 
 
 MONTHLY_KEY = "credits_monthly_usd"

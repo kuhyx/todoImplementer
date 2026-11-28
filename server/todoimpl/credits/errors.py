@@ -16,3 +16,16 @@ EXHAUSTED = re.compile(
 def exhausted(text: str) -> bool:
     """Return True when a credit turn's final text says the credits ran out or the key may not pay."""
     return EXHAUSTED.search(text) is not None
+
+
+# The balance is gone: the board switches the credits off (setting.turn_off); only kuhy turns them on.
+BALANCE_LOW = re.compile(
+    r"credit balance is too low|insufficient (?:credit|fund|balance)|out of (?:api )?credits|billing_error",
+    re.IGNORECASE,
+)
+BALANCE_REASON = "balance too low"
+
+
+def balance_low(text: str) -> bool:
+    """Return True when a credit turn's text says the API balance is empty (not a bad key or limit)."""
+    return BALANCE_LOW.search(text) is not None

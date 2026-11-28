@@ -88,13 +88,13 @@ const costRow = { calls: number_, sessions: number_, usd: number_ };
 
 /** GET /api/tokens/items: one row per item and stage, the same cost per repo and stage, per shipped part and per manual day. */
 export const itemsPanel = z.object({
+  compare: z.object({ manual_sessions: number_, manual_usd: number_, shipped_parts: number_, shipped_usd: number_, usd_per_day: number_, usd_per_part: number_, usd_per_session: number_ }),
   items: z.array(z.object({ ...costRow, item: text, repo: text, stage: text })),
+  manual: z.array(z.object({ ...costRow, day: text, mean_usd: number_ })),
   repos: z.array(z.object({ ...costRow, repo: text })),
+  shipped: z.array(z.object({ at: text, calls: number_, cycle: number_, cycle_usd: number_, part: text, parts: number_, repo: text, sessions: number_, title: text, usd: number_ })),
   stages: z.array(z.object({ ...costRow, stage: text })),
   total_usd: number_,
-  shipped: z.array(z.object({ part: text, title: text, repo: text, cycle: number_, at: text, parts: number_, sessions: number_, calls: number_, cycle_usd: number_, usd: number_ })),
-  manual: z.array(z.object({ ...costRow, day: text, mean_usd: number_ })),
-  compare: z.object({ shipped_parts: number_, shipped_usd: number_, usd_per_part: number_, manual_sessions: number_, manual_usd: number_, usd_per_session: number_, usd_per_day: number_ }),
 });
 export type ItemsPanel = z.infer<typeof itemsPanel>;
 
