@@ -58,7 +58,8 @@ def _repo_of(run_dir: Path) -> str:
     return repo if isinstance(repo, str) else ""
 
 
-def _stream_sessions(stream: Path) -> list[str]:
+def stream_sessions(stream: Path) -> list[str]:
+    """Return the session ids of a stream's result events, first seen first."""
     found: dict[str, None] = {}
     with stream.open(encoding="utf-8", errors="replace") as handle:
         for line in handle:
@@ -78,11 +79,12 @@ def _run_sessions(run_root: Path) -> Iterator[tuple[str, str, str, str]]:
     for run_dir in sorted(p for p in run_root.glob("*") if p.is_dir()):
         repo = _repo_of(run_dir)
         for stream in sorted(run_dir.glob(f"*{STREAM_SUFFIX}")):
-            for sid in _stream_sessions(stream):
+            for sid in stream_sessions(stream):
                 yield sid, run_dir.name, repo, stage_of(stream)
 
 
-def _costs(conn: sqlite3.Connection, ids: list[str]) -> dict[str, tuple[float, int]]:
+def costs(conn: sqlite3.Connection, ids: list[str]) -> dict[str, tuple[float, int]]:
+    """Return `session id -> (usd, calls)` for the ids the store holds."""
     rows = conn.execute(
         "SELECT key, usd, calls FROM session_summary WHERE key IN (SELECT value FROM json_each(?))",
         (json.dumps(ids),),
@@ -95,9 +97,9 @@ def session_items(db: sqlite3.Connection, run_root: Path) -> list[SessionItem]:
     seen: dict[str, tuple[str, str, str]] = {}
     for sid, item, repo, stage in _run_sessions(run_root):
         seen.setdefault(sid, (item, repo, stage))
-    costs = _costs(db, list(seen))
+    priced = costs(db, list(seen))
     return [
-        SessionItem(sid, item, repo, stage, *costs.get(sid, (0.0, 0)), ingested=sid in costs)
+        SessionItem(sid, item, repo, stage, *priced.get(sid, (0.0, 0)), ingested=sid in priced)
         for sid, (item, repo, stage) in seen.items()
     ]
 

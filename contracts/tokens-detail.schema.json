@@ -60,9 +60,41 @@
       "properties": {
         "items": {"type": "array", "items": {"$ref": "#/$defs/item_row"}},
         "repos": {"type": "array", "items": {"$ref": "#/$defs/repo_row"}},
-        "stages": {"type": "array", "items": {"$ref": "#/$defs/stage_row"}}, "total_usd": {"type": "number"}
+        "stages": {"type": "array", "items": {"$ref": "#/$defs/stage_row"}}, "total_usd": {"type": "number"},
+        "shipped": {"type": "array", "items": {"$ref": "#/$defs/shipped_row"}},
+        "manual": {"type": "array", "items": {"$ref": "#/$defs/manual_day_row"}},
+        "compare": {"$ref": "#/$defs/ship_compare"}
       },
-      "required": ["items", "repos", "stages", "total_usd"], "unevaluatedProperties": false
+      "required": ["items", "repos", "stages", "total_usd", "shipped", "manual", "compare"], "unevaluatedProperties": false
+    },
+    "shipped_row": {
+      "type": "object",
+      "description": "One shipped or closed part (ship ledger line): its share of the cycle's session cost. `parts` is how many parts the cycle shipped, `cycle_usd` the cost of the cycle's sessions, `usd` = cycle_usd / parts.",
+      "properties": {
+        "part": {"type": "string"}, "title": {"type": "string"}, "repo": {"type": "string"}, "cycle": {"type": "number"},
+        "at": {"type": "string"}, "parts": {"type": "number"}, "sessions": {"type": "number"}, "calls": {"type": "number"},
+        "cycle_usd": {"type": "number"}, "usd": {"type": "number"}
+      },
+      "required": ["part", "title", "repo", "cycle", "at", "parts", "sessions", "calls", "cycle_usd", "usd"],
+      "additionalProperties": false
+    },
+    "manual_day_row": {
+      "type": "object", "description": "Sessions no board run started (kuhy's own), per local day.",
+      "properties": {
+        "day": {"type": "string"}, "sessions": {"type": "number"}, "calls": {"type": "number"},
+        "usd": {"type": "number"}, "mean_usd": {"type": "number"}
+      },
+      "required": ["day", "sessions", "calls", "usd", "mean_usd"], "additionalProperties": false
+    },
+    "ship_compare": {
+      "type": "object", "description": "Board cost per shipped part beside manual cost per session and per day; 0 when there is none.",
+      "properties": {
+        "shipped_parts": {"type": "number"}, "shipped_usd": {"type": "number"}, "usd_per_part": {"type": "number"},
+        "manual_sessions": {"type": "number"}, "manual_usd": {"type": "number"}, "usd_per_session": {"type": "number"},
+        "usd_per_day": {"type": "number"}
+      },
+      "required": ["shipped_parts", "shipped_usd", "usd_per_part", "manual_sessions", "manual_usd", "usd_per_session", "usd_per_day"],
+      "additionalProperties": false
     },
     "item_row": {
       "type": "object",

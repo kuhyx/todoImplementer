@@ -175,7 +175,7 @@ describe("per todo item", () => {
     use();
     const view = await itemsView(context(), signal);
     expect(view.querySelectorAll(".chart")).toHaveLength(2);
-    expect(view.querySelectorAll("usage-table")).toHaveLength(3);
+    expect(view.querySelectorAll("usage-table")).toHaveLength(5);
     expect(text(view)).toContain("$15.62");
     expect(text(view)).toContain("todoImplementer");
     clean(view);

@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 from todoimpl.board.state import run_root
 from todoimpl.tokens.items import SessionItem, session_items
+from todoimpl.tokens_api import ships
 
 if TYPE_CHECKING:
     import sqlite3
@@ -41,7 +42,7 @@ def _group(rows: dict[tuple[str, ...], list[float]], names: tuple[str, ...]) -> 
 def payload(
     conn: sqlite3.Connection, filters: Filters, find: Callable[[sqlite3.Connection], dict[str, SessionItem]]
 ) -> dict[str, Any]:
-    """Cost by item/repo/stage for the sessions started inside the window."""
+    """Cost by item/repo/stage for the window, plus cost per shipped part and per manual day."""
     known = find(conn)
     cwd = filters.cwd
     by_item: dict[tuple[str, ...], list[float]] = defaultdict(lambda: [0.0, 0.0, 0.0])
@@ -66,4 +67,5 @@ def payload(
         "repos": _group(by_repo, ("repo",)),
         "stages": _group(by_stage, ("stage",)),
         "total_usd": total,
+        **ships.payload(conn, filters, set(known)),
     }

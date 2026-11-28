@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import logging
 import threading
+import time
 from typing import TYPE_CHECKING
 
-from todoimpl.repotask import files, legacy
+from todoimpl.repotask import files, ledger, legacy
 from todoimpl.repotask.legacy import Older
 from todoimpl.runner.parsing import for_part
 from todoimpl.todo_mcp.items import Item
@@ -105,7 +106,20 @@ class ItemView:
             self._close_parts(task, evidence)
         else:
             self._client.close_item(task.item, evidence)
+            self._ledger(task.id, [(task.id, task.title)], "close")
         self._cache.poke()
+
+    def _ledger(self, card: str, parts: list[tuple[str, str]], kind: str) -> None:
+        """Append the closed parts to the ship ledger while the run still holds its cycle.
+
+        A ledger write that fails is logged loudly and never undoes the close that already happened.
+        """
+        if self._root is None:
+            return
+        try:
+            ledger.record(self._root, card, parts, kind, time.time())
+        except OSError:
+            log.exception("ship ledger not written for %s", card)
 
     def _close_parts(self, task: CardTask, evidence: str) -> None:
         """Close the section of every part the run ticked; the other parts stay open for the next cycle."""
@@ -115,6 +129,7 @@ class ItemView:
         for part in done:  # close_item re-reads the note and fails closed on a section that moved
             item = Item(part.note_id, part.index, part.title, part.body, task.repo, "todo", part.done_check)
             self._client.close_item(item, for_part(evidence, part.key))  # its own live rows only (T2460)
+            self._ledger(task.id, [(part.key, part.title)], "ship")
 
     def tick_child(self, card: str, cid: str, mark: str = "x") -> None:
         """Tick child `cid`'s checkbox in the umbrella note behind `card` (`mark` `-` drops it)."""
@@ -165,6 +180,7 @@ class ItemView:
         items = [Item(p.note_id, p.index, p.title, p.body, found.repo, "todo", p.done_check) for p in parts]
         for item in items or [found.item]:
             self._client.close_item(item, evidence)
+        self._ledger(card, [(p.key, p.title) for p in parts] or [(card, found.title)], "done_manually")
         return found
 
     def add_task(self, repo: str, title: str, body: str = "") -> Task:

@@ -23,6 +23,7 @@ Future<List<UsageBlock>> itemsView(ViewContext c, String _) async {
   final items = objs(d, 'items');
   final repos = objs(d, 'repos');
   final stages = objs(d, 'stages');
+  final compare = objOr(d, 'compare') ?? const <String, dynamic>{};
   List<(String, num)> pairs(List<Json> rows, String k) => [
     for (final r in rows) (str(r, k), numOf(r, 'usd')),
   ];
@@ -35,7 +36,51 @@ Future<List<UsageBlock>> itemsView(ViewContext c, String _) async {
         '${items.map((r) => r['item']).toSet().length}',
       ),
       UsageTile(Icons.source_outlined, 'Repos', '${repos.length}'),
+      UsageTile(
+        Icons.inventory_2_outlined,
+        'USD per shipped part',
+        usd(numOf(compare, 'usd_per_part')),
+      ),
+      UsageTile(
+        Icons.person_outline,
+        'Manual USD per session',
+        usd(numOf(compare, 'usd_per_session')),
+      ),
+      UsageTile(
+        Icons.today_outlined,
+        'Manual USD per day',
+        usd(numOf(compare, 'usd_per_day')),
+      ),
     ]),
+    TableBlock(
+      id: 'shipped',
+      semantics: 'Cost per shipped part',
+      icon: Icons.inventory_2_outlined,
+      rows: objs(d, 'shipped'),
+      columns: [
+        Col.text('part', 'Part'),
+        Col.tag('repo', 'Repo'),
+        Col.count('cycle', 'Cycle'),
+        Col.text('at', 'Shipped'),
+        Col.count('parts', 'Parts'),
+        Col.count('sessions', 'Sessions'),
+        Col.money('cycle_usd', 'Cycle USD'),
+        Col.money('usd', 'USD'),
+      ],
+    ),
+    TableBlock(
+      id: 'manual',
+      semantics: 'Manual cost per day',
+      icon: Icons.today_outlined,
+      rows: objs(d, 'manual'),
+      columns: [
+        Col.text('day', 'Day'),
+        Col.count('sessions', 'Sessions'),
+        Col.count('calls', 'Calls'),
+        Col.money('usd', 'USD'),
+        Col.money('mean_usd', 'USD per session'),
+      ],
+    ),
     rank('USD per repo', Icons.source_outlined, pairs(repos, 'repo'), usd),
     rank(
       'USD per stage',

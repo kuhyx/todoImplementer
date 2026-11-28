@@ -105,6 +105,11 @@ title and body edits through a card.
   restart a Ship's own deploy causes loses nothing. A Start that begins a run or a cycle drops the flag; a run
   that ends `failed` keeps it (kuhy's Retry, then its Ship, starts the handed-off work); Cancel leaves it unused
   (Restart drops it). A refused automatic Start drops it too, unless the todo app was only unreachable.
+- **Ship ledger.** `ItemView.close_task` / `done_manually` append one line per closed part to `<run root>/ships.jsonl`
+  (`repotask/ledger.py`: card, part, title, repo, cycle, ISO time, kind, the cycle's session ids), before `new_cycle`
+  clears them. `GET /api/tokens/items` joins it to the store: `shipped` (a part's share of its cycle's session cost),
+  `manual` (cost per day of sessions no board run started) and `compare`; the usage page "Per todo item" and the app
+  show them. `python -m todoimpl.repotask.ledger backfill` adds the last shipped cycle of each run that has none.
 - Cancel stops the run only; it never abandons notes (they hold other parts too). The card goes back to Backlog
   (current line "cancelled", Start resumes the run) while a note is open; only closed notes put it in Done (T2530).
 - **Won't do** (T2045) drops a card no turn works on (Backlog, Cancelled, Yours, Needs you; confirm first): it

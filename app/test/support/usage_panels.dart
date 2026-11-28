@@ -50,6 +50,32 @@ Map<String, RelayOutcome> morePanels() => {
     'stages': [
       {'stage': 'plan', 'usd': 1, 'calls': 2, 'sessions': 1},
     ],
+    'shipped': [
+      {
+        'part': 'p-0',
+        'title': 't',
+        'repo': 'r1',
+        'cycle': 1,
+        'at': '2026-11-27T21:43:07+00:00',
+        'parts': 1,
+        'sessions': 2,
+        'calls': 4,
+        'cycle_usd': 2,
+        'usd': 2,
+      },
+    ],
+    'manual': [
+      {'day': '2026-11-27', 'sessions': 2, 'calls': 9, 'usd': 6, 'mean_usd': 3},
+    ],
+    'compare': {
+      'shipped_parts': 1,
+      'shipped_usd': 2,
+      'usd_per_part': 2,
+      'manual_sessions': 2,
+      'manual_usd': 6,
+      'usd_per_session': 3,
+      'usd_per_day': 6,
+    },
   }),
   '/panel/efficiency': const RelayOk({
     'captions': {'done': 'per finished', 'notes': ''},
