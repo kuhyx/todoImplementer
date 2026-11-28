@@ -56,15 +56,19 @@ def host_argv(run_dir: Path, stem: str) -> list[str]:
     return [sys.executable, "-m", "todoimpl.runner.turnhost", str(run_dir), stem]
 
 
-def systemd_argv(unit: str, run_dir: Path, stem: str) -> list[str]:
-    """`systemd-run` argv for the host; the env is deliberately not here, only the host's PYTHONPATH."""
+def unit_argv(unit: str, run_dir: Path) -> list[str]:
+    """`systemd-run` argv up to the command; the env is deliberately not here, only the host's PYTHONPATH."""
     return [
         "systemd-run", "--user", "--collect", "--quiet", f"--unit={unit}",
         f"--slice={cardslice.card_slice(run_dir.name)}", "-p", "KillMode=control-group",
         "-p", f"TimeoutStopSec={UNIT_STOP_SEC}", "-p", "OOMPolicy=continue",
         "-E", f"PYTHONPATH={SERVER_DIR}",
-        "--", *host_argv(run_dir, stem),
     ]  # fmt: skip
+
+
+def systemd_argv(unit: str, run_dir: Path, stem: str) -> list[str]:
+    """`systemd-run` argv for the turn host."""
+    return [*unit_argv(unit, run_dir), "--", *host_argv(run_dir, stem)]
 
 
 @dataclass(frozen=True)
@@ -148,3 +152,26 @@ def start(run_dir: Path, stem: str, role: str, inv: Invocation) -> orphans.Recor
             msg = f"could not start the turn unit {unit}: {done.stderr.strip()[:300]}"
             raise NeedsYouError(msg)
     return rec
+
+
+def start_unit(unit: str, run_dir: Path, module: str, *args: str) -> tuple[int | None, str]:
+    """Start `python -m <module> <run_dir> <args>` detached; return (pid when direct, error text or "").
+
+    A transient unit like a turn's host in production (same card slice, so Cancel stops it), a plain
+    detached child under `TODOIMPL_TURN_LAUNCH=direct` (tests). `jobs.start` starts its host this way.
+    """
+    argv = [sys.executable, "-m", module, str(run_dir), *args]
+    if direct():
+        host = subprocess.Popen(  # noqa: S603 - fixed argv, no shell
+            argv, env={"PYTHONPATH": str(SERVER_DIR)}, start_new_session=True,
+            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )  # fmt: skip
+        threading.Thread(target=host.wait, daemon=True).start()
+        return host.pid, ""
+    done = _run([*unit_argv(unit, run_dir), "--", *argv], capture_output=True, text=True, check=False)
+    return None, "" if done.returncode == 0 else done.stderr.strip()[:300]
+
+
+def unit_active(unit: str) -> bool:
+    """Say whether the user unit `unit` is active (a vanished transient unit is not)."""
+    return _run(["systemctl", "--user", "is-active", "--quiet", unit], capture_output=True).returncode == 0

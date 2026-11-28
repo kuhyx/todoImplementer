@@ -51,6 +51,11 @@ class Hub:
         self._book = Book(root)
         self._rates = Window()
 
+    @property
+    def root(self) -> Path:
+        """The run root (a board session's run dir is `<root>/<card>`)."""
+        return self._root
+
     def token_ok(self, given: str | None) -> bool:  # noqa: D102
         return tokens.same(given, self._token)
 

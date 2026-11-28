@@ -29,8 +29,7 @@ GRANT = (
     "The board files any stretch over 60 s with no tool call or reply as a top-priority bug, so each tool "
     "call is one step that ends within 60 s: one gate step or test shard per call, `git push` and a deploy "
     "as calls of their own, never chained after a gate; the inner loop runs only the tests of changed "
-    "files. Only a job that cannot be split (a release build) runs via `systemd-run --user --collect "
-    "--slice=todoimpl.slice`; wait for it in 40 s slices. Builds (flutter, gradle, pnpm, pytest, cargo, ...) "
+    "files. Builds (flutter, gradle, pnpm, pytest, cargo, ...) "
     "queue in arrival order on a "
     "machine-wide build lock (three builds at once) that the shims take for you, so a wait is normal: "
     "never kill a waiting build "
@@ -54,18 +53,9 @@ GRANT = (
     + NIGHT.rstrip()
 )
 WAITS = (
-    "Waits (kuhy, 2026-11-19; the board kills a dead wait once you are silent 5 min): wait on an event, "
-    "never poll, and in slices: one call waits at most 40 s. A long job starts once as a named unit without "
-    "`--wait` (`systemd-run --user --collect --unit=<name> ...`); each later call waits on it at most 40 s "
-    "(`timeout 40 tail --pid=$(systemctl --user show -p MainPID --value <name>) -f /dev/null`, then "
-    "`systemctl --user is-active <name>`) and never starts it again; likewise `timeout 40 inotifywait ...` "
-    "and `timeout 40 gh run watch` (T2427). Never follow a log (`tail -f <log>`, `journalctl -f`): it never "
-    "ends; no self-made `until`/`while ... sleep` loop when "
-    "an event wait exists. Never `pgrep -f` "
-    "a pattern that is in your own command line (it matches itself and never ends). Never start a "
-    "background job (`&`) inside `$(...)`: it holds the pipe open, a deadlock. No `flock -n` polling and "
-    "no when_free.sh: a build waits on the lock by itself. Never wait on another card's process or unit: "
-    'the board sequences cards. Never print periodic "still waiting" output to look alive.'
+    "Builds, test suites, deploys and APK builds go through the `run_job` tool (`peer` MCP server): it runs "
+    "the command outside your session, ends your turn and resumes you with its exit code and output tail. "
+    "Never wait, sleep or poll."
 )
 DEPLOY = (
     "Done means deployed: after Ship pushes, the server runs the repo's `- deploy: `<command>`` bullet from "

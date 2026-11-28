@@ -14,6 +14,7 @@ from todoimpl.repotask.prompt import addendum
 from . import chain, checks, deploy, phone, resume, retry, stepwatch, tags, tiering, turncheck, worktree
 from .ctxcap import go_on, mark, seed
 from .files import KilledError, NeedsYouError
+from .jobwait import active, hold, wrap
 from .partrefresh import before_turn
 from .permit import with_grant
 from .prompting import Ask, prompt_for
@@ -64,9 +65,7 @@ class Ctx:
     cancelled: Callable[[], bool]
     check_timeout: float
     inbox: Callable[[], list[str]]
-    locks: RepoLocks = field(
-        default_factory=RepoLocks
-    )  # the engine's per-repo lock; umbrella children take it too
+    locks: RepoLocks = field(default_factory=RepoLocks)  # the engine's per-repo lock (umbrella children too)
 
 
 class Driver:
@@ -180,6 +179,7 @@ class Driver:
     def turn(self, role: str, stage: str, *, failure_tail: str = "", prompt: str = "") -> TurnResult:
         """One claude turn (`prompt` picks the builder, else `stage`); raises on cancel, limit, failure."""
         st, ctx = self.state, self.ctx
+        hold(self)  # a `run_job` unit of the last turn ends first: its result is this turn's prompt
         choice = chain.choose(ctx.root, ctx.now(), st)
         if choice.route is None:  # the plan limit holds and the free credits cannot take over
             raise LimitHitError(choice.until or ctx.now())
@@ -194,7 +194,7 @@ class Driver:
             st.extra[phone.REPLIED] = True  # this turn takes kuhy's reply in: its ask may not return (T1981)
         plan = tiering.plan_turn(self, role)
         ask = Ask(stage, prompt, failure_tail, nudge, cont, new_session, plan.note, reseed)
-        build_for = prompt_for(self, ask)
+        build_for = wrap(ctx.run_dir, prompt_for(self, ask))
 
         env = TurnEnv(ctx.run_dir, worktree.turn_dir(st, self.item.repo), ctx.publish, ctx.register, ctx.now)
         try:
@@ -213,7 +213,7 @@ class Driver:
         cut = mark(st, role, res)  # a turn stopped at the context cap: the role's next turn is fresh
         self.save()
         self._check_turn(res)
-        if go_on(st, res, cut=cut):  # a cap stopped the turn: go on at once (credits: on the plan)
+        if go_on(st, res, cut=cut) or active(ctx.run_dir):  # a cap or `run_job` ended the turn: go on
             return self.turn(role, stage, failure_tail=failure_tail, prompt=prompt)
         resume.rest(self, res, stage)  # a wait or resume line of Claude's own rests on the ladder (T2104)
         if any(note(self, res, stage) for note in HOOKS):

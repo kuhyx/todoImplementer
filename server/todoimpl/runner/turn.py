@@ -26,6 +26,7 @@ from . import (
     files,
     freeroute,
     guard,
+    jobs,
     launch,
     orphans,
     session,
@@ -190,6 +191,7 @@ def _consume(env: TurnEnv, state: RunState, rec: orphans.Record) -> TurnResult |
             env.now,
         )
     parser.on_context = brake(state, role, handle.stop, parser)  # the context cap stops either route's turn
+    jobs.arm(env.run_dir, parser, handle.stop)  # `run_job` ends the turn once its result is in
     show, silent = (functools.partial(_show, env, state, key) for key in (WAITS_FOR, SILENT))
     show(None)  # a wait saved before a restart is no longer known
     silent(None)

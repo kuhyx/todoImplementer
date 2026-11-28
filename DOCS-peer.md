@@ -107,6 +107,28 @@ No new UI text: everything shown is the data. Every change is published on the c
 activity line, and a `peer` event carrying the row (`live.schema.json`), which the open drawer merges at once
 with no refetch (`web/src/components/drawer-live.ts`, T2473).
 
+## Jobs: `run_job` replaces waiting (kuhy, 2026-11-28)
+
+Waiting calls (sleep, poll loops, tailing output) were 13 % of the token spend. Builds, test suites, deploys and
+APK builds go through the `run_job(command, name?)` tool of the `peer` server (board sessions only; it is an MCP
+tool, so the `--tools` allowlist does not filter it and `--allowedTools mcp__peer` covers it).
+
+- `POST /api/peer/job` (`http/peer.py`, card key like the other routes) -> `runner/jobs.py` starts
+  `bash -lc <command>` as a transient unit (`runner/jobhost.py` via `launch.start_unit`: the card's slice, so
+  Cancel stops it) in the worktree with the turn's env (`claude.turn_env`, build shims first on PATH). One job
+  per card; a second call is refused until the first is done.
+- Disk, not state.json: `<run>/job.json` (id, name, command, unit), `<run>/jobs/<id>.out` (stdout+stderr),
+  `<id>.exit.json`. A restart finds them; a unit gone with no exit record reads as exit 255.
+- `jobs.arm` ends the turn once the `run_job` result is in and no tool call is in flight (the `ctxcap` way:
+  board-side stop, not a prompt request). `jobwait.hold` then waits for the unit (card line `waits_for`
+  `job <name>`, Cancel works) and the same session resumes (`--resume`) with `job <id> (<command>) exited
+  <code>` plus the last 40 lines. A session idle over an hour starts fresh: that text follows its handoff.
+- Launch denies (`waitdeny.rules()`, only when the peer server is present, kept under a loose policy):
+  `Bash(sleep:*)`, `Bash(tail --pid*)`, `Bash(inotifywait*)`, `Monitor`,
+  `Read(//tmp/claude-*/**/tasks/**)` and the same under the server's temp dir (`/var/disktmp`): the harness's
+  background-task output (`runner/waitdeny.py`). A terminal denial of one is ignored by the permission gate
+  (no rerun, no Needs you). `cat` of such a file stays possible. Both routes share the rules.
+
 ## Storage
 
 - `<run>/peer.json`: the card's thread, the last 50 (durable writes).
@@ -118,5 +140,5 @@ with no refetch (`web/src/components/drawer-live.ts`, T2473).
 
 `server/todoimpl/peer/` (`hub.py` the rules, `book.py`, `senders.py`, `envelope.py`, `limits.py`,
 `token.py`, `pipe.py`, `service.py`), `server/todoimpl/http/peer.py`, `server/todoimpl/runner/peerpipe.py`,
-`mcp/todoimpl_mcp/peer_*.py`. Tests: `tests/peer/`, `tests/runner/test_runner_peer_turn.py`,
-`tests/mcp_server/test_peer_mcp.py`, `web/src/components/peer-thread.test.ts`.
+`server/todoimpl/runner/job{s,host,wait}.py`, `mcp/todoimpl_mcp/peer_*.py`. Tests: `tests/peer/`,
+`tests/runner/test_runner_peer_turn.py`, `tests/mcp_server/test_peer_mcp.py`, `web/src/components/peer-thread.test.ts`.

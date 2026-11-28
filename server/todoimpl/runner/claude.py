@@ -14,7 +14,7 @@ from typing import Any
 
 from todoimpl.newtask import images
 
-from . import buildlock, mcpconf, policy, userbase, venvless
+from . import buildlock, mcpconf, policy, userbase, venvless, waitdeny
 
 # Every card role runs Sonnet 5.5 at high effort unpinned (kuhy, 2026-11-27: "default model should be SONNET,
 # NOT opus"; Opus is a conscious pick in the model picker). T2615; T2471 had set Opus.
@@ -36,6 +36,8 @@ ROLE_EFFORT = {
 # Sessions load kuhy's real ~/.claude allow rules, which permit pushing; only the Ship click may push.
 DENY_ALWAYS = ("Bash(git push:*)", "Bash(git push *)")
 DENY_READONLY = ("Edit", "Write", "NotebookEdit")
+# Waiting costs tokens (13% of a day's spend): builds, suites, deploys and APK builds go through `run_job`
+# (runner/jobs.py), and the turn ends. `waitdeny.rules` stays under a loose session policy: no safety rule.
 READONLY_ROLES = frozenset({"classify", "closing"})
 KEY_VAR = "ANTHROPIC_API_KEY"
 SETTING_SOURCES = "project"  # only the repo's CLAUDE.md and settings, none of ~/.claude
@@ -91,6 +93,24 @@ def effort_for(role: str, effort: str | None = None) -> str:
     return effort or ROLE_EFFORT[role]
 
 
+def turn_env(worktree: Path) -> dict[str, str]:
+    """Return the env of a turn in `worktree`; a `run_job` unit (runner/jobs.py) gets the same one.
+
+    Each turn is a new process: one owner per card keeps its phone test slot across turns. The plan route
+    never carries the API key (it would take precedence over the plan's login); the credit route adds it.
+    Builds queue on one machine-wide lock (buildlock.py); a turn never starts out holding it.
+    A worker's `python3` is the system one, never the server's venv (T2500).
+    """
+    env = {k: v for k, v in venvless.strip(os.environ).items() if k not in {KEY_VAR, buildlock.HELD_VAR}}
+    return env | {
+        "CLAUDE_AUTO_CONTINUE": "0",
+        BG_WAIT_VAR: "0",
+        "PHONE_LEASE_OWNER": f"todoimpl:{worktree.parent.name}",
+        **buildlock.turn_env(worktree.parent.name),
+        **userbase.turn_env(worktree.parent, env),  # pip never writes to kuhy's user site (T2495)
+    }
+
+
 def options(  # noqa: PLR0913, PLR0917 - one set of turn options, built in one place
     role: str,
     prompt: str,
@@ -105,18 +125,7 @@ def options(  # noqa: PLR0913, PLR0917 - one set of turn options, built in one p
     pol = policy.load()
     deny = (DENY_ALWAYS if pol.deny is None else pol.deny) + (DENY_READONLY if role in READONLY_ROLES else ())
     deny += policy.src_deny_for(worktree)  # kuhy's checkouts, even with a loose policy (T2515)
-    # Each turn is a new process: one owner per card keeps its phone test slot across turns. The plan route
-    # never carries the API key (it would take precedence over the plan's login); the credit route adds it.
-    # Builds queue on one machine-wide lock (buildlock.py); a turn never starts out holding it.
-    # A worker's `python3` is the system one, never the server's venv (T2500).
-    env = {k: v for k, v in venvless.strip(os.environ).items() if k not in {KEY_VAR, buildlock.HELD_VAR}}
-    env |= {
-        "CLAUDE_AUTO_CONTINUE": "0",
-        BG_WAIT_VAR: "0",
-        "PHONE_LEASE_OWNER": f"todoimpl:{worktree.parent.name}",
-        **buildlock.turn_env(worktree.parent.name),
-        **userbase.turn_env(worktree.parent, env),  # pip never writes to kuhy's user site (T2495)
-    }
+    env = turn_env(worktree)
     dirs = (
         str(worktree),
         *map(str, (*extra_dirs, *images.session_dirs())),
@@ -126,6 +135,7 @@ def options(  # noqa: PLR0913, PLR0917 - one set of turn options, built in one p
     notes = (pol.warning,) if pol.warning else ()
     servers = mcpconf.servers(worktree)
     peer = mcpconf.PEER in servers
+    deny += waitdeny.rules() if peer else ()  # without the peer server there is no `run_job` to wait through
     allow = (*allow, *(mcpconf.PEER_ALLOW if peer else ()))
     return Options(
         prompt,

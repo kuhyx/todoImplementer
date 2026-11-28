@@ -1,4 +1,4 @@
-"""POST /api/peer/{send,await,inbox,reply}: sessions on this PC message each other (DOCS-peer.md).
+"""POST /api/peer/{send,await,inbox,reply,job}: sessions on this PC message each other (DOCS-peer.md).
 
 Loopback only (the Host is the bound 127.0.0.1 origin and nothing forwarded it) and gated by the peer token
 from `$TODOIMPL_HOME/peer.token` in `X-Todoimpl-Peer-Token`, never by the browser's CSRF token: a request
@@ -13,11 +13,13 @@ from typing import TYPE_CHECKING, Any, Protocol
 
 from todoimpl.peer import limits
 from todoimpl.peer.limits import Refusal
+from todoimpl.runner import jobs
 
 from .reply import STATUS, Reply, error_reply, json_reply
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from pathlib import Path
 
     from todoimpl.peer.senders import Sender
 
@@ -31,6 +33,8 @@ class Headers(Protocol):  # noqa: D101 - the slice of http.client.HTTPMessage us
 
 
 class PeerHub(Protocol):  # noqa: D101 - what the endpoint needs of todoimpl.peer.hub.Hub
+    @property
+    def root(self) -> Path: ...  # noqa: D102
     def token_ok(self, given: str | None) -> bool: ...  # noqa: D102
     def identify(  # noqa: D102
         self,
@@ -75,6 +79,15 @@ def _seconds(body: dict[str, Any], key: str, default: float) -> float:
     return min(max(float(value), 0.0), limits.AWAIT_SLICE)
 
 
+def _job(hub: PeerHub, who: Sender, body: dict[str, Any]) -> dict[str, Any]:
+    """`run_job`: a board session's command runs as a unit and its turn ends (runner/jobs.py)."""
+    if who.card is None:
+        msg = "run_job is for board task sessions"
+        raise Refusal(msg, code="forbidden")
+    name = _text(body, "name", optional=True) or ""
+    return jobs.start(hub.root, who.card, str(_text(body, "command")), name)
+
+
 def _dispatch(hub: PeerHub, route: str, body: dict[str, Any]) -> dict[str, Any]:
     who = hub.identify(
         _text(body, "label", optional=True),
@@ -89,6 +102,7 @@ def _dispatch(hub: PeerHub, route: str, body: dict[str, Any]) -> dict[str, Any]:
         "await": lambda: {
             "message": hub.wait(str(_text(body, "id")), _seconds(body, "timeout", limits.AWAIT_SLICE))},
         "inbox": lambda: {"messages": hub.inbox(who, _seconds(body, "wait", 0.0))},
+        "job": lambda: {"job": _job(hub, who, body)},
     }  # fmt: skip
     return {"ok": True, "sender": who.id, "as": who.display, **actions[route]()}
 
@@ -98,7 +112,7 @@ def handle(  # noqa: PLR0911 - one refusal per gate
 ) -> Reply:
     """Answer one peer POST."""
     route = path.removeprefix(PREFIX)
-    if hub is None or route not in {"send", "reply", "await", "inbox"}:
+    if hub is None or route not in {"send", "reply", "await", "inbox", "job"}:
         return error_reply("not_found", "no such route")
     try:
         size = int(headers.get("Content-Length") or 0)

@@ -1,11 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://todoimplementer.local/contracts/peer.schema.json",
-  "title": "POST /api/peer/{send,await,inbox,reply} answers and the card's Peer thread (DOCS-peer.md)",
+  "title": "POST /api/peer/{send,await,inbox,reply,job} answers and the card's Peer thread (DOCS-peer.md)",
   "description": "Loopback only, X-Todoimpl-Peer-Token from $TODOIMPL_HOME/peer.token; a refusal is $defs/refusal.",
   "oneOf": [
     {"$ref": "#/$defs/message_answer"},
     {"$ref": "#/$defs/inbox_answer"},
+    {"$ref": "#/$defs/job_answer"},
     {"$ref": "#/$defs/refusal"}
   ],
   "$defs": {
@@ -71,6 +72,25 @@
         }
       },
       "required": ["messages"],
+      "unevaluatedProperties": false
+    },
+    "job_answer": {
+      "description": "job (`run_job`, board sessions only): the command runs as a unit and the turn ends.",
+      "allOf": [{"$ref": "#/$defs/caller"}],
+      "properties": {
+        "ok": true, "sender": true, "as": true,
+        "job": {
+          "type": "object",
+          "properties": {
+            "id": {"type": "string", "pattern": "^[0-9a-f]{6}$"},
+            "name": {"type": "string", "maxLength": 40},
+            "message": {"type": "string"}
+          },
+          "required": ["id", "name", "message"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["job"],
       "unevaluatedProperties": false
     },
     "refusal": {

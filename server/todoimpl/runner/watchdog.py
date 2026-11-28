@@ -29,9 +29,8 @@ SAVE_EVERY = 5.0  # seconds between two writes of the real-action clock
 REAL_SUFFIX = ".real"
 NOISE = frozenset({"tool_progress", "rate_limit_event"})
 RULES = {
-    "pgrep-self": "`pgrep -f {detail}` matched only its own command line, so it never ends. Wait on a "
-    "unit by name (`systemctl --user is-active <unit>`, `timeout 40 tail --pid=<pid> -f /dev/null`), "
-    "never `pgrep -f` with a "
+    "pgrep-self": "`pgrep -f {detail}` matched only its own command line, so it never ends. Start long "
+    "work with `run_job` and end your turn; never `pgrep -f` with a "
     "pattern that is in your own command",
     "cross-card": "it waited on card {detail}, which is done or gone. Never wait on another card's process: "
     "the board sequences cards",

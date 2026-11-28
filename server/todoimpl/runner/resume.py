@@ -28,9 +28,8 @@ MAX_RESUMES = 12
 SHOWN = 110
 RESUMED = (
     "(runner) Resume it yourself, nobody else will: the steps below are yours, you have kuhy's standing "
-    "permission. If the unit or build is still running, wait for it inside this turn with event waits of at "
-    "most 40 s each (`timeout 40 tail --pid=<its pid> -f /dev/null`, `inotifywait`, `gh run watch`; never "
-    "start it again), never a sleep loop, then do the rest and carry on. Your last ask was:\n\n"
+    "permission. A build, suite or deploy that is not running yet goes through `run_job`; never wait, sleep "
+    "or poll. Do the rest and carry on. Your last ask was:\n\n"
 )
 # What marks a wait or a resume line: "Resume by ...", "is-active", "when it finishes".
 RESUME_ASK = re.compile(

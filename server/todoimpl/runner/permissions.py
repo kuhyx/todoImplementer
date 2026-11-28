@@ -9,6 +9,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from .waitdeny import is_wait
+
 if TYPE_CHECKING:
     from .stream import Denial
 
@@ -213,6 +215,8 @@ def classify(  # noqa: PLR0911
     """Map a denial to rules; `strict` (no session policy file) applies the never-list."""
     wt = Path(os.path.realpath(worktree))
     rd = Path(os.path.realpath(run_dir))
+    if is_wait(d):  # a hard deny (waitdeny.py): the session ends its turn on `run_job`, never gets a rule
+        return Verdict(ignore=True)
     if d.hook:
         return Verdict(blocked="a hook blocked it (allow rules cannot lift a hook)")
     if UNBYPASSABLE in d.message:

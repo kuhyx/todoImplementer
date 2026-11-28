@@ -52,6 +52,21 @@ def send_peer(to: str, text: str, reply_to: str = "") -> str:
 
 
 @mcp.tool(
+    description=(
+        "Run a build, test suite, deploy or APK build as a job outside this session: bash -lc in the "
+        "worktree. This turn ends and you are resumed with its exit code and last 40 lines. Never wait."
+    ),
+    structured_output=False,
+)
+def run_job(command: str, name: str = "") -> str:
+    """Start the job; the board ends this turn at its next boundary."""
+    try:
+        return str(_me().run_job(command, name)["message"])
+    except PeerError as exc:
+        return str(exc)
+
+
+@mcp.tool(
     description="Wait for the answer to a sent message id (seconds; retry to keep waiting).",
     structured_output=False,
 )

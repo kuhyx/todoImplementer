@@ -105,6 +105,11 @@ class Peer:
         message: dict[str, Any] = self._post("send", body)["message"]
         return message
 
+    def run_job(self, command: str, name: str = "") -> dict[str, Any]:
+        """Ask the board to run `command` as this card's job; return `{id, name, message}`."""
+        job: dict[str, Any] = self._post("job", {"command": command, "name": name})["job"]
+        return job
+
     def await_reply(self, msg_id: str, timeout: float = 600.0) -> dict[str, Any]:
         """Wait up to `timeout` s (capped by $TODOIMPL_PEER_MAX_WAIT) for the answer; return the message."""
         cap = os.environ.get(WAIT_ENV)

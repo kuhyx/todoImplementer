@@ -14,7 +14,7 @@ from todoimpl.errors import marks
 from todoimpl.repotask.start import prepare
 from todoimpl.todo_mcp.model import TodoError
 
-from . import appfix, closing, latenote, modelswitch, phone, prepin, retry, stopping, whenfree
+from . import appfix, closing, jobs, latenote, modelswitch, phone, prepin, retry, stopping, whenfree
 from .engine import Client, default_clock
 from .files import read_json
 from .phone_sched import PhoneEngine
@@ -23,7 +23,6 @@ from .restart import restart_stage
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
     from pathlib import Path
-
 
 log = logging.getLogger("todoimpl.runner")
 RESTARTABLE = ("failed", "cancelled")
@@ -131,6 +130,7 @@ class Scheduler(PhoneEngine):
                 st.auto_ship = bool(auto_ship)
                 appfix.forget(st)
                 whenfree.clear(self.root / card)  # this Start is the one a pending handoff waited for
+                jobs.drop(self.root / card)  # a cancelled run's job is no news to the new cycle
             if item.parts:
                 prepare(st, item, self.root / card, self.clock())
             st.stage = latenote.retry_stage(self.root / card, restart_stage(st, item))

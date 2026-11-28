@@ -184,7 +184,7 @@ def test_cli_module_entry(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_mcp_tools(board: World, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv(peer_client.LABEL_ENV, "mcp-desk")
     names = {t.name for t in asyncio.run(peer_server.mcp.list_tools())}
-    assert names == {"send_peer", "await_reply", "inbox", "reply_peer"}
+    assert names == {"send_peer", "await_reply", "inbox", "reply_peer", "run_job"}
 
     def call(name: str, **args: Any) -> str:
         result = asyncio.run(peer_server.mcp.call_tool(name, args))
