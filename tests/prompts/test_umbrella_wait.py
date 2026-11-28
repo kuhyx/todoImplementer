@@ -26,4 +26,3 @@ def test_t1886_the_manager_builds_the_worktree_environment_before_the_servers_ch
 def test_t1922_the_manager_fixes_a_red_check_that_predates_the_task(ctx: PromptContext) -> None:
     text = build("manager", ctx)
     assert "never leave it red as out of scope" in text
-    assert "bump each pin the dependency-freshness gate names" in text

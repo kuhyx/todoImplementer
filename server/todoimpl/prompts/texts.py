@@ -24,10 +24,7 @@ SPEC_NIGHT = (
 )
 TAIL_CHARS = 3000
 CARD = "❓ **Q1** - **<title>**: <body>\n➡️ <your recommended answer>"
-RULES = (
-    "Rules: work only in {wt}. Follow your ~/.claude rules: red check first, heavy commands via "
-    "~/.claude/scripts/capped.sh."
-)
+RULES = "Rules: work only in {wt}. Run heavy commands via ~/.claude/scripts/capped.sh."
 BLOCKS = (
     "Claude Code blocks some Bash and Edit calls in every permission mode: no `rm` on a bare variable or a "
     "glob after `cd` or `$(...)`: use explicit absolute paths; no zsh-only expansions like `${(f)...}`; "
@@ -35,7 +32,7 @@ BLOCKS = (
     "not Edit or Write."
 )
 SELF_CHECK = (
-    "Self-check: walk every acceptance criterion, run the done_check and the tests yourself, and state per "
+    "Self-check: walk every acceptance criterion, run the done_check yourself, and state per "
     "criterion `Cn: done` or `Cn: not done` plus one line of evidence."
 )
 KUHY_PLAN = (  # runner/approval.py gates Ship on these (T2362)
@@ -123,7 +120,6 @@ def implement(ctx: PromptContext) -> str:
         item(ctx),
         plan_text(ctx),
         _rules(ctx),
-        "Write the failing check first, see it red, implement, see it green.",
         SELF_CHECK,
         f"{KUHY_LIVE} {phone.LIVE_WORK}",
         standing.DEPLOY,
@@ -177,7 +173,7 @@ def fix(ctx: PromptContext) -> str:
         item(ctx),
         plan_text(ctx),
         _rules(ctx),
-        "Find the root cause, add a failing check for it first, fix, rerun the failing command until green.",
+        "Find the root cause, fix it, rerun the failing command until green.",
         SELF_CHECK,
         f"{KUHY_LIVE} {phone.LIVE_WORK}",
         "End with `D:`.",

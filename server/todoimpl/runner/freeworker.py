@@ -24,6 +24,7 @@ from todoimpl.board.clone import src_root
 from todoimpl.umbrella import issues, workers
 
 from . import srcguard, srcwall, workerwait
+from .claude import SETTING_SOURCES, TOOLS
 from .policy import HOOKS_OFF, src_deny
 
 PREAMBLE = (
@@ -101,6 +102,8 @@ def run(worktree: Path, prompt_file: Path, log: Path, *, run_dir: Path | None = 
     wall, unguarded = srcwall.wrap(worktree, src)  # T2519: the shell cannot write kuhy's checkouts either
     argv = [*wall, tool, "-p", f"{PREAMBLE} {scope}\n\n{task}", "--permission-mode"]
     argv += ["bypassPermissions", "--disallowedTools", *DENY, *src_deny(src), "--settings", HOOKS_OFF]
+    # Lean context: no ~/.claude user config, no skills, only the tools a session uses.
+    argv += ["--setting-sources", SETTING_SOURCES, "--disable-slash-commands", "--tools", TOOLS]
     log.parent.mkdir(parents=True, exist_ok=True)
     card, stray = worktree.parent, functools.partial(_issue, run_dir, child, "checkout")  # T2515
     if unguarded:

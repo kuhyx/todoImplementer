@@ -88,6 +88,8 @@ async def turn(spec: dict[str, Any], seen: Seen) -> None:
         allowed_tools=spec["allowed_tools"],
         disallowed_tools=spec["disallowed_tools"],
         setting_sources=spec["setting_sources"],
+        tools=spec["tools"],
+        extra_args={"disable-slash-commands": None},
         effort=spec.get("effort"),
         mcp_servers=spec.get("mcp_servers", {}),
         strict_mcp_config=spec.get("strict_mcp_config", False),

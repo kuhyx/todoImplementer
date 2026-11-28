@@ -11,14 +11,13 @@ import re
 MAX_COACHED = 3
 PROMPT_PHASE = "prompt"
 _TEXTGATE = re.compile(r"textgate|text-free", re.IGNORECASE)
-SKILLS = "~/.claude/skills/textgate-rework/SKILL.md and ~/.claude/skills/textgate/SKILL.md"
 
 COACHING = (
     "A free worker that fails, declines, misreads the task or leaves a bad diff is coached, not replaced: "
     "DIAGNOSE why first (read its log and `git diff`), fix the CAUSE, then run the freeworker command "
     "again. "
-    "Fixes: rewrite or clarify the worker prompt; add the missing context (paste the relevant rules of "
-    f"{SKILLS}, the scan output, the exact files and lines to change, a worked example); or split the task "
+    "Fixes: rewrite or clarify the worker prompt; add the missing context (the scan output, the exact "
+    "files and lines to change, a worked example); or split the task "
     f"smaller. Up to {MAX_COACHED} coached attempts per child. Log each one as an issue line with "
     f'phase "{PROMPT_PHASE}" (symptom = what the worker got wrong, action = what you changed in the '
     f"prompt or context). Only after {MAX_COACHED} failed attempts may you finish the work yourself "

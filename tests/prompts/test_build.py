@@ -81,9 +81,8 @@ def test_work_stages_say_how_to_avoid_the_blocks_no_permission_mode_lifts(
     assert "through Bash (python, sed or git apply), not Edit or Write" in text
 
 
-def test_implement_ends_with_self_check_and_red_first(ctx: PromptContext) -> None:
+def test_implement_ends_with_self_check(ctx: PromptContext) -> None:
     text = build("implement", ctx)
-    assert "failing check first" in text
     assert "`Cn: done` or `Cn: not done`" in text
 
 

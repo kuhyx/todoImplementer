@@ -38,6 +38,8 @@ DENY_ALWAYS = ("Bash(git push:*)", "Bash(git push *)")
 DENY_READONLY = ("Edit", "Write", "NotebookEdit")
 READONLY_ROLES = frozenset({"classify", "closing"})
 KEY_VAR = "ANTHROPIC_API_KEY"
+SETTING_SOURCES = "project"  # only the repo's CLAUDE.md and settings, none of ~/.claude
+TOOLS = "Read,Edit,Write,Bash,Grep,Glob"  # built-in tools offered; MCP tools come from --mcp-config
 PEER_VAR = "TODOIMPL_PEER_STDIN"  # 0: the prompt stays in argv, no peer messages mid-turn
 BG_WAIT_VAR = "CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS"  # 0: headless claude waits for background subagents
 
@@ -160,6 +162,8 @@ def build(  # noqa: PLR0913, PLR0917 - one argv, built in one place
     argv += ["--permission-mode", opt.permission_mode, "--add-dir", *opt.add_dirs]
     argv += ["--effort", opt.effort]
     argv += ["--strict-mcp-config", "--mcp-config", json.dumps({"mcpServers": opt.mcp_servers})]
+    # Lean context: no ~/.claude user config, no skills, only the tools a session uses.
+    argv += ["--setting-sources", SETTING_SOURCES, "--disable-slash-commands", "--tools", TOOLS]
     if resume:
         argv += ["--resume", resume]
     argv += ["--settings", opt.settings]

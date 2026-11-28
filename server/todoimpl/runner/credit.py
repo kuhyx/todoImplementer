@@ -26,7 +26,6 @@ if TYPE_CHECKING:
     from todoimpl.board.state import RunState
 
 RANK = {"opus": 2, "sonnet": 1}  # model families, dearer first; anything else (haiku, unknown) ranks 0
-SETTING_SOURCES = ("user", "project", "local")  # kuhy's full setup, as the CLI loads it
 MODULE = "todoimpl.runner.sdkturn"
 
 
@@ -59,7 +58,7 @@ def build(  # noqa: PLR0913, PLR0917 - same signature as claude.build
         "prompt": opt.prompt, "model": opt.model, "cwd": str(opt.cwd), "add_dirs": list(opt.add_dirs),
         "permission_mode": opt.permission_mode, "resume": opt.resume, "settings": opt.settings,
         "allowed_tools": list(opt.allow), "disallowed_tools": list(opt.deny),
-        "setting_sources": list(SETTING_SOURCES), "effort": opt.effort,
+        "setting_sources": [claude.SETTING_SOURCES], "tools": claude.TOOLS.split(","), "effort": opt.effort,
         "mcp_servers": opt.mcp_servers, "strict_mcp_config": True, "system_append": opt.system_append,
     }  # fmt: skip
     path = os.pathsep.join(p for p in (str(SERVER_DIR), os.environ.get("PYTHONPATH", "")) if p)

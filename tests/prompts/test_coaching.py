@@ -11,7 +11,6 @@ from todoimpl.prompts import tier as texts
 def test_t2054_the_umbrella_manager_diagnoses_and_coaches_before_doing_the_edits(ctx: PromptContext) -> None:
     text = build("manager", ctx)
     assert "DIAGNOSE" in text
-    assert "textgate-rework/SKILL.md" in text
     assert "freeworker command again" in text
     assert "3 coached attempts" in text
     assert 'phase "prompt"' in text
@@ -22,7 +21,6 @@ def test_t2054_the_umbrella_manager_diagnoses_and_coaches_before_doing_the_edits
 def test_t2054_the_cheap_tier_manager_coaches_the_same_way() -> None:
     text = texts.manager(Path("/wt/x"), Path("/run/r1"), "W-CMD", "kuhyx/x")
     assert "DIAGNOSE" in text
-    assert "textgate/SKILL.md" in text
     assert "3 coached attempts" in text
     assert 'phase "prompt"' in text
 

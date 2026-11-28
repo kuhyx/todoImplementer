@@ -20,6 +20,8 @@ class ClaudeAgentOptions:
     allowed_tools: list[str] = field(default_factory=list)
     disallowed_tools: list[str] = field(default_factory=list)
     setting_sources: list[str] | None = None
+    tools: list[str] | None = None
+    extra_args: dict[str, str | None] = field(default_factory=dict)
     system_prompt: Any = None
     effort: str | None = None
     mcp_servers: dict[str, Any] = field(default_factory=dict)

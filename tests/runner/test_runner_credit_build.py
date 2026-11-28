@@ -45,7 +45,8 @@ def test_credit_invocation_mirrors_the_plan_options_and_carries_the_key(
     assert spec["allowed_tools"] == ["Bash(ls:*)"]
     assert spec["disallowed_tools"] == [*claude.DENY_ALWAYS, *src_deny()]  # T2515
     assert spec["settings"] == HOOKS_OFF
-    assert spec["setting_sources"] == ["user", "project", "local"]
+    assert spec["setting_sources"] == ["project"]
+    assert spec["tools"] == ["Read", "Edit", "Write", "Bash", "Grep", "Glob"]
     assert spec["prompt"] == "go"
     assert cred.env["ANTHROPIC_API_KEY"] == FAKE_KEY
     assert cred.env["CLAUDE_AUTO_CONTINUE"] == "0"

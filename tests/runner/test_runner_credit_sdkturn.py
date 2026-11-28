@@ -17,7 +17,7 @@ def spec(world: Env, **over: Any) -> str:
         "prompt": "do it", "model": "sonnet", "cwd": str(cwd), "add_dirs": [str(cwd)],
         "permission_mode": "acceptEdits", "resume": None, "settings": None,
         "allowed_tools": ["Bash(ls:*)"], "disallowed_tools": ["Bash(git push:*)"],
-        "setting_sources": ["user", "project", "local"],
+        "setting_sources": ["project"], "tools": ["Read", "Bash"],
     }  # fmt: skip
     return json.dumps({**base, **over})
 
@@ -46,7 +46,9 @@ def test_a_turn_prints_the_cli_stream_and_passes_the_options(
     assert opt["permission_mode"] == "acceptEdits"
     assert opt["allowed_tools"] == ["Bash(ls:*)"]
     assert opt["disallowed_tools"] == ["Bash(git push:*)"]
-    assert opt["setting_sources"] == ["user", "project", "local"]
+    assert opt["setting_sources"] == ["project"]
+    assert opt["tools"] == ["Read", "Bash"]
+    assert opt["extra_args"] == {"disable-slash-commands": None}
     assert opt["system_prompt"] == {"type": "preset", "preset": "claude_code"}
     assert opt["prompt"] == "do it"
 
