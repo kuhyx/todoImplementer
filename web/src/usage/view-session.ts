@@ -47,6 +47,23 @@ export async function sessionView(context: Context, signal: AbortSignal, key: st
       ],
       title: "Cost per prompt",
     }),
+    barChart({
+      fmt: compact,
+      labels: data.stream.map((call) => String(call.idx)),
+      series: [
+        { color: color(0), name: "Fixed", values: data.stream.map((call) => call.fixed) },
+        { color: color(1), name: "Accumulated", values: data.stream.map((call) => call.accumulated) },
+      ],
+      title: "Context per call",
+    }),
+    section("Calls by trigger", makeTable({
+      columns: [col.tag("trigger", "Trigger"), col.count("calls", "Calls"), col.money("usd", "USD"), col.pct("share", "Share"), col.big("output", "Output tokens"), col.big("context", "Context read"), col.big("accumulated", "Accumulated")],
+      context, id: "classes", rows: data.classes, title: "Calls by trigger",
+    })),
+    section("Calls", makeTable({
+      columns: [col.count("idx", "#"), col.when("ts", "Time"), col.count("prompt_idx", "Prompt"), col.tag("trigger", "Trigger"), col.big("context", "Context"), col.big("fixed", "Fixed"), col.big("accumulated", "Accumulated"), col.big("output", "Output"), col.money("usd", "USD")],
+      context, id: "stream", rows: data.stream, title: "Calls",
+    })),
     section("Prompts", makeTable({
       columns: [col.count("idx", "#"), col.when("ts", "Time"), col.text("text", "Prompt"), col.money("usd", "USD"), col.money("usd_own", "Own"), col.money("usd_sub", "Subagents"), col.count("calls", "Calls"), col.secs("active_s", "Active"), col.secs("wall_s", "Wall")],
       context, id: "prompts", rows: prompts, title: "Prompts",

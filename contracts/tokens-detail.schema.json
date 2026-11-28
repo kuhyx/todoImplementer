@@ -35,15 +35,38 @@
       "required": ["idx", "ts", "text", "usd", "usd_own", "usd_sub", "active_s", "wall_s", "calls", "subagents", "tools"],
       "additionalProperties": false
     },
+    "call_row": {
+      "type": "object",
+      "description": "One assistant message of the main transcript. context = fixed + accumulated = input + cache write + cache read; fixed is the first call's context (capped at this call's). output is the usage output_tokens (thinking included). usd is the list price of the call's usage. trigger: prompt (first call of a prompt) | test | read | screenshot | wait | edit | subagent | other, the class of the biggest tool result that came back before the call.",
+      "properties": {
+        "idx": {"type": "number"}, "ts": {"$ref": "#/$defs/ts"}, "prompt_idx": {"type": "number"}, "model": {"type": "string"},
+        "trigger": {"enum": ["prompt", "test", "read", "screenshot", "wait", "edit", "subagent", "other"]},
+        "context": {"type": "number"}, "fixed": {"type": "number"}, "accumulated": {"type": "number"},
+        "output": {"type": "number"}, "usd": {"type": "number"}
+      },
+      "required": ["idx", "ts", "prompt_idx", "model", "trigger", "context", "fixed", "accumulated", "output", "usd"],
+      "additionalProperties": false
+    },
+    "call_class_row": {
+      "type": "object", "description": "Totals of the calls one trigger class caused; share is its part of the stream's usd (null when that is 0).",
+      "properties": {
+        "trigger": {"type": "string"}, "calls": {"type": "number"}, "usd": {"type": "number"}, "output": {"type": "number"},
+        "context": {"type": "number"}, "accumulated": {"type": "number"}, "share": {"type": ["number", "null"]}
+      },
+      "required": ["trigger", "calls", "usd", "output", "context", "accumulated", "share"], "additionalProperties": false
+    },
     "session": {
-      "type": "object", "description": "GET /api/tokens/session/<key>; 404 {error} for an unknown key.",
+      "type": "object", "description": "GET /api/tokens/session/<key>; 404 {error} for an unknown key. stream: per-call inspector of the main transcript (subagents are their own sessions); fixed: the first call's context.",
       "properties": {
         "session": {"$ref": "https://todoimplementer.local/contracts/tokens-common.schema.json#/$defs/session_row"},
         "prompts": {"type": "array", "items": {"$ref": "#/$defs/prompt_row"}},
         "unattributed": {"type": "array", "items": {"$ref": "#/$defs/subagent_row"}},
+        "fixed": {"type": "number"},
+        "stream": {"type": "array", "items": {"$ref": "#/$defs/call_row"}},
+        "classes": {"type": "array", "items": {"$ref": "#/$defs/call_class_row"}},
         "_tables": {"$ref": "https://todoimplementer.local/contracts/tokens-common.schema.json#/$defs/tables_meta"}
       },
-      "required": ["session", "prompts", "unattributed", "_tables"], "additionalProperties": false
+      "required": ["session", "prompts", "unattributed", "fixed", "stream", "classes", "_tables"], "additionalProperties": false
     },
     "context_file": {
       "type": "object", "description": "GET /api/tokens/context-file?path=; 404 {error} unless the path is a listed context file.",

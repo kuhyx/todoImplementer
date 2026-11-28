@@ -1,4 +1,4 @@
-/// One session: prompts, tools, subagents (`web/src/usage/view-session.ts`).
+/// One session: per-call inspector, prompts, tools, subagents (`web/src/usage/view-session.ts`).
 library;
 
 import 'package:material_ui/material_ui.dart';
@@ -61,6 +61,38 @@ Future<List<UsageBlock>> sessionView(ViewContext c, String key) async {
         ),
       ],
       fmt: usd,
+    ),
+    TableBlock(
+      id: 'classes',
+      semantics: 'Calls by trigger',
+      icon: Icons.bolt_outlined,
+      rows: objs(d, 'classes'),
+      columns: [
+        Col.tag('trigger', 'Trigger'),
+        Col.money('usd', 'USD'),
+        Col.pct('share', 'Share'),
+        Col.count('calls', 'Calls'),
+        Col.big('output', 'Output tokens'),
+        Col.big('context', 'Context read'),
+        Col.big('accumulated', 'Accumulated'),
+      ],
+    ),
+    TableBlock(
+      id: 'stream',
+      semantics: 'Calls',
+      icon: Icons.format_list_numbered,
+      rows: objs(d, 'stream'),
+      columns: [
+        Col.count('idx', '#'),
+        Col.tag('trigger', 'Trigger'),
+        Col.big('context', 'Context'),
+        Col.big('fixed', 'Fixed'),
+        Col.big('accumulated', 'Accumulated'),
+        Col.big('output', 'Output'),
+        Col.money('usd', 'USD'),
+        Col.when('ts', 'Time'),
+        Col.count('prompt_idx', 'Prompt'),
+      ],
     ),
     TableBlock(
       id: 'prompts',

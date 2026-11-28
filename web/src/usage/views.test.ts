@@ -55,8 +55,8 @@ describe("sessions", () => {
     use();
     const view = await sessionView(context(), signal, "k");
     expect(view.querySelector(".crumbs a")?.getAttribute("href")).toBe("#/sessions?cwd=%2Fhome%2Fkuhy");
-    expect(view.querySelectorAll("usage-table")).toHaveLength(3);
-    expect(view.querySelectorAll(".chart")).toHaveLength(1);
+    expect(view.querySelectorAll("usage-table")).toHaveLength(5);
+    expect(view.querySelectorAll(".chart")).toHaveLength(2);
     clean(view);
   });
 

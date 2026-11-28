@@ -35,7 +35,9 @@ TABLE_PARAMS = {
 ENDPOINTS = {
     "GET /api/tokens": "panel list, filter options, data coverage, A/B banner",
     "GET /api/tokens/panel/<name>": "one panel under the filters and table params",
-    "GET /api/tokens/session/<key>": ("one session: prompts, prompts.tools, prompts.subagents, unattributed"),
+    "GET /api/tokens/session/<key>": (
+        "one session: prompts, prompts.tools, prompts.subagents, unattributed, stream (per call), classes"
+    ),
     "GET /api/tokens/context-file?path=<path>": "one listed context file",
     "GET /api/tokens/ab": "A/B judgment-agent payload (the tray reads this)",
     "GET /api/tokens/schema": "this document",

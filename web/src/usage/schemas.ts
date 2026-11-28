@@ -96,9 +96,28 @@ const promptRow = z.object({
 });
 export type PromptRow = z.infer<typeof promptRow>;
 
+export const callRow = z.object({
+  accumulated: number_,
+  context: number_,
+  fixed: number_,
+  idx: number_,
+  model: text,
+  output: number_,
+  prompt_idx: number_,
+  trigger: z.enum(["prompt", "test", "read", "screenshot", "wait", "edit", "subagent", "other"]),
+  ts: number_,
+  usd: number_,
+});
+export type CallRow = z.infer<typeof callRow>;
+
+export const callClassRow = z.object({ accumulated: number_, calls: number_, context: number_, output: number_, share: maybe, trigger: text, usd: number_ });
+
 export const sessionDetail = z.object({
+  classes: z.array(callClassRow),
+  fixed: number_,
   prompts: z.array(promptRow),
   session: sessionRow,
+  stream: z.array(callRow),
   unattributed: z.array(subagentRow),
 });
 export type SessionDetail = z.infer<typeof sessionDetail>;

@@ -99,6 +99,32 @@ Map<String, RelayOutcome> cannedUsage() => {
   }),
   '/session/k1': RelayOk({
     'session': _session('k1', 2),
+    'fixed': 1000,
+    'stream': [
+      {
+        'idx': 1,
+        'ts': 1700000100,
+        'prompt_idx': 2,
+        'model': 'm',
+        'trigger': 'prompt',
+        'context': 1000,
+        'fixed': 1000,
+        'accumulated': 0,
+        'output': 50,
+        'usd': 0.2,
+      },
+    ],
+    'classes': [
+      {
+        'trigger': 'prompt',
+        'calls': 1,
+        'usd': 0.2,
+        'output': 50,
+        'context': 1000,
+        'accumulated': 0,
+        'share': 1.0,
+      },
+    ],
     'prompts': [
       {
         'idx': 2,

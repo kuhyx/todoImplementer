@@ -11,7 +11,7 @@ import json
 from collections import defaultdict
 from typing import TYPE_CHECKING, Any
 
-from todoimpl.tokens_api import db
+from todoimpl.tokens_api import db, session_calls
 from todoimpl.tokens_api.model_group import regroup
 from todoimpl.tokens_api.registry import panel
 
@@ -168,4 +168,5 @@ def detail(conn: sqlite3.Connection, key: str) -> dict[str, Any] | None:
         "session": _session(row),
         "prompts": prompts,
         "unattributed": subagents.get(None, []),
+        **session_calls.stream(conn, key),
     }
